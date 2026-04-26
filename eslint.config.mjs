@@ -1,0 +1,72 @@
+// QA Nexus PM1 — root ESLint flat config (ESLint 9)
+// Generated 2026-04-26 (replaces .eslintrc.json + .eslintignore legacy format)
+// Per-workspace overrides live in apps/web/eslint.config.mjs (Next.js plugin)
+// and apps/api/eslint.config.mjs (NestJS plugin — added by MS0-T003).
+
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  // Global ignores — applies before any other config
+  {
+    ignores: [
+      'node_modules/**',
+      '**/node_modules/**',
+      '.next/**',
+      '**/.next/**',
+      'dist/**',
+      '**/dist/**',
+      'out/**',
+      'build/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+      '.turbo/**',
+      'apps/api/src/generated/**',
+      'apps/api/node_modules/.prisma/**',
+      'pnpm-lock.yaml',
+      '.claude/audit.jsonl',
+      '.cache/**',
+      '**/Xenova/**',
+      'QA Nexus/**',
+      'docs/**',
+      '*.min.js',
+      '**/next-env.d.ts',
+      'node-compile-cache/**',
+    ],
+  },
+
+  // Base recommended (ESLint + typescript-eslint)
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+
+  // Workspace-wide PM1 rules
+  {
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': 'error',
+      'no-debugger': 'error',
+    },
+  },
+
+  // Test files — relaxed rules
+  {
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/test/**/*.ts',
+      '**/__tests__/**/*.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-console': 'off',
+    },
+  },
+
+  // PM1 hard rule: no `any` without // FIXME + ticket reference
+  // (Enforced via the no-explicit-any rule above; humans must add // FIXME comment with ticket before suppressing.)
+);

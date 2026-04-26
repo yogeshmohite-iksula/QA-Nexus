@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+/* ----------------------------------------------------------------------
+   QA Nexus PM1 -- LOCKED design tokens.
+   Source: PM1_UI_v2/UI Files/01_SYSTEM.md sec 3.1 (palette) + sec 3.3 (typography).
+   Anti-drift: enforce-design-tokens.sh PreToolUse hook gates Edit/Write
+   on apps/web TypeScript and CSS files against this exact whitelist.
+   NEVER add tertiary, MD3 tokens, orange, or extend Tailwind config.
+   ---------------------------------------------------------------------- */
+
+:root {
+  /* Surface ladder (4 canvas values) */
+  --canvas: #0b0f17;
+  --base: #111827;
+  --raised: #1a2233;
+  --overlay: #232c3f;
+  --border-subtle: #2a3347;
+  --border-strong: #3b4660;
+
+  /* Text ladder */
+  --text-primary: #f1f5f9;
+  --text-secondary: #c7d0dc;
+  --text-tertiary: #8a94a6;
+  --text-disabled: #94a3b8;
+
+  /* Brand — exactly 2 colors, no tertiary */
+  --primary: #2dd4bf; /* TEAL — system actions ONLY (Save/Approve/Generate/+Add) */
+  --secondary: #a78bfa; /* VIOLET — AI surfaces ONLY (agents, confidence, AI badges) */
+  --ai-accent: #c4b5fd; /* lighter violet — AI background tints, confidence-lane glow */
+
+  /* Semantic */
+  --pass: #34d399;
+  --fail: #f87171;
+  --warn: #fbbf24;
+  --info: #60a5fa;
+
+  /* F25 Prove mode — the ONLY frame that flips canvas */
+  --canvas-prove: #fafaf8; /* ivory; only used inside F25 Executive Dashboard */
+}
+
+/* Tailwind 4 @theme — exposes tokens as Tailwind utilities (bg-canvas, text-primary, etc.)
+   Do NOT add color utilities here that aren't in the locked palette above. */
+@theme inline {
+  /* Surface */
+  --color-canvas: var(--canvas);
+  --color-base: var(--base);
+  --color-raised: var(--raised);
+  --color-overlay: var(--overlay);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  /* Text */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: var(--text-disabled);
+
+  /* Brand */
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-ai-accent: var(--ai-accent);
+
+  /* Semantic */
+  --color-pass: var(--pass);
+  --color-fail: var(--fail);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+
+  /* Typography — exactly 4 stacks, no others (PM1_UI_v2 §3.3) */
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-code: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
