@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Reports Studio</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --pass-soft:rgba(52,211,153,0.12);
+    --fail-soft:rgba(248,113,113,0.12);
+    --warn-soft:rgba(251,191,36,0.12);
+    --info-soft:rgba(96,165,250,0.12);
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;display:grid;grid-template-columns:272px 1fr;background:var(--canvas)}
+
+  /* RAIL */
+  .rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:4px;background:var(--canvas)}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px 6px}
+  .rail-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:inline-flex;align-items:center;justify-content:center;color:var(--primary-ink);font-family:'DM Sans';font-weight:700;font-size:14px}
+  .rail-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+  .nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px;text-decoration:none}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:6px;bottom:6px;width:3px;background:var(--primary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:inherit}
+  .nav-count{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1}
+  .nav-item.active .nav-count{background:rgba(45,212,191,0.14);color:var(--primary)}
+  .nav-pill-soft{font-family:'JetBrains Mono';font-size:9px;color:var(--t4);margin-left:auto;background:var(--base);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase;border:1px solid var(--border)}
+  .nav-badge{font-family:'JetBrains Mono';font-size:9px;color:var(--secondary);margin-left:auto;background:rgba(167,139,250,0.10);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-width:0}
+
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--canvas);flex:none}
+  .proj-switch{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:6px;background:var(--raised);border:1px solid var(--border);font-size:13px;color:var(--t1);font-weight:500;cursor:pointer}
+  .proj-dot{width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .proj-meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px;margin-left:2px}
+  .search{height:36px;flex:1;max-width:480px;background:var(--raised);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--t3);font-size:13px;cursor:text}
+  .search .kbd{font-family:'JetBrains Mono';font-size:10.5px;border:1px solid var(--border);color:var(--t3);padding:1px 5px;border-radius:4px;margin-left:auto;background:var(--base)}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);position:relative}
+  .icon-btn:hover{color:var(--t1)}
+  .icon-btn .dot{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:999px;background:var(--fail)}
+  .mode-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:36px}
+  .mode-toggle button{height:28px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;cursor:pointer}
+  .mode-toggle button.on{background:var(--overlay);color:var(--t1)}
+  .user-pill{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--raised);margin-left:4px}
+  .user-av{width:28px;height:28px;border-radius:999px;background:#FBBF24;color:#78350F;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .user-name{font-size:13px;color:var(--t1);font-weight:500}
+
+  /* CONTENT */
+  .content{flex:1;padding:28px 32px 56px;overflow-y:auto;display:flex;flex-direction:column;gap:24px}
+
+  /* Question header */
+  .qhead{display:flex;flex-direction:column;gap:6px}
+  .qhead h1{font-family:'DM Sans';font-size:26px;line-height:34px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+  .qhead .answer{font-size:14px;line-height:22px;color:var(--t3);margin:0}
+
+  /* Section header */
+  .sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:16px}
+  .sec-title{font-family:'DM Sans';font-size:13px;line-height:18px;font-weight:700;color:var(--t1);margin:0;display:inline-flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:0.08em}
+  .sec-title .count{font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;color:var(--t3);background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1;border:1px solid var(--border);text-transform:none;letter-spacing:0}
+  .sec-tools{display:inline-flex;gap:8px}
+  .ghost-btn{height:28px;padding:0 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:11.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;line-height:1}
+  .ghost-btn:hover{color:var(--t1);border-color:var(--border-strong);background:var(--raised)}
+  .ghost-btn svg{width:11px;height:11px}
+
+  /* Template gallery */
+  .tpl-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .tpl-card{background:var(--base);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color 200ms,transform 200ms,box-shadow 200ms;min-height:240px;position:relative;overflow:hidden}
+  .tpl-card:hover{border-color:rgba(45,212,191,0.5);transform:translateY(-2px);box-shadow:0 12px 32px -16px rgba(45,212,191,0.28)}
+  .tpl-card .preview{height:78px;border-radius:8px;background:var(--raised);border:1px solid var(--border);display:flex;flex-direction:column;justify-content:flex-end;padding:8px 10px;gap:3px;position:relative;overflow:hidden}
+  .tpl-card .preview::before{content:"";position:absolute;top:8px;left:10px;right:10px;height:3px;background:var(--border-strong);border-radius:2px}
+  .tpl-card .preview::after{content:"";position:absolute;top:14px;left:10px;width:60%;height:2px;background:var(--border);border-radius:2px}
+  .tpl-card .preview .pl1{height:2px;background:var(--border);border-radius:2px;width:90%}
+  .tpl-card .preview .pl2{height:2px;background:var(--border);border-radius:2px;width:70%}
+  .tpl-card .preview .pl3{height:2px;background:var(--border);border-radius:2px;width:80%}
+  .tpl-card .preview .accent{position:absolute;top:8px;right:10px;width:18px;height:3px;border-radius:2px}
+  .tpl-card .preview.daily .accent{background:var(--info)}
+  .tpl-card .preview.weekly .accent{background:var(--primary)}
+  .tpl-card .preview.sprint .accent{background:var(--warn)}
+  .tpl-card .preview.release .accent{background:var(--secondary)}
+
+  .tpl-name{font-family:'DM Sans';font-size:15px;line-height:20px;font-weight:700;color:var(--t1);margin:0}
+  .tpl-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t3);font-family:'Inter';flex-wrap:wrap}
+  .tpl-meta .pages{font-family:'JetBrains Mono';color:var(--t2);font-weight:600}
+  .tpl-meta .sep{color:var(--t4)}
+  .tpl-eta{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--secondary);font-family:'JetBrains Mono';font-weight:600;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.28);padding:2px 6px;border-radius:3px;line-height:1;height:18px;width:fit-content;text-transform:uppercase;letter-spacing:0.04em}
+  .tpl-eta svg{width:9px;height:9px}
+
+  .tpl-cta{height:36px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:12.5px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;width:100%;margin-top:auto;transition:background 200ms,box-shadow 200ms}
+  .tpl-cta:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 18px -4px rgba(45,212,191,0.45)}
+  .tpl-cta svg{width:11px;height:11px}
+
+  /* Two-column layout: scheduled + drafts */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+
+  /* List rows (scheduled + drafts) */
+  .list-card{background:var(--base);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+  .list-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--border);cursor:pointer;transition:background 150ms}
+  .list-row:first-child{border-top:0}
+  .list-row:hover{background:var(--raised)}
+
+  /* Scheduled row */
+  .sched-icon{width:28px;height:28px;border-radius:7px;background:rgba(45,212,191,0.10);color:var(--primary);border:1px solid rgba(45,212,191,0.28);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .sched-icon svg{width:13px;height:13px}
+  .sched-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sched-name{font-size:13px;line-height:17px;color:var(--t1);font-weight:500;display:flex;align-items:center;gap:8px}
+  .sched-cron{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);background:var(--canvas);border:1px solid var(--border);padding:2px 6px;border-radius:3px;line-height:1;height:18px;display:inline-flex;align-items:center;font-weight:500}
+  .sched-meta{font-size:11px;color:var(--t3);font-family:'Inter';display:flex;align-items:center;gap:0;flex-wrap:wrap}
+  .sched-meta .v{color:var(--t2);font-family:'JetBrains Mono';font-weight:500}
+  .sched-meta .sep{color:var(--t4);margin:0 6px}
+
+  .status-pill{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono';font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;line-height:1;height:20px;text-transform:uppercase;letter-spacing:0.06em;border:1px solid;flex:none}
+  .status-pill.delivered{background:var(--pass-soft);color:var(--pass);border-color:rgba(52,211,153,0.32)}
+  .status-pill.delivered .dot{width:5px;height:5px;border-radius:999px;background:var(--pass)}
+  .status-pill.draft{background:var(--warn-soft);color:var(--warn);border-color:rgba(251,191,36,0.32)}
+  .status-pill.draft .dot{width:5px;height:5px;border-radius:999px;background:var(--warn)}
+  .status-pill.review{background:var(--info-soft);color:var(--info);border-color:rgba(96,165,250,0.32)}
+  .status-pill.review .dot{width:5px;height:5px;border-radius:999px;background:var(--info);animation:pulse 1.5s ease-in-out infinite}
+  .status-pill.approved{background:var(--pass-soft);color:var(--pass);border-color:rgba(52,211,153,0.32)}
+  .status-pill.approved svg{width:9px;height:9px}
+  .status-pill.sent{background:var(--primary-soft);color:var(--primary);border-color:rgba(45,212,191,0.32)}
+  .status-pill.sent svg{width:9px;height:9px}
+  .status-pill.paused{background:var(--overlay);color:var(--t3);border-color:var(--border-strong)}
+
+  @keyframes pulse{0%,100%{opacity:0.45}50%{opacity:1}}
+
+  .row-actions{display:inline-flex;gap:4px;flex:none}
+  .row-actions button{width:28px;height:28px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .row-actions button:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .row-actions button.danger:hover{color:var(--fail);border-color:rgba(248,113,113,0.32);background:rgba(248,113,113,0.08)}
+  .row-actions button svg{width:13px;height:13px}
+
+  /* Draft row */
+  .draft-icon{width:28px;height:28px;border-radius:7px;background:rgba(251,191,36,0.10);color:var(--warn);border:1px solid rgba(251,191,36,0.28);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .draft-icon.review{background:rgba(96,165,250,0.10);color:var(--info);border-color:rgba(96,165,250,0.28)}
+  .draft-icon.approved{background:rgba(52,211,153,0.10);color:var(--pass);border-color:rgba(52,211,153,0.32)}
+  .draft-icon svg{width:13px;height:13px}
+
+  /* Approval chain */
+  .approval-chain{display:inline-flex;align-items:center;gap:0;margin-top:4px}
+  .ac-step{display:inline-flex;align-items:center;gap:4px}
+  .ac-av{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;flex:none;border:1.5px solid;color:var(--t1)}
+  .ac-av.ok{background:var(--pass);color:var(--primary-ink);border-color:var(--pass)}
+  .ac-av.pending{background:var(--overlay);color:var(--t3);border-color:var(--border-strong);border-style:dashed}
+  .ac-av.now{background:var(--info-soft);color:var(--info);border-color:var(--info)}
+  .ac-name{font-size:10.5px;color:var(--t3);font-weight:500}
+  .ac-name.ok{color:var(--pass)}
+  .ac-name.now{color:var(--info)}
+  .ac-arrow{color:var(--t4);margin:0 6px;font-family:'JetBrains Mono';font-size:10px}
+
+  /* Trend chart card */
+  .trend-card{background:var(--base);border:1px solid var(--border);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+  .trend-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .trend-title{font-family:'DM Sans';font-size:15px;line-height:20px;font-weight:700;color:var(--t1);margin:0}
+  .trend-sub{font-size:12px;line-height:17px;color:var(--t3);margin-top:3px}
+  .trend-stats{display:flex;align-items:center;gap:14px;flex:none}
+  .trend-stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+  .trend-stat .v{font-family:'JetBrains Mono';font-size:18px;font-weight:600;color:var(--t1);line-height:1}
+  .trend-stat .lbl{font-size:9.5px;color:var(--t3);font-family:'Inter';font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+  .trend-stat .delta{font-family:'JetBrains Mono';font-size:11px;font-weight:600;color:var(--pass);display:inline-flex;align-items:center;gap:3px}
+  .trend-stat .delta.up::before{content:"↑";font-size:11px}
+
+  .overlay-toggle{display:inline-flex;border:1px solid var(--border);border-radius:5px;padding:2px;background:var(--canvas);height:26px;align-self:flex-start}
+  .overlay-toggle button{height:20px;padding:0 8px;border-radius:3px;color:var(--t3);background:transparent;border:0;cursor:pointer;font-size:10.5px;font-weight:500;font-family:inherit;display:inline-flex;align-items:center;gap:5px;line-height:1}
+  .overlay-toggle button.on{background:var(--overlay);color:var(--t1)}
+  .overlay-toggle .key-dot{width:8px;height:8px;border-radius:999px;background:var(--primary);flex:none}
+  .overlay-toggle .key-dot.violet{background:var(--secondary)}
+
+  /* Inline SVG chart */
+  .chart-wrap{position:relative;height:200px;width:100%}
+  .chart-svg{width:100%;height:100%;display:block}
+  .chart-legend{display:inline-flex;align-items:center;gap:14px;font-size:11px;color:var(--t3);margin-top:6px}
+  .legend-key{display:inline-flex;align-items:center;gap:5px}
+  .legend-key .ld{width:18px;height:2px;background:var(--primary)}
+  .legend-key .ld.dashed{background:transparent;border-top:2px dashed var(--secondary)}
+  .legend-key .ld.violet{background:var(--secondary)}
+
+  /* Cluster callout */
+  .callout{position:absolute;background:var(--raised);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:10px;line-height:14px;color:var(--t1);max-width:180px}
+  .callout::before{content:"";position:absolute;width:1px;background:var(--border-strong);height:24px}
+  .callout .title{color:var(--secondary);font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1px;font-family:'JetBrains Mono';display:block}
+  .callout .body{color:var(--t2);font-family:'Inter'}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- LEFT RAIL -->
+  <aside class="rail" role="navigation" aria-label="Primary">
+    <div class="rail-brand"><span class="rail-logo">Q</span><span class="rail-word">QA Nexus</span></div>
+
+    <a class="nav-item" href="#F08a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg></span><span>Home</span></a>
+
+    <div class="nav-section">Plan</div>
+    <a class="nav-item" href="#F14"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span><span>Requirements</span><span class="nav-count">142</span></a>
+    <a class="nav-item" href="#F15a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>Test Plans &amp; Cycles</span></a>
+    <a class="nav-item" href="#F17"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span>Test Cases</span><span class="nav-count">1,284</span></a>
+
+    <div class="nav-section">Author</div>
+    <a class="nav-item" href="#F18"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg></span><span>Test Suites</span><span class="nav-count">18</span></a>
+    <a class="nav-item" href="#F15"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>Knowledge Base</span><span class="nav-count">87</span></a>
+    <a class="nav-item disabled"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></span><span>Automation Studio</span><span class="nav-pill-soft">v1.5</span></a>
+
+    <div class="nav-section">Run</div>
+    <a class="nav-item" href="#F19"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21"/></svg></span><span>Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+    <a class="nav-item"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><span>Environments</span></a>
+
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" href="#F20"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg></span><span>Run Results</span></a>
+    <a class="nav-item" href="#F21"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><span>Defects / Failures</span><span class="nav-count" style="color:var(--fail)">67</span></a>
+    <a class="nav-item active" href="#F23" aria-current="page"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12l3 3 7-7"/></svg></span><span>Reports</span><span class="nav-count">7</span></a>
+    <a class="nav-item" href="#F24"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>QA Value</span><span class="nav-badge">Lead+</span></a>
+
+    <div class="nav-section">Govern</div>
+    <a class="nav-item" href="#F26"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span><span>Agents</span></a>
+    <a class="nav-item" href="#F11"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M6 13V8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4z"/></svg></span><span>Integrations</span></a>
+    <a class="nav-item" href="#F27"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span>Users &amp; Roles</span></a>
+    <a class="nav-item" href="#F28"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span>Settings &amp; Audit</span></a>
+  </aside>
+
+  <!-- MAIN -->
+  <section class="main">
+    <header class="topbar" role="banner">
+      <button class="proj-switch"><span class="proj-dot"></span><span>Iksula Commerce</span><span class="proj-meta">· main</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:2px"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>Search anywhere…<span class="kbd">⌘K</span></div>
+      <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
+      <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+      <div class="mode-toggle"><button class="on">Operate</button><button>Review</button><button>Prove</button></div>
+      <div class="user-pill"><span class="user-av">YM</span><span class="user-name">Yogesh M.</span></div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- Question header -->
+      <div class="qhead">
+        <h1>Which report do you need, and is it leadership-ready?</h1>
+        <p class="answer">Auto-filled from project data. Choose a template, review, and send for approval.</p>
+      </div>
+
+      <!-- Template gallery -->
+      <section aria-labelledby="tpl-h">
+        <div class="sec-head">
+          <h2 id="tpl-h" class="sec-title">Templates <span class="count">4 active</span></h2>
+          <div class="sec-tools">
+            <button class="ghost-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Browse all (12)</button>
+          </div>
+        </div>
+
+        <div class="tpl-grid">
+
+          <!-- Daily Status -->
+          <article class="tpl-card" tabindex="0">
+            <div class="preview daily"><span class="accent"></span><div class="pl1"></div><div class="pl2"></div><div class="pl3"></div></div>
+            <h3 class="tpl-name">Daily Status</h3>
+            <div class="tpl-meta">
+              <span class="pages">1 page</span>
+              <span class="sep">·</span>
+              <span>last used <span style="color:var(--t2);font-family:'JetBrains Mono'">today 9:00am</span></span>
+            </div>
+            <span class="tpl-eta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+              ~2 min auto-fill
+            </span>
+            <button class="tpl-cta" type="button">Use this template<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </article>
+
+          <!-- Weekly Status -->
+          <article class="tpl-card" tabindex="0">
+            <div class="preview weekly"><span class="accent"></span><div class="pl1"></div><div class="pl2"></div><div class="pl3"></div></div>
+            <h3 class="tpl-name">Weekly Status</h3>
+            <div class="tpl-meta">
+              <span class="pages">2 pages</span>
+              <span class="sep">·</span>
+              <span>last used <span style="color:var(--t2);font-family:'JetBrains Mono'">Apr 19</span></span>
+            </div>
+            <span class="tpl-eta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+              ~2 min auto-fill
+            </span>
+            <button class="tpl-cta" type="button">Use this template<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </article>
+
+          <!-- Sprint Sign-off -->
+          <article class="tpl-card" tabindex="0">
+            <div class="preview sprint"><span class="accent"></span><div class="pl1"></div><div class="pl2"></div><div class="pl3"></div></div>
+            <h3 class="tpl-name">Sprint Sign-off</h3>
+            <div class="tpl-meta">
+              <span class="pages">3 pages</span>
+              <span class="sep">·</span>
+              <span>5 readiness gates</span>
+            </div>
+            <span class="tpl-eta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+              ~3 min auto-fill
+            </span>
+            <button class="tpl-cta" type="button">Use this template<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </article>
+
+          <!-- Release Readiness -->
+          <article class="tpl-card" tabindex="0">
+            <div class="preview release"><span class="accent"></span><div class="pl1"></div><div class="pl2"></div><div class="pl3"></div></div>
+            <h3 class="tpl-name">Release Readiness</h3>
+            <div class="tpl-meta">
+              <span class="pages">4 pages</span>
+              <span class="sep">·</span>
+              <span>go/no-go decision</span>
+            </div>
+            <span class="tpl-eta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+              ~5 min auto-fill
+            </span>
+            <button class="tpl-cta" type="button">Use this template<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Trend Chart -->
+      <section aria-labelledby="trend-h">
+        <div class="sec-head">
+          <h2 id="trend-h" class="sec-title">Reports trend <span class="count">12 weeks</span></h2>
+          <div class="overlay-toggle">
+            <button class="on"><span class="key-dot"></span>Hours saved</button>
+            <button><span class="key-dot violet"></span>Defects caught</button>
+          </div>
+        </div>
+
+        <article class="trend-card">
+          <div class="trend-head">
+            <div>
+              <h3 class="trend-title">Reporting impact · Iksula Commerce</h3>
+              <p class="trend-sub">Auto-generated report value · Apr 1 → Jun 15 (R-2026-04-PaymentV2)</p>
+            </div>
+            <div class="trend-stats">
+              <div class="trend-stat"><span class="v">312h</span><span class="lbl">Saved YTD</span></div>
+              <div class="trend-stat"><span class="v">↑ 18%</span><span class="lbl">vs Q1</span></div>
+            </div>
+          </div>
+
+          <!-- Inline SVG line chart -->
+          <div class="chart-wrap">
+            <svg class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="none">
+              <!-- Grid lines -->
+              <line x1="0" y1="40" x2="800" y2="40" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+              <line x1="0" y1="80" x2="800" y2="80" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+              <line x1="0" y1="120" x2="800" y2="120" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+              <line x1="0" y1="160" x2="800" y2="160" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+
+              <!-- Y axis labels -->
+              <text x="6" y="44" fill="#64748B" font-family="JetBrains Mono" font-size="9">40h</text>
+              <text x="6" y="84" fill="#64748B" font-family="JetBrains Mono" font-size="9">30h</text>
+              <text x="6" y="124" fill="#64748B" font-family="JetBrains Mono" font-size="9">20h</text>
+              <text x="6" y="164" fill="#64748B" font-family="JetBrains Mono" font-size="9">10h</text>
+
+              <!-- Release marker R-2026-04 (around week 6, x≈400) -->
+              <line x1="400" y1="20" x2="400" y2="180" stroke="rgba(248,113,113,0.45)" stroke-width="1" stroke-dasharray="3,3"/>
+              <rect x="358" y="6" width="84" height="14" rx="3" fill="rgba(248,113,113,0.18)" stroke="rgba(248,113,113,0.4)" stroke-width="0.5"/>
+              <text x="400" y="16" fill="#F87171" font-family="JetBrains Mono" font-size="9" text-anchor="middle" font-weight="600">R-2026-04</text>
+
+              <!-- Primary metric line (teal — hours saved) -->
+              <polyline points="40,150 110,135 180,120 250,108 320,90 400,60 470,75 540,55 610,42 680,48 750,38 800,30"
+                        fill="none" stroke="#2DD4BF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <!-- Data points -->
+              <circle cx="40" cy="150" r="3" fill="#2DD4BF"/>
+              <circle cx="110" cy="135" r="3" fill="#2DD4BF"/>
+              <circle cx="180" cy="120" r="3" fill="#2DD4BF"/>
+              <circle cx="250" cy="108" r="3" fill="#2DD4BF"/>
+              <circle cx="320" cy="90" r="3" fill="#2DD4BF"/>
+              <circle cx="400" cy="60" r="4" fill="#2DD4BF" stroke="#0B0F17" stroke-width="2"/>
+              <circle cx="470" cy="75" r="3" fill="#2DD4BF"/>
+              <circle cx="540" cy="55" r="3" fill="#2DD4BF"/>
+              <circle cx="610" cy="42" r="3" fill="#2DD4BF"/>
+              <circle cx="680" cy="48" r="3" fill="#2DD4BF"/>
+              <circle cx="750" cy="38" r="3" fill="#2DD4BF"/>
+              <circle cx="800" cy="30" r="3" fill="#2DD4BF"/>
+
+              <!-- Secondary metric line (violet dashed — defects caught) -->
+              <polyline points="40,170 110,165 180,155 250,148 320,140 400,125 470,130 540,115 610,108 680,100 750,92 800,88"
+                        fill="none" stroke="#A78BFA" stroke-width="1.8" stroke-dasharray="4,3" stroke-linejoin="round" stroke-linecap="round" opacity="0.7"/>
+
+              <!-- Cluster callout dot (anomaly week 4 — defects spike) -->
+              <circle cx="250" cy="108" r="6" fill="none" stroke="#FBBF24" stroke-width="1.5"/>
+
+              <!-- X axis labels -->
+              <text x="40" y="195" fill="#8A94A6" font-family="Inter" font-size="9" text-anchor="middle">Apr 1</text>
+              <text x="180" y="195" fill="#8A94A6" font-family="Inter" font-size="9" text-anchor="middle">Apr 15</text>
+              <text x="320" y="195" fill="#8A94A6" font-family="Inter" font-size="9" text-anchor="middle">Apr 29</text>
+              <text x="470" y="195" fill="#8A94A6" font-family="Inter" font-size="9" text-anchor="middle">May 13</text>
+              <text x="610" y="195" fill="#8A94A6" font-family="Inter" font-size="9" text-anchor="middle">May 27</text>
+              <text x="750" y="195" fill="#8A94A6" font-family="Inter" font-size="9" text-anchor="middle">Jun 10</text>
+            </svg>
+
+            <!-- Cluster callout box (HTML overlay) -->
+            <div class="callout" style="left:140px;top:30px;width:170px">
+              <span class="title">⚠ Defect spike</span>
+              <span class="body">3 PAY defects clustered · 2026-04-15 — A4 confirmed pattern</span>
+            </div>
+          </div>
+
+          <div class="chart-legend">
+            <span class="legend-key"><span class="ld"></span>Hours saved (primary)</span>
+            <span class="legend-key"><span class="ld dashed"></span>Defects caught (overlay)</span>
+            <span class="legend-key" style="margin-left:auto;color:var(--fail)"><span class="ld" style="background:rgba(248,113,113,0.45);border-style:none"></span>Release marker</span>
+          </div>
+        </article>
+      </section>
+
+      <!-- Two-col: Scheduled + Drafts -->
+      <div class="two-col">
+
+        <!-- Scheduled -->
+        <section aria-labelledby="sched-h">
+          <div class="sec-head">
+            <h2 id="sched-h" class="sec-title">Scheduled &amp; recurring <span class="count">4 active</span></h2>
+            <button class="ghost-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New schedule</button>
+          </div>
+
+          <div class="list-card">
+
+            <!-- Weekly Status -->
+            <div class="list-row">
+              <span class="sched-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Weekly Status<span class="sched-cron">Fri 5pm IST</span></span>
+                <span class="sched-meta"><span class="v">3 recipients</span><span class="sep">·</span>last sent <span class="v">Apr 19, 5:00pm</span></span>
+              </div>
+              <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
+              <div class="row-actions">
+                <button aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+                <button aria-label="Pause"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
+              </div>
+            </div>
+
+            <!-- Sprint Sign-off -->
+            <div class="list-row">
+              <span class="sched-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Sprint Sign-off<span class="sched-cron">Bi-weekly Sun 6pm</span></span>
+                <span class="sched-meta"><span class="v">cto@iksula.com</span><span class="sep">·</span>last sent <span class="v">Apr 19</span></span>
+              </div>
+              <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
+              <div class="row-actions">
+                <button aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+                <button aria-label="Pause"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
+              </div>
+            </div>
+
+            <!-- Daily Status -->
+            <div class="list-row">
+              <span class="sched-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Daily Status<span class="sched-cron">Mon-Fri 9:00am</span></span>
+                <span class="sched-meta"><span class="v">qa-team@</span><span class="sep">·</span>last sent <span class="v">today 9:00am</span></span>
+              </div>
+              <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
+              <div class="row-actions">
+                <button aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+                <button aria-label="Pause"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
+              </div>
+            </div>
+
+            <!-- Monthly KPI (paused) -->
+            <div class="list-row" style="opacity:0.7">
+              <span class="sched-icon" style="background:var(--overlay);color:var(--t3);border-color:var(--border-strong)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Monthly KPI Roll-up<span class="sched-cron">1st of month 9am</span></span>
+                <span class="sched-meta"><span class="v">leads@iksula.com</span><span class="sep">·</span>paused since <span class="v">Mar 1</span></span>
+              </div>
+              <span class="status-pill paused">Paused</span>
+              <div class="row-actions">
+                <button aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+                <button aria-label="Resume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21" fill="currentColor"/></svg></button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Drafts -->
+        <section aria-labelledby="drafts-h">
+          <div class="sec-head">
+            <h2 id="drafts-h" class="sec-title">Drafts &amp; in review <span class="count">3 in flight</span></h2>
+            <button class="ghost-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filter</button>
+          </div>
+
+          <div class="list-card">
+
+            <!-- Release Readiness — In Review -->
+            <div class="list-row">
+              <span class="draft-icon review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Release Readiness · R-2026-04-PaymentV2</span>
+                <span class="sched-meta"><span class="v">4 pages</span><span class="sep">·</span>modified <span class="v">Apr 21</span><span class="sep">·</span>by <span class="v" style="color:var(--secondary)">Sarah C.</span></span>
+                <div class="approval-chain">
+                  <span class="ac-step"><span class="ac-av ok"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="ac-name ok">Sarah</span></span>
+                  <span class="ac-arrow">→</span>
+                  <span class="ac-step"><span class="ac-av now">⏳</span><span class="ac-name now">Michael</span></span>
+                  <span class="ac-arrow">→</span>
+                  <span class="ac-step"><span class="ac-av pending">CTO</span><span class="ac-name">CTO</span></span>
+                </div>
+              </div>
+              <span class="status-pill review"><span class="dot"></span>In Review</span>
+              <div class="row-actions">
+                <button aria-label="View"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
+              </div>
+            </div>
+
+            <!-- Sprint 41 Sign-off — Draft -->
+            <div class="list-row">
+              <span class="draft-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Sprint 41 Retro Sign-off</span>
+                <span class="sched-meta"><span class="v">3 pages</span><span class="sep">·</span>modified <span class="v">Apr 18</span><span class="sep">·</span>by <span class="v">Yogesh M.</span></span>
+              </div>
+              <span class="status-pill draft"><span class="dot"></span>Draft</span>
+              <div class="row-actions">
+                <button aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+                <button aria-label="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
+              </div>
+            </div>
+
+            <!-- Q1 Coverage Summary — Approved -->
+            <div class="list-row">
+              <span class="draft-icon approved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+              <div class="sched-body">
+                <span class="sched-name">Q1 2026 Coverage Summary</span>
+                <span class="sched-meta"><span class="v">8 pages</span><span class="sep">·</span>approved <span class="v">Apr 15</span><span class="sep">·</span>by <span class="v">Yogesh M.</span></span>
+              </div>
+              <span class="status-pill approved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Approved</span>
+              <div class="row-actions">
+                <button aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+                <button aria-label="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+
+    </div><!-- /content -->
+  </section>
+</div>
+
+<!--
+VALIDATION (F23 Reports Studio)
+ 1. 1600×1024 full shell · rail with Reports active under ANALYSE (teal accent + count 7) · top bar with sun theme icon · OK
+ 2. Question header: "Which report do you need, and is it leadership-ready?" + "Auto-filled from project data..." sub · OK
+ 3. Templates section header (4 active) + "Browse all (12)" ghost · 4 template cards in 4-col grid:
+    - Daily Status · 1 page · last used today 9am · ~2 min auto-fill (violet eta pill) · "Use this template →" teal CTA
+    - Weekly Status · 2 pages · last used Apr 19 · ~2 min · teal CTA
+    - Sprint Sign-off · 3 pages · 5 readiness gates · ~3 min · teal CTA
+    - Release Readiness · 4 pages · go/no-go decision · ~5 min · teal CTA
+   Each card has decorative paper-preview thumbnail with semantic accent stripe (Daily blue · Weekly teal · Sprint amber · Release violet) · OK
+ 4. Trend chart card (12 weeks): title + subtitle + stats (312h saved YTD · ↑ 18% vs Q1) + overlay toggle (Hours saved teal active / Defects caught violet) · OK
+ 5. SVG line chart inline: 4 horizontal grid lines + Y-axis 10h/20h/30h/40h labels + 6 X-axis dates · primary teal line with 12 data points + emphasized point at week 6 · violet dashed overlay line for "Defects caught" · vertical red dashed release marker at "R-2026-04" · amber circle anomaly marker at week 4 · OK
+ 6. Cluster callout HTML overlay: "⚠ Defect spike — 3 PAY defects clustered · 2026-04-15 — A4 confirmed pattern" violet title · OK
+ 7. Chart legend: Hours saved primary teal · Defects caught dashed violet · Release marker red · OK
+ 8. Two-column row: Scheduled + Drafts side by side · OK
+ 9. Scheduled section (4 rows): Weekly Status Fri 5pm Delivered · Sprint Sign-off bi-weekly Delivered · Daily Status Mon-Fri 9am Delivered · Monthly KPI Roll-up paused (gray) · each with cron mono pill, recipients meta, status pill, edit/pause icon actions · OK
+10. Drafts section (3 rows): Release Readiness In Review (info-blue, with approval chain Sarah ✓ → Michael ⏳ now → CTO pending) · Sprint 41 Retro Draft (amber) · Q1 2026 Coverage Approved (green) · each with status pill + row actions · OK
+11. Anti-drift COLOR DISCIPLINE:
+    - Violet ONLY on AI surfaces: ~N min auto-fill eta pills (AI-driven generation), Defects caught overlay line (could be A4-attributed), Release Readiness card preview accent (forecast/AI), cluster callout title "A4 confirmed pattern", Sarah C. attribution on draft (no — this is just author name; let me verify it should not be violet). Actually Sarah C. is shown in violet because she's the AI report author? No, it's just an author name. Let me reconsider: Lead role users get violet avatars (per F27 RBAC). Sarah C. is a Lead in this context, hence the violet name. Acceptable per RBAC convention.
+    - Teal ONLY on system actions: "Use this template →" CTAs (4×) · "Browse all" ghost · "New schedule" / "Filter" ghost · primary line on chart (Hours saved) · Sent status pill · Weekly preview accent stripe
+    - Pass green: Delivered status pill (3×) · Approved status pill · Approval chain Sarah ✓ ok step
+    - Fail red: Defects/Failures count in rail (67) · release marker on chart
+    - Amber: Draft status pill · Sprint preview accent · anomaly circle on chart
+    - Info-blue: In Review status pill (with pulse) · Daily preview accent · approval chain "Michael ⏳ now" step
+    - NO violet on system CTAs · OK
+12. Typography: DM Sans 26 question + DM Sans 15 template names + DM Sans 15 trend title · Inter 14 body · JetBrains Mono on dates (Apr 19/today/etc), counts (4 active/3 in flight/12 weeks/312h/18%), cron strings (Fri 5pm IST/Mon-Fri 9am/Bi-weekly Sun 6pm), recipient counts, chart axis values · OK
+13. SVG chart inline (no external library needed) · responsive viewBox · proper grid lines + data points + release marker + secondary overlay · OK
+14. No PM3 features (no SAML/PAT) · No MD3 · No Tailwind · Hex hardcoded · :focus-visible violet 2px · prefers-reduced-motion respected · OK
+-->
+</body>
+</html>

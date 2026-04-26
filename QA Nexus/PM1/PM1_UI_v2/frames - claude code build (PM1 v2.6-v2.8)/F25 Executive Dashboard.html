@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Executive Dashboard · R-2026-04-PaymentV2</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Dark workspace chrome (rail + top bar) */
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+
+    /* Prove-mode ivory canvas (main content area only) */
+    --p-canvas:#FAFAF8;
+    --p-card:#FFFFFF;
+    --p-card-soft:#F4F4F0;
+    --p-border:#E5E7EB;
+    --p-border-strong:#CBD5E1;
+    --p-text-1:#0F172A;
+    --p-text-2:#475569;
+    --p-text-3:#64748B;
+    --p-text-4:#94A3B8;
+
+    /* Prove-mode semantic (visible on ivory) */
+    --p-pass:#10B981;
+    --p-pass-bg:#D1FAE5;
+    --p-warn:#D97706;
+    --p-warn-bg:#FEF3C7;
+    --p-fail:#DC2626;
+    --p-fail-bg:#FEE2E2;
+    --p-info:#2563EB;
+    --p-info-bg:#DBEAFE;
+    --p-secondary:#7C3AED;
+    --p-secondary-bg:#EDE9FE;
+    --p-primary:#0D9488;
+    --p-primary-bg:#CCFBF1;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;display:grid;grid-template-columns:272px 1fr;background:var(--canvas)}
+
+  /* DARK RAIL (chrome) */
+  .rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:4px;background:var(--canvas)}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px 6px}
+  .rail-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:inline-flex;align-items:center;justify-content:center;color:var(--primary-ink);font-family:'DM Sans';font-weight:700;font-size:14px}
+  .rail-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+  .nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px;text-decoration:none}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:6px;bottom:6px;width:3px;background:var(--primary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:inherit}
+  .nav-count{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1}
+  .nav-item.active .nav-count{background:rgba(45,212,191,0.14);color:var(--primary)}
+  .nav-pill-soft{font-family:'JetBrains Mono';font-size:9px;color:var(--t4);margin-left:auto;background:var(--base);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase;border:1px solid var(--border)}
+  .nav-badge{font-family:'JetBrains Mono';font-size:9px;color:var(--secondary);margin-left:auto;background:rgba(167,139,250,0.10);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-width:0}
+
+  /* DARK TOP BAR */
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--canvas);flex:none}
+  .proj-switch{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:6px;background:var(--raised);border:1px solid var(--border);font-size:13px;color:var(--t1);font-weight:500;cursor:pointer}
+  .proj-dot{width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .proj-meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px;margin-left:2px}
+  .search{height:36px;flex:1;max-width:480px;background:var(--raised);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--t3);font-size:13px;cursor:text}
+  .search .kbd{font-family:'JetBrains Mono';font-size:10.5px;border:1px solid var(--border);color:var(--t3);padding:1px 5px;border-radius:4px;margin-left:auto;background:var(--base)}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);position:relative}
+  .icon-btn:hover{color:var(--t1)}
+  .icon-btn .dot{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:999px;background:var(--fail)}
+  .mode-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:36px;position:relative}
+  .mode-toggle button{height:28px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;cursor:pointer}
+  .mode-toggle button.locked{background:var(--p-canvas);color:var(--p-text-1);font-weight:600}
+  .mode-toggle .lock-icon{width:9px;height:9px}
+  .mode-toggle .locked-tag{position:absolute;top:-7px;right:-4px;font-family:'JetBrains Mono';font-size:8px;color:var(--secondary);background:var(--canvas);padding:1px 5px;border-radius:3px;line-height:1;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border:1px solid rgba(167,139,250,0.4)}
+  .user-pill{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--raised);margin-left:4px}
+  .user-av{width:28px;height:28px;border-radius:999px;background:#FBBF24;color:#78350F;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .user-name{font-size:13px;color:var(--t1);font-weight:500}
+
+  /* ════════ PROVE-MODE CONTENT ════════ */
+  .prove{flex:1;background:var(--p-canvas);overflow-y:auto;padding:0;color:var(--p-text-1)}
+  .prove::-webkit-scrollbar{width:8px}
+  .prove::-webkit-scrollbar-thumb{background:var(--p-border-strong);border-radius:4px}
+
+  .prove-inner{padding:28px 36px 48px;display:flex;flex-direction:column;gap:20px}
+
+  /* SECTION 1 — Release header + Go/No-Go */
+  .release-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:18px;border-bottom:1px solid var(--p-border)}
+  .rh-left{flex:1;min-width:0}
+  .rh-eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--p-text-3);font-weight:700;margin-bottom:6px;display:inline-flex;align-items:center;gap:8px}
+  .rh-eyebrow .prove-badge{font-family:'JetBrains Mono';font-size:9.5px;color:var(--p-secondary);background:var(--p-secondary-bg);border:1px solid #DDD6FE;padding:2px 6px;border-radius:3px;letter-spacing:0.04em;font-weight:700;text-transform:uppercase;line-height:1}
+  .rh-name{font-family:'DM Sans';font-size:28px;line-height:34px;font-weight:700;color:var(--p-text-1);margin:0;letter-spacing:-0.01em}
+  .rh-meta{font-size:14px;line-height:20px;color:var(--p-text-2);margin-top:6px}
+  .rh-meta b{color:var(--p-text-1);font-weight:600;font-family:'JetBrains Mono'}
+  .rh-meta .sep{color:var(--p-text-4);margin:0 8px}
+
+  .gng{display:inline-flex;flex-direction:column;align-items:flex-end;gap:10px;flex:none}
+  .gng-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;font-family:'DM Sans';font-size:18px;font-weight:700;line-height:1;border:2px solid;letter-spacing:-0.01em}
+  .gng-pill.go{background:var(--p-pass-bg);color:var(--p-pass);border-color:var(--p-pass)}
+  .gng-pill svg{width:18px;height:18px}
+  .gng-meta{font-size:11px;color:var(--p-text-3);font-family:'JetBrains Mono';font-weight:500}
+
+  /* Secondary metrics row */
+  .scope-row{display:flex;align-items:center;gap:0;flex-wrap:wrap;padding:14px 0 4px}
+  .scope-stat{display:inline-flex;align-items:baseline;gap:6px;padding:0 14px;border-right:1px solid var(--p-border);font-size:13px;color:var(--p-text-2)}
+  .scope-stat:first-child{padding-left:0}
+  .scope-stat:last-child{border-right:0}
+  .scope-stat .v{color:var(--p-text-1);font-weight:600;font-family:'JetBrains Mono'}
+
+  .scope-chips{margin-left:auto;display:inline-flex;gap:8px;align-items:center}
+  .scope-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:5px;line-height:1;height:22px;border:1px solid;font-family:'Inter'}
+  .scope-chip.ok{background:var(--p-pass-bg);color:var(--p-pass);border-color:#A7F3D0}
+  .scope-chip.warn{background:var(--p-warn-bg);color:var(--p-warn);border-color:#FCD34D}
+  .scope-chip svg{width:11px;height:11px}
+  .scope-chip .arrow{font-family:'JetBrains Mono'}
+
+  /* SECTION 2 — Value tile */
+  .value-tile{background:var(--p-card);border:2px solid var(--p-primary);border-radius:14px;padding:28px;display:grid;grid-template-columns:1.4fr 1fr;gap:32px;box-shadow:0 1px 0 0 rgba(13,148,136,0.06)}
+
+  .vt-left{display:flex;flex-direction:column;gap:12px}
+  .vt-eyebrow{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--p-primary);font-weight:700;display:inline-flex;align-items:center;gap:8px}
+  .vt-eyebrow svg{width:11px;height:11px}
+  .vt-hero{font-family:'JetBrains Mono';font-size:54px;line-height:60px;font-weight:700;color:var(--p-text-1);letter-spacing:-0.02em;margin:0}
+  .vt-hero .pct{color:var(--p-primary)}
+  .vt-sub{font-size:15px;line-height:22px;color:var(--p-text-2);margin:0;max-width:520px}
+  .vt-sub b{color:var(--p-text-1);font-weight:600}
+
+  .vt-formula{background:var(--p-card-soft);border:1px solid var(--p-border);border-radius:8px;padding:12px 14px;font-family:'JetBrains Mono';font-size:11.5px;line-height:18px;color:var(--p-text-2);margin-top:6px}
+  .vt-formula .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:1px 0}
+  .vt-formula .row.sep{border-top:1px solid var(--p-border);margin-top:6px;padding-top:6px}
+  .vt-formula .row.bold{color:var(--p-text-1);font-weight:700}
+  .vt-formula .label{flex:1}
+  .vt-formula .v{color:var(--p-text-1);font-weight:600;text-align:right}
+  .vt-formula .roi-line{color:var(--p-primary);font-weight:700;font-size:12.5px}
+  .vt-note{font-size:11px;line-height:15px;color:var(--p-text-3);font-style:italic;margin-top:6px}
+  .vt-note b{color:var(--p-text-2);font-weight:600;font-style:normal;font-family:'JetBrains Mono'}
+
+  .vt-right{display:flex;flex-direction:column;justify-content:center;gap:14px;padding-left:28px;border-left:1px solid var(--p-border)}
+  .vt-cto-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--p-text-3);font-weight:700;display:inline-flex;align-items:center;gap:6px}
+  .vt-cto-text{font-size:15px;line-height:22px;color:var(--p-text-1);font-weight:500;font-style:italic;margin:0}
+  .vt-cto-text b{color:var(--p-primary);font-weight:700;font-style:normal}
+  .vt-cto-attribution{font-size:11px;color:var(--p-text-3);font-family:'JetBrains Mono';margin-top:4px}
+
+  /* SECTION 3 — Quality posture (3 cards) */
+  .three-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .p-card{background:var(--p-card);border:1px solid var(--p-border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px;min-height:180px}
+  .p-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .p-card-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--p-text-3);font-weight:700}
+  .p-card-trend{font-family:'JetBrains Mono';font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:4px;line-height:1;height:20px;border:1px solid}
+  .p-card-trend.up{background:var(--p-pass-bg);color:var(--p-pass);border-color:#A7F3D0}
+  .p-card-trend.down-good{background:var(--p-pass-bg);color:var(--p-pass);border-color:#A7F3D0}
+
+  .p-metric{font-family:'JetBrains Mono';font-size:36px;line-height:42px;font-weight:700;color:var(--p-text-1);letter-spacing:-0.02em;margin:0}
+  .p-metric .unit{font-size:18px;color:var(--p-text-3);font-weight:500;margin-left:4px}
+  .p-card-sub{font-size:13px;line-height:18px;color:var(--p-text-2);font-weight:500;margin:0}
+
+  /* Coverage breakdown bar */
+  .cov-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--p-card-soft);border:1px solid var(--p-border);margin-top:4px}
+  .cov-bar .seg{height:100%}
+  .cov-bar .seg.auto{background:var(--p-primary)}
+  .cov-bar .seg.manual{background:var(--p-text-3)}
+  .cov-bar .seg.uncov{background:var(--p-border)}
+  .cov-legend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--p-text-3);margin-top:6px;font-family:'Inter'}
+  .cov-legend .key{display:inline-flex;align-items:center;gap:5px}
+  .cov-legend .swatch{width:10px;height:10px;border-radius:2px}
+  .cov-legend .swatch.auto{background:var(--p-primary)}
+  .cov-legend .swatch.manual{background:var(--p-text-3)}
+  .cov-legend .swatch.uncov{background:var(--p-border)}
+  .cov-legend .v{color:var(--p-text-1);font-family:'JetBrains Mono';font-weight:600;margin-left:2px}
+
+  /* Defect density benchmark */
+  .benchmark{font-size:11px;color:var(--p-text-3);background:var(--p-card-soft);border:1px solid var(--p-border);border-radius:5px;padding:6px 10px;margin-top:auto;display:inline-flex;align-items:center;gap:6px}
+  .benchmark svg{width:10px;height:10px;color:var(--p-pass);flex:none}
+  .benchmark b{color:var(--p-text-2);font-family:'JetBrains Mono';font-weight:600}
+
+  /* Pass rate severity rows */
+  .severity-rows{display:flex;flex-direction:column;gap:5px;margin-top:auto}
+  .sev-row{display:grid;grid-template-columns:60px 1fr 36px;align-items:center;gap:8px;font-size:11px;color:var(--p-text-2)}
+  .sev-row .label{font-weight:500}
+  .sev-row .bar{height:5px;background:var(--p-card-soft);border-radius:999px;border:1px solid var(--p-border);overflow:hidden}
+  .sev-row .fill{height:100%;background:var(--p-primary)}
+  .sev-row .pct{font-family:'JetBrains Mono';font-weight:600;color:var(--p-text-1);text-align:right;font-size:11px}
+
+  /* SECTION 4 — Risk posture (2 cards) */
+  .two-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+  /* Open defects card */
+  .defect-block{background:var(--p-warn-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
+  .def-pill{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono';font-size:13px;font-weight:700;padding:5px 10px;border-radius:5px;line-height:1;height:26px;border:1px solid}
+  .def-pill.p0{background:var(--p-fail-bg);color:var(--p-fail);border-color:#FCA5A5}
+  .def-pill.p1{background:#FFEDD5;color:#C2410C;border-color:#FDBA74}
+  .def-pill.p2{background:var(--p-warn-bg);color:var(--p-warn);border-color:#FCD34D}
+  .def-pill .ct{font-size:15px;font-weight:800;margin-right:1px}
+  .def-pill .lvl{font-size:10px;letter-spacing:0.06em}
+  .def-target{font-size:11.5px;color:var(--p-text-2);margin-top:auto;line-height:16px;font-family:'Inter'}
+  .def-target b{color:var(--p-text-1);font-weight:600;font-family:'JetBrains Mono'}
+  .def-target .arrow{color:var(--p-pass);font-weight:700}
+
+  .def-link{font-size:12px;color:var(--p-secondary);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px}
+  .def-link:hover{color:var(--p-text-1)}
+  .def-link svg{width:11px;height:11px}
+
+  /* Readiness gates card */
+  .gates-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .gate-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--p-text-1);line-height:17px}
+  .gate-icon{width:18px;height:18px;border-radius:999px;background:var(--p-pass-bg);color:var(--p-pass);border:1.5px solid var(--p-pass);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .gate-icon svg{width:9px;height:9px}
+  .gate-name{font-weight:600;color:var(--p-text-1)}
+  .gate-detail{font-size:11px;color:var(--p-text-3);margin-left:auto;text-align:right}
+  .gates-summary{font-size:12px;color:var(--p-text-2);background:var(--p-pass-bg);border:1px solid #A7F3D0;border-radius:6px;padding:6px 10px;margin-top:4px;display:inline-flex;align-items:center;gap:6px;font-family:'Inter'}
+  .gates-summary svg{width:11px;height:11px;color:var(--p-pass)}
+  .gates-summary b{color:var(--p-pass);font-weight:700;font-family:'JetBrains Mono'}
+
+  /* SECTION 5 — Trend cards (3 mini-charts) */
+  .mini-chart{margin-top:auto;height:80px;width:100%;position:relative}
+  .mini-chart svg{width:100%;height:100%;display:block}
+  .mini-chart .annotation{font-size:10.5px;color:var(--p-text-3);font-style:italic;line-height:14px;margin-top:8px;font-family:'Inter'}
+
+  /* SECTION 6 — Recommendations panel */
+  .rec-panel{background:var(--p-secondary-bg);border:1px solid #DDD6FE;border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+  .rec-head{display:flex;align-items:center;gap:10px}
+  .rec-glyph{width:28px;height:28px;border-radius:7px;background:#DDD6FE;color:var(--p-secondary);border:1px solid #C4B5FD;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .rec-glyph svg{width:14px;height:14px}
+  .rec-title{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--p-text-1);margin:0}
+  .rec-tag{font-family:'JetBrains Mono';font-size:9.5px;color:var(--p-secondary);background:#EDE9FE;border:1px solid #C4B5FD;padding:2px 6px;border-radius:3px;letter-spacing:0.04em;font-weight:700;text-transform:uppercase;line-height:1;height:18px;display:inline-flex;align-items:center;margin-left:auto}
+
+  .rec-list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+  .rec-list li{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:19px;color:var(--p-text-1)}
+  .rec-list li::before{content:"";width:6px;height:6px;border-radius:999px;background:var(--p-secondary);flex:none;margin-top:7px}
+  .rec-list li b{color:var(--p-text-1);font-weight:600}
+  .rec-list li .pos{color:var(--p-pass);font-weight:600}
+  .rec-list li .code{font-family:'JetBrains Mono';font-size:12px;color:var(--p-secondary);background:rgba(124,58,237,0.10);padding:1px 5px;border-radius:3px}
+
+  /* SECTION 7 — Approval */
+  .approval{background:var(--p-card-soft);border:1px solid var(--p-border);border-radius:12px;padding:20px 24px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:24px;align-items:center}
+  .ap-col{display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--p-border);padding-right:24px}
+  .ap-col:nth-child(3){border-right:0}
+  .ap-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--p-text-3);font-weight:700}
+  .ap-name{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--p-text-1)}
+  .ap-av{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+  .ap-av.green{background:var(--p-primary-bg);color:var(--p-primary);border:1px solid var(--p-primary)}
+  .ap-av.amber{background:var(--p-warn-bg);color:var(--p-warn);border:1px solid #FCD34D}
+  .ap-role{font-size:11px;color:var(--p-text-3);font-family:'Inter'}
+  .ap-status{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;border:1px solid;line-height:1;height:22px;font-family:'Inter';width:fit-content;margin-top:4px}
+  .ap-status.approved{background:var(--p-pass-bg);color:var(--p-pass);border-color:#A7F3D0}
+  .ap-status.pending{background:var(--p-warn-bg);color:var(--p-warn);border-color:#FCD34D}
+  .ap-status svg{width:10px;height:10px}
+  .ap-decision{font-size:14px;color:var(--p-pass);font-weight:700;display:inline-flex;align-items:center;gap:6px}
+  .ap-decision svg{width:14px;height:14px}
+  .ap-conf{font-size:11.5px;color:var(--p-text-2);font-style:italic}
+
+  .ap-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .ap-btn{height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--p-border-strong);background:var(--p-card);color:var(--p-text-1);font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;line-height:1}
+  .ap-btn:hover{background:var(--p-card-soft);border-color:var(--p-text-3)}
+  .ap-btn.primary{background:var(--p-primary);color:#FFFFFF;border-color:var(--p-primary)}
+  .ap-btn.primary:hover{background:#0F766E;border-color:#0F766E}
+  .ap-btn svg{width:12px;height:12px}
+
+  /* Section title */
+  .sec-title{font-family:'DM Sans';font-size:13px;line-height:18px;font-weight:700;color:var(--p-text-1);margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.08em;display:inline-flex;align-items:center;gap:8px}
+  .sec-title .count{font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;color:var(--p-text-3);background:var(--p-card);padding:2px 7px;border-radius:999px;line-height:1;border:1px solid var(--p-border);text-transform:none;letter-spacing:0}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- DARK RAIL -->
+  <aside class="rail" role="navigation" aria-label="Primary">
+    <div class="rail-brand"><span class="rail-logo">Q</span><span class="rail-word">QA Nexus</span></div>
+
+    <a class="nav-item" href="#F08a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg></span><span>Home</span></a>
+
+    <div class="nav-section">Plan</div>
+    <a class="nav-item" href="#F14"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span><span>Requirements</span><span class="nav-count">142</span></a>
+    <a class="nav-item" href="#F15a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>Test Plans &amp; Cycles</span></a>
+    <a class="nav-item" href="#F17"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span>Test Cases</span><span class="nav-count">1,284</span></a>
+
+    <div class="nav-section">Author</div>
+    <a class="nav-item" href="#F18"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg></span><span>Test Suites</span><span class="nav-count">18</span></a>
+    <a class="nav-item" href="#F15"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>Knowledge Base</span><span class="nav-count">87</span></a>
+
+    <div class="nav-section">Run</div>
+    <a class="nav-item" href="#F19"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21"/></svg></span><span>Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" href="#F20"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg></span><span>Run Results</span></a>
+    <a class="nav-item" href="#F21"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><span>Defects / Failures</span><span class="nav-count" style="color:var(--fail)">67</span></a>
+    <a class="nav-item" href="#F23"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12l3 3 7-7"/></svg></span><span>Reports</span></a>
+    <a class="nav-item" href="#F24"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg></span><span>QA Value</span><span class="nav-badge">Lead+</span></a>
+    <a class="nav-item active" href="#F25" aria-current="page"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span><span>Executive Dashboard</span><span class="nav-badge">Lead+</span></a>
+
+    <div class="nav-section">Govern</div>
+    <a class="nav-item" href="#F26"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span><span>Agents</span></a>
+    <a class="nav-item" href="#F27"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span>Users &amp; Roles</span></a>
+    <a class="nav-item" href="#F28"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span>Settings &amp; Audit</span></a>
+  </aside>
+
+  <!-- MAIN -->
+  <section class="main">
+    <header class="topbar" role="banner">
+      <button class="proj-switch"><span class="proj-dot"></span><span>Iksula Commerce</span><span class="proj-meta">· main</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:2px"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>Search anywhere…<span class="kbd">⌘K</span></div>
+      <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
+      <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+      <div class="mode-toggle" title="Mode locked to Prove for executive dashboard">
+        <button>Operate</button>
+        <button>Review</button>
+        <button class="locked"><svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Prove</button>
+        <span class="locked-tag">Locked</span>
+      </div>
+      <div class="user-pill"><span class="user-av">YM</span><span class="user-name">Yogesh M.</span></div>
+    </header>
+
+    <!-- ════════ PROVE-MODE CONTENT (ivory canvas) ════════ -->
+    <div class="prove">
+      <div class="prove-inner">
+
+        <!-- SECTION 1 — Release header + Go/No-Go -->
+        <section class="release-head">
+          <div class="rh-left">
+            <div class="rh-eyebrow">
+              <span class="prove-badge">Prove · Boardroom</span>
+              <span style="color:var(--p-text-3)">Release · Quality &amp; Value Snapshot</span>
+            </div>
+            <h1 class="rh-name">R-2026-04-PaymentV2</h1>
+            <p class="rh-meta">Target ship date <b>Apr 28, 2026</b><span class="sep">·</span><b>5 days</b> remaining<span class="sep">·</span>Iksula Commerce Sprint 42</p>
+          </div>
+          <div class="gng">
+            <div class="gng-pill go">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              GO
+            </div>
+            <span class="gng-meta">Last updated · 2026-04-23 15:05 UTC</span>
+          </div>
+        </section>
+
+        <!-- Scope row -->
+        <div class="scope-row">
+          <span class="scope-stat"><span class="v">89</span>tickets</span>
+          <span class="scope-stat"><span class="v">156</span>test cases</span>
+          <span class="scope-stat"><span class="v">3</span>projects · Payment API · Dashboard · Admin Portal</span>
+          <div class="scope-chips">
+            <span class="scope-chip ok">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Stable · last 50 runs <span style="font-family:'JetBrains Mono';font-weight:700;margin-left:3px">92%</span> pass
+            </span>
+            <span class="scope-chip warn">
+              <span style="font-family:'JetBrains Mono';font-weight:700">2</span> P0 open · <span style="font-family:'JetBrains Mono';font-weight:700">8</span> P1 open
+              <span class="arrow" style="color:var(--p-pass);font-weight:700;margin-left:4px">↓ 3</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- SECTION 2 — Value tile -->
+        <section class="value-tile">
+          <div class="vt-left">
+            <div class="vt-eyebrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 7l7-5 7 5M5 17l7 5 7-5"/></svg>
+              ROI · This release
+            </div>
+            <p class="vt-hero"><span class="pct">342%</span> ROI</p>
+            <p class="vt-sub">QA &amp; AI generated <b>342% return</b> on AI infrastructure investment for this release. Conservative net is <b>242%</b> (excluding indirect benefits).</p>
+
+            <div class="vt-formula" aria-label="ROI formula breakdown">
+              <div class="row"><span class="label">Time saved</span><span class="v">184 h <span style="color:var(--p-text-3);font-weight:400">(23 human-days)</span></span></div>
+              <div class="row"><span class="label">Blended QA rate</span><span class="v">₹8,000 / hour</span></div>
+              <div class="row"><span class="label">Time value</span><span class="v">₹14.72 L · ~$18K</span></div>
+              <div class="row sep"><span class="label">+ Defects caught</span><span class="v">23 (21 pre-prod · 2 staging)</span></div>
+              <div class="row"><span class="label">+ Stage multiplier</span><span class="v">avg 50× (PRD cost model)</span></div>
+              <div class="row"><span class="label">+ Cost avoided</span><span class="v">₹9.2 L · defect + rework</span></div>
+              <div class="row sep bold"><span class="label">= Total QA value</span><span class="v">₹23.92 L · ~$29.5K</span></div>
+              <div class="row"><span class="label">− AI infra cost</span><span class="v">₹7 L · LLM + vector DB + compute</span></div>
+              <div class="row sep bold"><span class="label">= Net benefit</span><span class="v">₹16.92 L · ~$20.8K</span></div>
+              <div class="row roi-line"><span class="label">= Net ROI</span><span class="v">(16.92L / 7L) × 100 = 242%</span></div>
+            </div>
+            <p class="vt-note"><b>Note:</b> Headline 342% ROI includes indirect benefits (faster TTM, reduced hiring need, improved product quality perception — conservatively valued at <b>₹8.92 L</b>).</p>
+          </div>
+
+          <div class="vt-right">
+            <span class="vt-cto-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              One-line CTO summary
+            </span>
+            <p class="vt-cto-text">"AI-generated test cases cut authoring time by <b>50%</b>, caught <b>23 shipping defects</b> pre-release. <b>Justifies AI investment 3× over.</b>"</p>
+            <span class="vt-cto-attribution">— A4 narrative · approved by Sarah C. (QA Lead)</span>
+          </div>
+        </section>
+
+        <!-- SECTION 3 — Quality posture -->
+        <section>
+          <h2 class="sec-title">Quality posture <span class="count">3 metrics</span></h2>
+          <div class="three-grid">
+
+            <!-- Coverage -->
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Test coverage</span>
+                <span class="p-card-trend up">▲ 3% since sprint start</span>
+              </div>
+              <p class="p-metric">74<span class="unit">%</span></p>
+              <p class="p-card-sub">Automated coverage across 156 cases</p>
+              <div class="cov-bar">
+                <span class="seg auto" style="width:74%"></span>
+                <span class="seg manual" style="width:21%"></span>
+                <span class="seg uncov" style="width:5%"></span>
+              </div>
+              <div class="cov-legend">
+                <span class="key"><span class="swatch auto"></span>Automated <span class="v">74%</span></span>
+                <span class="key"><span class="swatch manual"></span>Manual <span class="v">21%</span></span>
+                <span class="key"><span class="swatch uncov"></span>Untested <span class="v">5%</span></span>
+              </div>
+            </article>
+
+            <!-- Defect density -->
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Defect density</span>
+                <span class="p-card-trend down-good">▼ 0.8 vs prior release</span>
+              </div>
+              <p class="p-metric">2.3<span class="unit">/ 1k LOC</span></p>
+              <p class="p-card-sub">Healthy zone · trending down</p>
+              <span class="benchmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+                Industry: <b>1–5</b> per 1k LOC · this release in healthy zone
+              </span>
+            </article>
+
+            <!-- Pass rate -->
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Overall pass rate</span>
+                <span class="p-card-trend up">▲ 2% since release branch</span>
+              </div>
+              <p class="p-metric">87<span class="unit">%</span></p>
+              <p class="p-card-sub">187 / 218 cases passed last 24h</p>
+              <div class="severity-rows">
+                <div class="sev-row"><span class="label">Smoke</span><div class="bar"><span class="fill" style="width:95%"></span></div><span class="pct">95%</span></div>
+                <div class="sev-row"><span class="label">Regression</span><div class="bar"><span class="fill" style="width:91%"></span></div><span class="pct">91%</span></div>
+                <div class="sev-row"><span class="label">Feature</span><div class="bar"><span class="fill" style="width:79%"></span></div><span class="pct">79%</span></div>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- SECTION 4 — Risk posture -->
+        <section>
+          <h2 class="sec-title">Risk posture <span class="count">2 dimensions</span></h2>
+          <div class="two-grid">
+
+            <!-- Open defects -->
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Open defects</span>
+                <span class="p-card-trend down-good">▼ 3 P1s resolved this week</span>
+              </div>
+              <div class="defect-block">
+                <span class="def-pill p0"><span class="ct">2</span><span class="lvl">P0</span></span>
+                <span class="def-pill p1"><span class="ct">8</span><span class="lvl">P1</span></span>
+                <span class="def-pill p2"><span class="ct">23</span><span class="lvl">P2</span></span>
+              </div>
+              <p class="def-target">
+                Target by ship: <b>0 P0</b><span style="color:var(--p-text-4);margin:0 5px">·</span><b>≤ 3 P1</b>
+                <span class="arrow" style="margin-left:6px">▼ on track</span>
+              </p>
+              <a class="def-link" href="#F21">View P0/P1 list<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            </article>
+
+            <!-- Readiness gates -->
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Release readiness gates</span>
+                <span class="p-card-trend up">5 of 5 passed</span>
+              </div>
+              <div class="gates-list">
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Core workflows e2e tested</span><span class="gate-detail">Payment · Settlement · Reporting</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Jira sync healthy</span><span class="gate-detail">2-way · 0 orphaned defects</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">AI review rails active</span><span class="gate-detail">A1 · A2 · A4 &gt; 80% conf</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Weekly reporting queued</span><span class="gate-detail">Exec report · Apr 27</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Pilot measurement dashboard ready</span><span class="gate-detail">F24 QA Value live</span></div>
+              </div>
+              <span class="gates-summary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+                <b>5 of 5 gates passed.</b> Release-ready.
+              </span>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- SECTION 5 — Trends -->
+        <section>
+          <h2 class="sec-title">4-week trends <span class="count">last 4 weeks</span></h2>
+          <div class="three-grid">
+
+            <!-- Defect Trend -->
+            <article class="p-card">
+              <div class="p-card-head"><span class="p-card-label">Defect trend</span><span class="p-card-trend down-good">▼ healthy</span></div>
+              <p class="p-metric" style="font-size:24px;line-height:30px">28 → <span style="color:var(--p-pass)">9</span></p>
+              <p class="p-card-sub">Defect resolution outpacing findings</p>
+              <div class="mini-chart">
+                <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                  <line x1="0" y1="20" x2="300" y2="20" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <line x1="0" y1="50" x2="300" y2="50" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <polyline points="20,15 110,30 200,55 280,68" fill="none" stroke="#0D9488" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                  <circle cx="20" cy="15" r="3.5" fill="#0D9488"/>
+                  <circle cx="110" cy="30" r="3.5" fill="#0D9488"/>
+                  <circle cx="200" cy="55" r="3.5" fill="#0D9488"/>
+                  <circle cx="280" cy="68" r="4.5" fill="#0D9488" stroke="#FAFAF8" stroke-width="2"/>
+                  <text x="20" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W1·28</text>
+                  <text x="110" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W2·22</text>
+                  <text x="200" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W3·14</text>
+                  <text x="280" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W4·9</text>
+                </svg>
+                <p class="annotation">Downward trend — resolution outpaces new findings.</p>
+              </div>
+            </article>
+
+            <!-- Pass Rate Trend -->
+            <article class="p-card">
+              <div class="p-card-head"><span class="p-card-label">Pass rate trend</span><span class="p-card-trend up">▲ stable</span></div>
+              <p class="p-metric" style="font-size:24px;line-height:30px">82% → <span style="color:var(--p-pass)">87%</span></p>
+              <p class="p-card-sub">Stable and improving · suite reliable</p>
+              <div class="mini-chart">
+                <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                  <line x1="0" y1="20" x2="300" y2="20" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <line x1="0" y1="50" x2="300" y2="50" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <rect x="15" y="50" width="50" height="20" fill="#0D9488" rx="2"/>
+                  <rect x="85" y="42" width="50" height="28" fill="#0D9488" rx="2"/>
+                  <rect x="155" y="32" width="50" height="38" fill="#0D9488" rx="2"/>
+                  <rect x="225" y="32" width="50" height="38" fill="#0D9488" rx="2"/>
+                  <text x="40" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W1·82%</text>
+                  <text x="110" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W2·85%</text>
+                  <text x="180" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W3·87%</text>
+                  <text x="250" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W4·87%</text>
+                </svg>
+                <p class="annotation">Stable and improving — test suite reliable.</p>
+              </div>
+            </article>
+
+            <!-- Velocity Trend -->
+            <article class="p-card">
+              <div class="p-card-head"><span class="p-card-label">Velocity trend</span><span class="p-card-trend up" style="background:var(--p-card-soft);color:var(--p-text-3);border-color:var(--p-border)">expected taper</span></div>
+              <p class="p-metric" style="font-size:24px;line-height:30px">156 → 89</p>
+              <p class="p-card-sub">Stabilization phase · final testing focus</p>
+              <div class="mini-chart">
+                <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                  <line x1="0" y1="20" x2="300" y2="20" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <line x1="0" y1="50" x2="300" y2="50" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <rect x="15" y="30" width="50" height="40" fill="#0D9488" rx="2"/>
+                  <rect x="85" y="22" width="50" height="48" fill="#0D9488" rx="2"/>
+                  <rect x="155" y="34" width="50" height="36" fill="#0D9488" rx="2"/>
+                  <rect x="225" y="48" width="50" height="22" fill="#0D9488" rx="2" opacity="0.7"/>
+                  <text x="40" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W1·140</text>
+                  <text x="110" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W2·156</text>
+                  <text x="180" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W3·134</text>
+                  <text x="250" y="78" fill="#94A3B8" font-family="Inter" font-size="9" text-anchor="middle">W4·89</text>
+                </svg>
+                <p class="annotation">Velocity ramping down — expected as release stabilizes.</p>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- SECTION 6 — Recommendations (A4) -->
+        <section class="rec-panel" aria-labelledby="rec-h">
+          <div class="rec-head">
+            <span class="rec-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span>
+            <h3 id="rec-h" class="rec-title">Pre-ship recommendations</h3>
+            <span class="rec-tag">A4 narrative · v1.4</span>
+          </div>
+          <ul class="rec-list">
+            <li><span><b>Flaky test stabilization complete.</b> Flake rate <span class="code">7% → 2%</span>. <span class="code">payment_retry</span> and <span class="code">checkout_timeout</span> now use 8-second timeout. <b>No further action.</b></span></li>
+            <li><span><b>P1 admin_cache_clear occasionally hangs.</b> Root cause: stale cache in environment. Recommendation: clear test env cache <b>1 hour before smoke test Apr 28</b>. Patch ready for v2.1.</span></li>
+            <li><span><b>Coverage gap.</b> 5% untested (legacy error handlers). Risk <b>low</b>. Recommendation: add coverage in v2.1 sprint. <b>Does not block release.</b></span></li>
+            <li><span><span class="pos">+ Positive signal:</span> A2 dedup caught <b>24 duplicate test cases</b>, preventing <b>12 hours</b> of redundant test runs. Recommend expanding A2 across projects.</span></li>
+          </ul>
+        </section>
+
+        <!-- SECTION 7 — Approval & Sign-off -->
+        <section class="approval">
+          <div class="ap-col">
+            <span class="ap-label">QA Lead approval</span>
+            <span class="ap-name"><span class="ap-av green">SC</span>Sarah Chen</span>
+            <span class="ap-role">QA Lead · Iksula Commerce</span>
+            <span class="ap-status approved">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Approved · Apr 21, 3:45 PM
+            </span>
+          </div>
+          <div class="ap-col">
+            <span class="ap-label">CTO review</span>
+            <span class="ap-name"><span class="ap-av amber">MR</span>Michael Rodriguez</span>
+            <span class="ap-role">CTO · Iksula Services</span>
+            <span class="ap-status pending">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Pending · awaiting review
+            </span>
+          </div>
+          <div class="ap-col">
+            <span class="ap-label">Final decision</span>
+            <span class="ap-decision">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Release-ready for Apr 28 ship
+            </span>
+            <span class="ap-conf">High confidence · all 5 gates passed · no blockers</span>
+          </div>
+          <div class="ap-actions">
+            <button class="ap-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download PDF</button>
+            <button class="ap-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Share to Slack</button>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </section>
+</div>
+
+<!--
+VALIDATION (F25 Executive Dashboard — Prove mode locked)
+ 1. 1600×1024 split shell: dark workspace chrome (rail + topbar) preserved · main content area flips to ivory canvas #FAFAF8 with white cards and dark text · OK
+ 2. Mode toggle in topbar shows Prove SELECTED with lock icon + "LOCKED" violet tag (mode is forced for this frame, no toggle interaction) · OK
+ 3. Rail: Executive Dashboard active under ANALYSE with teal accent + "Lead+" violet badge (role-gated, hidden from QA Engineer per spec) · OK
+ 4. Section 1 — Release header: "Prove · Boardroom" violet badge + R-2026-04-PaymentV2 release name DM Sans 28 + meta with ship date Apr 28 · 5 days remaining · GO green pill with checkmark + last updated timestamp · scope row (89 tickets / 156 cases / 3 projects) + Stable green chip + "2 P0 · 8 P1 ↓ 3" amber chip · OK
+ 5. Section 2 — Value tile (white card with 2px teal border): "ROI · This release" eyebrow + 342% hero metric in JetBrains Mono 54 + sub-narrative + ROI formula breakdown (10 rows: time saved → blended rate → time value → defects caught → stage multiplier → cost avoided → total QA value → AI infra cost → net benefit → net ROI 242%) + indirect benefits note + right column "One-line CTO summary" italic with 50%/23 emphasis + A4 attribution · OK
+ 6. Section 3 — Quality posture (3 cards): Coverage 74% with green up trend + 3-segment cov bar (auto/manual/uncov) + legend · Defect density 2.3 / 1k LOC with green down trend + industry benchmark · Pass rate 87% with green up trend + 3 severity rows (Smoke 95% · Regression 91% · Feature 79%) · OK
+ 7. Section 4 — Risk posture (2 cards): Open defects card with 3 severity pills (P0 red 2 · P1 orange 8 · P2 yellow 23) + target line · Readiness gates card with 5 green ✓ rows + "5 of 5 gates passed · Release-ready" green summary · OK
+ 8. Section 5 — Trends (3 cards): Defect 28→9 with mini line chart · Pass rate 82%→87% with mini bar chart · Velocity 156→89 with mini bar chart (last bar dimmed) · each with annotation italic · OK
+ 9. Section 6 — Recommendations panel (violet-tinted A4 surface): violet ✨ glyph + "Pre-ship recommendations" + "A4 narrative · v1.4" tag + 4 bulleted recommendations (flaky stabilization done · admin_cache_clear patch · coverage gap low · A2 dedup positive signal in green) with violet inline code refs · OK
+10. Section 7 — Approval (gray card): 3 columns + actions · Sarah Chen QA Lead Approved Apr 21 3:45 PM (green) · Michael Rodriguez CTO Pending (amber) · Final "Release-ready for Apr 28 ship" green decision + confidence note · Download PDF teal-primary + Share to Slack ghost · OK
+11. Anti-drift COLOR DISCIPLINE for Prove mode (light palette):
+    - Canvas ivory #FAFAF8 (main content) · cards white #FFFFFF · text dark slate #0F172A → #94A3B8 · borders #E5E7EB
+    - Workspace chrome (rail + topbar) preserves dark canvas tokens (consistency with rest of system)
+    - Teal preserved as primary system accent on ivory: ROI hero %, value tile border, GO pill stays semantic green, scope chips, primary CTA "Download PDF" filled teal #0D9488
+    - Violet preserved for AI surfaces on ivory: Prove badge, A4 narrative panel (violet tinted #EDE9FE bg + violet glyph + violet inline code), A4 narrative tag
+    - Semantic palette adapted to ivory: green pass uses #10B981 with #D1FAE5 bg · red fail uses #DC2626 with #FEE2E2 bg · amber #D97706 with #FEF3C7 bg · info #2563EB with #DBEAFE bg
+    - Gates green checkmarks in tinted backgrounds for boardroom-friendly contrast · OK
+12. Typography: DM Sans 28 release name + DM Sans 15 panel titles · JetBrains Mono 54 hero ROI metric + 36 quality metric · Inter 14 body · monospace formula breakdown · all dates and counts in JetBrains Mono · OK
+13. AI provenance honored: A4 narrative tag on recommendations · A4 attribution on CTO summary · violet ✨ glyph + violet code refs throughout AI surfaces · OK
+14. No PM3 features (no SAML/PAT/cloud-grid) · No MD3 · No Tailwind config · Hex hardcoded · :focus-visible violet 2px (workspace) · prefers-reduced-motion respected · OK
+-->
+</body>
+</html>

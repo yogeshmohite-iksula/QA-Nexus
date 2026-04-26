@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — What needs my attention?</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--primary:#2DD4BF;--primary-600:#14B8A6;
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+    --ai-soft-2:rgba(167,139,250,0.04);
+    --pass-soft:rgba(52,211,153,0.10);
+    --fail-soft:rgba(248,113,113,0.10);
+    --warn-soft:rgba(251,191,36,0.10);
+    --info-soft:rgba(96,165,250,0.10);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  .bg-canvas{background:var(--canvas)}.bg-base{background:var(--base)}.bg-raised{background:var(--raised)}.bg-overlay{background:var(--overlay)}
+  .text-t1{color:var(--t1)}.text-t2{color:var(--t2)}.text-t3{color:var(--t3)}.text-t4{color:var(--t4)}
+  .r-sm{border-radius:4px}.r-md{border-radius:6px}.r-lg{border-radius:10px}.r-xl{border-radius:14px}
+
+  .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1)}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:5px;bottom:5px;width:3px;background:var(--secondary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-section{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8A94A6;padding:0 10px;margin:18px 0 6px;font-weight:600}
+  .count{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:1px 6px;border-radius:999px}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;white-space:nowrap}
+  .chip.ok{background:var(--pass-soft);color:var(--pass);border-color:color-mix(in srgb,var(--pass) 30%,transparent)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+  .chip.bad{background:var(--fail-soft);color:var(--fail);border-color:color-mix(in srgb,var(--fail) 30%,transparent)}
+  .chip.info{background:var(--info-soft);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+  .chip.ai{background:var(--ai-soft);color:var(--secondary);border-color:color-mix(in srgb,var(--secondary) 35%,transparent)}
+  .chip.teal{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,transparent)}
+
+  .kbd{font-family:"JetBrains Mono",monospace;font-size:10.5px;border:1px solid var(--border);background:var(--base);color:var(--t2);padding:1px 5px;border-radius:4px;line-height:14px;display:inline-block}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t1);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#06262A;font-weight:600}
+  .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600)}
+  .btn-teal-outline{color:var(--primary);border-color:color-mix(in srgb,var(--primary) 45%,transparent);background:transparent}
+  .btn-teal-outline:hover{background:var(--primary-soft)}
+
+  .card{background:var(--base);border:1px solid var(--border);border-radius:10px}
+
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:32px}
+  .seg button{height:24px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--overlay);color:var(--t1)}
+  .seg button.dis{color:var(--t4);cursor:not-allowed}
+
+  .lane{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+  .lane-ai{background:var(--secondary)}
+  .lane-high{background:var(--pass)}
+  .lane-med{background:var(--warn)}
+  .lane-low{background:var(--fail)}
+
+  .aglyph{width:22px;height:22px;border-radius:6px;background:var(--ai-soft);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:10.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--secondary) 30%,transparent);flex:none}
+
+  .av{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:10.5px;font-weight:600;color:#06131A;flex:none}
+
+  .pulse{animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:0.6}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+
+  .qtab{padding:8px 0;margin-right:20px;color:var(--t3);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;line-height:18px}
+  .qtab.on{color:var(--t1);border-bottom-color:var(--primary)}
+  .qtab .n{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t4)}
+  .qtab.on .n{color:var(--primary)}
+
+  /* worklist */
+  .wrow{position:relative;display:flex;align-items:center;gap:12px;height:64px;padding:0 14px 0 18px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+  .wrow:hover{background:#141B29}
+
+  /* Evidence thread — 2-col: 32px gutter (glyph + connector) + content */
+  .ev-row{display:flex;gap:0;position:relative;padding-top:12px;padding-bottom:16px}
+  .ev-gutter{width:32px;flex:none;position:relative;display:flex;justify-content:center;padding-top:4px}
+  .ev-gutter .aglyph{position:relative;z-index:2}
+  .ev-connector{position:absolute;left:50%;transform:translateX(-0.5px);top:34px;bottom:-12px;width:1px;background:#2A3347;transition:background 0.15s ease}
+  .ev-row:hover .ev-connector{background:var(--secondary)}
+  .ev-row:last-child .ev-connector{display:none}
+  .ev-content{flex:1;min-width:0;padding-left:16px}
+  .ev-chip{display:inline-flex;align-items:center;height:20px;padding:3px 8px;border-radius:3px;background:var(--raised);border:1px solid var(--border);color:var(--t2);font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:400;line-height:14px}
+
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  #stage{width:1600px;margin:0 auto;position:relative}
+</style>
+</head>
+<body>
+<div id="stage" class="bg-canvas" style="min-height:1024px;position:relative">
+
+  <!-- TOP BAR -->
+  <header class="h-14 flex items-center gap-3 px-5 bg-base" style="border-bottom:1px solid var(--border)">
+    <a class="flex items-center gap-2.5 mr-1">
+      <svg viewBox="0 0 22 22" width="22" height="22" fill="none">
+        <path d="M8.5 2.5h5M9.5 2.5v4.2L5 15.2a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4.5-8.5V2.5" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="9.7" cy="13" r="0.9" fill="#A78BFA"/><circle cx="13.3" cy="15.3" r="0.7" fill="#2DD4BF"/><circle cx="11" cy="11.2" r="0.6" fill="#A78BFA"/>
+      </svg>
+      <span class="display text-t1" style="font-size:15px;font-weight:700;letter-spacing:-0.01em">QA Nexus</span>
+    </a>
+    <button class="flex items-center gap-2 h-9 px-3 r-md ml-1" style="border:1px solid var(--border);background:var(--raised)">
+      <span class="w-5 h-5 r-sm" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA)"></span>
+      <span class="text-t1 text-[13px] font-medium">Iksula Commerce</span>
+      <span class="text-t4 text-[13px] mono">·</span>
+      <span class="text-t3 text-[13px] mono">main</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="ml-1"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="flex-1 flex justify-center">
+      <button class="flex items-center gap-3 h-9 px-3 r-md w-[520px] text-t3 text-[13px]" style="border:1px solid var(--border);background:var(--canvas)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Search cases, defects, runs, docs…</span>
+        <span class="ml-auto flex items-center gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+      </button>
+    </div>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised relative" style="border:1px solid var(--border)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.2L3 11h10l-1-2.8V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.3"/></svg>
+      <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background:var(--secondary)"></span>
+    </button>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 9.5A5 5 0 0 1 6.5 3a1 1 0 0 0-1.2-1.3A6 6 0 1 0 14.3 10.7 1 1 0 0 0 13 9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+    <div class="seg"><button class="on">Operate</button><button>Review</button><button class="dis" title="Available for Lead+ roles">Prove 🔒</button></div>
+    <button class="flex items-center gap-2 h-9 pl-1 pr-2 r-md hover:bg-raised" style="border:1px solid var(--border)">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">RK</span>
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <div class="flex">
+    <!-- LEFT RAIL (shortened — no QA Value, no Govern) -->
+    <nav class="w-[272px] bg-base flex flex-col px-4 py-4 flex-none" style="border-right:1px solid var(--border);min-height:1080px">
+      <a class="nav-item active" style="margin-bottom:2px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8l5.5-5 5.5 5v5a1 1 0 0 1-1 1H9v-4H7v4H3.5a1 1 0 0 1-1-1V8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Home</span></a>
+      <div class="nav-section">Plan</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9H4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Requirements</span><span class="count">142</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6h11M5.5 3v10" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3.5l2.5 2.5L2 8.5M2 9.5L4.5 12 2 14.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 6h7M6.5 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Cases</span><span class="count">1,284</span></a>
+      <div class="nav-section">Author</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Suites</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h8l2 2v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Knowledge Base</span></a>
+      <a class="nav-item disabled" title="Coming in v1.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5L2 8l3 4.5M11 3.5L14 8l-3 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Automation Studio</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t4)">v1.5</span></a>
+      <a class="nav-item disabled" title="Coming in v1.5"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M3 4v4c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8v4c0 1.1 2.2 2 5 2s5-.9 5-2V8" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Data &amp; Mocks</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t4)">v1.5</span></a>
+      <div class="nav-section">Run</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5v9l7-4.5-7-4.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Runs &amp; Sessions</span><span class="count" style="color:var(--primary)">1 live</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="2.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Environments</span></a>
+      <div class="nav-section">Analyse</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 12.5L6 8.5l3 2 4.5-5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Run Results</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Defects / Failures</span><span class="count" style="color:var(--fail)">2</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 10l2-2 2 1.5 3-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Reports</span></a>
+      <!-- QA Value HIDDEN for QA Engineer -->
+      <!-- ENTIRE GOVERN SECTION HIDDEN for QA Engineer -->
+
+      <div class="mt-auto pt-3" style="border-top:1px solid var(--border)">
+        <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 6.5a1.5 1.5 0 0 1 3 0c0 1-1.5 1.2-1.5 2.3M8 11v.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Support</span></a>
+        <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 14c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Account</span></a>
+        <div class="flex items-center gap-2.5 px-2.5 py-2 r-md mt-2" style="border:1px solid var(--border);background:var(--raised)">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">RK</span>
+          <div class="flex-1 min-w-0"><div class="text-t1 text-[12.5px] font-medium leading-tight">Rahul K</div><div class="mono text-[10px] mt-0.5" style="color:#8A94A6">QA_ENGINEER</div></div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="flex-1 min-w-0" style="padding:28px 28px 48px">
+
+      <!-- REGION 1 — QUESTION HEADER -->
+      <div class="flex items-start justify-between gap-6">
+        <div class="min-w-0 flex-1">
+          <h1 class="display" style="font-size:30px;line-height:38px;font-weight:500;color:var(--t1)">What needs your attention right now?</h1>
+          <p class="mt-2" style="font-size:15px;line-height:22px;color:var(--t2)">
+            <span class="text-t1 font-medium">3 AI drafts</span> to review ·
+            <span class="text-t1 font-medium">1 run</span> in flight ·
+            <span class="text-t1 font-medium">2 defects</span> triaging ·
+            <span style="color:var(--pass)">Sprint 42 is on track</span>
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-none flex-wrap justify-end max-w-[460px]">
+          <span class="chip ai" style="height:24px"><span class="w-1.5 h-1.5 rounded-full pulse" style="background:var(--secondary)"></span><span class="aglyph" style="width:16px;height:16px;font-size:9px">A1</span>is thinking…</span>
+          <span class="chip teal" style="height:24px">Sprint 42 · Day 9 of 14</span>
+          <span class="chip" style="height:24px;color:var(--t3)">Thu · 2026-04-23 · 09:14 IST</span>
+        </div>
+      </div>
+
+      <!-- REGION 2 — OUTCOME BOARD -->
+      <div class="grid gap-4 mt-6" style="grid-template-columns:repeat(4,1fr)">
+
+        <!-- Action queue -->
+        <div class="card" style="padding:20px 20px 16px">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[11px] font-semibold uppercase" style="color:var(--t3);letter-spacing:0.08em">Action queue</span>
+            <span class="chip ok" style="height:20px;font-size:10.5px"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>+2</span>
+          </div>
+          <div class="flex items-end justify-between mt-3">
+            <div class="display" style="font-size:40px;line-height:44px;font-weight:700;letter-spacing:-0.02em">6<span style="font-size:20px;color:var(--t3);font-weight:500;margin-left:6px">items</span></div>
+            <svg width="76" height="28" viewBox="0 0 76 28" fill="none" class="flex-none">
+              <g fill="#2DD4BF"><rect x="0" y="18" width="6" height="10" rx="1"/><rect x="10" y="14" width="6" height="14" rx="1"/><rect x="20" y="20" width="6" height="8" rx="1"/><rect x="30" y="12" width="6" height="16" rx="1"/><rect x="40" y="8" width="6" height="20" rx="1"/><rect x="50" y="14" width="6" height="14" rx="1"/><rect x="60" y="4" width="6" height="24" rx="1"/></g>
+            </svg>
+          </div>
+          <div class="text-[11.5px] mt-2" style="color:var(--t2)">3 AI reviews · 2 clarifications · 1 defect triage</div>
+          <div class="mt-3 pt-3" style="border-top:1px solid var(--border)"><a class="text-[12px] font-medium flex items-center gap-1" style="color:var(--primary)">Work through queue <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+        </div>
+
+        <!-- Active runs -->
+        <div class="card" style="padding:20px 20px 16px">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[11px] font-semibold uppercase" style="color:var(--t3);letter-spacing:0.08em">Active runs</span>
+            <span class="chip" style="height:20px;font-size:10px;color:var(--pass);background:var(--pass-soft);border-color:color-mix(in srgb,var(--pass) 30%,transparent)"><span class="w-1.5 h-1.5 rounded-full pulse" style="background:var(--pass)"></span>LIVE</span>
+          </div>
+          <div class="mt-3">
+            <div class="mono text-[11px] text-t3">R-2026-04-23-B</div>
+            <div class="text-[13px] text-t1 mt-0.5 font-medium">Checkout Gift Cards suite</div>
+            <div class="mono text-[11px] mt-1" style="color:var(--t2)"><span class="text-t1">142</span> / 218 cases · <span class="text-t1">67%</span></div>
+          </div>
+          <div class="mt-2 h-1.5 r-sm overflow-hidden flex" style="background:var(--raised)">
+            <div style="width:58%;background:#34D399"></div>
+            <div style="width:6%;background:#FBBF24"></div>
+            <div style="width:3%;background:#F87171"></div>
+            <div style="width:15%;background:#2DD4BF"></div>
+          </div>
+          <div class="flex items-center gap-3 mt-1.5 text-[10px]" style="color:var(--t3)"><span style="color:var(--pass)">126 pass</span><span style="color:var(--warn)">13 flaky</span><span style="color:var(--fail)">3 fail</span><span>· 76 left</span></div>
+          <div class="mt-3 pt-3" style="border-top:1px solid var(--border)"><a class="text-[12px] font-medium flex items-center gap-1" style="color:var(--primary)">Open Run Console <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+        </div>
+
+        <!-- My release risk -->
+        <div class="card" style="padding:20px 20px 16px">
+          <div class="flex items-center justify-between">
+            <span class="mono text-[11px] font-semibold uppercase" style="color:var(--t3);letter-spacing:0.08em">My work — release risk</span>
+            <span class="chip warn" style="height:20px;font-size:10px"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--warn)"></span>AMBER</span>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <div class="mono text-[11px] text-t3">R-2026-04-Sprint-42</div>
+            <span class="text-[11px] text-t3">·</span>
+            <div class="text-[11.5px] font-medium text-t1">ships in 5 days</div>
+          </div>
+          <div class="mt-3 flex flex-col gap-1.5">
+            <div class="flex items-center gap-2 text-[12px]"><span class="w-1.5 h-1.5 rounded-full flex-none" style="background:var(--warn)"></span><span class="mono text-t2">TC-PAY-0189</span><span class="text-t3">flaky</span></div>
+            <div class="flex items-center gap-2 text-[12px]"><span class="w-1.5 h-1.5 rounded-full flex-none" style="background:var(--fail)"></span><span class="mono text-t2">TC-CHK-0042</span><span class="text-t3">failing nightly</span></div>
+          </div>
+          <div class="mt-3 pt-3" style="border-top:1px solid var(--border)"><a class="text-[12px] font-medium flex items-center gap-1" style="color:var(--primary)">Review flaky tests <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+        </div>
+
+        <!-- AI narrative -->
+        <div class="relative card" style="padding:20px 20px 16px 22px;background:linear-gradient(180deg,rgba(167,139,250,0.06),transparent 60%)">
+          <div class="lane lane-ai"></div>
+          <div class="flex items-center justify-between">
+            <span class="mono text-[11px] font-semibold uppercase" style="color:var(--secondary);letter-spacing:0.08em">AI narrative</span>
+            <div class="flex gap-1"><span class="aglyph" style="width:18px;height:18px;font-size:9px">A1</span><span class="aglyph" style="width:18px;height:18px;font-size:9px">A2</span><span class="aglyph" style="width:18px;height:18px;font-size:9px">A4</span></div>
+          </div>
+          <div class="mt-3 text-[15px] font-medium" style="color:var(--t1);line-height:20px">A1 drafted <span style="color:var(--secondary)">8 cases</span> from ACM-881</div>
+          <div class="text-[11.5px] mt-2" style="color:var(--t2);line-height:17px">Ready for your review · <span class="mono text-t1">0.91</span> avg confidence · <span style="color:var(--secondary)">2 marked likely dupes</span> by A2</div>
+          <div class="mt-3 pt-3" style="border-top:1px solid color-mix(in srgb,var(--secondary) 18%,var(--border))"><a class="text-[12px] font-medium flex items-center gap-1" style="color:var(--primary)">Review drafts <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+        </div>
+      </div>
+
+      <!-- REGION 3 — WORK QUEUE -->
+      <section class="mt-8">
+        <div class="flex items-center gap-3">
+          <h2 class="display" style="font-size:22px;font-weight:500">Your queue</h2>
+          <span class="chip" style="height:22px;color:var(--t2);background:var(--raised)">6 items</span>
+          <div class="ml-auto flex items-center gap-2">
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t2)">Sort: Due date <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <label class="flex items-center gap-1.5 text-[12px] text-t3 cursor-pointer"><span class="w-7 h-4 r-sm relative flex items-center" style="background:var(--raised);border:1px solid var(--border)"><span class="w-2.5 h-2.5 rounded-full absolute left-0.5" style="background:var(--t4)"></span></span>Dense mode</label>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-0" style="border-bottom:1px solid var(--border)">
+          <button class="qtab on">All <span class="n">6</span></button>
+          <button class="qtab">AI reviews <span class="n">3</span></button>
+          <button class="qtab">Clarifications <span class="n">2</span></button>
+          <button class="qtab">Defect triage <span class="n">1</span></button>
+          <div class="ml-auto text-[11.5px] text-t3 mb-2 flex items-center gap-2"><span class="w-4 h-4 r-sm flex-none" style="border:1px solid var(--border-strong)"></span>0 of 6 selected · <a class="text-t2 hover:text-t1">Select all</a></div>
+        </div>
+
+        <div class="mt-3 flex flex-col gap-1.5">
+
+          <!-- Row 1 AI review high -->
+          <div class="wrow" style="padding-left:22px">
+            <div class="lane lane-ai"></div>
+            <span class="w-[18px] h-[18px] r-sm flex-none" style="border:1.5px solid var(--border-strong)"></span>
+            <span class="w-5 h-5 rounded-full flex-none" style="background:var(--ai-soft);border:1.5px solid var(--secondary)"></span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[14px] text-t1 font-medium truncate">Review 8 A1-drafted cases for ACM-881 "Gift-card split checkout"</span>
+              </div>
+              <div class="flex items-center gap-2 mt-1 text-[11.5px]" style="color:var(--t3)">
+                <span class="chip ai mono" style="height:18px;font-size:10px;padding:0 6px">A1</span>
+                <span class="chip ok mono" style="height:18px;font-size:10px;padding:0 6px">92%</span>
+                <span>Iksula Commerce / Checkout / Payments</span><span class="text-t4">·</span>
+                <span>drafted 18 min ago</span><span class="text-t4">·</span>
+                <span>0 duplicates flagged</span>
+              </div>
+            </div>
+            <svg width="60" height="18" viewBox="0 0 60 18" fill="none" class="flex-none"><polyline points="0,14 10,12 20,10 30,8 40,5 50,4 60,2" stroke="#2DD4BF" stroke-width="1.4" fill="none"/></svg>
+            <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Accept all</button>
+            <button class="btn btn-teal-outline" style="height:28px;padding:0 10px;font-size:12px">Open Review</button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px" title="Pin"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2h4l-.5 4 2 1.5-4 .5v4l-1 1.5L5.5 12v-4l-4-.5 2-1.5L3 2h3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg></button>
+          </div>
+
+          <!-- Row 2 Clarification medium amber -->
+          <div class="wrow" style="padding-left:22px">
+            <div class="lane lane-med"></div>
+            <span class="w-[18px] h-[18px] r-sm flex-none" style="border:1.5px solid var(--border-strong)"></span>
+            <span class="w-5 h-5 rounded-full flex-none" style="background:var(--ai-soft);border:1.5px solid var(--secondary);position:relative"><span style="position:absolute;inset:4px;border-radius:999px;border:1.5px solid var(--secondary);border-top-color:transparent"></span></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px] text-t1 font-medium truncate">A1 has 2 clarification questions on "Cart API RTM rows"</div>
+              <div class="flex items-center gap-2 mt-1 text-[11.5px]" style="color:var(--t3)">
+                <span class="chip ai mono" style="height:18px;font-size:10px;padding:0 6px">A1</span>
+                <span class="chip warn mono" style="height:18px;font-size:10px;padding:0 6px">74%</span>
+                <span>Iksula Commerce / Cart / API</span><span class="text-t4">·</span>
+                <span>asked 1h ago</span><span class="text-t4">·</span>
+                <span style="color:var(--warn)">awaiting your answer</span>
+              </div>
+            </div>
+            <span class="chip warn" style="height:20px;font-size:10px">2 questions</span>
+            <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Answer questions</button>
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t3)">Dismiss</button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px" title="Pin"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2h4l-.5 4 2 1.5-4 .5v4l-1 1.5L5.5 12v-4l-4-.5 2-1.5L3 2h3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg></button>
+          </div>
+
+          <!-- Row 3 Defect triage (no lane — not AI-generated row) -->
+          <div class="wrow">
+            <span class="w-[18px] h-[18px] r-sm flex-none" style="border:1.5px solid var(--border-strong)"></span>
+            <span class="flex-none" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3l7.5 13h-15z" fill="rgba(248,113,113,0.14)" stroke="#F87171" stroke-width="1.4" stroke-linejoin="round"/><path d="M10 8v4M10 14v0.2" stroke="#F87171" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px] text-t1 font-medium truncate"><span class="mono text-[13px] mr-1.5" style="color:var(--t3)">PAY-1472</span>Checkout 3DS Firefox — A4 classified as App Bug</div>
+              <div class="flex items-center gap-2 mt-1 text-[11.5px]" style="color:var(--t3)">
+                <span class="chip bad mono" style="height:18px;font-size:10px;padding:0 6px">P1 · open</span>
+                <span class="chip ai mono" style="height:18px;font-size:10px;padding:0 6px">A4 · app-bug · 87%</span>
+                <span>Priya S assigned</span><span class="text-t4">·</span>
+                <span>6h ago</span><span class="text-t4">·</span>
+                <span>Sprint 42</span>
+              </div>
+            </div>
+            <span class="av" style="background:#FBBF24;width:20px;height:20px;font-size:9px">PS</span>
+            <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Review RCA</button>
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t3)">Add comment</button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2h4l-.5 4 2 1.5-4 .5v4l-1 1.5L5.5 12v-4l-4-.5 2-1.5L3 2h3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg></button>
+          </div>
+
+          <!-- Row 4 AI review high teal A2 -->
+          <div class="wrow" style="padding-left:22px">
+            <div class="lane lane-ai"></div>
+            <span class="w-[18px] h-[18px] r-sm flex-none" style="border:1.5px solid var(--border-strong)"></span>
+            <span class="w-5 h-5 rounded-full flex-none" style="background:var(--ai-soft);border:1.5px solid var(--secondary)"></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px] text-t1 font-medium truncate">Review 3 A2-flagged duplicate cases in Login module</div>
+              <div class="flex items-center gap-2 mt-1 text-[11.5px]" style="color:var(--t3)">
+                <span class="chip ai mono" style="height:18px;font-size:10px;padding:0 6px">A2</span>
+                <span class="chip ok mono" style="height:18px;font-size:10px;padding:0 6px">88%</span>
+                <span>3 dupes found · Iksula Commerce / Auth &amp; Identity / Login</span><span class="text-t4">·</span>
+                <span>flagged 32 min ago</span><span class="text-t4">·</span>
+                <span class="mono">threshold ≥ 0.82</span>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Review dupes</button>
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t3)">Not dupe</button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2h4l-.5 4 2 1.5-4 .5v4l-1 1.5L5.5 12v-4l-4-.5 2-1.5L3 2h3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg></button>
+          </div>
+
+          <!-- Row 5 Assigned (no lane) -->
+          <div class="wrow">
+            <span class="w-[18px] h-[18px] r-sm flex-none" style="border:1.5px solid var(--border-strong)"></span>
+            <span class="w-5 h-5 r-sm flex-none" style="background:var(--primary-soft);border:1.5px solid var(--primary)"></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px] text-t1 font-medium truncate">Run Checkout regression suite for <span class="mono">PR #1847</span> (Priya S revert)</div>
+              <div class="flex items-center gap-2 mt-1 text-[11.5px]" style="color:var(--t3)">
+                <span class="mono text-t2">42 cases</span><span class="text-t4">·</span>
+                <span>target env: <span class="mono text-t2">staging</span></span><span class="text-t4">·</span>
+                <span>assigned 2h ago by</span>
+                <span class="flex items-center gap-1"><span class="av" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);width:14px;height:14px;font-size:7.5px;color:#fff">YM</span>Yogesh M</span>
+                <span class="text-t4">·</span>Sprint 42
+              </div>
+            </div>
+            <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Start run</button>
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t3)">Reassign</button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2h4l-.5 4 2 1.5-4 .5v4l-1 1.5L5.5 12v-4l-4-.5 2-1.5L3 2h3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg></button>
+          </div>
+
+          <!-- Row 6 Peer review (no lane) -->
+          <div class="wrow">
+            <span class="w-[18px] h-[18px] r-sm flex-none" style="border:1.5px solid var(--border-strong)"></span>
+            <span class="flex-none" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center"><span style="width:12px;height:12px;background:var(--warn-soft);border:1.5px solid var(--warn);transform:rotate(45deg);display:inline-block"></span></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[14px] text-t1 font-medium truncate">Neha D requested peer-review on 12 new Cart API cases</div>
+              <div class="flex items-center gap-2 mt-1 text-[11.5px]" style="color:var(--t3)">
+                <span class="chip warn" style="height:18px;font-size:10px;padding:0 6px">draft review</span>
+                <span>Iksula Payments / Cart API</span><span class="text-t4">·</span>
+                <span>submitted 45 min ago</span><span class="text-t4">·</span>
+                <span>manual cases</span>
+              </div>
+            </div>
+            <span class="av" style="background:#60A5FA;width:20px;height:20px;font-size:9px;color:#fff">ND</span>
+            <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Review</button>
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t3)">Reassign</button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2h4l-.5 4 2 1.5-4 .5v4l-1 1.5L5.5 12v-4l-4-.5 2-1.5L3 2h3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+            <button class="btn" style="width:28px;padding:0;justify-content:center;height:28px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="3.5" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg></button>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- REGION 4 — RIGHT EVIDENCE RAIL -->
+    <aside class="flex-none" style="width:380px;border-left:1px solid var(--border);background:var(--base);padding:28px 20px 28px 24px;min-height:1080px">
+      <div class="flex items-center justify-between mb-3">
+        <span class="mono text-[11px] font-semibold uppercase" style="color:#8A94A6;letter-spacing:0.08em">Your recent agent activity</span>
+        <span class="kbd">⌘J</span>
+      </div>
+
+      <!-- Evidence thread -->
+      <div class="flex flex-col">
+
+        <!-- A1 drafted -->
+        <div class="ev-row">
+          <div class="ev-gutter">
+            <span class="aglyph">A1</span>
+            <span class="ev-connector"></span>
+          </div>
+          <div class="ev-content">
+            <div style="font-family:'Inter';font-size:13px;font-weight:500;line-height:18px;color:#F1F5F9">Drafted 8 cases for ACM-881</div>
+            <div style="font-family:'Inter';font-size:11px;font-weight:400;line-height:14px;color:#8A94A6;margin-top:4px">conf <span class="mono" style="color:var(--pass)">0.91</span> · 18 min ago</div>
+            <div class="flex flex-wrap" style="gap:6px;margin-top:8px">
+              <span class="ev-chip">confluence/ACM-881</span>
+              <span class="ev-chip">2 negative-path variants</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- A2 dupes -->
+        <div class="ev-row">
+          <div class="ev-gutter">
+            <span class="aglyph">A2</span>
+            <span class="ev-connector"></span>
+          </div>
+          <div class="ev-content">
+            <div style="font-family:'Inter';font-size:13px;font-weight:500;line-height:18px;color:#F1F5F9">Flagged 3 dupes in Login module</div>
+            <div style="font-family:'Inter';font-size:11px;font-weight:400;line-height:14px;color:#8A94A6;margin-top:4px">conf <span class="mono" style="color:var(--pass)">0.82</span> · 32 min ago</div>
+            <div class="flex flex-wrap" style="gap:6px;margin-top:8px">
+              <span class="ev-chip">TC-AUTH-0112 ≈ 0188 ≈ 0231</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- A4 RCA -->
+        <div class="ev-row">
+          <div class="ev-gutter">
+            <span class="aglyph">A4</span>
+            <span class="ev-connector"></span>
+          </div>
+          <div class="ev-content">
+            <div style="font-family:'Inter';font-size:13px;font-weight:500;line-height:18px;color:#F1F5F9">RCA'd failure cluster → <span class="mono">PAY-1472</span></div>
+            <div style="font-family:'Inter';font-size:11px;font-weight:400;line-height:14px;color:#8A94A6;margin-top:4px">conf <span class="mono" style="color:var(--pass)">0.87</span> · 6h ago · assigned to Priya</div>
+            <div class="flex flex-wrap" style="gap:6px;margin-top:8px">
+              <span class="ev-chip">6 runs</span>
+              <span class="ev-chip">2 stacks</span>
+              <span class="ev-chip">PaymentIframe.tsx:241</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- A1 clarify -->
+        <div class="ev-row">
+          <div class="ev-gutter">
+            <span class="aglyph">A1</span>
+            <span class="ev-connector"></span>
+          </div>
+          <div class="ev-content">
+            <div style="font-family:'Inter';font-size:13px;font-weight:500;line-height:18px;color:#F1F5F9">Asked 2 clarification questions on Cart API RTM</div>
+            <div style="font-family:'Inter';font-size:11px;font-weight:400;line-height:14px;color:#8A94A6;margin-top:4px">awaiting reply · <span style="color:var(--warn)">1h ago</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Suggested next -->
+      <div class="relative r-lg mt-6" style="background:var(--raised);padding:14px 16px 14px 18px;border:1px solid color-mix(in srgb,var(--primary) 25%,transparent)">
+        <div class="lane" style="background:var(--primary)"></div>
+        <div class="mono text-[10.5px] font-semibold uppercase" style="color:var(--primary);letter-spacing:0.08em">Suggested next</div>
+        <p class="mt-2 text-[12.5px]" style="color:var(--t1);line-height:18px">Start with A1's 8 drafted cases for <span class="mono">ACM-881</span> — confidence is high (<span class="mono">0.91</span>), 0 dupes flagged, should clear in ~5 minutes.</p>
+        <div class="flex items-center gap-2 mt-3">
+          <button class="btn btn-primary" style="height:28px;padding:0 10px;font-size:12px">Open review</button>
+          <button class="btn" style="height:28px;padding:0 8px;font-size:12px;color:var(--t3)">Something else</button>
+        </div>
+      </div>
+
+      <!-- Pinned refs -->
+      <div class="mt-6">
+        <div class="mono text-[11px] font-semibold uppercase mb-2" style="color:#8A94A6;letter-spacing:0.08em">Pinned references</div>
+        <div class="card p-3 flex items-start gap-2.5">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-0.5 flex-none"><path d="M4 2h6l3 3v9H4z" stroke="#C7D0DC" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          <div class="flex-1 min-w-0">
+            <div class="text-[12.5px] text-t1 font-medium truncate">Checkout 3DS runbook</div>
+            <div class="text-[10.5px] mt-0.5" style="color:var(--t3)"><span style="color:var(--pass)">Approved</span> · v3 · updated 4d ago</div>
+          </div>
+        </div>
+        <div class="card p-3 flex items-start gap-2.5 mt-2">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="mt-0.5 flex-none"><path d="M4 2h6l3 3v9H4z" stroke="#C7D0DC" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          <div class="flex-1 min-w-0">
+            <div class="text-[12.5px] text-t1 font-medium truncate">A1 prompt style guide</div>
+            <div class="text-[10.5px] mt-0.5" style="color:var(--t3)">reference doc · v2.3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 flex items-center justify-between" style="border-top:1px solid var(--border)">
+        <span class="mono text-[10px]" style="color:var(--t4)">evidence-mesh v1.0 · ⌘J toggle</span>
+        <a class="text-[11.5px] font-medium" style="color:var(--primary)">View all →</a>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

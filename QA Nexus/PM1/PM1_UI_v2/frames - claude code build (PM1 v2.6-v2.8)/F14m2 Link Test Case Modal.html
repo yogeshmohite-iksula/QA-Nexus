@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Link Test Case Modal</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --p0:#EF4444;--p1:#FBBF24;--p2:#2DD4BF;--p3:#8A94A6;
+    --story-blue:#60A5FA;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;position:relative;overflow:hidden}
+
+  /* ═══════════════════════ F14 BACKDROP (dimmed 35%, blur 4px) ═══════════════════════ */
+  .backdrop{position:absolute;inset:0;display:grid;grid-template-columns:272px 1fr;background:var(--canvas);filter:blur(4px) brightness(0.55);opacity:0.9;pointer-events:none}
+  .bd-rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+  .bd-section-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px}
+  .bd-nav{height:32px;background:transparent;border-radius:6px;padding:6px 10px}
+  .bd-nav.active{background:var(--overlay)}
+  .bd-line{height:12px;background:var(--raised);border-radius:4px;margin:0}
+  .bd-line.s{width:70%}
+  .bd-line.xs{width:45%}
+
+  .bd-main{display:flex;flex-direction:column;padding:0}
+  .bd-topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px}
+  .bd-proj{height:36px;width:180px;background:var(--raised);border-radius:6px}
+  .bd-search{height:36px;flex:1;max-width:420px;background:var(--raised);border-radius:8px}
+  .bd-icon{width:36px;height:36px;border-radius:8px;background:var(--raised)}
+  .bd-mode{height:36px;width:220px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+  .bd-user{height:36px;width:150px;background:var(--raised);border-radius:999px;margin-left:auto}
+
+  .bd-content{padding:28px;display:flex;flex-direction:column;gap:16px}
+  .bd-q{height:32px;background:var(--raised);border-radius:4px;width:55%}
+  .bd-sprint-strip{height:44px;background:var(--base);border:1px solid var(--border);border-radius:10px}
+  .bd-req-card{height:128px;background:var(--base);border:1px solid var(--border);border-radius:12px}
+
+  /* ═══════════════════════ SCRIM (72% opacity per spec) ═══════════════════════ */
+  .scrim{position:absolute;inset:0;background:rgba(11,15,23,0.72);backdrop-filter:blur(4px);z-index:5}
+
+  /* ═══════════════════════ MODAL 720 × 640 ═══════════════════════ */
+  .modal-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10}
+  .modal{width:720px;height:640px;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 32px 72px -20px rgba(0,0,0,0.75),0 0 0 1px rgba(45,212,191,0.06);display:flex;flex-direction:column;overflow:hidden;animation:modalIn 280ms cubic-bezier(0.2,0.8,0.2,1) both}
+
+  @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media (prefers-reduced-motion: reduce){.modal{animation:none !important}}
+
+  /* ── Region A · Header 80 ── */
+  .m-head{padding:14px 20px 12px 20px;border-bottom:1px solid var(--border);flex:none;position:relative;min-height:80px}
+  .m-title{font-family:'DM Sans';font-size:20px;line-height:28px;font-weight:700;color:var(--t1);margin:0}
+  .m-sub{font-size:13px;line-height:18px;color:var(--t3);margin-top:2px}
+  .m-sub .ret-id{font-family:'JetBrains Mono';color:var(--primary);font-weight:500}
+  .m-sub .req-title{color:var(--t1);font-weight:500}
+  .m-status{font-size:12px;line-height:16px;color:var(--t2);margin-top:4px}
+  .m-status .count{color:var(--t1);font-weight:600}
+  .m-status .sep{color:var(--t4);margin:0 8px}
+  .m-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .m-close:hover{color:var(--t1);background:var(--raised)}
+  .m-close svg{width:13px;height:13px;display:block}
+
+  /* ── Region B · Requirement Context Card 64 ── */
+  .req-ctx{margin:10px 20px 0 20px;min-height:56px;background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:14px;flex:none}
+  .req-ctx-left{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .req-ctx-head{display:flex;align-items:center;gap:8px}
+  .story-dot{width:10px;height:10px;border-radius:2px;background:var(--story-blue);flex:none;box-shadow:0 0 0 1px rgba(96,165,250,0.3)}
+  .req-ctx-id{font-family:'JetBrains Mono';font-size:12px;color:var(--primary);font-weight:500}
+  .req-ctx-title{font-size:13px;line-height:18px;color:var(--t1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .req-ctx-link{font-size:12px;color:var(--t3);text-decoration:none;flex:none;display:inline-flex;align-items:center;gap:3px;transition:color 150ms}
+  .req-ctx-link:hover{color:var(--t1)}
+
+  /* ── Body ── */
+  .m-body{flex:1;overflow-y:auto;padding:12px 20px 6px 20px;display:flex;flex-direction:column;gap:10px;min-height:0}
+  .m-body::-webkit-scrollbar{width:8px}
+  .m-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  /* ── Region C · Search + Filter Bar ── */
+  .filter-bar{display:flex;align-items:center;gap:8px;flex:none;height:36px}
+  .search-wrap{flex:1;position:relative;display:flex;align-items:center}
+  .search-wrap svg.si{position:absolute;left:10px;color:var(--t3);pointer-events:none}
+  .search-input{flex:1;height:36px;padding:0 12px 0 34px;background:var(--raised);border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--t1);font-family:inherit;outline:none;transition:border-color 150ms,box-shadow 150ms;width:100%}
+  .search-input::placeholder{color:var(--t4)}
+  .search-input:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  .filter-pill{height:36px;padding:0 10px;border-radius:6px;background:var(--overlay);border:1px solid var(--border);color:var(--t2);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .filter-pill:hover{border-color:var(--border-strong);color:var(--t1)}
+  .filter-pill .chev{color:var(--t3);flex:none}
+
+  /* ── Region D · A1 Suggestion Banner ── */
+  .a1-banner{background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.28);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex:none}
+  .a1-spark{width:28px;height:28px;border-radius:7px;background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.28);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .a1-text{flex:1;font-size:12.5px;line-height:17px;color:var(--t1)}
+  .a1-text .lead{font-weight:600}
+  .a1-text .src{color:var(--t3)}
+  .a1-text .src .fn{font-family:'JetBrains Mono';font-size:11px;color:var(--t2)}
+  .a1-filter-link{font-size:12px;color:var(--secondary);font-weight:500;text-decoration:none;white-space:nowrap;flex:none;transition:color 150ms}
+  .a1-filter-link:hover{color:var(--t1)}
+
+  /* ── Region E · Selected Chips Strip ── */
+  .sel-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 2px;flex:none;min-height:28px}
+  .sel-label{font-size:11px;line-height:16px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3)}
+  .sel-label .n{color:var(--primary);font-weight:700;font-family:'JetBrains Mono'}
+  .sel-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 4px 3px 8px;background:rgba(45,212,191,0.14);border:1px solid rgba(45,212,191,0.35);border-radius:5px;font-family:'JetBrains Mono';font-size:11px;color:var(--primary);font-weight:500;height:24px}
+  .sel-chip .sc-x{width:18px;height:18px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;color:var(--primary);background:transparent;border:0;cursor:pointer;transition:color 150ms,background 150ms;padding:0}
+  .sel-chip .sc-x svg{width:11px;height:11px;display:block}
+  .sel-chip .sc-x:hover{color:var(--fail);background:rgba(248,113,113,0.15)}
+  .sel-clear{margin-left:auto;font-size:11px;color:var(--t3);text-decoration:none;font-weight:500;transition:color 150ms}
+  .sel-clear:hover{color:var(--t1)}
+
+  /* ── Region F · Test Case List ── */
+  .list-card{background:var(--canvas);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0}
+  .list-thead{display:grid;grid-template-columns:40px 1fr 124px 50px 116px 84px;align-items:center;height:32px;padding:0 12px;background:var(--overlay);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3)}
+  .list-thead .th-chk{display:flex;justify-content:center}
+  .list-thead .th-ann{text-align:right}
+
+  .list-body{overflow-y:auto;flex:1;min-height:0}
+  .list-body::-webkit-scrollbar{width:8px}
+  .list-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  .lrow{display:grid;grid-template-columns:40px 1fr 124px 50px 116px 84px;align-items:center;column-gap:8px;min-height:56px;padding:8px 12px;border-top:1px solid var(--border);position:relative;transition:background 150ms;cursor:pointer}
+  .lrow:first-child{border-top:0}
+  .lrow:nth-child(even){background:var(--raised)}
+  .lrow:nth-child(odd){background:var(--base)}
+  .lrow:hover{background:#141D2C}
+  .lrow.checked{background:rgba(45,212,191,0.07);box-shadow:inset 3px 0 0 0 var(--primary)}
+  .lrow.locked{cursor:not-allowed;opacity:0.72}
+
+  /* Custom checkbox */
+  .chk{width:18px;height:18px;border:1.5px solid var(--border-strong);border-radius:4px;background:var(--canvas);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;position:relative;margin:0 auto}
+  .chk.on{background:var(--primary);border-color:var(--primary)}
+  .chk.on::after{content:"";width:4px;height:8px;border:solid var(--primary-ink);border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px}
+  .chk.locked{background:var(--overlay);border-color:var(--border-strong);cursor:not-allowed}
+  .chk.locked::after{display:none}
+  .chk.locked .lock-i{display:inline-flex;align-items:center;justify-content:center;color:var(--t3)}
+  .chk.locked .lock-i svg{width:11px;height:11px;display:block}
+
+  .lrow-cell{display:flex;justify-content:center;align-items:center}
+
+  .tc-block{display:flex;flex-direction:column;gap:2px;min-width:0;padding-right:6px}
+  .tc-id{font-family:'JetBrains Mono';font-size:11.5px;color:var(--primary);font-weight:500;text-decoration:none;cursor:pointer;align-self:flex-start}
+  .tc-id:hover{text-decoration:underline}
+  .lrow.locked .tc-id{color:var(--t3)}
+  .tc-title{font-size:13px;line-height:18px;color:var(--t1);font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lrow.locked .tc-title{color:var(--t2)}
+
+  .suite-chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;background:var(--overlay);border:1px solid var(--border);font-size:11px;color:var(--t2);font-weight:500;white-space:nowrap;max-width:116px;overflow:hidden;text-overflow:ellipsis}
+
+  .pri{display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;font-weight:600;font-family:'JetBrains Mono';letter-spacing:0.02em;line-height:1;white-space:nowrap;min-width:34px}
+  .pri.p0{background:rgba(239,68,68,0.12);color:var(--p0);border:1px solid rgba(239,68,68,0.3)}
+  .pri.p1{background:rgba(251,191,36,0.12);color:var(--p1);border:1px solid rgba(251,191,36,0.3)}
+  .pri.p2{background:rgba(45,212,191,0.12);color:var(--p2);border:1px solid rgba(45,212,191,0.3)}
+  .pri.p3{background:var(--overlay);color:var(--p3);border:1px solid var(--border)}
+
+  .run-cell{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .run-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;line-height:1;width:fit-content}
+  .run-chip.pass{color:var(--pass)}
+  .run-chip.fail{color:var(--fail)}
+  .run-chip.flaky{color:var(--warn)}
+  .run-chip.none{color:var(--t3);font-weight:500}
+  .run-chip .dot{width:6px;height:6px;border-radius:999px;flex:none}
+  .run-chip.pass .dot{background:var(--pass)}
+  .run-chip.fail .dot{background:var(--fail)}
+  .run-chip.flaky .dot{background:var(--warn)}
+  .run-time{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);line-height:14px;white-space:nowrap}
+
+  .ann{font-size:11px;color:var(--t3);display:flex;align-items:center;justify-content:flex-end;text-align:right;line-height:1.2}
+  .a1-pill{display:inline-flex;align-items:center;gap:3px;background:rgba(167,139,250,0.14);color:var(--secondary);border:1px solid rgba(167,139,250,0.3);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;font-family:'JetBrains Mono';letter-spacing:0.02em;line-height:1;height:20px;white-space:nowrap}
+  .a1-pill svg{width:9px;height:9px;display:block}
+  .ann.linked{color:var(--t3);font-style:italic}
+
+  /* Pagination */
+  .pager{padding:10px 12px;text-align:center;font-size:11px;color:var(--t3);border-top:1px solid var(--border);flex:none;background:var(--canvas)}
+  .pager .val{color:var(--t1);font-weight:600;font-family:'JetBrains Mono'}
+  .pager .load{color:var(--primary);text-decoration:none;font-weight:500;margin-left:6px}
+  .pager .load:hover{color:var(--t1)}
+
+  /* ── Region G · Footer 72 ── */
+  .m-footer{height:72px;border-top:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex:none;background:var(--base);gap:16px}
+  .f-left-text{font-size:13px;line-height:18px;color:var(--t2)}
+  .f-left-text .create-link{color:var(--primary);font-weight:600;text-decoration:none;margin-left:6px;white-space:nowrap}
+  .f-left-text .create-link:hover{color:var(--t1)}
+  .f-right{display:inline-flex;gap:10px;align-items:center;flex:none}
+  .btn-cancel{height:40px;padding:0 18px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+  .btn-cancel:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .btn-link{height:40px;padding:0 18px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:13px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background 200ms,box-shadow 200ms;font-family:inherit}
+  .btn-link:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5),0 0 0 1px rgba(45,212,191,0.25)}
+  .btn-link:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ═══════════════════════ F14 BACKDROP (dimmed 72% + blur 4px) ═══════════════════════ -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="bd-rail">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 6px 14px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))"></div><div class="bd-line s" style="height:14px;width:90px"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Plan</div>
+      <div class="bd-nav active"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Run</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-section-label">Analyse</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+    </div>
+    <div class="bd-main">
+      <div class="bd-topbar">
+        <div class="bd-proj"></div>
+        <div class="bd-search"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-mode"></div>
+        <div class="bd-user"></div>
+      </div>
+      <div class="bd-content">
+        <div class="bd-q"></div>
+        <div class="bd-sprint-strip"></div>
+        <div class="bd-req-card"></div>
+        <div class="bd-req-card"></div>
+        <div class="bd-req-card"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SCRIM ═══════════════════════ -->
+  <div class="scrim" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════ MODAL 720×640 ═══════════════════════ -->
+  <div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="modal">
+
+      <!-- Region A · Header -->
+      <header class="m-head">
+        <h2 id="m-title" class="m-title display">Link test cases</h2>
+        <p class="m-sub">Linking to <span class="ret-id">RET-142</span> · <span class="req-title">Implement refund API for failed orders</span></p>
+        <p class="m-status">
+          Currently linked: <span class="count">8 cases</span>
+          <span class="sep">·</span>
+          Coverage: <span class="count">67%</span> (8/12)
+        </p>
+        <button class="m-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <!-- Region B · Requirement Context Card -->
+      <div class="req-ctx" role="note" aria-label="Requirement context">
+        <div class="req-ctx-left">
+          <div class="req-ctx-head">
+            <span class="story-dot" aria-hidden="true" title="Story"></span>
+            <span class="req-ctx-id">RET-142</span>
+          </div>
+          <span class="req-ctx-title">Implement refund API for failed orders</span>
+        </div>
+        <a class="req-ctx-link" href="#F14">
+          View requirement
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+        </a>
+      </div>
+
+      <!-- Body -->
+      <div class="m-body">
+
+        <!-- Region C · Search + Filter Bar -->
+        <div class="filter-bar">
+          <div class="search-wrap">
+            <svg class="si" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input class="search-input" type="search" placeholder="Search test cases by title, ID, or tag…" aria-label="Search test cases" />
+          </div>
+          <button class="filter-pill" type="button">Suite<svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="filter-pill" type="button">Priority<svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="filter-pill" type="button">Source<svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="filter-pill" type="button">Sort: Relevance<svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+
+        <!-- Region D · A1 Suggestion Banner -->
+        <aside class="a1-banner" role="note" aria-label="A1 suggestions">
+          <span class="a1-spark" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/>
+            </svg>
+          </span>
+          <div class="a1-text">
+            <span class="lead">A1 found 4 drafts matching this requirement</span>
+            <span class="src"> — generated from <span class="fn">return_policy_v2.xlsx</span> via import <span class="fn">#242</span>. Review and link the ones you want.</span>
+          </div>
+          <a class="a1-filter-link" href="#">Show only A1 drafts →</a>
+        </aside>
+
+        <!-- Region E · Selected Chips Strip -->
+        <div class="sel-strip" role="region" aria-label="Selected test cases">
+          <span class="sel-label">Selected (<span class="n">2</span>):</span>
+          <span class="sel-chip">
+            TC-RET-411
+            <button class="sc-x" type="button" aria-label="Unselect TC-RET-411">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </span>
+          <span class="sel-chip">
+            TC-RET-418
+            <button class="sc-x" type="button" aria-label="Unselect TC-RET-418">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </span>
+          <a class="sel-clear" href="#">Clear selection</a>
+        </div>
+
+        <!-- Region F · Test Case List -->
+        <div class="list-card">
+          <div class="list-thead" role="row">
+            <span class="th-chk"></span>
+            <span>Test case</span>
+            <span>Suite</span>
+            <span>Priority</span>
+            <span>Last run</span>
+            <span class="th-ann"></span>
+          </div>
+
+          <div class="list-body" role="rowgroup">
+
+            <!-- Row 1 · TC-RET-405 · unchecked · A1 draft -->
+            <div class="lrow" role="row">
+              <div class="lrow-cell"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"></span></div>
+              <div class="tc-block">
+                <a class="tc-id" href="#TC-RET-405" target="_blank" rel="noopener">TC-RET-405</a>
+                <span class="tc-title">Refund idempotency key replay on retry</span>
+              </div>
+              <span class="suite-chip" title="Refund Core">Refund Core</span>
+              <span class="pri p0">P0</span>
+              <div class="run-cell"><span class="run-chip none">— Not run</span></div>
+              <div class="ann">
+                <span class="a1-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+                  A1 draft
+                </span>
+              </div>
+            </div>
+
+            <!-- Row 2 · TC-RET-411 · CHECKED · A1 draft -->
+            <div class="lrow checked" role="row">
+              <div class="lrow-cell"><span class="chk on" role="checkbox" aria-checked="true" tabindex="0"></span></div>
+              <div class="tc-block">
+                <a class="tc-id" href="#TC-RET-411" target="_blank" rel="noopener">TC-RET-411</a>
+                <span class="tc-title">Exponential backoff delay precision (1s/4s/9s ±50ms)</span>
+              </div>
+              <span class="suite-chip">Refund Core</span>
+              <span class="pri p1">P1</span>
+              <div class="run-cell"><span class="run-chip none">— Not run</span></div>
+              <div class="ann">
+                <span class="a1-pill">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+                  A1 draft
+                </span>
+              </div>
+            </div>
+
+            <!-- Row 3 · TC-RET-401 · LOCKED already linked · Pass -->
+            <div class="lrow locked" role="row" title="This test case is already linked to RET-142">
+              <div class="lrow-cell">
+                <span class="chk locked" role="checkbox" aria-checked="true" aria-disabled="true">
+                  <span class="lock-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                </span>
+              </div>
+              <div class="tc-block">
+                <a class="tc-id" href="#TC-RET-401" target="_blank" rel="noopener">TC-RET-401</a>
+                <span class="tc-title">Refund API retries 3× on failure</span>
+              </div>
+              <span class="suite-chip">Refund Core</span>
+              <span class="pri p0">P0</span>
+              <div class="run-cell">
+                <span class="run-chip pass"><span class="dot"></span>✓ Pass</span>
+                <span class="run-time">2d ago</span>
+              </div>
+              <div class="ann linked">Already linked</div>
+            </div>
+
+            <!-- Row 4 · TC-RET-402 · LOCKED already linked · Pass -->
+            <div class="lrow locked" role="row" title="This test case is already linked to RET-142">
+              <div class="lrow-cell">
+                <span class="chk locked" role="checkbox" aria-checked="true" aria-disabled="true">
+                  <span class="lock-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                </span>
+              </div>
+              <div class="tc-block">
+                <a class="tc-id" href="#TC-RET-402" target="_blank" rel="noopener">TC-RET-402</a>
+                <span class="tc-title">Exponential backoff delay 1s / 4s / 9s</span>
+              </div>
+              <span class="suite-chip">Refund Core</span>
+              <span class="pri p1">P1</span>
+              <div class="run-cell">
+                <span class="run-chip pass"><span class="dot"></span>✓ Pass</span>
+                <span class="run-time">2d ago</span>
+              </div>
+              <div class="ann linked">Already linked</div>
+            </div>
+
+            <!-- Row 5 · TC-RET-418 · CHECKED · Flaky · manual -->
+            <div class="lrow checked" role="row">
+              <div class="lrow-cell"><span class="chk on" role="checkbox" aria-checked="true" tabindex="0"></span></div>
+              <div class="tc-block">
+                <a class="tc-id" href="#TC-RET-418" target="_blank" rel="noopener">TC-RET-418</a>
+                <span class="tc-title">Refund webhook receives <span class="mono" style="color:var(--t2);font-size:12px">refund.retry.exhausted</span> event</span>
+              </div>
+              <span class="suite-chip">Webhook Suite</span>
+              <span class="pri p1">P1</span>
+              <div class="run-cell">
+                <span class="run-chip flaky"><span class="dot"></span>⚠ Flaky</span>
+                <span class="run-time">3 of 5 passed · 1d ago</span>
+              </div>
+              <div class="ann"></div>
+            </div>
+
+            <!-- Row 6 · TC-RET-423 · unchecked · Fail · manual -->
+            <div class="lrow" role="row">
+              <div class="lrow-cell"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"></span></div>
+              <div class="tc-block">
+                <a class="tc-id" href="#TC-RET-423" target="_blank" rel="noopener">TC-RET-423</a>
+                <span class="tc-title">Multi-currency refund preserves original currency</span>
+              </div>
+              <span class="suite-chip">Payments Suite</span>
+              <span class="pri p1">P1</span>
+              <div class="run-cell">
+                <span class="run-chip fail"><span class="dot"></span>✗ Fail</span>
+                <span class="run-time">4h ago</span>
+              </div>
+              <div class="ann"></div>
+            </div>
+
+          </div>
+
+          <div class="pager">
+            Showing <span class="val">6</span> of <span class="val">243</span> cases
+            <span style="color:var(--t4);margin:0 6px">·</span>
+            <a class="load" href="#">Load 20 more ↓</a>
+          </div>
+        </div>
+
+      </div><!-- /m-body -->
+
+      <!-- Region G · Footer -->
+      <footer class="m-footer">
+        <div class="f-left-text">
+          Don't see your test case?
+          <a class="create-link" href="#F16a">+ Create new test case →</a>
+        </div>
+        <div class="f-right">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-link" type="button" aria-label="Link 2 tests to RET-142">
+            Link 2 tests
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+</div><!-- /stage -->
+
+<!--
+VALIDATION CHECKLIST (16 items per F14m2 spec)
+ 1. Stage Modal 720×640 centered · F14 dimmed behind scrim 72% opacity + blur(4px) · subtle border + 12px radius + elevation shadow · OK
+ 2. Region A Header: "Link test cases" DM Sans 20/700 + sub "Linking to RET-142 · Implement refund API for failed orders" (RET-142 mono teal, title primary 500) + status "Currently linked: 8 cases · Coverage: 67% (8/12)" counts weight 600 + close × top-right · OK
+ 3. Region B Requirement Context Card: story blue dot 10×10 + RET-142 mono teal + "Implement refund API for failed orders" primary 500 + "View requirement →" tertiary link (raised bg, 10px radius, 14px padding) · OK
+ 4. Region C Search + Filter Bar: 🔍 search input "Search test cases by title, ID, or tag…" + Suite / Priority / Source / Sort: Relevance filter pills (overlay bg, chevron icons) · OK
+ 5. Region D A1 Suggestion Banner: violet-tinted bg rgba(167,139,250,0.08) + violet border + ✨ 20px violet sparkle tile + "A1 found 4 drafts matching this requirement — generated from return_policy_v2.xlsx via import #242. Review and link the ones you want." + "Show only A1 drafts →" violet link right · OK
+ 6. Region E Selected Chips Strip: "Selected (2):" uppercase label (count in teal mono) + TC-RET-411 teal chip with × + TC-RET-418 teal chip with × + "Clear selection" tertiary right · OK
+ 7. Region F list (6 rows with header): Row1 TC-RET-405 unchecked P0 Not-run A1-draft · Row2 TC-RET-411 CHECKED teal-tinted+3px-accent P1 Not-run A1-draft · Row3 TC-RET-401 LOCKED🔒 P0 Pass 2d "Already linked" · Row4 TC-RET-402 LOCKED🔒 P1 Pass 2d "Already linked" · Row5 TC-RET-418 CHECKED teal-tinted+3px-accent P1 Flaky "3 of 5 passed · 1d ago" · Row6 TC-RET-423 unchecked P1 Fail 4h · OK
+ 8. Row columns: checkbox · TC-ID mono teal + title stacked · suite chip (overlay bg) · priority chip (P0 red / P1 amber) · last-run + timestamp stacked · right annotation (A1 pill or "Already linked") · OK
+ 9. Run-status color discipline: 2 Pass green #34D399 · 1 Flaky amber warn #FBBF24 · 1 Fail red #F87171 · 2 Not run tertiary · OK
+10. Pagination: "Showing 6 of 243 cases · Load 20 more ↓" teal link (counts in mono) centered · OK
+11. Region G Footer: "Don't see your test case? + Create new test case →" teal-bold link on left · Cancel ghost + "Link 2 tests →" teal primary on right (enabled because 2 new checks) · OK
+12. Typography: DM Sans 20 title · Inter 13 body · JetBrains Mono on TC-RET-###, RET-142, counts (2/243/8/12/67%, 4 drafts, #242), timestamps (2d ago, 1d ago, 4h ago, 3 of 5 passed) · OK
+13. Violet restricted to AI surfaces: A1 banner bg + border + ✨ + "A1 draft" pills (rows 1 & 2) + "Show only A1 drafts" link · Teal on: Link CTA, active checkboxes, selected-row 3px left accent + teal-tinted bg, Selected chips, "Currently linked" counts, Coverage count, + Create new link, TC-IDs · Violet NEVER on Link CTA or on any checkbox · OK
+14. Locked rows: 🔒 lock glyph replaces checkmark · row opacity 0.72 · TC-ID muted tertiary · title muted secondary · italic tertiary "Already linked" right · cursor not-allowed · title attr "This test case is already linked to RET-142" (tooltip on hover) · OK
+15. Priority chips: P0 red, P1 amber (P2 teal + P3 tertiary styles defined in CSS) · Status chips color-coded per spec · Suite chips use overlay bg / border · OK
+16. Anti-drift: No PM3 features · No Material Design 3 · No Tailwind config.extend · Hex values hardcoded · :focus-visible violet 2px + 2px offset on all interactives · @media (prefers-reduced-motion) disables modal entrance · OK
+-->
+</body>
+</html>

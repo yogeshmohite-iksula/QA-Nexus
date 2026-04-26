@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Anthropic Claude" modified="2026-04-21T00:00:00Z" version="1.0">
+  <diagram id="m1-workflow" name="M1 Workflow">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="M1: Users & Roles Workflow (Sign-up → Org Create → Invite → Assign → API Authorize)" style="text;fontSize=18;fontStyle=1;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="50" y="20" width="1100" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Week 1 Label -->
+        <mxCell id="week1-label" value="WEEK 1: Authentication Foundation + CRUD" style="text;fontSize=12;fontStyle=1;align=left;fillColor=#e6f2ff;" vertex="1" parent="1">
+          <mxGeometry x="50" y="70" width="500" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- T001-T015 Tasks (Week 1) -->
+        <mxCell id="t001" value="T001: BetterAuth Register Endpoint (5 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="50" y="110" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t002" value="T002: Password Reset Flow (5 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="260" y="110" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t003" value="T003: RBAC Matrix + Table (3 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="470" y="110" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t015" value="T015: DB Migration (3 SP)" style="rounded=1;fillColor=#f5a623;fontColor=#ffffff;fontSize=10;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="680" y="110" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Dependency arrows T015 to T001-T003 -->
+        <mxCell id="arrow-t015-t001" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t015" target="t001" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-t015-t002" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t015" target="t002" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-t015-t003" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t015" target="t003" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Row 2: T004-T008 -->
+        <mxCell id="t004" value="T004: /auth/me + Session (3 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="50" y="170" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t005" value="T005: User CRUD (5 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="260" y="170" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t006" value="T006: Sign In Screen (3 SP)" style="rounded=1;fillColor=#7ed321;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="470" y="170" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t007" value="T007: Sign Up Screen (3 SP)" style="rounded=1;fillColor=#7ed321;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="680" y="170" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t008" value="T008: Reset Password UI (3 SP)" style="rounded=1;fillColor=#7ed321;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="890" y="170" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Dependencies T001 -> T004, T006 -->
+        <mxCell id="arrow-t001-t004" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t001" target="t004" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-t001-t006" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t001" target="t006" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-t001-t007" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t001" target="t007" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Row 3: T009-T014 -->
+        <mxCell id="t009" value="T009: Project Picker (3 SP)" style="rounded=1;fillColor=#7ed321;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="50" y="230" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t010" value="T010: Org CRUD (3 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="260" y="230" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t011" value="T011: Project CRUD (5 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="470" y="230" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t012" value="T012: Invitations (4 SP)" style="rounded=1;fillColor=#4a90e2;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="680" y="230" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t013" value="T013: Audit Logging (3 SP)" style="rounded=1;fillColor=#f5a623;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="890" y="230" width="180" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Dependencies -->
+        <mxCell id="arrow-t004-t010" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t004" target="t010" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-t003-t012" value="" style="endArrow=classic;strokeColor=#666;" edge="1" source="t003" target="t012" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Week 2 Label -->
+        <mxCell id="week2-label" value="WEEK 2: Testing, Hardening, Documentation" style="text;fontSize=12;fontStyle=1;align=left;fillColor=#fff0e6;" vertex="1" parent="1">
+          <mxGeometry x="50" y="290" width="500" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- T016-T022 Tasks (Week 2) -->
+        <mxCell id="t016" value="T016: Contract Tests (4 SP)" style="rounded=1;fillColor=#bd10e0;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="50" y="330" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t017" value="T017: RBAC Unit Tests (3 SP)" style="rounded=1;fillColor=#bd10e0;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="230" y="330" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t018" value="T018: Audit Tests (3 SP)" style="rounded=1;fillColor=#bd10e0;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="410" y="330" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t019" value="T019: Perf Test (2 SP)" style="rounded=1;fillColor=#bd10e0;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="590" y="330" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t020" value="T020: Security Tests (3 SP)" style="rounded=1;fillColor=#bd10e0;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="770" y="330" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t021" value="T021: E2E Test (4 SP)" style="rounded=1;fillColor=#bd10e0;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="950" y="330" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Dependencies: Week 1 completion -> Week 2 testing -->
+        <mxCell id="arrow-week1-complete-to-testing" value="All Week 1 Complete" style="edgeLabel=1;endArrow=classic;strokeColor=#e74c3c;dashed=1;fontColor=#e74c3c;" edge="1" source="t012" target="t016" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- T022-T024 Accessibility & Dark Mode -->
+        <mxCell id="t022" value="T022: Accessibility (3 SP)" style="rounded=1;fillColor=#1abc9c;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="50" y="390" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t023" value="T023: Dark Mode (2 SP)" style="rounded=1;fillColor=#1abc9c;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="230" y="390" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t024" value="T024: Responsive (2 SP)" style="rounded=1;fillColor=#1abc9c;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="410" y="390" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- T025-T029 Documentation -->
+        <mxCell id="t025" value="T025: OpenAPI Spec (2 SP)" style="rounded=1;fillColor=#95a5a6;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="590" y="390" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t026" value="T026: DB Schema Docs (2 SP)" style="rounded=1;fillColor=#95a5a6;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="770" y="390" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t027" value="T027: Security Docs (2 SP)" style="rounded=1;fillColor=#95a5a6;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="950" y="390" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Final tasks -->
+        <mxCell id="t028" value="T028: README Update (2 SP)" style="rounded=1;fillColor=#95a5a6;fontColor=#ffffff;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="50" y="450" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t029" value="T029: Staging Deploy + Smoke (2 SP)" style="rounded=1;fillColor=#f39c12;fontColor=#ffffff;fontSize=10;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="230" y="450" width="160" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Exit Criteria Box -->
+        <mxCell id="exit-criteria" value="M1 EXIT CRITERIA&#10;✓ All 29 tasks DONE&#10;✓ All ACs verified&#10;✓ Tests passing (80%+ coverage)&#10;✓ Code reviewed&#10;✓ Staging deployed&#10;✓ Documentation complete" style="rounded=1;fillColor=#27ae60;fontColor=#ffffff;fontSize=10;verticalAlign=top;align=left;padding=10;" vertex="1" parent="1">
+          <mxGeometry x="50" y="520" width="340" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Critical Path Highlight -->
+        <mxCell id="critical-path-label" value="CRITICAL PATH (14 days)" style="text;fontSize=10;fontStyle=1;fillColor=#e74c3c;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="420" y="520" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="critical-path-boxes" value="T015 → T001–T005 → T013 → T021 → T029" style="text;fontSize=9;fontStyle=0;fillColor=#fadbd8;padding=5;" vertex="1" parent="1">
+          <mxGeometry x="420" y="545" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend-title" value="LEGEND" style="text;fontSize=11;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="50" y="650" width="500" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-be" value="Backend Tasks (API, DB)" style="rounded=0;fillColor=#4a90e2;fontColor=#ffffff;fontSize=9;width=60;height=20;" vertex="1" parent="1">
+          <mxGeometry x="50" y="680" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-fe" value="Frontend Tasks (UI/UX)" style="rounded=0;fillColor=#7ed321;fontColor=#ffffff;fontSize=9;width=60;height=20;" vertex="1" parent="1">
+          <mxGeometry x="180" y="680" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-qa" value="QA/Testing Tasks" style="rounded=0;fillColor=#bd10e0;fontColor=#ffffff;fontSize=9;width=60;height=20;" vertex="1" parent="1">
+          <mxGeometry x="310" y="680" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-doc" value="Documentation" style="rounded=0;fillColor=#95a5a6;fontColor=#ffffff;fontSize=9;width=60;height=20;" vertex="1" parent="1">
+          <mxGeometry x="440" y="680" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-deploy" value="Deployment/Gate" style="rounded=0;fillColor=#f39c12;fontColor=#ffffff;fontSize=9;width=60;height=20;" vertex="1" parent="1">
+          <mxGeometry x="570" y="680" width="120" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-db" value="Database Tasks" style="rounded=0;fillColor=#f5a623;fontColor=#ffffff;fontSize=9;width=60;height=20;" vertex="1" parent="1">
+          <mxGeometry x="700" y="680" width="120" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

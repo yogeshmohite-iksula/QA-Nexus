@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Set up your workspace</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --primary-soft:rgba(45,212,191,0.10);--ai-soft:rgba(167,139,250,0.10);--info-soft:rgba(96,165,250,0.10);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  #stage{width:1600px;margin:0 auto;position:relative;min-height:1024px}
+
+  .label{font-family:'Inter';font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--t3)}
+  .helper{font-family:'Inter';font-size:12px;font-weight:400;color:#94A3B8;margin-top:8px;line-height:16px}
+  .input{width:100%;height:48px;background:var(--raised);border:1px solid var(--border);border-radius:4px;color:var(--t1);font-size:15px;padding:14px 16px;outline:none;transition:border-color 0.15s,box-shadow 0.15s}
+  .input::placeholder{color:var(--t3);opacity:0.5}
+  .input:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  textarea.input{height:96px;resize:vertical;padding:12px 16px;font-family:'Inter'}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 14px;border-radius:4px;font-size:14px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised);color:var(--t1)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+  .btn-primary:hover{background:rgba(45,212,191,0.9)}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+
+  /* Stepper */
+  .step-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:999px;font-family:'Inter';font-size:13px;font-weight:500;white-space:nowrap}
+  .step-active{background:var(--primary);color:var(--primary-ink);font-weight:600}
+  .step-done{background:transparent;border:1px solid var(--primary);color:var(--primary)}
+  .step-todo{background:transparent;border:1px solid var(--border);color:var(--t3)}
+  .step-line{height:2px;width:40px;background:var(--border);border-radius:2px}
+  .step-line.done{background:var(--primary)}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;white-space:nowrap}
+  .chip-info{background:var(--info-soft);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+
+  .swatch{width:40px;height:40px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:"DM Sans";font-size:13px;font-weight:700;color:#fff;cursor:pointer;border:2px solid transparent;transition:transform 0.12s;flex:none}
+  .swatch:hover{transform:scale(1.06)}
+  .swatch.on{border-color:var(--primary);box-shadow:0 0 0 2px var(--canvas),0 0 0 3px var(--primary)}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- MINIMAL TOP BAR -->
+  <header class="flex items-center px-6" style="height:56px;background:var(--base);border-bottom:1px solid var(--border)">
+    <div class="flex items-center gap-2.5">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+        <path d="M9 2.5h6M10.2 2.5v4.6L5.2 16.6a2.2 2.2 0 0 0 2 3.2h9.6a2.2 2.2 0 0 0 2-3.2L13.8 7.1V2.5" stroke="#2DD4BF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="10.6" cy="14.4" r="1" fill="#2DD4BF"/><circle cx="14.3" cy="16.8" r="0.8" fill="#2DD4BF"/><circle cx="12" cy="12" r="0.7" fill="#2DD4BF"/>
+      </svg>
+      <span class="display" style="font-size:20px;font-weight:700;color:#2DD4BF">QA Nexus</span>
+    </div>
+    <div class="flex-1 flex justify-center">
+      <span style="font-family:'Inter';font-size:13px;color:var(--t3)">Setting up your workspace</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="#" style="font-family:'Inter';font-size:13px;color:var(--t3)" class="hover:text-teal-300 hover:underline">Skip setup</a>
+      <span class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">YM</span>
+    </div>
+  </header>
+
+  <!-- MAIN CANVAS -->
+  <main style="padding:56px 32px 120px;display:flex;flex-direction:column;align-items:center">
+
+    <!-- Stepper -->
+    <div class="flex items-center gap-3" style="max-width:640px">
+      <span class="step-pill step-active">
+        <span class="mono" style="font-size:11px;background:rgba(0,55,50,0.3);color:var(--primary-ink);width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center">1</span>
+        Create project
+      </span>
+      <span class="step-line"></span>
+      <span class="step-pill step-todo">
+        <span class="mono" style="font-size:11px;width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border)">2</span>
+        Connect data
+      </span>
+      <span class="step-line"></span>
+      <span class="step-pill step-todo">
+        <span class="mono" style="font-size:11px;width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border)">3</span>
+        Invite team
+      </span>
+    </div>
+
+    <!-- Step 1 content -->
+    <section style="margin-top:64px;width:560px">
+
+      <h1 class="display" style="font-size:32px;font-weight:600;color:#F1F5F9;margin:0;line-height:38px">Name your first project</h1>
+      <p style="font-family:'Inter';font-size:16px;color:#C7D0DC;margin:8px 0 0;line-height:24px">You can create more projects later. Most teams start with one.</p>
+
+      <form style="margin-top:48px;display:flex;flex-direction:column;gap:24px" onsubmit="return false" novalidate>
+
+        <!-- Project name -->
+        <div>
+          <label class="label block" for="pname" style="margin-bottom:8px">Project name</label>
+          <input id="pname" class="input" type="text" placeholder="e.g. Iksula Commerce" value="Iksula Commerce" />
+          <div class="helper">Slug auto-generated: <span class="mono" style="color:var(--t2)">iksula-commerce</span></div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="label block" for="pdesc" style="margin-bottom:8px">Description <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--t4)">(optional)</span></label>
+          <textarea id="pdesc" class="input" placeholder="What does this project test? e.g. E-commerce checkout, payment flows, mobile shopping…"></textarea>
+        </div>
+
+        <!-- Project glyph -->
+        <div>
+          <label class="label block" style="margin-bottom:8px">Project glyph</label>
+          <div class="flex items-center gap-3">
+            <span class="swatch on" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA)" title="Teal → Violet">IC</span>
+            <span class="swatch" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)" title="Teal → Teal-600">IC</span>
+            <span class="swatch" style="background:linear-gradient(135deg,#A78BFA,#7C3AED)" title="Violet → Violet-600">IC</span>
+            <span class="swatch" style="background:linear-gradient(135deg,#60A5FA,#2DD4BF)" title="Info blue → Teal">IC</span>
+            <span class="swatch" style="background:linear-gradient(135deg,#475569,#1A2233)" title="Neutral">IC</span>
+            <span class="swatch" style="background:var(--raised);border:1px dashed var(--border-strong);color:var(--t3)" title="Upload icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 11V3M5 6l3-3 3 3M3 12v1h10v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </div>
+          <div class="helper">Letter avatar auto-generated — pick a color.</div>
+        </div>
+
+        <!-- Jira key -->
+        <div>
+          <label class="label block" for="jira" style="margin-bottom:8px">Jira project key <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--t4)">(optional)</span></label>
+          <input id="jira" class="input mono" type="text" style="width:140px;font-size:14px" placeholder="e.g. ACM" />
+          <div class="helper">Leave blank to connect Jira later.</div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3" style="margin-top:24px">
+          <button type="button" class="btn">Save as draft</button>
+          <button type="submit" class="btn btn-primary">
+            Continue
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+      </form>
+    </section>
+  </main>
+
+  <!-- FOOTER HELP -->
+  <footer style="position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:center">
+    <span style="font-family:'Inter';font-size:13px;color:var(--t3)">
+      Need help setting up? <a href="#" style="color:var(--primary)" class="hover:underline">Read the onboarding guide →</a>
+    </span>
+  </footer>
+
+</div>
+</body>
+</html>

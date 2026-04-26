@@ -1,0 +1,35 @@
+# QA Nexus PM1 — files Prettier must NOT format
+# Generated 2026-04-26
+
+# ───── Binding docs (humans-edit-only, exact formatting matters) ─────
+# 41 locked HTML frames + PRD/ERD/design system / milestone files
+QA Nexus/
+
+# ───── Generated artifacts ─────
+node_modules/
+.next/
+dist/
+out/
+build/
+coverage/
+playwright-report/
+test-results/
+.turbo/
+
+# ───── Prisma generated ─────
+apps/api/src/generated/
+apps/api/node_modules/.prisma/
+
+# ───── Lockfiles + audit logs ─────
+pnpm-lock.yaml
+.claude/audit.jsonl
+.claude/settings.local.json
+
+# ───── Model cache ─────
+.cache/
+**/Xenova/
+
+# ───── Misc ─────
+*.min.js
+*.min.css
+*.bundle.js

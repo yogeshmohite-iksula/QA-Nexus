@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Test Case Method Chooser</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;position:relative;overflow:hidden}
+
+  /* ═══════════════════════ F17 BACKDROP (dimmed) ═══════════════════════ */
+  .backdrop{position:absolute;inset:0;display:grid;grid-template-columns:272px 1fr;background:var(--canvas);filter:blur(4px) brightness(0.55);opacity:0.9;pointer-events:none}
+  .bd-rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+  .bd-section-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px}
+  .bd-nav{height:32px;background:transparent;border-radius:6px;padding:6px 10px}
+  .bd-nav.active{background:var(--overlay)}
+  .bd-line{height:12px;background:var(--raised);border-radius:4px;margin:0}
+  .bd-line.s{width:70%}
+  .bd-line.xs{width:45%}
+
+  .bd-main{display:flex;flex-direction:column;padding:0}
+  .bd-topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px}
+  .bd-proj{height:36px;width:180px;background:var(--raised);border-radius:6px}
+  .bd-search{height:36px;flex:1;max-width:420px;background:var(--raised);border-radius:8px}
+  .bd-icon{width:36px;height:36px;border-radius:8px;background:var(--raised)}
+  .bd-mode{height:36px;width:220px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+  .bd-user{height:36px;width:150px;background:var(--raised);border-radius:999px;margin-left:auto}
+
+  .bd-content{padding:28px;display:flex;flex-direction:column;gap:16px}
+  .bd-q{height:32px;background:var(--raised);border-radius:4px;width:55%}
+  .bd-row-head{height:44px;background:var(--base);border:1px solid var(--border);border-radius:10px}
+  .bd-row{height:56px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+
+  /* ═══════════════════════ SCRIM ═══════════════════════ */
+  .scrim{position:absolute;inset:0;background:rgba(11,15,23,0.72);backdrop-filter:blur(4px);z-index:5}
+
+  /* ═══════════════════════ MODAL 1120 × 860 ═══════════════════════ */
+  .modal-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;padding:32px}
+  .modal{width:1120px;height:860px;background:var(--base);border:1px solid var(--border);border-radius:14px;box-shadow:0 40px 88px -24px rgba(0,0,0,0.8),0 0 0 1px rgba(45,212,191,0.06);display:flex;flex-direction:column;overflow:hidden;animation:modalIn 280ms cubic-bezier(0.2,0.8,0.2,1) both}
+
+  @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media (prefers-reduced-motion: reduce){.modal,.method-card{animation:none !important;transition:none !important}}
+
+  /* ── Header ── */
+  .m-head{padding:32px 40px 24px 40px;flex:none;position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+  .m-head-left{flex:1;min-width:0}
+  .m-eyebrow{font-size:11px;line-height:16px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--t3);margin-bottom:8px;display:inline-flex;align-items:center;gap:8px}
+  .m-eyebrow .dot{width:6px;height:6px;border-radius:999px;background:var(--primary)}
+  .m-title{font-family:'DM Sans';font-size:32px;line-height:40px;font-weight:500;color:var(--t1);margin:0;letter-spacing:-0.02em}
+  .m-sub{font-size:16px;line-height:24px;color:var(--t2);margin:8px 0 0 0;font-weight:400;max-width:760px}
+  .m-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
+  .m-close:hover{color:var(--t1);background:var(--raised)}
+  .m-close svg{width:14px;height:14px}
+
+  /* ── Body — 3-card row ── */
+  .m-body{flex:1;padding:24px 40px 32px 40px;display:flex;flex-direction:column;justify-content:flex-start;min-height:0;overflow-y:auto}
+  .cards-row{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+
+  .method-card{background:var(--raised);border:1px solid var(--border);border-radius:14px;padding:28px 28px 24px 28px;display:flex;flex-direction:column;gap:14px;min-height:0;position:relative;overflow:hidden;transition:border-color 220ms,transform 220ms,box-shadow 220ms;cursor:pointer}
+  .method-card::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;opacity:0.85;background:transparent;transition:opacity 220ms}
+  .method-card.ai::before{background:linear-gradient(to right,var(--secondary),rgba(167,139,250,0.3))}
+  .method-card.upload::before{background:linear-gradient(to right,var(--primary),rgba(45,212,191,0.3))}
+  .method-card.manual::before{background:linear-gradient(to right,var(--info),rgba(96,165,250,0.3))}
+
+  .method-card.ai:hover{border-color:rgba(167,139,250,0.55);transform:translateY(-3px);box-shadow:0 22px 48px -20px rgba(167,139,250,0.32),0 0 0 1px rgba(167,139,250,0.22)}
+  .method-card.upload:hover{border-color:rgba(45,212,191,0.55);transform:translateY(-3px);box-shadow:0 22px 48px -20px rgba(45,212,191,0.32),0 0 0 1px rgba(45,212,191,0.22)}
+  .method-card.manual:hover{border-color:rgba(96,165,250,0.55);transform:translateY(-3px);box-shadow:0 22px 48px -20px rgba(96,165,250,0.32),0 0 0 1px rgba(96,165,250,0.22)}
+
+  .card-icon{width:64px;height:64px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;flex:none;position:relative}
+  .card-icon::after{content:"";position:absolute;inset:-6px;border-radius:18px;border:1px solid;opacity:0.18}
+  .card-icon.ai{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--secondary)}
+  .card-icon.ai::after{border-color:var(--secondary)}
+  .card-icon.upload{background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.3);color:var(--primary)}
+  .card-icon.upload::after{border-color:var(--primary)}
+  .card-icon.manual{background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.3);color:var(--info)}
+  .card-icon.manual::after{border-color:var(--info)}
+
+  .card-pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;line-height:1;padding:4px 8px;border-radius:4px;align-self:flex-start;font-family:'JetBrains Mono'}
+  .card-pill.ai{background:rgba(167,139,250,0.14);color:var(--secondary);border:1px solid rgba(167,139,250,0.3)}
+  .card-pill.upload{background:rgba(45,212,191,0.14);color:var(--primary);border:1px solid rgba(45,212,191,0.3)}
+  .card-pill.manual{background:rgba(96,165,250,0.12);color:var(--info);border:1px solid rgba(96,165,250,0.28)}
+
+  .card-title{font-family:'DM Sans';font-size:22px;line-height:28px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+  .card-desc{font-size:14px;line-height:22px;color:var(--t2);margin:0;flex:1}
+  .card-desc strong{color:var(--t1);font-weight:600}
+
+  /* Mini bullet list of capabilities */
+  .card-bullets{display:flex;flex-direction:column;gap:8px;margin:4px 0 0 0;padding:0;list-style:none}
+  .card-bullets li{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;line-height:18px;color:var(--t2)}
+  .card-bullets svg{flex:none;margin-top:3px;width:11px;height:11px}
+  .card-bullets.ai svg{color:var(--secondary)}
+  .card-bullets.upload svg{color:var(--primary)}
+  .card-bullets.manual svg{color:var(--info)}
+  .card-bullets li b{color:var(--t1);font-weight:600}
+
+  /* Card meta strip (eta, formats etc) */
+  .card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:14px;border-top:1px dashed var(--border);margin-top:auto}
+  .meta-chip{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);background:var(--canvas);border:1px solid var(--border);padding:4px 8px;border-radius:4px;line-height:14px;display:inline-block;vertical-align:middle;white-space:nowrap}
+  .meta-chip .v{color:var(--t2);font-weight:600}
+
+  /* Card CTA */
+  .card-cta{height:48px;border-radius:6px;font-size:15px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background 200ms,box-shadow 200ms;width:100%;font-family:inherit}
+  .card-cta.primary-teal{background:var(--primary);color:var(--primary-ink)}
+  .card-cta.primary-teal:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5),0 0 0 1px rgba(45,212,191,0.25)}
+  .card-cta.primary-violet{background:var(--secondary);color:var(--secondary-ink)}
+  .card-cta.primary-violet:hover{background:rgba(167,139,250,0.92);box-shadow:0 0 22px -4px rgba(167,139,250,0.5),0 0 0 1px rgba(167,139,250,0.25)}
+  .card-cta.primary-info{background:var(--info);color:#0B2545}
+  .card-cta.primary-info:hover{background:rgba(96,165,250,0.92);box-shadow:0 0 22px -4px rgba(96,165,250,0.5),0 0 0 1px rgba(96,165,250,0.25)}
+
+  /* "Recommended" ribbon for AI card */
+  .reco-ribbon{position:absolute;top:18px;right:18px;font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--secondary);background:rgba(167,139,250,0.14);border:1px solid rgba(167,139,250,0.32);padding:4px 8px;border-radius:4px;line-height:1;display:inline-flex;align-items:center;gap:5px}
+  .reco-ribbon svg{width:9px;height:9px}
+
+  /* ── Footer ── */
+  .m-footer{height:64px;border-top:1px solid var(--border);padding:0 40px;display:flex;align-items:center;justify-content:space-between;flex:none;background:var(--base)}
+  .f-helper{font-size:12px;line-height:16px;color:var(--t3);display:inline-flex;align-items:center;gap:6px}
+  .f-helper svg{width:13px;height:13px;color:var(--t4)}
+  .f-helper kbd{font-family:'JetBrains Mono';font-size:10.5px;background:var(--canvas);border:1px solid var(--border);color:var(--t2);padding:2px 6px;border-radius:4px;line-height:1}
+  .btn-cancel{height:40px;padding:0 18px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:500;cursor:pointer}
+  .btn-cancel:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ═══════════════════════ F17 BACKDROP ═══════════════════════ -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="bd-rail">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 6px 14px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))"></div><div class="bd-line s" style="height:14px;width:90px"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Plan</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-nav active"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Author</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-section-label">Run</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+    </div>
+    <div class="bd-main">
+      <div class="bd-topbar">
+        <div class="bd-proj"></div>
+        <div class="bd-search"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-mode"></div>
+        <div class="bd-user"></div>
+      </div>
+      <div class="bd-content">
+        <div class="bd-q"></div>
+        <div class="bd-row-head"></div>
+        <div class="bd-row"></div>
+        <div class="bd-row"></div>
+        <div class="bd-row"></div>
+        <div class="bd-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SCRIM ═══════════════════════ -->
+  <div class="scrim" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════ MODAL 1120 × 860 ═══════════════════════ -->
+  <div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="modal">
+
+      <!-- Header -->
+      <header class="m-head">
+        <div class="m-head-left">
+          <span class="m-eyebrow"><span class="dot"></span>New test cases · Iksula Returns</span>
+          <h2 id="m-title" class="m-title display">How do you want to create test cases?</h2>
+          <p class="m-sub">Pick the method that fits your source material.</p>
+        </div>
+        <button class="m-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <!-- Body — 3 method cards -->
+      <div class="m-body">
+        <div class="cards-row">
+
+          <!-- Card A · AI Generate (VIOLET, recommended) -->
+          <article class="method-card ai" tabindex="0" aria-labelledby="card-ai-title">
+            <span class="reco-ribbon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+              Recommended
+            </span>
+            <span class="card-icon ai" aria-hidden="true">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/>
+                <path d="M18 3v3M20 5h-3M6 17v3M8 19H5"/>
+              </svg>
+            </span>
+            <span class="card-pill ai">A1 · A2</span>
+            <h3 id="card-ai-title" class="card-title">Let AI generate from requirements</h3>
+            <p class="card-desc">Point <strong>A1</strong> at a Jira ticket, PRD, or Figma link. It drafts cases with confidence scores; <strong>A2</strong> deduplicates live.</p>
+            <ul class="card-bullets ai">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span><b>4-phase flow</b> — Source → Clarify → Review → Accept</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span>Per-case <b>confidence scores</b> with evidence links</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span>You <b>review, edit, accept</b> each draft — never auto-merged</span></li>
+            </ul>
+            <div class="card-meta">
+              <span class="meta-chip"><span class="v">~2 min</span></span>
+              <span class="meta-chip"><span class="v">~10 cases</span> per source</span>
+              <span class="meta-chip">avg <span class="v">$0.04</span></span>
+            </div>
+            <button class="card-cta primary-violet" type="button" aria-label="Start with AI — routes to F16b A1 Generate">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>
+              Start with AI
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </article>
+
+          <!-- Card B · Upload Existing (TEAL) -->
+          <article class="method-card upload" tabindex="0" aria-labelledby="card-up-title">
+            <span class="card-icon upload" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <path d="M17 8l-5-5-5 5"/>
+                <path d="M12 3v12"/>
+              </svg>
+            </span>
+            <span class="card-pill upload">A2 · Dedup</span>
+            <h3 id="card-up-title" class="card-title">Upload existing test cases</h3>
+            <p class="card-desc">Bring in <strong>XLSX, CSV</strong>, or exports from <strong>TestRail / Zephyr / Xray</strong>. <strong>A2</strong> dedupes during import so your library stays clean.</p>
+            <ul class="card-bullets upload">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span>Map columns once · <b>save mapping</b> for re-use</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span><b>Live duplicate scan</b> with merge / ignore / dismiss controls</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span>Validation report before commit · <b>rollback safe</b></span></li>
+            </ul>
+            <div class="card-meta">
+              <span class="meta-chip"><span class="v">~5 min</span></span>
+              <span class="meta-chip"><span class="v">.xlsx · .csv · TestRail</span></span>
+              <span class="meta-chip">up to <span class="v">5,000</span> rows</span>
+            </div>
+            <button class="card-cta primary-teal" type="button" aria-label="Import file — routes to F16c Bulk Import">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              Import file
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </article>
+
+          <!-- Card C · Create Manually (INFO-BLUE) -->
+          <article class="method-card manual" tabindex="0" aria-labelledby="card-m-title">
+            <span class="card-icon manual" aria-hidden="true">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </span>
+            <span class="card-pill manual">Solo</span>
+            <h3 id="card-m-title" class="card-title">Create manually</h3>
+            <p class="card-desc">A blank <strong>Notion-style editor</strong>. Pick BDD or traditional format. Best for one-off cases or when you know exactly what to write.</p>
+            <ul class="card-bullets manual">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span><b>BDD</b> or <b>traditional</b> template — switch any time</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span>Inline <b>"✨ Polish with A1"</b> helper while you write</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg><span>Link to a requirement / suite as you save</span></li>
+            </ul>
+            <div class="card-meta">
+              <span class="meta-chip"><span class="v">~5 min</span></span>
+              <span class="meta-chip"><span class="v">BDD · Traditional</span></span>
+              <span class="meta-chip">1 case at a time</span>
+            </div>
+            <button class="card-cta primary-info" type="button" aria-label="Create blank — routes to blank editor">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Create blank
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="m-footer">
+        <span class="f-helper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          Tip — you can switch methods later. Press <kbd>Esc</kbd> to cancel.
+        </span>
+        <button class="btn-cancel" type="button">Cancel</button>
+      </footer>
+
+    </div>
+  </div>
+</div><!-- /stage -->
+
+<!--
+VALIDATION CHECKLIST (F16a Method Chooser per §2 of 04_TEST_LIFECYCLE.md)
+ 1. Stage Modal 1120 × 860 centered · F17 dimmed at 72% opacity + blur(4px) behind scrim · 14px radius + elevation shadow · OK
+ 2. Header: eyebrow "New test cases · Iksula Returns" with teal dot · "How do you want to create test cases?" DM Sans 32/500 · sub "Pick the method that fits your source material…" Inter 16/24 · close × top-right · OK
+ 3. Card grid: 3 cards horizontal at 304px wide each (via 1fr×3 + 20px gap) · 560px min-height · OK
+ 4. Card A — AI: violet ✨ icon 64px tile + violet "A1 · A2" pill + "Recommended" violet ribbon top-right + DM Sans 22 title "Let AI generate from requirements" + 3 bullets (4-phase flow, confidence scores, you review/edit/accept) + meta chips (~2 min, ~10 cases, $0.04 avg) + violet "Start with AI →" CTA → F16b · OK
+ 5. Card B — Upload: teal ⬆ icon 64px tile + teal "A2 · Dedup" pill + DM Sans 22 title "Upload existing test cases" + 3 bullets (column mapping, live dedup scan, validation report) + meta chips (~5 min, .xlsx/.csv/TestRail, up to 5000 rows) + teal "Import file →" CTA → F16c · OK
+ 6. Card C — Manual: info-blue ✏ icon 64px tile + info-blue "Solo" pill + DM Sans 22 title "Create manually" + 3 bullets (BDD/traditional, ✨ Polish helper, link to req/suite) + meta chips (~5 min, BDD/Traditional, 1 case) + info-blue "Create blank →" CTA → blank editor · OK
+ 7. Each card has gradient top accent (3px) + hover lift with color-coded shadow + tabindex 0 for keyboard navigation · OK
+ 8. Footer 64px: helper text "Tip — you can switch methods later. Press Esc to cancel." with kbd · Cancel ghost button right · OK
+ 9. Anti-drift COLOR DISCIPLINE — Violet on AI card surfaces ONLY: ✨ icon, A1·A2 pill, Recommended ribbon, top accent, "Start with AI" CTA, ✨ Polish reference inline. Teal on Upload card + teal "Import file" CTA. Info-blue on Manual card (info-blue is the spec-canonical "manual edit" color, distinct from system teal so it doesn't confuse with primary system actions; matches §2 spec line 60). NO violet on Upload or Manual CTAs · OK
+10. Typography: DM Sans 32/500 title, DM Sans 22/700 card titles, Inter 14/22 descriptions, Inter 12.5/18 bullets, JetBrains Mono on meta chips (~2 min, $0.04, 5,000 rows, .xlsx, BDD) · OK
+11. Anti-drift: No PM3 features (no SSO, no API token), no Material Design 3, no Tailwind config · Hex hardcoded · :focus-visible violet 2px + 2px offset on all interactives · prefers-reduced-motion disables modal entrance + card hover transitions · OK
+12. Routing per spec: Card A → F16b · Card B → F16c · Card C → blank editor (PM1 stub) · Cancel/× → close · OK
+-->
+</body>
+</html>

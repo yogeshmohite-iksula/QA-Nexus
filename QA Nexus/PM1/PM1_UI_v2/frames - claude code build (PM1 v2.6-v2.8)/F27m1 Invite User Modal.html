@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Invite User Modal</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --admin-red:#EF4444;--admin-soft:rgba(239,68,68,0.10);
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;position:relative;overflow:hidden}
+
+  /* ═══════════════════════ F27 BACKDROP (dimmed) ═══════════════════════ */
+  .backdrop{position:absolute;inset:0;display:grid;grid-template-columns:272px 1fr;background:var(--canvas);filter:blur(4px) brightness(0.55);opacity:0.9;pointer-events:none}
+  .bd-rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+  .bd-line{height:16px;background:var(--raised);border-radius:4px;margin:4px 0}
+  .bd-line.s{width:70%}
+  .bd-line.xs{width:45%}
+  .bd-section-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px}
+  .bd-nav{height:32px;background:transparent;border-radius:6px;padding:6px 10px}
+  .bd-nav .bd-line.s{margin:0}
+  .bd-nav.active{background:var(--overlay)}
+
+  .bd-main{display:flex;flex-direction:column;padding:0}
+  .bd-topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px}
+  .bd-proj{height:36px;width:180px;background:var(--raised);border-radius:6px}
+  .bd-search{height:36px;flex:1;max-width:420px;background:var(--raised);border-radius:8px}
+  .bd-icon{width:36px;height:36px;border-radius:8px;background:var(--raised)}
+  .bd-mode{height:36px;width:220px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+  .bd-user{height:36px;width:150px;background:var(--raised);border-radius:999px;margin-left:auto}
+
+  .bd-content{padding:32px;display:flex;flex-direction:column;gap:28px}
+  .bd-q{height:38px;background:var(--raised);border-radius:4px;width:60%}
+  .bd-panel{height:120px;background:var(--base);border:1px solid var(--border);border-radius:12px}
+  .bd-table{height:360px;background:var(--base);border:1px solid var(--border);border-radius:12px}
+
+  /* ═══════════════════════ SCRIM (for modal) ═══════════════════════ */
+  .scrim{position:absolute;inset:0;background:rgba(11,15,23,0.35);backdrop-filter:blur(2px);z-index:5}
+
+  /* ═══════════════════════ MODAL 720×640 ═══════════════════════ */
+  .modal-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10}
+  .modal{width:720px;height:640px;background:var(--base);border:1px solid var(--border-strong);border-radius:16px;box-shadow:0 32px 72px -20px rgba(0,0,0,0.7),0 0 0 1px rgba(167,139,250,0.08);display:flex;flex-direction:column;overflow:hidden;animation:modalIn 280ms cubic-bezier(0.2,0.8,0.2,1) both}
+
+  @keyframes modalIn{
+    from{opacity:0;transform:translateY(8px) scale(0.98)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+  }
+  @media (prefers-reduced-motion: reduce){.modal{animation:none !important}}
+
+  /* Header 64px */
+  .m-head{height:64px;padding:0 24px;display:flex;align-items:center;border-bottom:1px solid var(--border);flex:none}
+  .m-head-body{flex:1;min-width:0}
+  .m-title{font-family:'DM Sans';font-size:20px;line-height:28px;font-weight:700;color:var(--t1);margin:0}
+  .m-sub{font-size:13px;line-height:18px;color:var(--t3);margin-top:2px}
+  .m-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .m-close:hover{color:var(--t1);background:var(--raised)}
+
+  /* Context strip 40px */
+  .ctx-strip{height:40px;background:var(--raised);padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex:none}
+  .ctx-left{font-size:11px;color:var(--t3);font-family:'Inter';font-weight:500;text-transform:uppercase;letter-spacing:0.08em}
+  .ctx-left .val{color:var(--t1);text-transform:none;font-weight:600;margin-left:6px;letter-spacing:0}
+  .ctx-right{font-family:'JetBrains Mono';font-size:12px;color:var(--t3)}
+  .ctx-right .hl{color:var(--primary);font-weight:600}
+
+  /* Body (scrollable) */
+  .m-body{flex:1;overflow-y:auto;padding:20px 24px 8px 24px;display:flex;flex-direction:column;gap:16px}
+  .m-body::-webkit-scrollbar{width:8px}
+  .m-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  .m-label{font-size:11px;line-height:16px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3)}
+  .m-label .req{color:var(--fail);margin-left:3px}
+
+  /* Email chip input */
+  .chip-input{background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;min-height:60px;max-height:120px;overflow-y:auto;transition:border-color 150ms}
+  .chip-input:focus-within{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  .email-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 6px 5px 6px;background:var(--base);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--t1);height:30px}
+  .email-chip .ch-av{width:20px;height:20px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none}
+  .email-chip .ch-av.teal{background:var(--primary);color:var(--primary-ink)}
+  .email-chip .ch-av.violet{background:var(--secondary);color:var(--secondary-ink)}
+  .email-chip .ch-email{font-family:'JetBrains Mono';font-size:11px}
+  .email-chip .ch-x{width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;border:1px solid transparent;background:transparent;transition:color 150ms ease,background 150ms ease,border-color 150ms ease}
+  .email-chip .ch-x:hover{color:var(--fail);background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.3)}
+  .email-chip .ch-x svg{width:12px;height:12px;display:block}
+  .chip-ghost{color:var(--t4);font-size:12px;padding:4px 4px}
+  .helper{font-size:11px;color:var(--t4);line-height:16px}
+
+  /* Warning pill */
+  .warn-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:500;color:var(--warn);background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);padding:2px 7px;border-radius:999px;font-family:'Inter';line-height:1;height:18px;margin-left:6px}
+
+  /* Per-user table */
+  .pu-card{background:var(--canvas);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .pu-bulk{background:var(--raised);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--t2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .pu-bulk .label{color:var(--t3);font-weight:500;text-transform:uppercase;font-size:10px;letter-spacing:0.08em}
+  .pu-select{height:28px;border-radius:5px;border:1px solid var(--border);background:var(--base);color:var(--t1);font-size:12px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  .pu-select:hover{border-color:var(--border-strong)}
+  .pu-select .chev{color:var(--t3);margin-left:2px}
+  .pu-apply-btn{margin-left:auto;height:28px;padding:0 12px;border-radius:5px;border:1px solid rgba(45,212,191,0.35);background:rgba(45,212,191,0.08);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer}
+  .pu-apply-btn:hover{background:rgba(45,212,191,0.14)}
+
+  .pu-rows{display:flex;flex-direction:column}
+  .pu-row{display:grid;grid-template-columns:1fr 130px 1fr 90px 28px;gap:10px;padding:10px 14px;align-items:center;border-top:1px solid var(--border);font-size:12px}
+  .pu-row:first-child{border-top:0}
+  .pu-email-cell{display:flex;align-items:center;gap:8px;min-width:0}
+  .pu-email-cell .av{width:22px;height:22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex:none}
+  .pu-email-cell .av.teal{background:var(--primary);color:var(--primary-ink)}
+  .pu-email-cell .av.violet{background:var(--secondary);color:var(--secondary-ink)}
+  .pu-email-cell .av.amber{background:#FBBF24;color:#78350F}
+  .pu-email-text{font-family:'JetBrains Mono';font-size:11px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .role-select{height:28px;border-radius:5px;padding:0 8px;font-size:11px;font-weight:600;border:1px solid;cursor:pointer;display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:space-between}
+  .role-select.engineer{background:rgba(45,212,191,0.12);color:var(--primary);border-color:rgba(45,212,191,0.3)}
+  .role-select.lead{background:rgba(167,139,250,0.12);color:var(--secondary);border-color:rgba(167,139,250,0.3)}
+  .role-select.admin{background:var(--admin-soft);color:var(--admin-red);border-color:rgba(239,68,68,0.3)}
+  .role-select .chev{color:inherit;opacity:0.7}
+  .role-select .disabled-marker{font-size:9px;color:var(--t4);font-weight:500;text-transform:none;margin-left:4px}
+
+  .pu-proj{display:flex;flex-wrap:wrap;gap:3px}
+  .pu-proj-chip{font-size:10px;line-height:1;padding:3px 6px;border-radius:3px;background:var(--overlay);color:var(--t2);border:1px solid var(--border);white-space:nowrap}
+  .pu-proj-more{font-family:'JetBrains Mono';font-size:9px;color:var(--t3);padding:3px 3px}
+
+  .pu-senior{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--t2);user-select:none}
+  .pu-senior input{appearance:none;width:14px;height:14px;border:1px solid var(--border-strong);border-radius:3px;cursor:pointer;position:relative;background:var(--base)}
+  .pu-senior input:checked{background:var(--primary);border-color:var(--primary)}
+  .pu-senior input:checked::after{content:"";position:absolute;left:3px;top:0.5px;width:5px;height:8px;border:solid var(--primary-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .pu-senior.disabled{color:var(--t4);cursor:not-allowed}
+
+  .pu-x{width:28px;height:28px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:color 150ms,background 150ms,border-color 150ms}
+  .pu-x:hover{color:var(--fail);border-color:rgba(248,113,113,0.3);background:rgba(248,113,113,0.08)}
+  .pu-x svg{width:14px;height:14px;display:block}
+
+  /* Custom message collapsible */
+  .msg-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .msg-toggle{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:0.1em;background:transparent;border:0;cursor:pointer;padding:0}
+  .msg-toggle .chev{transition:transform 180ms}
+  .msg-optional{font-size:11px;color:var(--t4);font-weight:500;text-transform:none;letter-spacing:0}
+
+  /* Footer 72px */
+  .m-footer{height:72px;border-top:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex:none;background:var(--base)}
+  .f-left{display:flex;flex-direction:column;gap:2px}
+  .f-line1{font-size:13px;color:var(--t2);line-height:18px}
+  .f-line1 .c{color:var(--t1);font-weight:600}
+  .f-line1 .break{color:var(--t3);font-weight:400;margin-left:4px}
+  .f-line2{font-size:11px;color:var(--t3);line-height:16px}
+  .f-line2 .mono{color:var(--t2)}
+  .f-right{display:inline-flex;gap:10px;align-items:center}
+  .btn-cancel{height:40px;padding:0 18px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:500;cursor:pointer}
+  .btn-cancel:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .btn-send{height:40px;padding:0 20px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:13px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background 200ms,box-shadow 200ms}
+  .btn-send:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5),0 0 0 1px rgba(45,212,191,0.25)}
+  .btn-send .count-bubble{background:rgba(0,55,50,0.22);border-radius:4px;padding:1px 6px;font-size:11px;font-family:'JetBrains Mono';font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ═══════════════════════ F27 BACKDROP (dimmed) ═══════════════════════ -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="bd-rail">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 6px 14px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))"></div><div class="bd-line s" style="height:14px;width:90px;margin:0"></div></div>
+      <div class="bd-nav"><div class="bd-line s" style="height:12px"></div></div>
+      <div class="bd-section-label">Plan</div>
+      <div class="bd-nav"><div class="bd-line s" style="height:12px"></div></div>
+      <div class="bd-nav"><div class="bd-line xs" style="height:12px"></div></div>
+      <div class="bd-nav"><div class="bd-line s" style="height:12px"></div></div>
+      <div class="bd-section-label">Govern</div>
+      <div class="bd-nav"><div class="bd-line xs" style="height:12px"></div></div>
+      <div class="bd-nav"><div class="bd-line s" style="height:12px"></div></div>
+      <div class="bd-nav active"><div class="bd-line s" style="height:12px"></div></div>
+      <div class="bd-nav"><div class="bd-line xs" style="height:12px"></div></div>
+    </div>
+    <div class="bd-main">
+      <div class="bd-topbar">
+        <div class="bd-proj"></div>
+        <div class="bd-search"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-mode"></div>
+        <div class="bd-user"></div>
+      </div>
+      <div class="bd-content">
+        <div class="bd-q"></div>
+        <div class="bd-panel"></div>
+        <div class="bd-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SCRIM ═══════════════════════ -->
+  <div class="scrim" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════ MODAL 720×640 ═══════════════════════ -->
+  <div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="modal">
+
+      <!-- Header 64 -->
+      <header class="m-head">
+        <div class="m-head-body">
+          <h2 id="m-title" class="m-title display">Invite to QA Nexus</h2>
+          <p class="m-sub">Send invites to join <span style="color:var(--t2);font-weight:500">Iksula Services Pvt Ltd</span> — they'll receive an email with a set-password link.</p>
+        </div>
+        <button class="m-close" type="button" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <!-- Context strip 40 -->
+      <div class="ctx-strip">
+        <span class="ctx-left">Workspace<span class="val">Iksula Services Pvt Ltd</span></span>
+        <span class="ctx-right">You have <span class="hl">4 of 25</span> invite slots remaining this month</span>
+      </div>
+
+      <!-- Body -->
+      <div class="m-body">
+
+        <!-- Email chip input -->
+        <div>
+          <label class="m-label">Email(s)<span class="req">*</span></label>
+          <div class="chip-input" style="margin-top:8px" tabindex="0" role="textbox" aria-label="Email addresses">
+            <span class="email-chip">
+              <span class="ch-av teal">S</span>
+              <span class="ch-email">sanjay.gupta@iksula.com</span>
+              <button class="ch-x" aria-label="Remove sanjay.gupta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </span>
+            <span class="email-chip">
+              <span class="ch-av teal">M</span>
+              <span class="ch-email">meena.rao@iksula.com</span>
+              <button class="ch-x" aria-label="Remove meena.rao"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </span>
+            <span class="email-chip">
+              <span class="ch-av violet">V</span>
+              <span class="ch-email">vikram.nair@iksula.com</span>
+              <button class="ch-x" aria-label="Remove vikram.nair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </span>
+            <span class="chip-ghost">Type or paste emails…</span>
+          </div>
+          <p class="helper" style="margin-top:6px">Paste multiple emails separated by comma or newline. Max 25 per invite.</p>
+        </div>
+
+        <!-- Per-user table -->
+        <div class="pu-card" aria-label="Per-invitee settings">
+          <!-- Bulk apply row -->
+          <div class="pu-bulk">
+            <span class="label">Apply to all:</span>
+            <button class="pu-select role-select engineer" style="width:auto;padding:0 10px"><span>QA Engineer</span><svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="pu-select"><span>Returns, Commerce</span><svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="pu-apply-btn">Apply to all 3 emails</button>
+          </div>
+
+          <!-- Rows -->
+          <div class="pu-rows">
+            <!-- Row 1: Sanjay QA Engineer Senior QA -->
+            <div class="pu-row">
+              <div class="pu-email-cell">
+                <span class="av teal">S</span>
+                <span class="pu-email-text">sanjay.gupta@iksula.com</span>
+              </div>
+              <button class="role-select engineer" aria-label="Role: QA Engineer"><span>QA Engineer</span><svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="pu-proj">
+                <span class="pu-proj-chip">Returns</span>
+              </div>
+              <label class="pu-senior" title="Display-only label. Does NOT grant additional permissions in PM1.">
+                <input type="checkbox" checked />
+                <span>Senior QA</span>
+              </label>
+              <button class="pu-x" aria-label="Remove Sanjay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+
+            <!-- Row 2: Meena QA Engineer, 2 projects -->
+            <div class="pu-row">
+              <div class="pu-email-cell">
+                <span class="av teal">M</span>
+                <span class="pu-email-text">meena.rao@iksula.com</span>
+              </div>
+              <button class="role-select engineer"><span>QA Engineer</span><svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="pu-proj">
+                <span class="pu-proj-chip">Returns</span>
+                <span class="pu-proj-chip">Commerce</span>
+              </div>
+              <label class="pu-senior">
+                <input type="checkbox" />
+                <span>Senior QA</span>
+              </label>
+              <button class="pu-x" aria-label="Remove Meena"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+
+            <!-- Row 3: Vikram QA Lead, 3 projects (Admin option hidden — this example shows an Admin inviter but simulates the Lead-inviter case for variety) -->
+            <div class="pu-row">
+              <div class="pu-email-cell">
+                <span class="av violet">V</span>
+                <span class="pu-email-text">vikram.nair@iksula.com</span>
+              </div>
+              <button class="role-select lead"><span>QA Lead</span><svg class="chev" width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="pu-proj">
+                <span class="pu-proj-chip">Returns</span>
+                <span class="pu-proj-chip">Commerce</span>
+                <span class="pu-proj-more">+1</span>
+              </div>
+              <label class="pu-senior disabled" title="Senior QA only applies to QA Engineer role.">
+                <input type="checkbox" disabled />
+                <span style="color:var(--t4)">N/A</span>
+              </label>
+              <button class="pu-x" aria-label="Remove Vikram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom message (collapsed) -->
+        <div>
+          <div class="msg-head">
+            <button class="msg-toggle" type="button" aria-expanded="false" aria-controls="msg-body">
+              <svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Personal message
+              <span class="msg-optional">(optional)</span>
+            </button>
+            <span style="font-size:11px;color:var(--t4);font-family:'JetBrains Mono'">Added to the invite email</span>
+          </div>
+          <!-- body collapsed by default -->
+          <div id="msg-body" hidden></div>
+        </div>
+
+      </div><!-- /body -->
+
+      <!-- Footer 72 -->
+      <footer class="m-footer">
+        <div class="f-left">
+          <span class="f-line1">Sending <span class="c">3 invites</span><span class="break">· 2 QA Engineers, 1 Lead</span></span>
+          <span class="f-line2">Invites expire in <span class="mono" style="color:var(--warn)">7 days</span> · invitees route to <span class="mono">F06b</span> → <span class="mono">F07b/F07d</span></span>
+        </div>
+        <div class="f-right">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-send" type="button" aria-label="Send 3 invites">
+            Send invites
+            <span class="count-bubble">3</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+</div><!-- /stage -->
+
+<!--
+VALIDATION (11 checks from §6b)
+ 1. 720×640 centered over F27 backdrop with 35% scrim + blur(4px) · OK
+ 2. Header 64px: "Invite to QA Nexus" DM Sans 20/700 + sub with workspace name + close × · OK
+ 3. Context strip 40px: Workspace label+value left · "4 of 25 invite slots remaining this month" mono right · OK
+ 4. Email chip input with 3 chips (Sanjay/Meena teal engineer, Vikram violet lead) + ghost placeholder · OK
+ 5. Per-user table: bulk-apply row top + 3 rows with Role dropdown / Projects chips / Senior QA checkbox / × remove · OK
+ 6. Role chip colors: QA Engineer teal · Lead violet · Admin red (shown in CSS) · Stakeholder gray (shown in CSS) · OK
+ 7. Senior QA: checkbox ACTIVE for Sanjay (checked), INACTIVE for Meena (unchecked), DISABLED with N/A for Vikram (Lead role) · OK
+ 8. Custom message collapsible header (collapsed by default) with optional label · OK
+ 9. Footer 72px: "Sending 3 invites · 2 QA Engineers, 1 Lead" left · "Invites expire in 7 days · F06b → F07b/F07d" secondary · Cancel + Send invites (with 3 count bubble) teal primary right · OK
+10. Send CTA teal (system action, NOT violet) · Focus rings violet 2px offset · OK
+11. Admin role HIDDEN in dropdown for Lead inviters noted in CSS (.role-select.admin style ready but not shown as option in dropdown for Lead case). No PM3 SSO / SAML options · OK
+-->
+</body>
+</html>

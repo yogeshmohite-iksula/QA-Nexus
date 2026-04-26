@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Edit Suite · Checkout</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;position:relative;overflow:hidden}
+
+  /* Backdrop */
+  .backdrop{position:absolute;inset:0;display:grid;grid-template-columns:272px 1fr;background:var(--canvas);filter:blur(4px) brightness(0.55);opacity:0.9;pointer-events:none}
+  .bd-rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+  .bd-section-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px}
+  .bd-nav{height:32px;background:transparent;border-radius:6px;padding:6px 10px}
+  .bd-nav.active{background:var(--overlay)}
+  .bd-line{height:12px;background:var(--raised);border-radius:4px;margin:0}
+  .bd-line.s{width:70%}
+  .bd-line.xs{width:45%}
+
+  .bd-main{display:flex;flex-direction:column;padding:0}
+  .bd-topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px}
+  .bd-proj{height:36px;width:180px;background:var(--raised);border-radius:6px}
+  .bd-search{height:36px;flex:1;max-width:420px;background:var(--raised);border-radius:8px}
+  .bd-icon{width:36px;height:36px;border-radius:8px;background:var(--raised)}
+  .bd-mode{height:36px;width:220px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+  .bd-user{height:36px;width:150px;background:var(--raised);border-radius:999px;margin-left:auto}
+  .bd-content{padding:28px;display:flex;flex-direction:column;gap:14px}
+  .bd-q{height:32px;background:var(--raised);border-radius:4px;width:55%}
+  .bd-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .bd-card{height:200px;background:var(--base);border:1px solid var(--border);border-radius:10px}
+
+  /* Scrim */
+  .scrim{position:absolute;inset:0;background:rgba(11,15,23,0.72);backdrop-filter:blur(4px);z-index:5}
+
+  /* Modal 720 × 640 */
+  .modal-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;padding:24px}
+  .modal{width:720px;max-height:760px;height:760px;background:var(--base);border:1px solid var(--border);border-radius:14px;box-shadow:0 40px 88px -24px rgba(0,0,0,0.8),0 0 0 1px rgba(45,212,191,0.06);display:flex;flex-direction:column;overflow:hidden;animation:modalIn 280ms cubic-bezier(0.2,0.8,0.2,1) both}
+  @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media (prefers-reduced-motion: reduce){.modal{animation:none !important}}
+
+  /* Header */
+  .m-head{padding:16px 24px 14px 24px;border-bottom:1px solid var(--border);flex:none;display:flex;align-items:center;gap:12px}
+  .head-icon{width:36px;height:36px;border-radius:8px;background:rgba(45,212,191,0.10);border:1px solid rgba(45,212,191,0.28);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .head-icon svg{width:18px;height:18px}
+  .head-body{flex:1;min-width:0}
+  .m-eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary);font-weight:700;display:inline-flex;align-items:center;gap:6px;margin-bottom:2px}
+  .m-eyebrow .id{font-family:'JetBrains Mono';color:var(--t3);background:var(--overlay);border:1px solid var(--border);padding:1px 5px;border-radius:3px;letter-spacing:0.04em;font-weight:600;text-transform:none;font-size:9.5px}
+  .m-title{font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:700;color:var(--t1);margin:0}
+  .m-sub{font-size:12px;line-height:16px;color:var(--t3);margin-top:1px}
+  .m-sub b{color:var(--t2);font-weight:500;font-family:'JetBrains Mono'}
+  .m-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:0}
+  .m-close:hover{color:var(--t1);background:var(--raised)}
+  .m-close svg{width:13px;height:13px}
+
+  /* Body */
+  .m-body{flex:1;padding:18px 24px;overflow-y:auto;background:var(--base);min-height:0;display:flex;flex-direction:column;gap:16px}
+  .m-body::-webkit-scrollbar{width:8px}
+  .m-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  /* Form fields */
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field-label{font-size:11px;line-height:16px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3)}
+  .field-label .req{color:var(--fail);margin-left:2px}
+  .field-help{font-size:11px;line-height:15px;color:var(--t4);margin-top:2px;font-style:italic}
+  .input{width:100%;height:38px;padding:0 12px;background:var(--canvas);border:1px solid var(--border);border-radius:6px;color:var(--t1);font-size:13px;font-family:inherit;outline:none;transition:border-color 150ms,box-shadow 150ms}
+  .input::placeholder{color:var(--t4)}
+  .input:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  textarea.input{height:auto;padding:10px 12px;resize:vertical;min-height:64px;line-height:18px;font-family:inherit}
+
+  /* Two-column layout */
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  /* Owner picker */
+  .owner-picker{height:38px;background:var(--canvas);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;gap:10px;cursor:pointer;transition:border-color 150ms}
+  .owner-picker:hover{border-color:var(--border-strong)}
+  .owner-picker .av{width:22px;height:22px;border-radius:999px;background:var(--primary);color:var(--primary-ink);display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+  .owner-picker .nm{flex:1;font-size:13px;color:var(--t1);font-weight:500}
+  .owner-picker .role-tag{font-family:'JetBrains Mono';font-size:9.5px;color:var(--primary);background:rgba(45,212,191,0.10);border:1px solid rgba(45,212,191,0.25);padding:2px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;line-height:1}
+  .owner-picker .chev{color:var(--t3)}
+  .owner-picker .chev svg{width:11px;height:11px;display:block}
+
+  /* Visibility radio group */
+  .radio-stack{display:flex;flex-direction:column;gap:6px}
+  .radio-card{background:var(--canvas);border:1.5px solid var(--border);border-radius:6px;padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color 150ms,background 150ms}
+  .radio-card:hover{border-color:var(--border-strong)}
+  .radio-card.on{border-color:var(--primary);background:rgba(45,212,191,0.05)}
+  .radio-radio{width:14px;height:14px;border-radius:999px;border:1.5px solid var(--border-strong);flex:none;display:inline-flex;align-items:center;justify-content:center}
+  .radio-card.on .radio-radio{border-color:var(--primary)}
+  .radio-card.on .radio-radio::after{content:"";width:7px;height:7px;border-radius:999px;background:var(--primary)}
+  .radio-body{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
+  .radio-title{font-size:13px;line-height:18px;color:var(--t1);font-weight:500}
+  .radio-card.on .radio-title{color:var(--primary)}
+  .radio-desc{font-size:11px;color:var(--t3);font-style:italic;margin-left:auto;text-align:right}
+
+  /* Toggle + days input row */
+  .toggle-row{background:var(--canvas);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:12px}
+  .toggle{width:36px;height:20px;background:var(--overlay);border-radius:999px;position:relative;cursor:pointer;flex:none;border:1px solid var(--border);transition:background 200ms,border-color 200ms}
+  .toggle.on{background:var(--primary);border-color:var(--primary)}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:999px;background:var(--t1);transition:left 200ms,background 200ms}
+  .toggle.on::after{left:18px;background:var(--primary-ink)}
+  .toggle-label{flex:1;font-size:13px;color:var(--t1);font-weight:500}
+  .toggle-label .desc{display:block;font-size:11px;color:var(--t3);font-weight:400;margin-top:1px;font-style:italic}
+  .days-input{width:64px;height:30px;padding:0 8px;background:var(--base);border:1px solid var(--border);border-radius:5px;color:var(--t1);font-size:12px;font-family:'JetBrains Mono';text-align:center;outline:none;font-weight:500}
+  .days-input:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  .days-suffix{font-size:11px;color:var(--t3);font-family:'Inter'}
+
+  /* Select dropdown */
+  .select{width:100%;height:38px;background:var(--canvas);border:1px solid var(--border);border-radius:6px;color:var(--t1);font-size:13px;padding:0 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-family:inherit}
+  .select:hover{border-color:var(--border-strong)}
+  .select .chev{color:var(--t3)}
+  .select .chev svg{width:11px;height:11px;display:block}
+
+  /* Tags chip input */
+  .tags-input{background:var(--canvas);border:1px solid var(--border);border-radius:6px;padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;align-items:flex-start;min-height:38px;transition:border-color 150ms}
+  .tags-input:focus-within{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  .tag-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 9px;background:var(--overlay);border:1px solid var(--border);border-radius:5px;font-size:12px;color:var(--t1);height:26px;font-family:'Inter';font-weight:500}
+  .tag-chip .x{width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:var(--t2);background:transparent;border:0;cursor:pointer;padding:0;transition:color 150ms,background 150ms}
+  .tag-chip .x:hover{color:var(--fail);background:rgba(248,113,113,0.14)}
+  .tag-chip .x svg{width:11px;height:11px;display:block}
+  .tag-chip-ghost{font-size:11px;color:var(--t4);padding:5px 4px;line-height:18px}
+
+  /* Danger zone */
+  .danger-zone{background:rgba(248,113,113,0.04);border:1px solid rgba(248,113,113,0.22);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .dz-head{display:flex;align-items:center;gap:8px}
+  .dz-icon{width:24px;height:24px;border-radius:5px;background:rgba(248,113,113,0.10);border:1px solid rgba(248,113,113,0.28);color:var(--fail);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .dz-icon svg{width:13px;height:13px}
+  .dz-title{font-family:'DM Sans';font-size:13px;font-weight:700;color:var(--fail);text-transform:uppercase;letter-spacing:0.06em}
+  .dz-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid rgba(248,113,113,0.16)}
+  .dz-row:first-of-type{border-top:0;padding-top:2px}
+  .dz-text{flex:1}
+  .dz-text-title{font-size:12.5px;line-height:18px;color:var(--t1);font-weight:600}
+  .dz-text-desc{font-size:11px;line-height:15px;color:var(--t3);margin-top:1px}
+  .dz-btn{height:30px;padding:0 12px;border-radius:5px;border:1px solid rgba(248,113,113,0.32);background:rgba(248,113,113,0.06);color:var(--fail);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;flex:none;display:inline-flex;align-items:center;gap:5px;line-height:1}
+  .dz-btn:hover{background:rgba(248,113,113,0.14);border-color:rgba(248,113,113,0.55)}
+  .dz-btn svg{width:11px;height:11px}
+
+  /* Footer */
+  .m-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex:none;background:var(--base);gap:12px}
+  .f-left{font-size:11px;color:var(--t4);font-family:'JetBrains Mono'}
+  .f-left b{color:var(--t2)}
+  .f-right{display:inline-flex;gap:10px;align-items:center}
+  .btn-cancel{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+  .btn-cancel:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .btn-save{height:38px;padding:0 18px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:13px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background 200ms,box-shadow 200ms;font-family:inherit}
+  .btn-save:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5),0 0 0 1px rgba(45,212,191,0.25)}
+  .btn-save .modified{font-family:'JetBrains Mono';font-size:10.5px;background:rgba(0,55,50,0.22);border-radius:3px;padding:1px 5px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- Backdrop (F18 grid) -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="bd-rail">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 6px 14px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))"></div><div class="bd-line s" style="height:14px;width:90px"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Plan</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Author</div>
+      <div class="bd-nav active"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+    </div>
+    <div class="bd-main">
+      <div class="bd-topbar">
+        <div class="bd-proj"></div><div class="bd-search"></div><div class="bd-icon"></div><div class="bd-icon"></div><div class="bd-icon"></div><div class="bd-mode"></div><div class="bd-user"></div>
+      </div>
+      <div class="bd-content">
+        <div class="bd-q"></div>
+        <div class="bd-card-grid">
+          <div class="bd-card"></div><div class="bd-card"></div><div class="bd-card"></div>
+          <div class="bd-card"></div><div class="bd-card"></div><div class="bd-card"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scrim -->
+  <div class="scrim" aria-hidden="true"></div>
+
+  <!-- Modal -->
+  <div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="modal">
+
+      <!-- Header -->
+      <header class="m-head">
+        <span class="head-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>
+          </svg>
+        </span>
+        <div class="head-body">
+          <div class="m-eyebrow">Edit Suite <span class="id">SUITE-CHK</span></div>
+          <h2 id="m-title" class="m-title display">Checkout</h2>
+          <p class="m-sub"><b>142</b> cases · <b>119</b> automated · <b>88%</b> coverage · last run <b>3h ago</b></p>
+        </div>
+        <button class="m-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <!-- Body -->
+      <div class="m-body">
+
+        <!-- Name -->
+        <div class="field">
+          <label class="field-label" for="suite-name">Suite name<span class="req">*</span></label>
+          <input class="input" id="suite-name" type="text" value="Checkout" />
+        </div>
+
+        <!-- Description -->
+        <div class="field">
+          <label class="field-label" for="suite-desc">Description</label>
+          <textarea class="input" id="suite-desc" rows="2" placeholder="Short summary visible on the suite card and rail">End-to-end checkout flow including cart-to-payment, multi-currency, gift cards, 3DS challenges, and order confirmation.</textarea>
+        </div>
+
+        <!-- Two-col: Owner + Default framework -->
+        <div class="row-2">
+          <div class="field">
+            <label class="field-label">Owner</label>
+            <button class="owner-picker" type="button" aria-label="Change owner">
+              <span class="av">PS</span>
+              <span class="nm">Priya S.</span>
+              <span class="role-tag">QA Eng</span>
+              <span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </button>
+          </div>
+          <div class="field">
+            <label class="field-label" for="suite-fw">Default automation framework</label>
+            <button class="select" id="suite-fw" type="button">
+              <span>Playwright</span>
+              <span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visibility -->
+        <div class="field">
+          <label class="field-label">Visibility</label>
+          <div class="radio-stack" role="radiogroup" aria-label="Suite visibility">
+            <label class="radio-card on" role="radio" aria-checked="true">
+              <span class="radio-radio"></span>
+              <div class="radio-body">
+                <span class="radio-title">All project members</span>
+                <span class="radio-desc">QA Engineers, Leads, Stakeholders can view</span>
+              </div>
+            </label>
+            <label class="radio-card" role="radio" aria-checked="false">
+              <span class="radio-radio"></span>
+              <div class="radio-body">
+                <span class="radio-title">Suite collaborators only</span>
+                <span class="radio-desc">Only owner + invited members</span>
+              </div>
+            </label>
+            <label class="radio-card" role="radio" aria-checked="false">
+              <span class="radio-radio"></span>
+              <div class="radio-body">
+                <span class="radio-title">Lead &amp; Admin only</span>
+                <span class="radio-desc">Hidden from QA Engineer + Stakeholder</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Auto-archive -->
+        <div class="field">
+          <label class="field-label">Auto-archive policy</label>
+          <div class="toggle-row">
+            <span class="toggle on" role="switch" aria-checked="true" tabindex="0"></span>
+            <span class="toggle-label">
+              Auto-archive when stale
+              <span class="desc">Archives the suite if no runs occur within the threshold below.</span>
+            </span>
+            <input class="days-input" type="number" value="30" min="7" max="180" />
+            <span class="days-suffix">days</span>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="field">
+          <label class="field-label">Tags</label>
+          <div class="tags-input" tabindex="0">
+            <span class="tag-chip">e2e<button class="x" aria-label="Remove e2e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-chip">payments<button class="x" aria-label="Remove payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-chip">checkout<button class="x" aria-label="Remove checkout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-chip">sprint-42<button class="x" aria-label="Remove sprint-42"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+            <span class="tag-chip-ghost">+ Add a tag…</span>
+          </div>
+          <span class="field-help">Tags help filter and group suites in the Test Case Library and reports.</span>
+        </div>
+
+        <!-- Danger zone -->
+        <section class="danger-zone" aria-labelledby="dz-h">
+          <div class="dz-head">
+            <span class="dz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+            <span class="dz-title" id="dz-h">Danger zone</span>
+          </div>
+
+          <div class="dz-row">
+            <div class="dz-text">
+              <p class="dz-text-title">Archive this suite</p>
+              <p class="dz-text-desc">Hides from the Test Suites view · 142 cases preserved · reversible.</p>
+            </div>
+            <button class="dz-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="6" rx="1"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg>
+              Archive
+            </button>
+          </div>
+
+          <div class="dz-row">
+            <div class="dz-text">
+              <p class="dz-text-title">Delete this suite</p>
+              <p class="dz-text-desc">Suite removed permanently · 142 cases become unfiled · NOT reversible.</p>
+            </div>
+            <button class="dz-btn" type="button" style="color:var(--fail);background:rgba(248,113,113,0.10);border-color:rgba(248,113,113,0.45)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Delete
+            </button>
+          </div>
+        </section>
+
+      </div><!-- /m-body -->
+
+      <!-- Footer -->
+      <footer class="m-footer">
+        <span class="f-left"><b>3</b> changes pending · last edited <b>2026-04-22</b> by <b>Yogesh M.</b></span>
+        <div class="f-right">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-save" type="button" aria-label="Save changes">
+            Save changes
+            <span class="modified">3</span>
+          </button>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+</div><!-- /stage -->
+
+<!--
+VALIDATION (F18m1 Edit Suite Modal · clones F14m1 shell)
+ 1. Stage Modal 720×760 centered · F18 dimmed 72% + blur(4px) behind scrim · OK
+ 2. Header: teal grid icon tile + eyebrow "Edit Suite · SUITE-CHK" + DM Sans 18 title "Checkout" + sub mono stats "142 cases · 119 automated · 88% coverage · 3h ago" · close × · OK
+ 3. Form fields:
+    - Suite name (required) · pre-filled "Checkout"
+    - Description textarea (optional) · pre-filled with realistic copy
+    - 2-column row: Owner picker (Priya S. teal QA Eng tag + chev) · Default framework dropdown (Playwright)
+    - Visibility radio group (3 options): "All project members" SELECTED · "Suite collaborators only" · "Lead & Admin only"
+    - Auto-archive toggle (ON) + 30 days input + days suffix
+    - Tags chip input: e2e · payments · checkout · sprint-42 · "+ Add a tag…" ghost
+ 4. Danger zone (red-tinted card) at bottom: Archive button + Delete button (Lead/Admin only) with explainer text · OK
+ 5. Footer: "3 changes pending · last edited 2026-04-22 by Yogesh M." mono left · Cancel ghost + "Save changes [3]" teal primary right · OK
+ 6. Anti-drift: Teal on Save CTA, owner picker QA Eng tag, primary form focus rings, active radio. Red on danger zone (Archive + Delete buttons + tinted bg). NO violet anywhere — F18 has no AI surfaces · OK
+ 7. Typography: DM Sans 18 title · Inter 13 fields · JetBrains Mono on counts (142/119/88%/3h/3 changes/2026-04-22), tags use Inter (text labels) · OK
+ 8. Reuses F14m1 Stage Modal shell — same scrim+blur backdrop, same header pattern, same body padding, same footer pattern · OK
+ 9. No PM3 features (no SSO/PAT) · No MD3 · No Tailwind config · Hex hardcoded · :focus-visible violet 2px · prefers-reduced-motion respected · OK
+10. Routing per spec: Cancel/× → return to F18 grid · Save changes → F18 grid refreshed with new suite metadata · Archive → confirm modal (F14m3 pattern) · Delete → confirm modal (destructive) · OK
+-->
+</body>
+</html>

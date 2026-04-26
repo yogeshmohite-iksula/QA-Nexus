@@ -1,0 +1,228 @@
+{
+  "$schema": "https://tokens.studio/schema.json",
+  "$metadata": {
+    "project": "QA Nexus",
+    "version": "1.0.0",
+    "date": "2026-04-23",
+    "design_system": "Quiet Intelligence / Evidence Mesh",
+    "scope": "Project-level PM1 → PM4",
+    "canonical_source": "PROJECT_UI_UX_REDESIGN.md §6",
+    "tokens_format": "Figma Tokens Studio compatible (import via Tokens Studio plugin)",
+    "usage": "Import into Figma via Tokens Studio plugin. Apply $themes at page level: 'Operate' for dark operational frames (PM1-PM3 work surfaces), 'Prove' for light exec/compliance surfaces (F21, F42, F45)."
+  },
+  "color": {
+    "canvas": {
+      "operate": { "value": "#0B0F17", "type": "color", "description": "Midnight graphite — dark operational canvas. Primary background for all work surfaces PM1-PM3." },
+      "base": { "value": "#111827", "type": "color", "description": "Base surface — cards, lists, panels in operate mode." },
+      "raised": { "value": "#1A2233", "type": "color", "description": "Raised surface — elevated cards, dropdowns, popovers." },
+      "overlay": { "value": "#232C3F", "type": "color", "description": "Overlay — modals, hover states on raised surfaces." },
+      "prove": { "value": "#FAFAF8", "type": "color", "description": "Prove mode canvas — ivory, boardroom-safe, printable." },
+      "prove_card": { "value": "#FFFFFF", "type": "color", "description": "Prove mode card — white, used for ROI cards, compliance evidence cards." }
+    },
+    "text": {
+      "primary_on_dark": { "value": "#F1F5F9", "type": "color", "description": "Primary text on operate canvas. Body, headings, values." },
+      "secondary_on_dark": { "value": "#C7D0DC", "type": "color", "description": "Secondary text — labels, captions, metadata." },
+      "tertiary_on_dark": { "value": "#8A94A6", "type": "color", "description": "Tertiary — timestamps, hint text, breadcrumbs." },
+      "primary_on_light": { "value": "#0F172A", "type": "color", "description": "Primary text on prove canvas." },
+      "secondary_on_light": { "value": "#475569", "type": "color", "description": "Secondary text on prove canvas." }
+    },
+    "brand": {
+      "primary_teal": {
+        "500": { "value": "#2DD4BF", "type": "color", "description": "PRIMARY brand color — main CTAs (Approve, Generate, Save), value indicators, approval flows, ROI tiles, positive momentum. Tailwind 'primary' slot maps to this." },
+        "400": { "value": "#5EEAD4", "type": "color", "description": "Lighter teal — hover states on primary actions." },
+        "600": { "value": "#14B8A6", "type": "color", "description": "Darker teal — pressed states on primary actions." }
+      },
+      "secondary_violet": {
+        "500": { "value": "#A78BFA", "type": "color", "description": "SECONDARY brand color — RESERVED for AI / intelligence actions ONLY (agent outputs, AI labels, Confidence Lane, AI-draft badges). Never use for non-AI CTAs. Tailwind 'secondary' slot maps to this." },
+        "400": { "value": "#C4B5FD", "type": "color", "description": "Lighter violet — hover states on secondary (AI) actions." },
+        "600": { "value": "#8B5CF6", "type": "color", "description": "Darker violet — pressed states on secondary (AI) actions." }
+      }
+    },
+    "semantic": {
+      "pass": { "value": "#34D399", "type": "color", "description": "Green — test pass, defect resolved, healthy trend." },
+      "pass_bg": { "value": "#052E1F", "type": "color", "description": "Green background — pass pills, success toasts." },
+      "fail": { "value": "#F87171", "type": "color", "description": "Red — test fail, P0 defect, breaking change." },
+      "fail_bg": { "value": "#2C0F10", "type": "color", "description": "Red background — fail pills, error toasts." },
+      "warn": { "value": "#FBBF24", "type": "color", "description": "Amber — flaky, at-risk, degraded AI confidence." },
+      "warn_bg": { "value": "#2A2008", "type": "color", "description": "Amber background — warn pills." },
+      "info": { "value": "#60A5FA", "type": "color", "description": "Blue — informational, neutral notification." },
+      "info_bg": { "value": "#0E1F38", "type": "color", "description": "Blue background — info pills." }
+    },
+    "ai_accent": {
+      "500": { "value": "#C4B5FD", "type": "color", "description": "Dedicated AI accent (violet-400) — lighter violet used for AI-generated content highlights, Confidence Lane glow, AI text labels. Distinct from Secondary brand violet #A78BFA which is for AI CTA chips / badges. Used when a softer AI visual is needed (background tints, subtle highlights)." }
+    },
+    "neutral_gray": {
+      "500": { "value": "#94A3B8", "type": "color", "description": "Neutral gray — disabled states, deeply-secondary labels, subtle metadata. Sits between secondary text (#C7D0DC) and tertiary text (#8A94A6)." }
+    },
+    "prove_mode": {
+      "canvas": { "value": "#FAFAF8", "type": "color", "description": "PROVE mode main canvas — ivory, boardroom-safe, printable." },
+      "base": { "value": "#FFFFFF", "type": "color", "description": "PROVE mode base surface — white cards, ROI tiles, compliance cards." },
+      "raised": { "value": "#F4F3EF", "type": "color", "description": "PROVE mode raised surface — subtle off-white for card hover / elevated content." },
+      "overlay": { "value": "#FFFFFF", "type": "color", "description": "PROVE mode overlay — modal backgrounds in prove mode." },
+      "pass": { "value": "#047857", "type": "color", "description": "PROVE mode green — darker for WCAG AA contrast on white." },
+      "fail": { "value": "#B91C1C", "type": "color", "description": "PROVE mode red — darker for light-mode contrast." },
+      "warn": { "value": "#B45309", "type": "color", "description": "PROVE mode amber — darker bronze for light-mode readability." },
+      "info": { "value": "#1D4ED8", "type": "color", "description": "PROVE mode blue — darker for light-mode." },
+      "ai": { "value": "#6D28D9", "type": "color", "description": "PROVE mode AI accent — darker violet for AI content on white. Used sparingly." },
+      "neutral": { "value": "#475569", "type": "color", "description": "PROVE mode neutral gray — secondary text, metadata on light canvas." }
+    },
+    "confidence_lane": {
+      "high": { "value": "#34D399", "type": "color", "description": "Confidence ≥0.85 — left-edge marker on AI suggestion cards." },
+      "medium": { "value": "#FBBF24", "type": "color", "description": "Confidence 0.60–0.85." },
+      "low": { "value": "#F87171", "type": "color", "description": "Confidence <0.60 — HITL review required." }
+    },
+    "border": {
+      "subtle_on_dark": { "value": "#2A3347", "type": "color", "description": "Subtle border for card separation on dark canvas." },
+      "strong_on_dark": { "value": "#3B4660", "type": "color", "description": "Stronger border — focus rings, active states." },
+      "subtle_on_light": { "value": "#E5E7EB", "type": "color", "description": "Subtle border on prove canvas." }
+    }
+  },
+  "typography": {
+    "font_family": {
+      "ui": { "value": "Inter Variable", "type": "fontFamilies", "description": "UI font — body, labels, cards, tables." },
+      "display": { "value": "DM Sans", "type": "fontFamilies", "description": "Display — page question headers, section titles, hero metrics." },
+      "metric": { "value": "Geist Mono", "type": "fontFamilies", "description": "Metrics — KPIs, IDs, counts, percentages on cards." },
+      "code": { "value": "JetBrains Mono", "type": "fontFamilies", "description": "Code, selectors, diffs, policy logic." }
+    },
+    "scale": {
+      "question_header": {
+        "value": { "fontFamily": "{font_family.display}", "fontSize": "32px", "lineHeight": "40px", "fontWeight": "500", "letterSpacing": "-0.01em" },
+        "type": "typography",
+        "description": "Page question — top of every main frame."
+      },
+      "question_answer": {
+        "value": { "fontFamily": "{font_family.ui}", "fontSize": "16px", "lineHeight": "24px", "fontWeight": "400" },
+        "type": "typography",
+        "description": "One-line answer summary under page question."
+      },
+      "card_title": {
+        "value": { "fontFamily": "{font_family.ui}", "fontSize": "14px", "lineHeight": "20px", "fontWeight": "500", "letterSpacing": "0.01em" },
+        "type": "typography",
+        "description": "Card header title."
+      },
+      "card_metric_primary": {
+        "value": { "fontFamily": "{font_family.metric}", "fontSize": "28px", "lineHeight": "32px", "fontWeight": "500" },
+        "type": "typography",
+        "description": "Primary number on outcome board cards."
+      },
+      "card_metric_secondary": {
+        "value": { "fontFamily": "{font_family.metric}", "fontSize": "13px", "lineHeight": "16px", "fontWeight": "400" },
+        "type": "typography",
+        "description": "Trend/delta under primary metric."
+      },
+      "body": {
+        "value": { "fontFamily": "{font_family.ui}", "fontSize": "14px", "lineHeight": "20px", "fontWeight": "400" },
+        "type": "typography",
+        "description": "Body text — most list rows, paragraphs."
+      },
+      "body_dense": {
+        "value": { "fontFamily": "{font_family.ui}", "fontSize": "13px", "lineHeight": "18px", "fontWeight": "400" },
+        "type": "typography",
+        "description": "Dense mode body — tables, long lists."
+      },
+      "label": {
+        "value": { "fontFamily": "{font_family.ui}", "fontSize": "12px", "lineHeight": "16px", "fontWeight": "500", "letterSpacing": "0.02em", "textCase": "uppercase" },
+        "type": "typography",
+        "description": "Field labels, column headers, section labels."
+      },
+      "caption": {
+        "value": { "fontFamily": "{font_family.ui}", "fontSize": "12px", "lineHeight": "16px", "fontWeight": "400" },
+        "type": "typography",
+        "description": "Timestamps, hints, helper text."
+      },
+      "code": {
+        "value": { "fontFamily": "{font_family.code}", "fontSize": "13px", "lineHeight": "20px", "fontWeight": "400" },
+        "type": "typography",
+        "description": "Code blocks, selectors, diff lines, policy rules."
+      },
+      "prove_display": {
+        "value": { "fontFamily": "{font_family.display}", "fontSize": "48px", "lineHeight": "56px", "fontWeight": "500", "letterSpacing": "-0.02em" },
+        "type": "typography",
+        "description": "Prove-mode executive hero number (ROI tile, revenue protected tile)."
+      }
+    }
+  },
+  "spacing": {
+    "0": { "value": "0px", "type": "spacing" },
+    "1": { "value": "4px", "type": "spacing", "description": "xs — chip internal padding." },
+    "2": { "value": "8px", "type": "spacing", "description": "sm — between tightly-coupled elements." },
+    "3": { "value": "12px", "type": "spacing", "description": "between card rows." },
+    "4": { "value": "16px", "type": "spacing", "description": "md — default card internal padding." },
+    "5": { "value": "20px", "type": "spacing" },
+    "6": { "value": "24px", "type": "spacing", "description": "lg — between major sections on a frame." },
+    "8": { "value": "32px", "type": "spacing", "description": "xl — between Outcome Board rows and content below." },
+    "10": { "value": "40px", "type": "spacing" },
+    "12": { "value": "48px", "type": "spacing", "description": "xxl — frame-level vertical gutters." },
+    "16": { "value": "64px", "type": "spacing", "description": "top band height for question header." }
+  },
+  "radius": {
+    "sm": { "value": "4px", "type": "borderRadius", "description": "Pills, chips, small badges." },
+    "md": { "value": "8px", "type": "borderRadius", "description": "Default card radius." },
+    "lg": { "value": "12px", "type": "borderRadius", "description": "Outcome board cards, modal container." },
+    "xl": { "value": "16px", "type": "borderRadius", "description": "Stage modals." },
+    "round": { "value": "9999px", "type": "borderRadius", "description": "Avatars, full-pill status chips." }
+  },
+  "elevation": {
+    "0": { "value": "none", "type": "boxShadow", "description": "Flat — base surface." },
+    "1": { "value": { "x": "0", "y": "1", "blur": "2", "spread": "0", "color": "rgba(0,0,0,0.2)", "type": "dropShadow" }, "type": "boxShadow", "description": "Subtle lift — cards on raised surface." },
+    "2": { "value": { "x": "0", "y": "4", "blur": "8", "spread": "0", "color": "rgba(0,0,0,0.3)", "type": "dropShadow" }, "type": "boxShadow", "description": "Popover, dropdown." },
+    "3": { "value": { "x": "0", "y": "12", "blur": "32", "spread": "0", "color": "rgba(0,0,0,0.45)", "type": "dropShadow" }, "type": "boxShadow", "description": "Stage modal, inspection sheet." }
+  },
+  "motion": {
+    "duration": {
+      "fast": { "value": "120ms", "type": "duration", "description": "Hover/press feedback, chip state." },
+      "medium": { "value": "200ms", "type": "duration", "description": "Panel slide-in, sheet open, card reveal." },
+      "slow": { "value": "320ms", "type": "duration", "description": "Modal enter, full-page transition." }
+    },
+    "easing": {
+      "standard": { "value": "cubic-bezier(0.4, 0, 0.2, 1)", "type": "cubicBezier" },
+      "decelerate": { "value": "cubic-bezier(0, 0, 0.2, 1)", "type": "cubicBezier", "description": "Enter — things coming in." },
+      "accelerate": { "value": "cubic-bezier(0.4, 0, 1, 1)", "type": "cubicBezier", "description": "Exit — things leaving." }
+    },
+    "reduced_motion": { "value": "Respect prefers-reduced-motion — disable slide/fade, retain state change." }
+  },
+  "layout": {
+    "canvas": {
+      "desktop": { "value": "1600x1024", "type": "sizing", "description": "Primary desktop design canvas." },
+      "modal": { "value": "1120x860", "type": "sizing", "description": "Stage modal size." },
+      "sheet": { "value": "420x1024", "type": "sizing", "description": "Inspection sheet width × full height." },
+      "mobile_companion": { "value": "430x932", "type": "sizing", "description": "Mobile companion (iPhone 16 Pro)." }
+    },
+    "rail": {
+      "primary_collapsed": { "value": "88px", "type": "sizing", "description": "Left primary rail collapsed." },
+      "primary_expanded": { "value": "272px", "type": "sizing", "description": "Left primary rail expanded." },
+      "evidence_min": { "value": "360px", "type": "sizing", "description": "Right evidence/AI rail minimum width." },
+      "evidence_max": { "value": "420px", "type": "sizing", "description": "Right evidence/AI rail maximum width." }
+    },
+    "grid": {
+      "columns": { "value": "12", "description": "12-col grid for main canvas." },
+      "gutter": { "value": "{spacing.6}", "description": "24px gutter between columns." },
+      "outer_padding": { "value": "{spacing.8}", "description": "32px outer frame padding." }
+    }
+  },
+  "focus": {
+    "ring": { "value": { "width": "2px", "color": "{color.brand.violet.500}", "offset": "2px" }, "type": "outline", "description": "Focus ring — always visible on keyboard focus, high-contrast." }
+  },
+  "accessibility": {
+    "min_contrast_body": { "value": "4.5:1 (WCAG AA normal text)", "description": "Text on canvas — minimum. All typography/color pairs in this file meet or exceed." },
+    "min_contrast_large": { "value": "3:1 (WCAG AA large text)", "description": "24px+ text and UI components." },
+    "min_tap_target": { "value": "44x44px", "description": "Minimum tap/click target for interactive elements on mobile companion." },
+    "color_not_only": { "value": "true", "description": "Every status uses color + icon/shape + text. Never color alone." }
+  },
+  "$themes": [
+    {
+      "name": "Operate",
+      "selectedTokenSets": { "color.canvas.operate": "enabled", "color.text.primary_on_dark": "enabled" },
+      "description": "Dark operational mode — PM1 test authoring, PM2 self-healing, PM3 low-code. Default."
+    },
+    {
+      "name": "Prove",
+      "selectedTokenSets": { "color.canvas.prove": "enabled", "color.text.primary_on_light": "enabled" },
+      "description": "Light prove mode — F21 Exec Dashboard, F42 Compliance Vault, F45 Global Portfolio Board. Printable, boardroom-safe."
+    },
+    {
+      "name": "Review",
+      "description": "Review mode uses Operate canvas with denser spacing and added Confidence Lane and Evidence Thread motifs. Tokens are same as Operate — mode toggle is a density + emphasis change, not a color swap."
+    }
+  ]
+}

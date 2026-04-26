@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — How is AI helping?</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    /* Prove-mode light palette */
+    --canvas:#FAFAF8;
+    --base:#FFFFFF;
+    --raised:#F4F3EF;
+    --border:#E5E7EB;
+    --border-strong:#D1D5DB;
+    --t1:#0F172A;
+    --t2:#475569;
+    --t3:#94A3B8;
+    --t4:#CBD5E1;
+    --pass:#047857;
+    --fail:#B91C1C;
+    --warn:#B45309;
+    --info:#1D4ED8;
+    --ai:#6D28D9;
+    --primary:#2DD4BF;
+    --primary-600:#14B8A6;
+    --primary-ink:#06262A;
+    --pass-soft:rgba(4,120,87,0.10);
+    --fail-soft:rgba(185,28,28,0.10);
+    --warn-soft:rgba(180,83,9,0.10);
+    --info-soft:rgba(29,78,216,0.10);
+    --ai-soft:rgba(109,40,217,0.10);
+    --ai-soft-2:rgba(109,40,217,0.04);
+    --primary-soft:rgba(45,212,191,0.14);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;font-feature-settings:"cv11","ss01","ss03"}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  .bg-canvas{background:var(--canvas)} .bg-base{background:var(--base)} .bg-raised{background:var(--raised)}
+  .text-t1{color:var(--t1)} .text-t2{color:var(--t2)} .text-t3{color:var(--t3)}
+  .r-sm{border-radius:4px} .r-md{border-radius:6px} .r-lg{border-radius:10px} .r-xl{border-radius:14px}
+
+  .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px}
+  .nav-item:hover{background:#EAE8E2;color:var(--t1)}
+  .nav-item.active{background:var(--base);color:var(--t1);box-shadow:0 1px 2px rgba(15,23,42,0.04)}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:5px;bottom:5px;width:3px;background:var(--ai);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t3);cursor:not-allowed}
+  .nav-item.locked{color:var(--t3)}
+  .nav-section{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:18px 0 6px;font-weight:600}
+  .count{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t2);margin-left:auto;background:var(--base);padding:1px 6px;border-radius:999px;border:1px solid var(--border)}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:var(--base);white-space:nowrap}
+  .chip.ok{background:var(--pass-soft);color:var(--pass);border-color:color-mix(in srgb,var(--pass) 30%,transparent)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+  .chip.bad{background:var(--fail-soft);color:var(--fail);border-color:color-mix(in srgb,var(--fail) 30%,transparent)}
+  .chip.info{background:var(--info-soft);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+  .chip.ai{background:var(--ai-soft);color:var(--ai);border-color:color-mix(in srgb,var(--ai) 35%,transparent)}
+  .chip.teal{background:var(--primary-soft);color:#0E7C73;border-color:color-mix(in srgb,var(--primary) 55%,transparent)}
+
+  .kbd{font-family:"JetBrains Mono",monospace;font-size:10.5px;border:1px solid var(--border);background:var(--base);color:var(--t2);padding:1px 5px;border-radius:4px;line-height:14px;display:inline-block}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t1);background:var(--base);cursor:pointer}
+  .btn:hover{background:var(--raised)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+  .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600)}
+  .btn-teal-outline{color:#0E7C73;border-color:color-mix(in srgb,var(--primary) 55%,transparent);background:var(--base)}
+  .btn-teal-outline:hover{background:var(--primary-soft)}
+
+  .card{background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.04)}
+  .card-raised{background:var(--raised);border:1px solid var(--border);border-radius:12px}
+
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:32px}
+  .seg button{height:24px;padding:0 10px;border-radius:5px;color:var(--t2);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--raised);color:var(--t1);box-shadow:0 1px 2px rgba(15,23,42,0.05)}
+
+  /* Time range — underline style per spec */
+  .trange{display:inline-flex;align-items:center;gap:0;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:8px;background:var(--base)}
+  .trange button{height:32px;padding:0 14px;font-size:13px;font-weight:500;color:var(--t2);position:relative}
+  .trange button.on{color:var(--t1)}
+  .trange button.on::after{content:"";position:absolute;left:12px;right:12px;bottom:4px;height:2px;background:var(--primary);border-radius:2px}
+  .trange .sep{width:1px;height:16px;background:var(--border)}
+
+  .aglyph{width:22px;height:22px;border-radius:6px;background:var(--ai-soft);color:var(--ai);display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:10.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--ai) 30%,transparent);flex:none}
+
+  .av{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:10.5px;font-weight:600;color:#FFF;flex:none}
+
+  .ms{font-family:"Material Symbols Outlined";font-weight:400;font-style:normal;font-size:18px;line-height:1;display:inline-block;vertical-align:middle;text-transform:none;letter-spacing:normal;word-wrap:normal;white-space:nowrap;direction:ltr;text-rendering:optimizeLegibility;-webkit-font-feature-settings:'liga';font-feature-settings:'liga';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20;-webkit-font-smoothing:antialiased}
+
+  .kpi-label{font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--t2)}
+  .kpi-number{font-family:"DM Sans";font-size:48px;line-height:52px;font-weight:700;letter-spacing:-0.02em;color:var(--t1)}
+  .kpi-footnote{font-size:11px;line-height:16px;color:var(--t3)}
+
+  .lane{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+  .lane-ai{background:var(--ai)}
+
+  /* table */
+  table.vtab{width:100%;border-collapse:collapse;font-size:14px}
+  .vtab thead th{font-family:"JetBrains Mono";font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--t3);text-align:left;padding:10px 16px;border-bottom:1px solid var(--border)}
+  .vtab tbody td{padding:14px 16px;border-bottom:1px solid var(--border);color:var(--t1)}
+  .vtab tbody tr:nth-child(even) td{background:var(--canvas)}
+  .vtab tbody tr:hover td{background:var(--raised)}
+  .vtab tbody tr.total td{font-weight:600;background:#FAFAF8 !important;border-top:2px solid var(--border-strong);color:var(--t1)}
+
+  :focus-visible{outline:2px solid var(--ai);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+
+  #stage{width:1600px;margin:0 auto;position:relative}
+</style>
+</head>
+<body>
+<div id="stage" class="bg-canvas" style="min-height:1024px;position:relative">
+
+  <!-- TOP BAR -->
+  <header class="h-14 flex items-center gap-3 px-5 bg-base" style="border-bottom:1px solid var(--border)">
+    <a class="flex items-center gap-2.5 mr-1">
+      <svg viewBox="0 0 22 22" width="22" height="22" fill="none">
+        <path d="M8.5 2.5h5M9.5 2.5v4.2L5 15.2a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4.5-8.5V2.5" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="9.7" cy="13" r="0.9" fill="#6D28D9"/><circle cx="13.3" cy="15.3" r="0.7" fill="#2DD4BF"/><circle cx="11" cy="11.2" r="0.6" fill="#6D28D9"/>
+      </svg>
+      <span class="display text-t1" style="font-size:15px;font-weight:700;letter-spacing:-0.01em">QA Nexus</span>
+    </a>
+    <button class="flex items-center gap-2 h-9 px-3 r-md ml-1" style="border:1px solid var(--border);background:var(--raised)">
+      <span class="w-5 h-5 r-sm" style="background:linear-gradient(135deg,#2DD4BF,#6D28D9)"></span>
+      <span class="text-t1 text-[13px] font-medium">Iksula Commerce</span>
+      <span class="text-t3 text-[13px] mono">·</span>
+      <span class="text-t2 text-[13px] mono">main</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="ml-1"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="flex-1 flex justify-center">
+      <button class="flex items-center gap-3 h-9 px-3 r-md w-[520px] text-t3 text-[13px]" style="border:1px solid var(--border);background:var(--canvas)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" class="flex-none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Search metrics, projects, agents, audits…</span>
+        <span class="ml-auto flex items-center gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+      </button>
+    </div>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border);background:var(--base)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border);background:var(--base)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.2L3 11h10l-1-2.8V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border);background:var(--base)" title="Prove mode — light theme"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.2 3.2l1 1M11.8 11.8l1 1M3.2 12.8l1-1M11.8 4.2l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    <div class="seg"><button>Operate</button><button>Review</button><button class="on" style="color:#0E7C73"><span style="border-bottom:2px solid var(--primary);padding-bottom:1px">Prove</span></button></div>
+    <button class="flex items-center gap-2 h-9 pl-1 pr-2 r-md hover:bg-raised" style="border:1px solid var(--border);background:var(--base)">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#6D28D9);color:#fff">YM</span>
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <div class="flex">
+    <!-- LEFT RAIL -->
+    <nav class="w-[272px] bg-raised flex flex-col px-4 py-4 flex-none" style="border-right:1px solid var(--border);min-height:1080px">
+      <a class="nav-item" style="margin-bottom:2px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8l5.5-5 5.5 5v5a1 1 0 0 1-1 1H9v-4H7v4H3.5a1 1 0 0 1-1-1V8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Home</span></a>
+      <div class="nav-section">Plan</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9H4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Requirements</span><span class="count">142</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6h11M5.5 3v10" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3.5l2.5 2.5L2 8.5M2 9.5L4.5 12 2 14.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 6h7M6.5 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Cases</span><span class="count">1,284</span></a>
+      <div class="nav-section">Author</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Suites</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h8l2 2v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Knowledge Base</span></a>
+      <a class="nav-item disabled"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5L2 8l3 4.5M11 3.5L14 8l-3 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Automation Studio</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t3);background:var(--base)">v1.5</span></a>
+      <a class="nav-item disabled"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M3 4v4c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8v4c0 1.1 2.2 2 5 2s5-.9 5-2V8" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Data &amp; Mocks</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t3);background:var(--base)">v1.5</span></a>
+      <div class="nav-section">Run</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5v9l7-4.5-7-4.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Runs &amp; Sessions</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="2.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Environments</span></a>
+      <div class="nav-section">Analyse</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 12.5L6 8.5l3 2 4.5-5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Run Results</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Defects / Failures</span><span class="count" style="color:var(--fail)">47</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 10l2-2 2 1.5 3-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Reports</span></a>
+      <a class="nav-item active"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 6.5c0-1.4 1-2.5 2.5-2.5s2.5 1.1 2.5 2.5S7 9 5.5 9M8 9c2.5 0 4.5 1 4.5 2.5S10.5 14 8 14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">QA Value</span><span class="chip ai" style="height:16px;font-size:9.5px;padding:0 6px">Lead+</span></a>
+      <div class="nav-section">Govern</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 14c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Agents</span><span class="count">9</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 3l-3 5 3 5M10 3l3 5-3 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Integrations</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="6" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="10" r="2" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Users &amp; Roles</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Settings &amp; Audit</span></a>
+      <div class="mt-auto pt-3" style="border-top:1px solid var(--border)">
+        <div class="flex items-center gap-2.5 px-2.5 py-2 r-md" style="border:1px solid var(--border);background:var(--base)">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#6D28D9);color:#FFF">YM</span>
+          <div class="flex-1 min-w-0"><div class="text-t1 text-[12.5px] font-medium leading-tight">Yogesh M</div><div class="mono text-[10px] mt-0.5" style="color:var(--ai)">QA LEAD</div></div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="flex-1 min-w-0" style="padding:32px">
+
+      <!-- REGION 1 — QUESTION HEADER -->
+      <div class="flex items-start justify-between gap-8">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="chip ai" style="height:22px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-1px;flex:none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"/></svg>Prove mode · read-only narrative</span>
+            <button class="btn" style="height:26px;padding:0 10px;font-size:12px;color:var(--t2)">View: All projects <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="chip" style="height:22px;color:var(--t3)">3 projects · Sprint 42</span>
+          </div>
+          <h1 class="display" style="font-size:32px;line-height:40px;font-weight:500;color:var(--t1);max-width:920px">How is AI actually helping the QA team?</h1>
+          <p class="mt-3" style="font-size:16px;line-height:24px;color:var(--t2);max-width:920px">
+            <span class="mono text-t1 font-medium">184 hours</span> saved this sprint across
+            <span class="mono text-t1">2,341</span> <span class="text-t1" style="color:var(--ai);font-weight:500">A1</span> generations,
+            <span class="mono text-t1">412</span> <span style="color:var(--ai);font-weight:500">A2</span> flags,
+            <span class="mono text-t1">89</span> <span style="color:var(--ai);font-weight:500">A4</span> RCAs —
+            equivalent to <span class="text-t1 font-medium">23 human-days</span> recovered.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-none">
+          <div class="trange">
+            <button class="on">Sprint 42</button>
+            <span class="sep"></span>
+            <button>Quarter</button>
+            <span class="sep"></span>
+            <button>YTD</button>
+            <span class="sep"></span>
+            <button>Custom <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <button class="btn btn-teal-outline"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M8 2v8M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 9v4a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Export <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>
+
+      <!-- REGION 2 — HERO KPIs -->
+      <div class="grid grid-cols-4 gap-6 mt-8">
+
+        <!-- KPI 1 Time saved -->
+        <div class="card" style="padding:28px 28px 24px">
+          <div class="flex items-center justify-between">
+            <span class="kpi-label">Time saved</span>
+            <span class="text-t3" title="Calibrated baseline" style="display:inline-flex;align-items:center"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.5v3.5M8 5.3v.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="kpi-number">184<span style="font-size:24px;color:var(--t2);font-weight:500;margin-left:4px">h</span></div>
+              <div class="text-[13px] mt-1" style="color:var(--t2)">≈ <span class="text-t1 font-medium">23 human-days</span> recovered</div>
+            </div>
+            <svg width="80" height="32" viewBox="0 0 80 32" fill="none" class="flex-none">
+              <polyline points="0,24 10,22 20,20 30,18 40,17 50,14 60,11 70,7 80,4" stroke="#2DD4BF" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="80" cy="4" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3"><span class="chip ok" style="height:22px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>+23 h vs last sprint</span></div>
+          <div class="mt-4 pt-3 kpi-footnote" style="border-top:1px solid var(--border)">= Σ (621 A1 × 18m) + (412 A2 × 5m) + (89 A4 × 25m). Calibrated 2026-03-15.</div>
+        </div>
+
+        <!-- KPI 2 Cost avoided -->
+        <div class="card" style="padding:28px 28px 24px">
+          <div class="flex items-center justify-between">
+            <span class="kpi-label">Cost avoided</span>
+            <span class="text-t3" style="display:inline-flex;align-items:center"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.5v3.5M8 5.3v.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="kpi-number">₹14.2<span style="font-size:24px;color:var(--t2);font-weight:500;margin-left:4px">L</span></div>
+              <div class="text-[13px] mt-1" style="color:var(--t2)">≈ <span class="mono text-t1">$17K</span> USD blended</div>
+            </div>
+            <svg width="80" height="32" viewBox="0 0 80 32" fill="none" class="flex-none">
+              <polyline points="0,22 10,23 20,20 30,18 40,16 50,15 60,12 70,9 80,6" stroke="#2DD4BF" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="80" cy="6" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3"><span class="chip ok" style="height:22px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>+8% vs previous</span></div>
+          <div class="mt-4 pt-3 kpi-footnote" style="border-top:1px solid var(--border)">= Σ (defects × stage_mult) × ₹8K/hr. 21 pre-prod (×45) + 2 staging (×200).</div>
+        </div>
+
+        <!-- KPI 3 Defects caught early -->
+        <div class="card" style="padding:28px 28px 24px">
+          <div class="flex items-center justify-between">
+            <span class="kpi-label">Defects caught early</span>
+            <span class="text-t3" style="display:inline-flex;align-items:center"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.5v3.5M8 5.3v.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="kpi-number">23</div>
+              <div class="text-[13px] mt-1" style="color:var(--t2)">21 pre-prod · 2 staging · <span style="color:var(--pass);font-weight:500">0 prod escapes</span></div>
+            </div>
+            <svg width="80" height="32" viewBox="0 0 80 32" fill="none" class="flex-none">
+              <polyline points="0,20 10,21 20,17 30,19 40,14 50,15 60,10 70,11 80,7" stroke="#2DD4BF" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="80" cy="7" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3"><span class="chip ok" style="height:22px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>+5 vs previous</span></div>
+          <div class="mt-4 pt-3 kpi-footnote" style="border-top:1px solid var(--border)">A4-classified "caught early". 6,847 total defects scanned this sprint.</div>
+        </div>
+
+        <!-- KPI 4 ROI -->
+        <div class="card" style="padding:28px 28px 24px">
+          <div class="flex items-center justify-between">
+            <span class="kpi-label">ROI this quarter</span>
+            <span class="text-t3" style="display:inline-flex;align-items:center"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.5v3.5M8 5.3v.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="kpi-number">342<span style="font-size:32px;font-weight:600;color:var(--t1);margin-left:2px">%</span></div>
+              <div class="text-[13px] mt-1" style="color:var(--t2)">90-day window · 2026 Q2</div>
+            </div>
+            <svg width="80" height="32" viewBox="0 0 80 32" fill="none" class="flex-none">
+              <polyline points="0,26 10,24 20,22 30,20 40,17 50,14 60,10 70,7 80,3" stroke="#2DD4BF" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="80" cy="3" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3"><span class="chip ok" style="height:22px"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>+54 pts QoQ</span></div>
+          <div class="mt-4 pt-3 kpi-footnote" style="border-top:1px solid var(--border)">= (184h × ₹8K/hr) ÷ ₹4.32L infra. Incl. Claude API + pgvector + BGE + Langfuse.</div>
+        </div>
+
+      </div>
+
+      <!-- REGION 3 — PER-AGENT -->
+      <div class="flex items-baseline justify-between mt-10 mb-4">
+        <h2 class="display" style="font-size:20px;font-weight:500;color:var(--t1)">Per-agent breakdown</h2>
+        <span class="text-[12px] text-t3">9 agents deployed · 3 contributing materially this sprint</span>
+      </div>
+      <div class="grid grid-cols-3 gap-6">
+
+        <!-- A1 -->
+        <div class="relative card" style="padding:22px 24px 20px">
+          <div class="lane lane-ai"></div>
+          <div class="flex items-center gap-2">
+            <span class="aglyph">A1</span>
+            <div class="display text-t1" style="font-size:14px;font-weight:500">A1 · Test Case Generator</div>
+            <span class="chip ai" style="height:20px;font-size:10.5px;margin-left:auto">production</span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="display" style="font-size:32px;line-height:36px;font-weight:700;color:var(--t1);letter-spacing:-0.02em">87<span style="font-size:22px;color:var(--t2);font-weight:500;margin-left:1px">%</span></div>
+              <div class="text-[12px] text-t2 mt-0.5">accept rate · 12-week trend</div>
+            </div>
+            <svg width="120" height="36" viewBox="0 0 120 36" fill="none">
+              <polyline points="0,26 12,24 24,22 36,23 48,20 60,18 72,17 84,14 96,12 108,10 120,7" stroke="#2DD4BF" stroke-width="1.5" fill="none"/>
+              <circle cx="120" cy="7" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3 text-[12.5px] leading-5" style="color:var(--t2)">
+            <span class="mono text-t1">621</span> generated · avg confidence <span class="mono text-t1">0.91</span>
+            <br/><span class="mono" style="color:var(--pass)">539 accepted</span> · <span class="mono" style="color:var(--warn)">68 edited</span> · <span class="mono" style="color:var(--fail)">14 rejected</span>
+          </div>
+          <!-- Source breakdown -->
+          <div class="mt-4">
+            <div class="text-[10.5px] font-semibold uppercase tracking-wider mb-1.5" style="color:var(--t3);letter-spacing:0.08em">Source breakdown</div>
+            <div class="flex h-2 r-sm overflow-hidden" style="background:var(--raised)">
+              <div style="width:58%;background:#2DD4BF"></div>
+              <div style="width:24%;background:#6D28D9"></div>
+              <div style="width:12%;background:#1D4ED8"></div>
+              <div style="width:6%;background:#B45309"></div>
+            </div>
+            <div class="flex items-center gap-3 mt-2 text-[11px]" style="color:var(--t2)">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#2DD4BF"></span>Jira 58%</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#6D28D9"></span>Reqs 24%</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#1D4ED8"></span>Figma 12%</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#B45309"></span>KB 6%</span>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 flex items-center" style="border-top:1px solid var(--border)">
+            <span class="text-[11px] text-t3">Last tuned · prompt v2.3 · 2026-04-08</span>
+            <button class="ml-auto text-[12px] font-medium flex items-center gap-1" style="color:#0E7C73">Open A1 audit <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+
+        <!-- A2 -->
+        <div class="relative card" style="padding:22px 24px 20px">
+          <div class="lane lane-ai"></div>
+          <div class="flex items-center gap-2">
+            <span class="aglyph">A2</span>
+            <div class="display text-t1" style="font-size:14px;font-weight:500">A2 · Duplicate Detection</div>
+            <span class="chip ai" style="height:20px;font-size:10.5px;margin-left:auto">production</span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="display" style="font-size:32px;line-height:36px;font-weight:700;color:var(--t1);letter-spacing:-0.02em">78<span style="font-size:22px;color:var(--t2);font-weight:500;margin-left:1px">%</span></div>
+              <div class="text-[12px] text-t2 mt-0.5">precision · 12-week trend</div>
+            </div>
+            <svg width="120" height="36" viewBox="0 0 120 36" fill="none">
+              <polyline points="0,24 12,22 24,25 36,21 48,20 60,18 72,19 84,16 96,14 108,13 120,12" stroke="#2DD4BF" stroke-width="1.5" fill="none"/>
+              <circle cx="120" cy="12" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3 text-[12.5px] leading-5" style="color:var(--t2)">
+            <span class="mono text-t1">412</span> flags · recall <span class="mono text-t1">71%</span> · FPR <span class="mono" style="color:var(--warn)">22%</span>
+            <br/><span class="text-t1 font-medium">323 hrs</span> review time saved
+          </div>
+          <div class="mt-4">
+            <div class="text-[10.5px] font-semibold uppercase tracking-wider mb-1.5" style="color:var(--t3);letter-spacing:0.08em">Top modules by flag volume</div>
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center gap-2 text-[11.5px]"><span style="width:72px;color:var(--t2)">Login</span><div class="flex-1 h-1.5 r-sm overflow-hidden" style="background:var(--raised)"><div style="width:38%;height:100%;background:#6D28D9"></div></div><span class="mono text-t2" style="width:32px;text-align:right">38%</span></div>
+              <div class="flex items-center gap-2 text-[11.5px]"><span style="width:72px;color:var(--t2)">Checkout</span><div class="flex-1 h-1.5 r-sm overflow-hidden" style="background:var(--raised)"><div style="width:24%;height:100%;background:#6D28D9"></div></div><span class="mono text-t2" style="width:32px;text-align:right">24%</span></div>
+              <div class="flex items-center gap-2 text-[11.5px]"><span style="width:72px;color:var(--t2)">Cart</span><div class="flex-1 h-1.5 r-sm overflow-hidden" style="background:var(--raised)"><div style="width:14%;height:100%;background:#6D28D9"></div></div><span class="mono text-t2" style="width:32px;text-align:right">14%</span></div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 flex items-center" style="border-top:1px solid var(--border)">
+            <span class="text-[11px] text-t3">Threshold · cosine ≥ 0.82</span>
+            <button class="ml-auto text-[12px] font-medium flex items-center gap-1" style="color:#0E7C73">Open A2 audit <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+
+        <!-- A4 -->
+        <div class="relative card" style="padding:22px 24px 20px">
+          <div class="lane lane-ai"></div>
+          <div class="flex items-center gap-2">
+            <span class="aglyph">A4</span>
+            <div class="display text-t1" style="font-size:14px;font-weight:500">A4 · Defect Intelligence</div>
+            <span class="chip ai" style="height:20px;font-size:10.5px;margin-left:auto">production</span>
+          </div>
+          <div class="flex items-end justify-between mt-4">
+            <div>
+              <div class="display" style="font-size:32px;line-height:36px;font-weight:700;color:var(--t1);letter-spacing:-0.02em">84<span style="font-size:22px;color:var(--t2);font-weight:500;margin-left:1px">%</span></div>
+              <div class="text-[12px] text-t2 mt-0.5">Lead-rated helpfulness</div>
+            </div>
+            <svg width="120" height="36" viewBox="0 0 120 36" fill="none">
+              <polyline points="0,28 12,26 24,24 36,22 48,20 60,19 72,16 84,14 96,12 108,10 120,8" stroke="#2DD4BF" stroke-width="1.5" fill="none"/>
+              <circle cx="120" cy="8" r="2.5" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <div class="mt-3 text-[12.5px] leading-5" style="color:var(--t2)">
+            <span class="mono text-t1">89</span> RCAs · classification acc. <span class="mono text-t1">78%</span>
+            <br/>avg time-to-triage <span class="text-t1 font-medium">4 min</span> <span style="color:var(--t3)">(was 18 min)</span>
+          </div>
+          <div class="mt-4">
+            <div class="text-[10.5px] font-semibold uppercase tracking-wider mb-1.5" style="color:var(--t3);letter-spacing:0.08em">Classification breakdown</div>
+            <div class="flex h-2 r-sm overflow-hidden" style="background:var(--raised)">
+              <div style="width:54%;background:#B91C1C" title="App Bug"></div>
+              <div style="width:21%;background:#B45309" title="Flaky"></div>
+              <div style="width:15%;background:#1D4ED8" title="Env"></div>
+              <div style="width:10%;background:#6D28D9" title="Test Bug"></div>
+            </div>
+            <div class="flex items-center gap-3 mt-2 text-[11px]" style="color:var(--t2)">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#B91C1C"></span>App 54%</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#B45309"></span>Flaky 21%</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#1D4ED8"></span>Env 15%</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:#6D28D9"></span>Test 10%</span>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 flex items-center" style="border-top:1px solid var(--border)">
+            <span class="text-[11px] text-t3">5-layer RCA · HITL on &lt;60%</span>
+            <button class="ml-auto text-[12px] font-medium flex items-center gap-1" style="color:#0E7C73">Open A4 audit <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- REGION 4 — ANNOTATED TREND -->
+      <div class="card mt-10" style="padding:24px">
+        <div class="flex items-baseline justify-between">
+          <div>
+            <h2 class="display" style="font-size:20px;font-weight:500;color:var(--t1)">Weekly hours saved · 12-week trend</h2>
+            <div class="text-[12.5px] text-t2 mt-1">W14 2026 → W25 2026 · grew <span class="text-t1 font-semibold">+47% QoQ</span></div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn" style="height:28px;padding:0 10px;font-size:12px;color:var(--t2)">Show overlay: Defects caught <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="flex items-center gap-3 text-[11.5px]" style="color:var(--t2);padding-left:8px">
+              <span class="flex items-center gap-1.5"><span style="width:14px;height:2px;background:#2DD4BF;display:inline-block"></span>Hours saved</span>
+              <span class="flex items-center gap-1.5"><span style="width:14px;height:0;border-top:1.5px dashed #6D28D9;display:inline-block"></span>Defects caught</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="relative mt-4" style="height:280px">
+          <svg viewBox="0 0 1440 280" width="100%" height="280" preserveAspectRatio="none" style="display:block">
+            <!-- Gridlines -->
+            <g stroke="#F4F3EF" stroke-dasharray="3 3" stroke-width="1">
+              <line x1="40" x2="1440" y1="40" y2="40"/>
+              <line x1="40" x2="1440" y1="90" y2="90"/>
+              <line x1="40" x2="1440" y1="140" y2="140"/>
+              <line x1="40" x2="1440" y1="190" y2="190"/>
+              <line x1="40" x2="1440" y1="240" y2="240"/>
+            </g>
+            <!-- Y labels -->
+            <g font-family="Inter" font-size="10" fill="#94A3B8">
+              <text x="32" y="43" text-anchor="end">250</text>
+              <text x="32" y="93" text-anchor="end">200</text>
+              <text x="32" y="143" text-anchor="end">150</text>
+              <text x="32" y="193" text-anchor="end">100</text>
+              <text x="32" y="243" text-anchor="end">50</text>
+              <text x="32" y="253" text-anchor="end">0</text>
+            </g>
+            <!-- X axis baseline -->
+            <line x1="40" y1="240" x2="1440" y2="240" stroke="#E5E7EB" stroke-width="1"/>
+
+            <!-- Release markers (behind data) -->
+            <!-- W16 v1.3 ships (index 2) -->
+            <line x1="270" y1="40" x2="270" y2="240" stroke="#B91C1C" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+            <!-- W20 v1.4 ships (index 6) -->
+            <line x1="770" y1="40" x2="770" y2="240" stroke="#B91C1C" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+
+            <!-- Defects caught overlay (dashed violet) -->
+            <polyline points="95,205 210,200 325,195 440,185 555,180 670,170 785,165 900,150 1015,140 1130,130 1245,115 1370,100"
+                      stroke="#6D28D9" stroke-width="1.5" stroke-dasharray="4 3" fill="none" opacity="0.55"/>
+
+            <!-- Primary line: hours saved -->
+            <polyline points="95,210 210,200 325,188 440,178 555,170 670,150 785,140 900,150 1015,128 1130,90 1245,65 1370,58"
+                      stroke="#2DD4BF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- Data points -->
+            <g fill="#2DD4BF">
+              <circle cx="95" cy="210" r="4"/>
+              <circle cx="210" cy="200" r="4"/>
+              <circle cx="325" cy="188" r="4"/>
+              <circle cx="440" cy="178" r="4"/>
+              <circle cx="555" cy="170" r="4"/>
+              <circle cx="670" cy="150" r="4"/>
+              <circle cx="785" cy="140" r="4"/>
+              <circle cx="900" cy="150" r="4"/>
+              <circle cx="1015" cy="128" r="4"/>
+              <circle cx="1130" cy="90" r="4"/>
+              <circle cx="1245" cy="65" r="4"/>
+              <circle cx="1370" cy="58" r="4" stroke="#0F172A" stroke-width="1.5"/>
+            </g>
+
+            <!-- X labels -->
+            <g font-family="JetBrains Mono" font-size="10" fill="#475569" text-anchor="middle">
+              <text x="95" y="262">W14</text>
+              <text x="210" y="262">W15</text>
+              <text x="325" y="262">W16</text>
+              <text x="440" y="262">W17</text>
+              <text x="555" y="262">W18</text>
+              <text x="670" y="262">W19</text>
+              <text x="785" y="262">W20</text>
+              <text x="900" y="262">W21</text>
+              <text x="1015" y="262">W22</text>
+              <text x="1130" y="262">W23</text>
+              <text x="1245" y="262">W24</text>
+              <text x="1370" y="262">W25</text>
+            </g>
+
+            <!-- Release marker labels -->
+            <g>
+              <rect x="228" y="24" width="84" height="20" rx="4" fill="#FEE2E2" stroke="#B91C1C" stroke-width="0.8"/>
+              <text x="270" y="38" font-family="Inter" font-size="11" fill="#B91C1C" text-anchor="middle" font-weight="600">v1.3 ships</text>
+              <rect x="728" y="24" width="84" height="20" rx="4" fill="#FEE2E2" stroke="#B91C1C" stroke-width="0.8"/>
+              <text x="770" y="38" font-family="Inter" font-size="11" fill="#B91C1C" text-anchor="middle" font-weight="600">v1.4 ships</text>
+            </g>
+
+            <!-- Cluster callout W18: defect cluster (red) pointing to W18 dip-ish -->
+            <g>
+              <circle cx="555" cy="170" r="9" fill="none" stroke="#B91C1C" stroke-width="1.5"/>
+              <line x1="555" y1="161" x2="555" y2="120" stroke="#B91C1C" stroke-width="1" stroke-dasharray="3 2"/>
+              <rect x="430" y="78" width="258" height="42" rx="6" fill="#FFFFFF" stroke="#B91C1C" stroke-width="1"/>
+              <text x="442" y="95" font-family="Inter" font-size="11" font-weight="600" fill="#B91C1C">3 PAY defects cluster</text>
+              <text x="442" y="111" font-family="JetBrains Mono" font-size="10.5" fill="#475569">2026-03-15 · pre-A1 v2.3</text>
+            </g>
+
+            <!-- Cluster callout W22: A1 prompt v2.3 deployed (violet) -->
+            <g>
+              <circle cx="1015" cy="128" r="9" fill="none" stroke="#6D28D9" stroke-width="1.5"/>
+              <line x1="1015" y1="119" x2="1015" y2="80" stroke="#6D28D9" stroke-width="1" stroke-dasharray="3 2"/>
+              <rect x="878" y="42" width="274" height="42" rx="6" fill="#FFFFFF" stroke="#6D28D9" stroke-width="1"/>
+              <text x="890" y="59" font-family="Inter" font-size="11" font-weight="600" fill="#6D28D9">A1 prompt v2.3 deployed</text>
+              <text x="890" y="75" font-family="JetBrains Mono" font-size="10.5" fill="#475569">confidence 0.82 → 0.91 · +47% lift</text>
+            </g>
+          </svg>
+        </div>
+        <div class="mt-3 pt-3 text-[12.5px]" style="color:var(--t2);border-top:1px solid var(--border)">
+          Weekly hours saved grew <span class="text-t1 font-semibold">47% QoQ</span>. Highest gain: <span class="mono text-t1">W22</span> after <span style="color:var(--ai);font-weight:500">A1 v2.3</span> improved test-case confidence from <span class="mono">0.82 → 0.91</span>.
+        </div>
+      </div>
+
+      <!-- REGION 5 — PER-PROJECT TABLE -->
+      <div class="mt-10">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="display" style="font-size:18px;font-weight:500;color:var(--t1)">Value by project</h2>
+          <span class="text-[11.5px] text-t3">click row → drill into release dashboard</span>
+        </div>
+        <div class="card overflow-hidden">
+          <table class="vtab">
+            <thead>
+              <tr>
+                <th style="width:36%">Project</th>
+                <th>Time saved</th>
+                <th>Cost avoided</th>
+                <th>Defects caught</th>
+                <th>ROI</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="flex items-center gap-2.5"><span class="w-6 h-6 r-sm flex items-center justify-center mono text-[10px] font-semibold text-white" style="background:#2DD4BF">IC</span><span class="font-medium">Iksula Commerce</span><span class="mono text-[11px] text-t3">main</span></div></td>
+                <td class="mono">84 h</td>
+                <td class="mono">₹6.7 L</td>
+                <td class="mono">11</td>
+                <td><span class="chip ok" style="height:22px"><span class="mono font-semibold">362%</span></span></td>
+                <td><span class="text-t3" style="display:inline-flex;align-items:center;justify-content:flex-end"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr>
+                <td><div class="flex items-center gap-2.5"><span class="w-6 h-6 r-sm flex items-center justify-center mono text-[10px] font-semibold text-white" style="background:#6D28D9">IP</span><span class="font-medium">Iksula Payments</span><span class="mono text-[11px] text-t3">main</span></div></td>
+                <td class="mono">58 h</td>
+                <td class="mono">₹4.6 L</td>
+                <td class="mono">8</td>
+                <td><span class="chip ok" style="height:22px"><span class="mono font-semibold">321%</span></span></td>
+                <td><span class="text-t3" style="display:inline-flex;align-items:center;justify-content:flex-end"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr>
+                <td><div class="flex items-center gap-2.5"><span class="w-6 h-6 r-sm flex items-center justify-center mono text-[10px] font-semibold text-white" style="background:#1D4ED8">IM</span><span class="font-medium">Iksula Mobile App</span><span class="mono text-[11px] text-t3">release/4.2</span></div></td>
+                <td class="mono">42 h</td>
+                <td class="mono">₹2.9 L</td>
+                <td class="mono">4</td>
+                <td><span class="chip ok" style="height:22px"><span class="mono font-semibold">298%</span></span></td>
+                <td><span class="text-t3" style="display:inline-flex;align-items:center;justify-content:flex-end"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></td>
+              </tr>
+              <tr class="total">
+                <td>TOTAL · All projects</td>
+                <td class="mono">184 h</td>
+                <td class="mono">₹14.2 L</td>
+                <td class="mono">23</td>
+                <td><span class="chip ok" style="height:22px"><span class="mono font-semibold">342%</span></span></td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- REGION 6 — PROVENANCE FOOTER -->
+  <footer class="flex items-center" style="background:var(--raised);border-top:1px solid var(--border);padding:20px 32px;min-height:80px">
+    <div class="text-[12px] leading-5" style="color:var(--t2);max-width:1100px">
+      <span class="font-semibold text-t1">Metrics computed from</span>
+      <span class="mono text-t1">2,341 A1</span> generations,
+      <span class="mono text-t1">412 A2</span> flags,
+      <span class="mono text-t1">89 A4</span> RCAs over
+      <span class="mono">2026-04-01 → 2026-04-23</span> (Sprint 42).
+      Baseline calibration last refreshed <span class="mono">2026-03-15</span> against a 120-case hand-authored control set.
+      See full methodology <a href="#" style="color:#0E7C73;font-weight:500">here →</a>.
+      AI-infra cost sourced from billing system (Claude API + pgvector + BGE embeddings + Langfuse), rolled up monthly.
+    </div>
+    <div class="ml-auto flex items-center gap-3 pl-6">
+      <div class="text-right">
+        <div class="text-[11.5px] mono" style="color:var(--t2)">Last refreshed <span class="text-t1 font-medium">09:14 IST</span></div>
+        <div class="text-[10.5px] mono" style="color:var(--t3)">auto-refresh · every 5 min</div>
+      </div>
+      <button class="btn btn-teal-outline"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:inline-block;vertical-align:-2px;flex:none"><path d="M13.5 4v3h-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 7A5 5 0 1 0 13.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>Refresh now</button>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

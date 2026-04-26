@@ -1,0 +1,84 @@
+# QA Nexus PM1 — root .gitignore
+# Generated 2026-04-26 by Tech-project-forge-skill v1.4 + PM1-custom additions
+
+# ───── Secrets (NEVER commit) ─────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+*.pem
+*.key
+*.crt
+secrets/
+.secrets/
+
+# ───── Node / pnpm ─────
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+.pnp.*
+
+# ───── Next.js (apps/web) ─────
+.next/
+out/
+build/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# ───── NestJS / TypeScript build (apps/api) ─────
+dist/
+*.js.map
+*.d.ts.map
+*.tsbuildinfo
+
+# ───── Prisma ─────
+# Do NOT commit generated client (regenerated via `prisma generate`)
+apps/api/node_modules/.prisma/
+apps/api/src/generated/
+
+# ───── Test artifacts / coverage ─────
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+test-results/
+e2e-results/
+
+# ───── @xenova/transformers model cache ─────
+# Qwen3-Embedding-0.6B (~600 MB) downloads on first run — do NOT commit
+.cache/
+**/Xenova/
+
+# ───── Claude Code (project-local) ─────
+.claude/audit.jsonl
+.claude/settings.local.json
+.claude/skill-feedback.json
+
+# ───── OS / Editor cruft ─────
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ───── Misc ─────
+.docusaurus/
+.cache/
+.parcel-cache/
+.turbo/
+node-compile-cache/
+*.log

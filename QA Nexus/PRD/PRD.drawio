@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" modified="2026-04-21" agent="Claude" version="20.0" type="device">
+  <diagram id="qa-nexus-journey" name="QA Nexus MVP — End-to-End Product Journey">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" background="#F9FAFB" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="QA Nexus MVP — End-to-End Product Journey" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="20" width="1000" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 1: Sign-In -->
+        <mxCell id="stage1" value="1. Sign-In &amp; Onboard" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#1E3A8A;fontColor=#FFFFFF;strokeColor=#1E3A8A;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage1-detail" value="Email/password login or SSO (v1.5)&#10;Project Picker&#10;Create/join project&#10;Invite team members" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="190" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow 1 -->
+        <mxCell id="arrow1" edge="1" parent="1" source="stage1" target="stage2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 2: Create Project -->
+        <mxCell id="stage2" value="2. Project Setup" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#2563EB;fontColor=#FFFFFF;strokeColor=#2563EB;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="230" y="100" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage2-detail" value="Set Jira project key&#10;Configure environments&#10;Set RBAC roles&#10;Connect integrations" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="230" y="190" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow 2 -->
+        <mxCell id="arrow2" edge="1" parent="1" source="stage2" target="stage3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 3: Generate Documents -->
+        <mxCell id="stage3" value="3. Upload Requirements &amp; Generate Docs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#3B82F6;fontColor=#FFFFFF;strokeColor=#3B82F6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="410" y="100" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage3-detail" value="Paste Jira PRD / Figma link&#10;A1 generates Test Plan&#10;A1 generates Test Strategy&#10;Section confidence scores" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="190" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow 3 -->
+        <mxCell id="arrow3" edge="1" parent="1" source="stage3" target="stage4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 4: Author Test Cases -->
+        <mxCell id="stage4" value="4. Review & Author Test Cases" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#60A5FA;fontColor=#FFFFFF;strokeColor=#60A5FA;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="590" y="100" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage4-detail" value="A1 Generator outputs BDD cases&#10;A2 Dedup live chips&#10;Edit/approve cases&#10;Link to requirements (RTM)" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="190" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow 4 -->
+        <mxCell id="arrow4" edge="1" parent="1" source="stage4" target="stage5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 5: Test Execution -->
+        <mxCell id="stage5" value="5. Run Tests & Execute" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#93C5FD;fontColor=#1F2937;strokeColor=#60A5FA;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="770" y="100" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage5-detail" value="Create Run (suite+env)&#10;Execute cases step-by-step&#10;Auto-screenshot at failure&#10;Quick-status (pass/fail/skip)" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="770" y="190" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow 5 -->
+        <mxCell id="arrow5" edge="1" parent="1" source="stage5" target="stage6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 6: Log Defects & RCA -->
+        <mxCell id="stage6" value="6. Log Defects & A4 RCA" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#DC2626;fontColor=#FFFFFF;strokeColor=#DC2626;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="950" y="100" width="140" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage6-detail" value="Prefilled defect form&#10;A4 5-layer RCA analysis&#10;4-category classification&#10;Jira 2-way sync (OAuth)" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="950" y="190" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 7: Generate Reports -->
+        <mxCell id="stage7-label" value="7" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=#8B5CF6;fontColor=#FFFFFF;strokeColor=#8B5CF6;strokeWidth=2;width=30;height=30;" vertex="1" parent="1">
+          <mxGeometry x="100" y="350" width="30" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage7" value="Generate Reports & ROI Dashboard" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#8B5CF6;fontColor=#FFFFFF;strokeColor=#8B5CF6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="160" y="340" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage7-detail" value="Templated Daily/Weekly/Sprint/Release reports&#10;Exec Dashboard: pass rate, defect trend, coverage, RAG, ROI formula" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="400" width="200" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Stage 8: View KB & Close Loop -->
+        <mxCell id="stage8-label" value="8" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fontStyle=1;fillColor=#06B6D4;fontColor=#FFFFFF;strokeColor=#06B6D4;strokeWidth=2;width=30;height=30;" vertex="1" parent="1">
+          <mxGeometry x="100" y="520" width="30" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage8" value="Knowledge Base & Continuous Learning" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;fontStyle=1;fillColor=#06B6D4;fontColor=#FFFFFF;strokeColor=#06B6D4;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="160" y="510" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="stage8-detail" value="KB auto-populates from generated docs&#10;Cross-project memory for test strategies, RCA patterns&#10;Improves A1/A2/A4 accuracy over time" style="text;html=1;fontSize=10;align=left;verticalAlign=top;fillColor=#E5E7EB;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="570" width="200" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Key Metrics Box -->
+        <mxCell id="metrics-box" value="SUCCESS METRICS (12-Week Pilot)&#10;• Adoption: 80% of QAs active ≥4d/wk by week 3&#10;• Engagement: 70% of defects via QA Nexus → Jira&#10;• Speed: ≤90s time-to-log-bug, ≤30s doc gen&#10;• AI Quality: 80% A1 approval, 75% A4 RCA accuracy&#10;• Value: Live ROI dashboard by week 8" style="rounded=1;fillColor=#FEF3C7;strokeColor=#F59E0B;strokeWidth=2;fontSize=10;align=left;" vertex="1" parent="1">
+          <mxGeometry x="420" y="340" width="500" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- MVP vs Post-MVP Box -->
+        <mxCell id="roadmap-box" value="MVP (18 weeks) | Post-MVP (v1.5–v2)&#10;M0: Auth, RBAC, projects | v1.5: SSO, ChatOps, Low-Code Authoring&#10;M1: KB, 12 docs | v2: Full 70-doc catalog, EU AI Act compliance&#10;M2–M5: Cases, A1, A2, Runs, A4, Jira, Reports | v2+: Career Compass, Visual Regression, Cloud Grid" style="rounded=1;fillColor=#DBEAFE;strokeColor=#0284C7;strokeWidth=1;fontSize=9;align=left;" vertex="1" parent="1">
+          <mxGeometry x="420" y="460" width="500" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Tech Stack -->
+        <mxCell id="tech-box" value="TECH STACK (Zero-Cost MVP)&#10;Frontend: Next.js 14, React 18, TailwindCSS | Backend: NestJS, FastAPI, LangGraph&#10;LLM: Gemma 4 26B (Ollama) + Gemini 2.5 Flash | Data: Postgres + pgvector, Redis, Neo4j&#10;Hosting: Vercel, Oracle Always Free, Cloudflare R2, Upstash Redis" style="rounded=1;fillColor=#E8F5E9;strokeColor=#388E3C;strokeWidth=1;fontSize=9;align=left;" vertex="1" parent="1">
+          <mxGeometry x="420" y="560" width="500" height="70" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

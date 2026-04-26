@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" modified="2026-04-21T10:30:00Z" agent="Claude" version="23.0" type="device">
+  <diagram id="erd-qanexus" name="QA Nexus System Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1100" background="#0B0F17" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="QA Nexus — System Architecture (C4 Container Level)" style="text;html=1;fontSize=18;fontColor=#D8DEE9;fontStyle=1;align=center;spacingBottom=10;" vertex="1" parent="1">
+          <mxGeometry x="50" y="20" width="1300" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- External Users -->
+        <mxCell id="user" value="QA Engineer / Lead / Admin" style="shape=actor;whiteSpace=wrap;html=1;rounded=1;fillColor=#5E81AC;strokeColor=#88C0D0;fontColor=#D8DEE9;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="50" y="120" width="100" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Presentation Layer -->
+        <mxCell id="frontend" value="CO-001: Next.js 14 Frontend&#10;(React SSR + TipTap)&#10;Vercel Hobby" style="rounded=1;fillColor=#3B4252;strokeColor=#5E81AC;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="100" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway -->
+        <mxCell id="apigate" value="CO-002: NestJS API Gateway&#10;(Auth, RBAC, Audit)&#10;Oracle VM" style="rounded=1;fillColor=#3B4252;strokeColor=#5E81AC;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="550" y="100" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- AI Inference Layer -->
+        <mxCell id="aicenter" value="CO-018: FastAPI Server&#10;CO-019: LangGraph&#10;CO-020: Ollama Gemma 4&#10;Oracle VM" style="rounded=1;fillColor=#3B4252;strokeColor=#EBCB8B;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="850" y="100" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Integrations Hub -->
+        <mxCell id="integ" value="CO-014–017: Integration Hub&#10;(Jira OAuth, GitHub, Slack,&#10;Confluence)&#10;Oracle VM" style="rounded=1;fillColor=#3B4252;strokeColor=#A3BE8C;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="100" width="160" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Data Layer -->
+        <mxCell id="datashape" value="Data Layer" style="text;html=1;fontSize=12;fontColor=#D8DEE9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="280" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="postgres" value="CO-023: PostgreSQL 15&#10;(Relational, RLS)&#10;+ pgvector (CO-026)" style="rounded=1;fillColor=#3B4252;strokeColor=#5E81AC;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="320" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="redis" value="CO-024: Redis 7&#10;(Cache + PubSub)" style="rounded=1;fillColor=#3B4252;strokeColor=#5E81AC;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="450" y="320" width="130" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="neo4j" value="CO-025: Neo4j Community&#10;(Graphiti Memory)" style="rounded=1;fillColor=#3B4252;strokeColor=#5E81AC;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="650" y="320" width="130" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="jobqueue" value="CO-022: Hatchet Job Queue&#10;(Async AI workflows)" style="rounded=1;fillColor=#3B4252;strokeColor=#A3BE8C;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="850" y="320" width="130" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="r2" value="CO-027: Cloudflare R2&#10;(Evidence Storage)" style="rounded=1;fillColor=#3B4252;strokeColor=#5E81AC;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="320" width="130" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Observability -->
+        <mxCell id="obsshape" value="Observability Layer" style="text;html=1;fontSize=12;fontColor=#D8DEE9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="480" width="130" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="langfuse" value="CO-028: Langfuse&#10;(LLM Traces)" style="rounded=1;fillColor=#3B4252;strokeColor=#EBCB8B;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="520" width="130" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="signoz" value="CO-029: SigNoz&#10;(APM + Logs)" style="rounded=1;fillColor=#3B4252;strokeColor=#EBCB8B;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="450" y="520" width="130" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="glitchtip" value="CO-030: GlitchTip&#10;(Error Tracking)" style="rounded=1;fillColor=#3B4252;strokeColor=#EBCB8B;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="650" y="520" width="130" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="unleash" value="Unleash / Langfuse&#10;(Feature Flags)" style="rounded=1;fillColor=#3B4252;strokeColor=#A3BE8C;fontColor=#D8DEE9;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="850" y="520" width="130" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- External Services -->
+        <mxCell id="extshape" value="External Services" style="text;html=1;fontSize=12;fontColor=#D8DEE9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="680" width="130" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="jira" value="Jira Cloud&#10;(OAuth 2.0 3LO)" style="rounded=1;fillColor=#2E3440;strokeColor=#BF616A;fontColor=#D8DEE9;fontSize=9;align=center;" vertex="1" parent="1">
+          <mxGeometry x="250" y="720" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ghub" value="GitHub / GitLab&#10;(Webhooks)" style="rounded=1;fillColor=#2E3440;strokeColor=#BF616A;fontColor=#D8DEE9;fontSize=9;align=center;" vertex="1" parent="1">
+          <mxGeometry x="400" y="720" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="slack" value="Slack / Confluence&#10;(Webhooks)" style="rounded=1;fillColor=#2E3440;strokeColor=#BF616A;fontColor=#D8DEE9;fontSize=9;align=center;" vertex="1" parent="1">
+          <mxGeometry x="550" y="720" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="resend" value="Resend&#10;(Email)" style="rounded=1;fillColor=#2E3440;strokeColor=#BF616A;fontColor=#D8DEE9;fontSize=9;align=center;" vertex="1" parent="1">
+          <mxGeometry x="700" y="720" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gemini" value="Gemini 2.5 Flash&#10;(Fallback)" style="rounded=1;fillColor=#2E3440;strokeColor=#BF616A;fontColor=#D8DEE9;fontSize=9;align=center;" vertex="1" parent="1">
+          <mxGeometry x="850" y="720" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: User to Frontend -->
+        <mxCell id="edge1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5E81AC;strokeWidth=2;" edge="1" parent="1" source="user" target="frontend">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: Frontend to API Gateway -->
+        <mxCell id="edge2" value="HTTPS/JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5E81AC;strokeWidth=2;label;fontSize=9;fontColor=#D8DEE9;" edge="1" parent="1" source="frontend" target="apigate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: API Gateway to AI Inference -->
+        <mxCell id="edge3" value="LLM Jobs (Hatchet)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EBCB8B;strokeWidth=2;label;fontSize=9;fontColor=#D8DEE9;" edge="1" parent="1" source="apigate" target="aicenter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: API Gateway to Integrations -->
+        <mxCell id="edge4" value="OAuth / Webhooks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#A3BE8C;strokeWidth=2;label;fontSize=9;fontColor=#D8DEE9;" edge="1" parent="1" source="apigate" target="integ">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: API Gateway to Data -->
+        <mxCell id="edge5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5E81AC;strokeWidth=2;" edge="1" parent="1" source="apigate" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5E81AC;strokeWidth=2;" edge="1" parent="1" source="apigate" target="redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: AI Inference to Data -->
+        <mxCell id="edge7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EBCB8B;strokeWidth=2;" edge="1" parent="1" source="aicenter" target="neo4j">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge8" value="Vector Search" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EBCB8B;strokeWidth=2;label;fontSize=9;fontColor=#D8DEE9;" edge="1" parent="1" source="aicenter" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: Hatchet / Job Queue -->
+        <mxCell id="edge9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#A3BE8C;strokeWidth=2;" edge="1" parent="1" source="apigate" target="jobqueue">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#A3BE8C;strokeWidth=2;" edge="1" parent="1" source="jobqueue" target="aicenter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: R2 Storage -->
+        <mxCell id="edge11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5E81AC;strokeWidth=2;" edge="1" parent="1" source="apigate" target="r2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: Observability -->
+        <mxCell id="edge12" value="Traces" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EBCB8B;strokeWidth=2;label;fontSize=9;fontColor=#D8DEE9;" edge="1" parent="1" source="aicenter" target="langfuse">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EBCB8B;strokeWidth=2;" edge="1" parent="1" source="apigate" target="signoz">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EBCB8B;strokeWidth=2;" edge="1" parent="1" source="apigate" target="glitchtip">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Edges: External Integrations -->
+        <mxCell id="edge15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#BF616A;strokeWidth=2;dashed=1;" edge="1" parent="1" source="integ" target="jira">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#BF616A;strokeWidth=2;dashed=1;" edge="1" parent="1" source="integ" target="ghub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#BF616A;strokeWidth=2;dashed=1;" edge="1" parent="1" source="integ" target="slack">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#BF616A;strokeWidth=2;dashed=1;" edge="1" parent="1" source="apigate" target="resend">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#BF616A;strokeWidth=2;dashed=1;" edge="1" parent="1" source="aicenter" target="gemini">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="Solid lines = primary data flow | Dashed lines = external integrations | Colors: Blue=Core, Yellow=AI, Green=Queue, Red=External" style="text;html=1;fontSize=9;fontColor=#D8DEE9;align=left;spacing=5;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1000" width="1300" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

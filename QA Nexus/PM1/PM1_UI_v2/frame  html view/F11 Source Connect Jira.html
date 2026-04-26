@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Connect Jira · Iksula Returns</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --primary-soft:rgba(45,212,191,0.10);--ai-soft:rgba(167,139,250,0.10);--info-soft:rgba(96,165,250,0.10);--pass-soft:rgba(52,211,153,0.10);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  .bg-base{background:var(--base)}.bg-raised{background:var(--raised)}.bg-overlay{background:var(--overlay)}
+  .text-t1{color:var(--t1)}.text-t2{color:var(--t2)}.text-t3{color:var(--t3)}.text-t4{color:var(--t4)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 18px;border-radius:4px;font-size:14px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised);color:var(--t1)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+  .btn-primary:hover{background:rgba(45,212,191,0.9)}
+  .btn-disabled{background:var(--raised);border-color:var(--border);color:var(--t4);cursor:not-allowed}
+
+  .step-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t3);background:transparent}
+  .step-pill .num{width:22px;height:22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;background:var(--raised);color:var(--t3);font-family:"JetBrains Mono"}
+  .step-pill.on{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+  .step-pill.on .num{background:rgba(0,55,50,0.25);color:var(--primary-ink)}
+  .step-line{flex:1;height:2px;background:var(--border);max-width:72px}
+</style>
+</head>
+<body>
+<div style="width:1600px;margin:0 auto;min-height:1024px;position:relative">
+
+  <!-- MINIMAL TOP BAR -->
+  <header class="h-14 flex items-center gap-3 px-5 bg-base" style="border-bottom:1px solid var(--border)">
+    <a class="flex items-center gap-2.5">
+      <svg viewBox="0 0 22 22" width="22" height="22" fill="none">
+        <path d="M8.5 2.5h5M9.5 2.5v4.2L5 15.2a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4.5-8.5V2.5" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="9.7" cy="13" r="0.9" fill="#A78BFA"/><circle cx="13.3" cy="15.3" r="0.7" fill="#2DD4BF"/>
+      </svg>
+      <span class="display text-t1" style="font-size:15px;font-weight:700">QA Nexus</span>
+    </a>
+    <div class="flex-1 flex justify-center items-center gap-2" style="font-size:13px;color:var(--t3)">
+      <a href="#" style="color:var(--primary)" class="hover:underline">Iksula Returns</a>
+      <span>·</span>
+      <span>Setting up Jira</span>
+    </div>
+    <a href="#" class="text-[13px]" style="color:var(--t3)">Exit setup</a>
+    <span class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold mono ml-3" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">YM</span>
+  </header>
+
+  <!-- MAIN -->
+  <main style="max-width:960px;margin:0 auto;padding:48px 24px 120px">
+
+    <!-- Stepper -->
+    <div class="flex items-center justify-center gap-3">
+      <span class="step-pill on"><span class="num">1</span> Authorize</span>
+      <span class="step-line"></span>
+      <span class="step-pill"><span class="num">2</span> Map</span>
+      <span class="step-line"></span>
+      <span class="step-pill"><span class="num">3</span> Verify</span>
+    </div>
+    <div class="mono text-center mt-3" style="font-size:11px;color:var(--t3)">Step 1 of 3</div>
+
+    <!-- Step 1 content -->
+    <div style="max-width:820px;margin:48px auto 0">
+      <h1 class="display" style="font-size:32px;line-height:40px;font-weight:600">Connect to your Atlassian workspace</h1>
+      <p class="mt-3" style="font-size:16px;line-height:24px;color:var(--t2);max-width:680px">
+        QA Nexus needs read + write access to fetch issues and sync test cases. You can scope access to specific projects in the next step.
+      </p>
+
+      <!-- Two-column -->
+      <div class="grid mt-10" style="grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:32px">
+
+        <!-- Permissions card -->
+        <div class="bg-base" style="border:1px solid var(--border);border-radius:8px;padding:28px">
+          <h2 class="display" style="font-size:17px;font-weight:600;color:var(--t1)">What QA Nexus will access</h2>
+          <ul class="mt-5 space-y-4" style="font-size:13.5px;line-height:20px">
+            <li class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center flex-none" style="background:var(--primary-soft);color:var(--primary);margin-top:1px">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.2 2.2L9.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="text-t1">Read issues, stories, epics, sprints, and custom fields from authorized Jira projects</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center flex-none" style="background:var(--primary-soft);color:var(--primary);margin-top:1px">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.2 2.2L9.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="text-t1">Link QA Nexus test cases and defects to Jira issues, create defects as Jira Bugs</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center flex-none" style="background:var(--primary-soft);color:var(--primary);margin-top:1px">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.2 2.2L9.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="text-t1">Post comments and status updates to linked issues <span style="color:var(--t3)">(opt-in per project)</span></span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center flex-none" style="background:var(--raised);color:var(--t3);border:1px solid var(--border);margin-top:1px">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              </span>
+              <span style="color:#94A3B8"><span class="font-medium" style="color:var(--t2)">Never:</span> delete issues, modify issue types, or change Jira project settings</span>
+            </li>
+          </ul>
+          <div class="mt-6 pt-4" style="border-top:1px solid var(--border);font-size:12px;color:var(--t3)">
+            You can revoke this access anytime from <span class="text-t2">Integrations → Jira → Disconnect</span>.
+          </div>
+        </div>
+
+        <!-- OAuth CTA card -->
+        <div class="bg-base flex flex-col items-center text-center" style="border:1px solid color-mix(in srgb,var(--primary) 28%,transparent);border-radius:8px;padding:28px 24px;box-shadow:0 0 24px rgba(45,212,191,0.06)">
+          <span class="w-14 h-14 rounded-xl flex items-center justify-center mb-4" style="background:var(--info-soft);border:1px solid color-mix(in srgb,var(--info) 25%,transparent);color:var(--info)">
+            <!-- Jira mark -->
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <path d="M22 11.5L12.5 2A5 5 0 0 0 13 8.8l5.5 5.5a5 5 0 0 0 3.5-2.8z" fill="currentColor" opacity="0.9"/>
+              <path d="M16 6L6.5 15.5a5 5 0 0 0 6.8.5l2.2-2.2A5 5 0 0 0 16 6z" fill="currentColor" opacity="0.55"/>
+              <path d="M12 12l-9.5 9.5A5 5 0 0 0 9.3 22L14 17.3A5 5 0 0 0 12 12z" fill="currentColor" opacity="0.3"/>
+            </svg>
+          </span>
+          <h3 class="display" style="font-size:17px;font-weight:600;color:var(--t1)">Sign in with Atlassian</h3>
+          <p class="mt-2" style="font-size:12.5px;line-height:18px;color:var(--t2)">You'll authorize QA Nexus on <span class="mono" style="color:var(--t1)">iksula.atlassian.net</span> and be redirected back here automatically.</p>
+          <button class="btn btn-primary mt-5" style="width:100%;height:48px;font-size:14.5px;font-weight:600">
+            Authorize with Jira
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3h7v7M13 3L5 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="mono mt-3" style="font-size:10.5px;color:#94A3B8">Expected: 30s · Uses OAuth 2.0 3LO</div>
+          <a href="#" class="mt-3" style="font-size:12px;color:var(--primary)">Having trouble? See the Atlassian admin guide →</a>
+        </div>
+      </div>
+
+      <!-- Step footer -->
+      <div class="flex items-center justify-between mt-12 pt-6" style="border-top:1px solid var(--border)">
+        <button class="btn" style="border:none;color:var(--t2);padding:0">Cancel · Connect Jira later</button>
+        <div class="flex items-center gap-4">
+          <span class="mono text-[11px]" style="color:var(--t3)">Continue unlocks after authorization</span>
+          <button class="btn btn-disabled" style="padding:0 22px">
+            Continue to map
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Help footer -->
+  <footer style="position:absolute;bottom:0;left:0;right:0;height:48px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--t3)">
+    Need help connecting Jira? <a href="#" style="color:var(--primary);margin-left:6px">See the Jira integration guide →</a>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": ".claude/hooks/pre-tool-use/block-dangerous.sh" }]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-design-tokens.sh" },
+          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-pm1-stack.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [{ "type": "command", "command": ".claude/hooks/post-tool-use/audit-log.sh" }]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/prompt-submit/load-binding-context.sh" }
+        ]
+      }
+    ]
+  }
+}

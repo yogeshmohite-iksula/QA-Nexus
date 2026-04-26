@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Convert to Jira Story</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --p0:#EF4444;--p1:#FBBF24;--p2:#2DD4BF;--p3:#8A94A6;
+    --jira-blue:#2684FF;--story-blue:#60A5FA;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;position:relative;overflow:hidden}
+
+  /* ═══════════════════════ F14 BACKDROP (dimmed) ═══════════════════════ */
+  .backdrop{position:absolute;inset:0;display:grid;grid-template-columns:272px 1fr;background:var(--canvas);filter:blur(4px) brightness(0.55);opacity:0.9;pointer-events:none}
+  .bd-rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+  .bd-section-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px}
+  .bd-nav{height:32px;background:transparent;border-radius:6px;padding:6px 10px}
+  .bd-nav.active{background:var(--overlay)}
+  .bd-line{height:12px;background:var(--raised);border-radius:4px;margin:0}
+  .bd-line.s{width:70%}
+  .bd-line.xs{width:45%}
+
+  .bd-main{display:flex;flex-direction:column;padding:0}
+  .bd-topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px}
+  .bd-proj{height:36px;width:180px;background:var(--raised);border-radius:6px}
+  .bd-search{height:36px;flex:1;max-width:420px;background:var(--raised);border-radius:8px}
+  .bd-icon{width:36px;height:36px;border-radius:8px;background:var(--raised)}
+  .bd-mode{height:36px;width:220px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+  .bd-user{height:36px;width:150px;background:var(--raised);border-radius:999px;margin-left:auto}
+
+  .bd-content{padding:28px;display:flex;flex-direction:column;gap:16px}
+  .bd-q{height:32px;background:var(--raised);border-radius:4px;width:55%}
+  .bd-sprint-strip{height:44px;background:var(--base);border:1px solid var(--border);border-radius:10px}
+  .bd-req-card{height:128px;background:var(--base);border:1px solid var(--border);border-radius:12px}
+
+  /* ═══════════════════════ SCRIM ═══════════════════════ */
+  .scrim{position:absolute;inset:0;background:rgba(11,15,23,0.72);backdrop-filter:blur(4px);z-index:5}
+
+  /* ═══════════════════════ MODAL 480 × 360 (auto-grow) ═══════════════════════ */
+  .modal-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10}
+  .modal{width:480px;min-height:360px;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 32px 72px -20px rgba(0,0,0,0.75),0 0 0 1px rgba(45,212,191,0.06);display:flex;flex-direction:column;overflow:hidden;animation:modalIn 240ms cubic-bezier(0.2,0.8,0.2,1) both}
+
+  @keyframes modalIn{from{opacity:0;transform:translateY(6px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  @media (prefers-reduced-motion: reduce){.modal{animation:none !important}}
+
+  /* ── Header ── */
+  .m-head{padding:16px 20px 14px 20px;border-bottom:1px solid var(--border);flex:none;display:flex;align-items:flex-start;gap:14px}
+  .head-icon{width:36px;height:36px;border-radius:8px;background:rgba(38,132,255,0.12);border:1px solid rgba(38,132,255,0.28);color:var(--jira-blue);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .head-body{flex:1;min-width:0}
+  .m-title{font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:700;color:var(--t1);margin:0}
+  .m-sub{font-size:12.5px;line-height:17px;color:var(--t3);margin-top:3px}
+  .m-sub .req-id{font-family:'JetBrains Mono';color:var(--primary);font-weight:500}
+  .m-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+  .m-close:hover{color:var(--t1);background:var(--raised)}
+  .m-close svg{width:13px;height:13px}
+
+  /* ── Body ── */
+  .m-body{flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+
+  /* Source → Destination row */
+  .convert-row{background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr 32px 1fr;align-items:center;gap:10px}
+  .convert-side{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .convert-label{font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);font-weight:600;line-height:14px}
+  .convert-id{font-family:'JetBrains Mono';font-size:12px;font-weight:500;color:var(--primary);line-height:16px}
+  .convert-id.jira{color:var(--info)}
+  .convert-name{font-size:11.5px;line-height:16px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .convert-arrow{display:flex;align-items:center;justify-content:center;color:var(--t3)}
+  .convert-arrow svg{width:18px;height:18px;display:block}
+
+  /* Mapping preview list */
+  .map-card{background:var(--canvas);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .map-head{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);font-weight:600;padding:10px 14px 8px 14px;background:var(--overlay);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+  .map-head svg{width:11px;height:11px;color:var(--primary)}
+  .map-row{display:grid;grid-template-columns:104px 18px 1fr;column-gap:10px;align-items:center;min-height:32px;padding:7px 14px;border-top:1px solid var(--border);font-size:12px}
+  .map-row:first-child{border-top:0}
+  .map-from{color:var(--t3);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em}
+  .map-arrow{color:var(--t4);display:flex;justify-content:center}
+  .map-arrow svg{width:11px;height:11px}
+  .map-to{color:var(--t1);font-size:12px;line-height:18px;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .map-to .pri{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:3px;font-size:10px;font-weight:600;font-family:'JetBrains Mono';line-height:1}
+  .map-to .pri.p1{background:rgba(251,191,36,0.12);color:var(--p1);border:1px solid rgba(251,191,36,0.3)}
+  .map-to .jira-label{font-size:11px;color:var(--t3)}
+  .map-to .iss-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--story-blue);background:rgba(96,165,250,0.10);border:1px solid rgba(96,165,250,0.28);border-radius:4px;padding:1px 6px;line-height:1;height:18px}
+  .map-to .iss-pill .dot{width:8px;height:8px;border-radius:2px;background:var(--story-blue)}
+
+  /* Note */
+  .note{font-size:11.5px;line-height:16px;color:var(--t3);background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.18);border-radius:8px;padding:9px 12px;display:flex;align-items:flex-start;gap:8px}
+  .note svg{width:14px;height:14px;color:var(--info);flex:none;margin-top:1px}
+  .note b{color:var(--t2);font-weight:600}
+
+  /* ── Footer ── */
+  .m-footer{padding:12px 20px 16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;background:var(--base)}
+  .f-left-meta{font-size:11px;color:var(--t4);font-family:'JetBrains Mono'}
+  .f-right{display:inline-flex;gap:10px;align-items:center}
+  .btn-cancel{height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+  .btn-cancel:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .btn-create{height:36px;padding:0 14px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:13px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background 200ms,box-shadow 200ms;font-family:inherit}
+  .btn-create:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5),0 0 0 1px rgba(45,212,191,0.25)}
+  .btn-create svg{width:13px;height:13px}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ═══════════════════════ F14 BACKDROP ═══════════════════════ -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="bd-rail">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 6px 14px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))"></div><div class="bd-line s" style="height:14px;width:90px"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Plan</div>
+      <div class="bd-nav active"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-section-label">Run</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+      <div class="bd-section-label">Analyse</div>
+      <div class="bd-nav"><div class="bd-line s"></div></div>
+      <div class="bd-nav"><div class="bd-line xs"></div></div>
+    </div>
+    <div class="bd-main">
+      <div class="bd-topbar">
+        <div class="bd-proj"></div>
+        <div class="bd-search"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-icon"></div>
+        <div class="bd-mode"></div>
+        <div class="bd-user"></div>
+      </div>
+      <div class="bd-content">
+        <div class="bd-q"></div>
+        <div class="bd-sprint-strip"></div>
+        <div class="bd-req-card"></div>
+        <div class="bd-req-card"></div>
+        <div class="bd-req-card"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SCRIM ═══════════════════════ -->
+  <div class="scrim" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════ MODAL 480 × 360 ═══════════════════════ -->
+  <div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <div class="modal">
+
+      <!-- Header -->
+      <header class="m-head">
+        <span class="head-icon" aria-hidden="true">
+          <!-- Atlassian Jira-ish stack icon -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 22 8.5 12 15 2 8.5 12 2"/>
+            <polyline points="2 15.5 12 22 22 15.5"/>
+          </svg>
+        </span>
+        <div class="head-body">
+          <h2 id="m-title" class="m-title display">Convert to Jira Story</h2>
+          <p class="m-sub">Push <span class="req-id">REQ-088</span> to <span style="color:var(--t2)">iksula.atlassian.net</span> as a new Story.</p>
+        </div>
+        <button class="m-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <!-- Body -->
+      <div class="m-body">
+
+        <!-- Source → Destination -->
+        <div class="convert-row" aria-label="Conversion summary">
+          <div class="convert-side">
+            <span class="convert-label">From · Uploaded</span>
+            <span class="convert-id">REQ-088</span>
+            <span class="convert-name" title="Returns dashboard mobile responsive layout">Returns dashboard mobile…</span>
+          </div>
+          <div class="convert-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </div>
+          <div class="convert-side">
+            <span class="convert-label">To · Jira</span>
+            <span class="convert-id jira">RET · Story</span>
+            <span class="convert-name" style="color:var(--t3)">Auto-assigned next ID</span>
+          </div>
+        </div>
+
+        <!-- Mapping preview -->
+        <div class="map-card" aria-label="Field mapping preview">
+          <div class="map-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            Field mapping preview
+          </div>
+          <div class="map-row">
+            <span class="map-from">Title</span>
+            <span class="map-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            <span class="map-to">Summary <span class="jira-label">— Returns dashboard mobile responsive layout</span></span>
+          </div>
+          <div class="map-row">
+            <span class="map-from">Description</span>
+            <span class="map-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            <span class="map-to">Description <span class="jira-label">+ Acceptance criteria appended</span></span>
+          </div>
+          <div class="map-row">
+            <span class="map-from">Priority</span>
+            <span class="map-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            <span class="map-to"><span class="pri p1">P1</span><span class="jira-label">Medium</span></span>
+          </div>
+          <div class="map-row">
+            <span class="map-from">Issue type</span>
+            <span class="map-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+            <span class="map-to"><span class="iss-pill"><span class="dot"></span>Story</span><span class="jira-label">· To Do</span></span>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <p class="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span><b>Linked back automatically.</b> After creation, REQ-088 in QA Nexus updates to show the new Jira ID. Future edits sync from Jira.</span>
+        </p>
+
+      </div><!-- /m-body -->
+
+      <!-- Footer -->
+      <footer class="m-footer">
+        <span class="f-left-meta">iksula.atlassian.net · RET</span>
+        <div class="f-right">
+          <button class="btn-cancel" type="button">Cancel</button>
+          <button class="btn-create" type="button" aria-label="Create Story in Jira">
+            Create in Jira
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+</div><!-- /stage -->
+
+<!--
+VALIDATION CHECKLIST (F14m3 Confirm Modal)
+ 1. Confirm Modal 480 × 360 (auto-grows for content) centered · F14 dimmed 72% + blur(4px) behind scrim · 12px radius + elevation shadow · OK
+ 2. Header: Jira-blue stack icon tile + "Convert to Jira Story" DM Sans 18/700 + sub "Push REQ-088 to iksula.atlassian.net as a new Story." (REQ-088 mono teal, domain primary 500) + close × top-right · OK
+ 3. Source→Destination summary row: "FROM · UPLOADED" REQ-088 mono teal + "Returns dashboard mobile…" truncated · arrow → · "TO · JIRA" RET · Story info-blue + "Auto-assigned next ID" tertiary · OK
+ 4. Field mapping preview card: 4 rows showing Title→Summary, Description→Description (+AC appended), Priority P1→Medium, Issue type→Story · To Do · OK
+ 5. Story type pill in info-blue (matches Jira Story icon convention) · OK
+ 6. Info note: "Linked back automatically. After creation, REQ-088 in QA Nexus updates to show the new Jira ID. Future edits sync from Jira." with info-blue tinted bg · OK
+ 7. Footer: "iksula.atlassian.net · RET" mono left tertiary · Cancel ghost + "Create in Jira →" teal primary right · OK
+ 8. Anti-drift: Teal on primary CTA + REQ-088 mono · Info-blue on Jira-side identifiers (Story type, Jira project, .atlassian.net) — NOT a new surface color, just a semantic data-source signal · No violet anywhere (no AI involvement on this confirmation flow) · OK
+ 9. Typography: DM Sans 18 title · Inter 13 body · JetBrains Mono on REQ-088, RET·Story, .atlassian.net domain · OK
+10. Anti-drift: No PM3 (no API token / SSO / SAML mention) · No Material Design 3 · No Tailwind config · Hex values hardcoded · :focus-visible violet 2px + 2px offset on all interactives · prefers-reduced-motion disables entrance · OK
+-->
+</body>
+</html>

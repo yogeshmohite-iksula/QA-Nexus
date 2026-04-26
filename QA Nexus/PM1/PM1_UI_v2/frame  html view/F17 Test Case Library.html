@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — What's in the library?</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --ai:#C4B5FD;--neutral:#94A3B8;
+    --primary:#2DD4BF;--primary-600:#14B8A6;
+    --secondary:#A78BFA;
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+    --ai-soft-2:rgba(196,181,253,0.08);
+    --pass-soft:rgba(52,211,153,0.10);
+    --fail-soft:rgba(248,113,113,0.10);
+    --warn-soft:rgba(251,191,36,0.10);
+    --info-soft:rgba(96,165,250,0.10);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;font-feature-settings:"cv11","ss01","ss03"}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  .bg-canvas{background:var(--canvas)}.bg-base{background:var(--base)}.bg-raised{background:var(--raised)}.bg-overlay{background:var(--overlay)}
+  .text-t1{color:var(--t1)}.text-t2{color:var(--t2)}.text-t3{color:var(--t3)}.text-t4{color:var(--t4)}
+  .r-sm{border-radius:4px}.r-md{border-radius:6px}.r-lg{border-radius:10px}.r-xl{border-radius:14px}
+
+  /* Rail nav */
+  .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1)}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:5px;bottom:5px;width:3px;background:var(--secondary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-section{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8A94A6;padding:0 10px;margin:18px 0 6px;font-weight:600}
+  .count{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:1px 6px;border-radius:999px}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;white-space:nowrap}
+  .chip.ok{background:var(--pass-soft);color:var(--pass);border-color:color-mix(in srgb,var(--pass) 30%,transparent)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+  .chip.bad{background:var(--fail-soft);color:var(--fail);border-color:color-mix(in srgb,var(--fail) 30%,transparent)}
+  .chip.info{background:var(--info-soft);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+  .chip.ai{background:var(--ai-soft);color:var(--secondary);border-color:color-mix(in srgb,var(--secondary) 35%,transparent)}
+  .chip.teal{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,transparent)}
+  .chip.neutral{color:var(--t3)}
+
+  .kbd{font-family:"JetBrains Mono",monospace;font-size:10.5px;border:1px solid var(--border);background:var(--base);color:var(--t2);padding:1px 5px;border-radius:4px;line-height:14px;display:inline-block}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t1);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#06262A;font-weight:600}
+  .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600)}
+  .btn-teal-outline{color:var(--primary);border-color:color-mix(in srgb,var(--primary) 40%,transparent);background:transparent}
+  .btn-teal-outline:hover{background:var(--primary-soft)}
+
+  .card{background:var(--base);border:1px solid var(--border);border-radius:10px}
+  .card-raised{background:var(--raised);border:1px solid var(--border);border-radius:10px}
+
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:32px}
+  .seg button{height:24px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--overlay);color:var(--t1)}
+
+  /* Shape markers */
+  .sh{display:inline-block;flex:none}
+  .sh-pass{background:var(--pass);border-radius:999px;width:10px;height:10px}
+  .sh-fail{background:var(--fail);border-radius:1px;width:10px;height:10px}
+  .sh-warn{width:0;height:0;background:transparent;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--warn)}
+  .sh-info{border:1.5px solid var(--info);background:transparent;border-radius:999px;width:10px;height:10px}
+  .sh-ai{background:var(--secondary);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%);width:10px;height:10px}
+
+  /* Tree */
+  .tree-row{position:relative;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;font-size:12.5px;color:var(--t2);cursor:pointer;line-height:18px}
+  .tree-row:hover{background:var(--raised);color:var(--t1)}
+  .tree-row.active{background:var(--overlay);color:var(--t1)}
+  .tree-row.active::before{content:"";position:absolute;left:-4px;top:5px;bottom:5px;width:3px;background:var(--primary);border-radius:2px}
+  .tree-row .caret{width:10px;color:var(--t4);flex:none;display:inline-flex;justify-content:center}
+  .tree-row .n{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t4);margin-left:auto}
+
+  /* Lane */
+  .lane{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+  .lane-ai{background:var(--secondary)}
+  .lane-high{background:var(--pass)}
+  .lane-med{background:var(--warn)}
+  .lane-low{background:var(--fail)}
+
+  /* Sparkline */
+  .spark path.line{fill:none;stroke-width:1.5}
+  .spark-teal path.line{stroke:var(--primary)}
+  .spark-warn path.line{stroke:var(--warn)}
+
+  .tick{width:14px;height:14px;border:1.25px solid var(--border-strong);border-radius:3px;display:inline-block;flex:none}
+
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+
+  #stage{width:1600px;margin:0 auto;position:relative}
+
+  .ms{font-family:"Material Symbols Outlined";font-weight:400;font-size:18px;line-height:1;display:inline-block;vertical-align:middle;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20}
+
+  .aglyph{width:20px;height:20px;border-radius:5px;background:var(--ai-soft);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:10px;font-weight:600;border:1px solid color-mix(in srgb,var(--secondary) 30%,transparent);flex:none}
+
+  .step-badge{font-family:"JetBrains Mono";font-size:9.5px;font-weight:600;letter-spacing:0.06em;padding:2px 6px;border-radius:3px;text-transform:uppercase;display:inline-block;line-height:14px}
+  .step-ui{background:rgba(96,165,250,0.12);color:var(--info);border:1px solid color-mix(in srgb,var(--info) 30%,transparent)}
+  .step-api{background:rgba(45,212,191,0.10);color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 35%,transparent)}
+  .step-db{background:rgba(251,191,36,0.10);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+  .step-kb{background:var(--ai-soft);color:var(--secondary);border:1px solid color-mix(in srgb,var(--secondary) 35%,transparent)}
+
+  .divide-hair > * + *{border-top:1px solid var(--border)}
+
+  /* Tabs */
+  .dtab{padding:8px 2px;margin-right:18px;color:var(--t3);font-size:12.5px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px}
+  .dtab.on{color:var(--t1);border-bottom-color:var(--primary)}
+  .dtab .n{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t4)}
+  .dtab.on .n{color:var(--primary)}
+
+  /* Framework chip w/ dot */
+  .fw-dot{width:8px;height:8px;border-radius:2px}
+
+  /* Avatars */
+  .av{width:20px;height:20px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:9.5px;font-weight:600;color:#06131A;flex:none}
+</style>
+</head>
+<body>
+<div id="stage" class="bg-canvas">
+
+  <!-- ============= TOP COMMAND BAR ============= -->
+  <header class="h-14 flex items-center gap-3 px-5 bg-base" style="border-bottom:1px solid var(--border)">
+    <a class="flex items-center gap-2.5 mr-1">
+      <svg viewBox="0 0 22 22" width="22" height="22" fill="none">
+        <path d="M8.5 2.5h5M9.5 2.5v4.2L5 15.2a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4.5-8.5V2.5" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="9.7" cy="13" r="0.9" fill="#A78BFA"/>
+        <circle cx="13.3" cy="15.3" r="0.7" fill="#2DD4BF"/>
+        <circle cx="11" cy="11.2" r="0.6" fill="#A78BFA"/>
+      </svg>
+      <span class="display text-t1" style="font-size:15px;font-weight:700;letter-spacing:-0.01em">QA Nexus</span>
+    </a>
+    <button class="flex items-center gap-2 h-9 px-3 r-md ml-1" style="border:1px solid var(--border);background:var(--raised)">
+      <span class="w-5 h-5 r-sm" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA)"></span>
+      <span class="text-t1 text-[13px] font-medium">Iksula Commerce</span>
+      <span class="text-t4 text-[13px] mono">·</span>
+      <span class="text-t3 text-[13px] mono">main</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="ml-1"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="flex-1 flex justify-center">
+      <button class="flex items-center gap-3 h-9 px-3 r-md w-[520px] text-t3 text-[13px]" style="border:1px solid var(--border);background:var(--canvas)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" class="flex-none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Search cases, defects, runs, docs, agents…</span>
+        <span class="ml-auto flex items-center gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+      </button>
+    </div>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised relative" style="border:1px solid var(--border)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.2L3 11h10l-1-2.8V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.3"/></svg>
+      <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background:var(--fail)"></span>
+    </button>
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 9.5A5 5 0 0 1 6.5 3a1 1 0 0 0-1.2-1.3A6 6 0 1 0 14.3 10.7 1 1 0 0 0 13 9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+    <div class="seg">
+      <button class="on">Operate</button><button>Review</button><button>Prove</button>
+    </div>
+    <button class="flex items-center gap-2 h-9 pl-1 pr-2 r-md hover:bg-raised" style="border:1px solid var(--border)">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">YM</span>
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <!-- ============= BODY ============= -->
+  <div class="flex" style="height:968px">
+
+    <!-- LEFT PRIMARY RAIL (272) -->
+    <nav class="w-[272px] bg-base flex flex-col px-4 py-4" style="border-right:1px solid var(--border);overflow:hidden">
+      <a class="nav-item" style="margin-bottom:2px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8l5.5-5 5.5 5v5a1 1 0 0 1-1 1H9v-4H7v4H3.5a1 1 0 0 1-1-1V8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Home</span></a>
+
+      <div class="nav-section">Plan</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9H4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Requirements</span><span class="count">142</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6h11M5.5 3v10" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item active"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3.5l2.5 2.5L2 8.5M2 9.5L4.5 12 2 14.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 6h7M6.5 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Cases</span><span class="count" style="color:var(--t1)">1,284</span></a>
+
+      <div class="nav-section">Author</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Suites</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h8l2 2v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 7h5M5.5 9.5h5M5.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Knowledge Base</span></a>
+      <a class="nav-item disabled" title="Coming in v1.5 (PM2)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5L2 8l3 4.5M11 3.5L14 8l-3 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Automation Studio</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t4);border-color:var(--border)">v1.5</span></a>
+      <a class="nav-item disabled" title="Coming in v1.5 (PM2)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M3 4v4c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8v4c0 1.1 2.2 2 5 2s5-.9 5-2V8" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Data &amp; Mocks</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t4);border-color:var(--border)">v1.5</span></a>
+
+      <div class="nav-section">Run</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5v9l7-4.5-7-4.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Runs &amp; Sessions</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="2.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Environments</span></a>
+
+      <div class="nav-section">Analyse</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 12.5L6 8.5l3 2 4.5-5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Run Results</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 7v3M8 11.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Defects / Failures</span><span class="count" style="color:var(--fail)">47</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 10l2-2 2 1.5 3-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Reports</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 6.5c0-1.4 1-2.5 2.5-2.5s2.5 1.1 2.5 2.5S7 9 5.5 9M8 9c2.5 0 4.5 1 4.5 2.5S10.5 14 8 14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">QA Value</span></a>
+
+      <div class="nav-section">Govern</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 14c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Agents</span><span class="count">9</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 3l-3 5 3 5M10 3l3 5-3 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Integrations</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="6" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="10" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 13c0-1.4 1.2-2.5 2.8-2.5M8.5 3.5C10 3.5 11.5 4.5 12 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Users &amp; Roles</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Settings &amp; Audit</span></a>
+
+      <div class="mt-auto pt-3" style="border-top:1px solid var(--border)">
+        <div class="flex items-center gap-2.5 px-2.5 py-2 r-md" style="border:1px solid var(--border);background:var(--raised)">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">YM</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-t1 text-[12.5px] font-medium leading-tight">Yogesh M</div>
+            <div class="mono text-[10px] mt-0.5" style="color:var(--secondary)">QA LEAD</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ============= MAIN — 3 PANELS ============= -->
+    <main class="flex-1 bg-canvas overflow-hidden" style="min-width:0">
+      <div class="flex h-full">
+
+        <!-- PANEL 1 — SUITES TREE (280) -->
+        <aside class="flex-none bg-base" style="width:280px;border-right:1px solid var(--border);overflow:hidden">
+          <div class="px-4 py-4 flex flex-col gap-3 h-full">
+            <div class="flex items-center justify-between">
+              <div class="text-[10px] font-semibold uppercase" style="color:#8A94A6;letter-spacing:0.08em">Suites</div>
+              <button class="btn btn-teal-outline" style="height:24px;padding:0 8px;font-size:11.5px;gap:4px">
+                <span class="ms" style="font-size:13px">add</span>New
+              </button>
+            </div>
+            <div class="flex items-center gap-2 h-8 px-2.5 r-md" style="border:1px solid var(--border);background:var(--canvas)">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" class="flex-none text-t4"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              <span class="text-[12px] text-t4">Filter suites…</span>
+            </div>
+
+            <div class="flex flex-col gap-0.5 mt-1 overflow-y-auto" style="scrollbar-width:thin">
+              <!-- All cases -->
+              <div class="tree-row">
+                <span class="caret">▸</span>
+                <span class="ms" style="font-size:14px;color:var(--t3)">folder</span>
+                <span class="flex-1">All cases</span><span class="n">1,284</span>
+              </div>
+              <!-- Checkout expanded -->
+              <div class="tree-row">
+                <span class="caret">▾</span>
+                <span class="ms" style="font-size:14px;color:var(--t3)">folder_open</span>
+                <span class="flex-1">Checkout</span><span class="n">284</span>
+              </div>
+              <div style="padding-left:20px">
+                <div class="tree-row active">
+                  <span class="caret">▾</span>
+                  <span class="ms" style="font-size:13px;color:var(--primary)">folder_open</span>
+                  <span class="flex-1 font-medium">Payments</span><span class="n" style="color:var(--primary)">92</span>
+                </div>
+                <div style="padding-left:18px">
+                  <div class="tree-row"><span class="caret">·</span><span class="flex-1">Gift cards</span><span class="n">18</span></div>
+                  <div class="tree-row"><span class="caret">·</span><span class="flex-1">Stripe 3DS</span><span class="n">24</span></div>
+                  <div class="tree-row"><span class="caret">·</span><span class="flex-1">Refunds</span><span class="n">32</span></div>
+                  <div class="tree-row"><span class="caret">·</span><span class="flex-1">Currency</span><span class="n">18</span></div>
+                </div>
+                <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:13px;color:var(--t3)">folder</span><span class="flex-1">Cart</span><span class="n">76</span></div>
+                <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:13px;color:var(--t3)">folder</span><span class="flex-1">Shipping</span><span class="n">58</span></div>
+                <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:13px;color:var(--t3)">folder</span><span class="flex-1">Address book</span><span class="n">58</span></div>
+              </div>
+              <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:14px;color:var(--t3)">folder</span><span class="flex-1">Auth &amp; Identity</span><span class="n">186</span></div>
+              <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:14px;color:var(--t3)">folder</span><span class="flex-1">Search &amp; Browse</span><span class="n">142</span></div>
+              <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:14px;color:var(--t3)">folder</span><span class="flex-1">Account</span><span class="n">104</span></div>
+              <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:14px;color:var(--t3)">folder</span><span class="flex-1">Loyalty</span><span class="n">58</span></div>
+              <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:14px;color:var(--t3)">folder</span><span class="flex-1">Admin &amp; Ops</span><span class="n">212</span></div>
+              <div class="tree-row"><span class="caret">▸</span><span class="ms" style="font-size:14px;color:var(--t3)">folder</span><span class="flex-1">A11y &amp; Visual</span><span class="n">46</span></div>
+
+              <div class="mt-3 pt-3" style="border-top:1px solid var(--border)">
+                <div class="flex items-center justify-between mb-1.5 px-1">
+                  <div class="text-[10px] font-semibold uppercase" style="color:#8A94A6;letter-spacing:0.08em">Smart <span class="ms" style="font-size:11px;color:var(--secondary);vertical-align:baseline">auto_awesome</span></div>
+                  <span class="text-[10px] mono text-t4">auto</span>
+                </div>
+                <div class="tree-row"><span class="sh sh-ai" style="margin-right:2px"></span><span class="flex-1">AI-drafted <span class="text-t4 text-[10.5px]">· last 7d</span></span><span class="n" style="color:var(--secondary)">38</span></div>
+                <div class="tree-row"><span class="sh sh-warn" style="margin-right:2px"></span><span class="flex-1">Flaky &gt; 20%</span><span class="n" style="color:var(--warn)">64</span></div>
+                <div class="tree-row"><span class="sh sh-fail" style="margin-right:2px"></span><span class="flex-1">Failing nightly</span><span class="n" style="color:var(--fail)">12</span></div>
+                <div class="tree-row"><span class="sh sh-info" style="margin-right:2px"></span><span class="flex-1">No coverage link</span><span class="n" style="color:var(--info)">184</span></div>
+                <div class="tree-row"><span class="ms" style="font-size:12px;color:var(--t3);margin-right:2px">schedule</span><span class="flex-1">Awaiting review</span><span class="n">22</span></div>
+                <div class="tree-row"><span class="ms" style="font-size:12px;color:var(--t3);margin-right:2px">person_off</span><span class="flex-1">Unassigned</span><span class="n">31</span></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- PANEL 2 — CARD CANVAS -->
+        <section class="flex-1 min-w-0 overflow-hidden">
+          <div class="px-7 py-5 h-full overflow-y-auto" style="scrollbar-width:thin">
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-1.5 text-[12px]" style="color:#8A94A6">
+              <span>Test Cases</span>
+              <span style="color:#44505E">/</span>
+              <span>Checkout</span>
+              <span style="color:#44505E">/</span>
+              <span class="text-t1 font-medium">Payments</span>
+              <span class="chip neutral mono ml-2" style="height:18px;font-size:10px;padding:0 6px">92</span>
+            </div>
+
+            <!-- Question header -->
+            <div class="flex items-start justify-between gap-6 mt-3">
+              <div class="flex-1 min-w-0">
+                <h1 class="display text-t1" style="font-size:32px;line-height:40px;font-weight:600">What's in the library, and what's changing?</h1>
+                <p class="mt-2 text-[15px] leading-6" style="color:var(--t2)">
+                  <span class="text-t1 font-medium">92 cases</span> in this suite ·
+                  <span class="text-t1">81 automated</span> · 11 manual ·
+                  <span style="color:var(--secondary)" class="font-medium">2 AI drafts</span> awaiting review ·
+                  flake rate <span class="mono text-t1">4.1%</span> this week <span style="color:var(--warn)">↑ 0.7</span>
+                </p>
+              </div>
+              <div class="flex items-center gap-2 flex-none pt-1">
+                <button class="btn"><span class="ms" style="font-size:14px">download</span>Export</button>
+                <button class="btn btn-primary"><span class="ms" style="font-size:14px">add</span>New case <span class="kbd ml-1" style="background:rgba(255,255,255,0.18);border-color:transparent;color:inherit">⌘N</span></button>
+              </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="flex items-center gap-2 mt-5 pb-4" style="border-bottom:1px solid var(--border)">
+              <span class="chip teal" style="height:26px">Suite: Payments <span class="ml-1 text-[10px]" style="cursor:pointer">✕</span></span>
+              <span class="chip warn" style="height:26px">Flake ≥ 20% <span class="ml-1 text-[10px]" style="cursor:pointer">✕</span></span>
+              <button class="chip" style="height:26px;color:var(--t3);border-style:dashed"><span class="ms" style="font-size:12px">add</span>priority</button>
+              <button class="chip" style="height:26px;color:var(--t3);border-style:dashed"><span class="ms" style="font-size:12px">add</span>owner</button>
+              <div class="ml-auto flex items-center gap-3">
+                <button class="flex items-center gap-1 text-[12px] text-t2 hover:text-t1">
+                  Sorted by <span class="text-t1 font-medium">Flake ↓</span>
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <span class="text-[12px] text-t4">3 of 92 hidden</span>
+                <div class="seg" style="height:28px">
+                  <button class="on" style="height:22px"><span class="ms" style="font-size:13px">grid_view</span>Cards</button>
+                  <button style="height:22px"><span class="ms" style="font-size:13px">table_rows</span>Table</button>
+                  <button style="height:22px"><span class="ms" style="font-size:13px">density_small</span></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card grid -->
+            <div class="grid grid-cols-2 gap-5 mt-5">
+
+              <!-- CARD 1 (selected, AI draft, violet lane) -->
+              <div class="card relative" style="height:336px;border-color:color-mix(in srgb,var(--secondary) 45%,var(--border));box-shadow:0 0 0 1px color-mix(in srgb,var(--secondary) 30%,transparent)">
+                <div class="lane lane-ai"></div>
+                <div class="p-5 pl-6 flex flex-col h-full">
+                  <div class="flex items-center gap-2">
+                    <span class="mono text-[11px]" style="color:var(--t3)">TC-PAY-0341</span>
+                    <span class="chip ai" style="height:20px;font-size:10.5px"><span class="sh sh-ai" style="width:8px;height:8px"></span>AI DRAFT · V2.3</span>
+                    <span class="ml-auto text-t4 hover:text-t1"><span class="ms" style="font-size:16px">more_horiz</span></span>
+                  </div>
+                  <div class="display mt-2" style="font-size:20px;line-height:26px;font-weight:500;color:var(--t1)">Apply two gift cards at checkout and split remainder across a saved card</div>
+                  <p class="mt-2 text-[12.5px] leading-5" style="color:var(--t2)">Covers <span class="mono text-t1">ACM-881</span> · 6 steps · 1 negative path · tagged <span class="chip neutral" style="height:16px;font-size:9.5px;padding:0 5px;vertical-align:baseline">a11y</span></p>
+                  <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                    <span class="chip teal" style="height:22px"><span class="ms" style="font-size:12px">check_circle</span>+ 92%</span>
+                    <span class="chip ok" style="height:22px"><span class="sh sh-pass" style="width:7px;height:7px"></span>PASS</span>
+                    <span class="chip" style="height:22px;color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent);background:var(--info-soft)"><span class="ms" style="font-size:12px">link</span>ACM-881</span>
+                    <span class="chip" style="height:22px"><span class="fw-dot" style="background:#2EAD33"></span>playwright</span>
+                  </div>
+
+                  <div class="mt-auto pt-3 flex items-end justify-between" style="border-top:1px solid var(--border)">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="av" style="background:#FBBF24">PS</span>
+                        <span class="text-[12px] text-t2">priya.s</span>
+                      </div>
+                      <div class="text-[10.5px] mono mt-1.5" style="color:var(--t4)">2h ago · nightly</div>
+                    </div>
+                    <div class="flex items-end gap-3">
+                      <div class="flex flex-col items-end">
+                        <div class="text-[10px] mono" style="color:var(--t4)">last 7 runs</div>
+                        <svg viewBox="0 0 80 22" width="80" height="22" class="spark spark-teal mt-0.5"><path class="line" d="M0 14 L13 12 L26 15 L40 10 L53 11 L66 7 L80 5"/>
+                          <g fill="var(--primary)"><circle cx="0" cy="14" r="1.6"/><circle cx="13" cy="12" r="1.6"/><circle cx="26" cy="15" r="1.6"/><circle cx="40" cy="10" r="1.6"/><circle cx="53" cy="11" r="1.6"/><circle cx="66" cy="7" r="1.6"/><circle cx="80" cy="5" r="1.6"/></g>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 2 (flaky, amber lane) -->
+              <div class="card relative" style="height:336px">
+                <div class="lane lane-med"></div>
+                <div class="p-5 pl-6 flex flex-col h-full">
+                  <div class="flex items-center gap-2">
+                    <span class="mono text-[11px]" style="color:var(--t3)">TC-PAY-0189</span>
+                    <span class="chip warn" style="height:20px;font-size:10.5px"><span class="sh sh-warn"></span>3DS FALLBACK</span>
+                    <span class="ml-auto text-t4 hover:text-t1"><span class="ms" style="font-size:16px">more_horiz</span></span>
+                  </div>
+                  <div class="display mt-2" style="font-size:20px;line-height:26px;font-weight:500;color:var(--t1)">Stripe 3DS challenge completes on mobile Safari with saved card</div>
+                  <p class="mt-2 text-[12.5px] leading-5" style="color:var(--t2)">Covers <span class="mono text-t1">ACM-742</span> · 11 steps · <span style="color:var(--warn)">quarantine candidate</span></p>
+                  <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                    <span class="chip warn" style="height:22px"><span class="sh sh-warn"></span>FLAKY 71%</span>
+                    <span class="chip bad" style="height:22px"><span class="ms" style="font-size:12px">payments</span>$412/wk cost</span>
+                    <span class="chip" style="height:22px;color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent);background:var(--info-soft)"><span class="ms" style="font-size:12px">link</span>ACM-742</span>
+                    <span class="chip" style="height:22px"><span class="fw-dot" style="background:#2EAD33"></span>playwright</span>
+                  </div>
+
+                  <div class="mt-auto pt-3 flex items-end justify-between" style="border-top:1px solid var(--border)">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="av" style="background:#60A5FA">AM</span>
+                        <span class="text-[12px] text-t2">arjun.m</span>
+                      </div>
+                      <div class="text-[10.5px] mono mt-1.5" style="color:var(--t4)">18m ago · PR #2841</div>
+                    </div>
+                    <div class="flex items-end gap-3">
+                      <div class="flex flex-col items-end">
+                        <div class="text-[10px] mono" style="color:var(--t4)">last 7 runs · flaky</div>
+                        <svg viewBox="0 0 80 22" width="80" height="22" class="spark spark-warn mt-0.5"><path class="line" d="M0 6 L13 16 L26 8 L40 18 L53 9 L66 17 L80 10"/>
+                          <g fill="var(--warn)"><circle cx="0" cy="6" r="1.6"/><circle cx="13" cy="16" r="1.6"/><circle cx="26" cy="8" r="1.6"/><circle cx="40" cy="18" r="1.6"/><circle cx="53" cy="9" r="1.6"/><circle cx="66" cy="17" r="1.6"/><circle cx="80" cy="10" r="1.6"/></g>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 3 -->
+              <div class="card relative" style="height:336px">
+                <div class="lane lane-high"></div>
+                <div class="p-5 pl-6 flex flex-col h-full">
+                  <div class="flex items-center gap-2">
+                    <span class="mono text-[11px]" style="color:var(--t3)">TC-PAY-0214</span>
+                    <span class="chip neutral" style="height:20px;font-size:10.5px">AUTOMATED</span>
+                    <span class="ml-auto text-t4 hover:text-t1"><span class="ms" style="font-size:16px">more_horiz</span></span>
+                  </div>
+                  <div class="display mt-2" style="font-size:20px;line-height:26px;font-weight:500;color:var(--t1)">Refund to original tender splits across gift card + Stripe charge</div>
+                  <p class="mt-2 text-[12.5px] leading-5" style="color:var(--t2)">Covers <span class="mono text-t1">ACM-612</span> · 8 steps · 2 negative paths</p>
+                  <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                    <span class="chip ok" style="height:22px"><span class="sh sh-pass" style="width:7px;height:7px"></span>PASS · 100%</span>
+                    <span class="chip" style="height:22px;color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent);background:var(--info-soft)"><span class="ms" style="font-size:12px">link</span>ACM-612</span>
+                    <span class="chip" style="height:22px"><span class="fw-dot" style="background:#2EAD33"></span>playwright</span>
+                    <span class="chip" style="height:22px">api</span>
+                  </div>
+                  <div class="mt-auto pt-3 flex items-end justify-between" style="border-top:1px solid var(--border)">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="av" style="background:#34D399">RK</span>
+                        <span class="text-[12px] text-t2">rahul.k</span>
+                      </div>
+                      <div class="text-[10.5px] mono mt-1.5" style="color:var(--t4)">yesterday · nightly</div>
+                    </div>
+                    <svg viewBox="0 0 80 22" width="80" height="22" class="spark spark-teal"><path class="line" d="M0 8 L13 7 L26 9 L40 6 L53 8 L66 5 L80 4"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD 4 -->
+              <div class="card relative" style="height:336px">
+                <div class="lane lane-high"></div>
+                <div class="p-5 pl-6 flex flex-col h-full">
+                  <div class="flex items-center gap-2">
+                    <span class="mono text-[11px]" style="color:var(--t3)">TC-PAY-0402</span>
+                    <span class="chip ai" style="height:20px;font-size:10.5px"><span class="sh sh-ai" style="width:8px;height:8px"></span>AI DRAFT · V2.3</span>
+                    <span class="ml-auto text-t4 hover:text-t1"><span class="ms" style="font-size:16px">more_horiz</span></span>
+                  </div>
+                  <div class="display mt-2" style="font-size:20px;line-height:26px;font-weight:500;color:var(--t1)">Saved card expiry block — user cannot submit after card month passes</div>
+                  <p class="mt-2 text-[12.5px] leading-5" style="color:var(--t2)">Covers <span class="mono text-t1">PAY-1472</span> · 5 steps · clarification pending</p>
+                  <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                    <span class="chip teal" style="height:22px"><span class="ms" style="font-size:12px">check_circle</span>+ 88%</span>
+                    <span class="chip ai" style="height:22px"><span class="ms" style="font-size:12px">help</span>2 questions</span>
+                    <span class="chip" style="height:22px"><span class="fw-dot" style="background:#2EAD33"></span>playwright</span>
+                  </div>
+                  <div class="mt-auto pt-3 flex items-end justify-between" style="border-top:1px solid var(--border)">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="av" style="background:#F87171">ND</span>
+                        <span class="text-[12px] text-t2">neha.d</span>
+                      </div>
+                      <div class="text-[10.5px] mono mt-1.5" style="color:var(--t4)">1h ago · awaiting review</div>
+                    </div>
+                    <svg viewBox="0 0 80 22" width="80" height="22" class="spark spark-teal"><path class="line" d="M0 14 L13 10 L26 12 L40 8 L53 7 L66 5 L80 4"/></svg>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- PANEL 3 — SELECTED CASE DETAIL (420) -->
+        <aside class="flex-none bg-base" style="width:420px;border-left:1px solid var(--border);overflow:hidden">
+          <div class="flex flex-col h-full">
+            <!-- Top bar -->
+            <div class="flex items-center justify-between px-5 py-3" style="border-bottom:1px solid var(--border)">
+              <div class="flex items-center gap-2 text-[11px] mono" style="color:#8A94A6">
+                <span class="text-t1">TC-PAY-0341</span>
+                <span>·</span>
+                <span>v4</span>
+                <span>·</span>
+                <span>saved 2m ago</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="w-7 h-7 r-md hover:bg-raised flex items-center justify-center" title="Dock (⌘J)"><span class="ms" style="font-size:14px">dock_to_right</span></button>
+                <button class="w-7 h-7 r-md hover:bg-raised flex items-center justify-center"><span class="ms" style="font-size:14px">close</span></button>
+              </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto" style="scrollbar-width:thin">
+              <div class="px-5 py-4">
+                <!-- Title -->
+                <h2 class="display" style="font-size:20px;line-height:26px;font-weight:500;color:var(--t1)">Apply two gift cards at checkout and split remainder across a saved card</h2>
+
+                <!-- Pills -->
+                <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+                  <span class="chip teal" style="height:22px"><span class="sh sh-pass" style="width:7px;height:7px;background:var(--primary)"></span>P1</span>
+                  <span class="chip ai" style="height:22px"><span class="sh sh-ai" style="width:8px;height:8px"></span>AI draft · 92%</span>
+                  <span class="chip" style="height:22px"><span class="fw-dot" style="background:#2EAD33"></span>playwright</span>
+                  <span class="chip" style="height:22px"><span class="av" style="background:#FBBF24;width:14px;height:14px;font-size:7.5px">PS</span>priya.s</span>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex items-center mt-4" style="border-bottom:1px solid var(--border)">
+                  <button class="dtab on">Steps <span class="n">6</span></button>
+                  <button class="dtab">History <span class="n">34</span></button>
+                  <button class="dtab">Bugs <span class="n">1</span></button>
+                  <button class="dtab">Coverage</button>
+                  <button class="dtab">Audit</button>
+                </div>
+
+                <!-- Provenance card -->
+                <div class="relative r-lg mt-4" style="background:var(--ai-soft-2);border:1px solid color-mix(in srgb,var(--secondary) 25%,transparent);padding:12px 14px 14px 18px">
+                  <div class="lane lane-ai"></div>
+                  <div class="flex items-center gap-2">
+                    <span class="aglyph">A1</span>
+                    <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--secondary);letter-spacing:0.08em">Generator · v2.3</div>
+                    <span class="chip ai ml-auto" style="height:18px;font-size:10px;padding:0 6px">92% confidence</span>
+                  </div>
+                  <p class="mt-2 text-[12.5px] leading-5" style="color:var(--t1)">Drafted from <span class="mono">ACM-881</span> + <span class="font-medium">Payments Knowledge Base</span>. 3 negative-path variants suggested.</p>
+                  <button class="mt-2 text-[12px] flex items-center gap-1" style="color:var(--secondary)">Show evidence <span class="ms" style="font-size:13px">arrow_forward</span></button>
+                </div>
+
+                <!-- Steps label -->
+                <div class="flex items-center justify-between mt-5 mb-2">
+                  <div class="text-[10px] font-semibold uppercase" style="color:#8A94A6;letter-spacing:0.08em">Steps <span class="text-t4 mono" style="letter-spacing:0">· drag to reorder · <span class="kbd" style="font-size:9.5px">/</span> slash menu</span></div>
+                  <button class="text-[11px] text-t3 hover:text-t1 flex items-center gap-1"><span class="ms" style="font-size:13px">add</span>Step</button>
+                </div>
+
+                <!-- Steps -->
+                <ol class="flex flex-col gap-2">
+                  <!-- Step 1 -->
+                  <li class="r-md p-3" style="background:var(--raised);border:1px solid var(--border)">
+                    <div class="flex items-start gap-2.5">
+                      <span class="mono text-[11px]" style="color:var(--t4);padding-top:1px">01</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5">
+                          <span class="step-badge step-ui">UI</span>
+                        </div>
+                        <div class="text-[12.5px] text-t1 leading-5">Sign in as <span class="mono text-t2"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fc8f94938c8c998ed79b9fbc9d9f9199d288998f88">[email&#160;protected]</a></span> and open <span class="mono text-t2">/cart</span></div>
+                        <div class="text-[11.5px] mt-1 leading-4" style="color:var(--t3)"><span class="mono" style="color:var(--pass)">expect</span> cart total is <span class="mono">$184.20</span></div>
+                      </div>
+                      <span class="ms text-t4" style="font-size:14px">drag_indicator</span>
+                    </div>
+                  </li>
+                  <!-- Step 2 KB -->
+                  <li class="r-md p-3" style="background:var(--raised);border:1px solid var(--border)">
+                    <div class="flex items-start gap-2.5">
+                      <span class="mono text-[11px]" style="color:var(--t4);padding-top:1px">02</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5">
+                          <span class="step-badge step-kb">KB</span>
+                        </div>
+                        <div class="text-[12.5px] text-t1 leading-5">Reference <span class="font-medium" style="color:var(--secondary)">Payments / Gift Cards</span> knowledge pill</div>
+                        <div class="text-[11.5px] mt-1 leading-4" style="color:var(--t3)">Rules: max 2 cards · no store-credit mix · balance preserved on failure</div>
+                      </div>
+                      <span class="ms text-t4" style="font-size:14px">drag_indicator</span>
+                    </div>
+                  </li>
+                  <!-- Step 3 UI -->
+                  <li class="r-md p-3" style="background:var(--raised);border:1px solid var(--border)">
+                    <div class="flex items-start gap-2.5">
+                      <span class="mono text-[11px]" style="color:var(--t4);padding-top:1px">03</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5">
+                          <span class="step-badge step-ui">UI</span>
+                        </div>
+                        <div class="text-[12.5px] text-t1 leading-5">Apply gift card <span class="mono text-t2">GCARD-7783</span> ($100 balance)</div>
+                        <div class="text-[11.5px] mt-1 leading-4" style="color:var(--t3)"><span class="mono" style="color:var(--pass)">expect</span> remaining due <span class="mono">$84.20</span>, chip shows <span class="mono text-t2">'Applied · $100.00'</span></div>
+                      </div>
+                      <span class="ms text-t4" style="font-size:14px">drag_indicator</span>
+                    </div>
+                  </li>
+                  <!-- Step 4 API -->
+                  <li class="r-md p-3" style="background:var(--raised);border:1px solid var(--border)">
+                    <div class="flex items-start gap-2.5">
+                      <span class="mono text-[11px]" style="color:var(--t4);padding-top:1px">04</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5">
+                          <span class="step-badge step-api">API</span>
+                        </div>
+                        <div class="text-[12.5px] text-t1 leading-5"><span class="mono">POST /checkout/giftcard</span> — chain <span class="mono text-t2">balance_cents → var.remaining</span></div>
+                        <div class="text-[11.5px] mt-1 leading-4" style="color:var(--t3)"><span class="mono" style="color:var(--pass)">expect</span> 200 · assert <span class="mono">var.remaining == 0</span> after 2nd card</div>
+                      </div>
+                      <span class="ms text-t4" style="font-size:14px">drag_indicator</span>
+                    </div>
+                  </li>
+                  <!-- Step 5 DB -->
+                  <li class="r-md p-3" style="background:var(--raised);border:1px solid var(--border)">
+                    <div class="flex items-start gap-2.5">
+                      <span class="mono text-[11px]" style="color:var(--t4);padding-top:1px">05</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5">
+                          <span class="step-badge step-db">DB</span>
+                        </div>
+                        <div class="text-[12.5px] text-t1 leading-5">Assert <span class="mono">giftcard_ledger</span> row created with delta <span class="mono">-10000</span> cents</div>
+                        <div class="text-[11.5px] mt-1 leading-4" style="color:var(--t3)">Store <span class="mono text-t2">ledger_id → var.ledger_id</span> for step 06</div>
+                      </div>
+                      <span class="ms text-t4" style="font-size:14px">drag_indicator</span>
+                    </div>
+                  </li>
+                  <!-- Collapsed + 1 more -->
+                  <li class="r-md p-2.5 flex items-center justify-center text-[12px]" style="background:transparent;border:1px dashed var(--border);color:var(--t3)">
+                    <span class="ms" style="font-size:14px;margin-right:6px">expand_more</span>1 more step · TC-PAY-0341 step 06 (UI)
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center gap-2 px-5 py-3" style="border-top:1px solid var(--border);background:var(--canvas)">
+              <button class="btn btn-primary flex-1 justify-center"><span class="ms" style="font-size:14px">edit</span>Edit</button>
+              <button class="btn flex-1 justify-center">Close</button>
+              <button class="btn" title="More"><span class="ms" style="font-size:14px">more_horiz</span></button>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </main>
+
+  </div>
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F26m1 · Agent Model Assignment · QA Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --canvas: #0B0F17;
+  --base: #111827;
+  --raised: #1A2233;
+  --overlay: #232C3F;
+  --border-subtle: #2A3347;
+  --border-strong: #3B4660;
+  --text-primary: #F1F5F9;
+  --text-secondary: #C7D0DC;
+  --text-tertiary: #8A94A6;
+  --teal: #2DD4BF;
+  --teal-dim: rgba(45,212,191,0.15);
+  --violet: #A78BFA;
+  --violet-dim: rgba(167,139,250,0.15);
+  --pass: #34D399;
+  --pass-dim: rgba(52,211,153,0.15);
+  --fail: #F87171;
+  --fail-dim: rgba(248,113,113,0.15);
+  --warn: #FBBF24;
+  --warn-dim: rgba(251,191,36,0.15);
+  --info: #60A5FA;
+  --info-dim: rgba(96,165,250,0.15);
+  --shadow-modal: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { overflow: hidden; height: 1024px; }
+html, body {
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  width: 1600px;
+  height: 1024px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ==================== Workspace shell (dimmed) ==================== */
+.workspace-shell {
+  width: 1600px; height: 1024px;
+  display: flex;
+  filter: blur(2px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+.left-rail {
+  width: 272px;
+  background: var(--base);
+  border-right: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.rail-brand {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 10px;
+}
+.brand-logo {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--teal), #14B8A6);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px;
+  color: var(--canvas);
+}
+.brand-name {
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 18px;
+}
+.rail-section {
+  padding: 16px 12px 4px 16px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
+  color: var(--text-tertiary); text-transform: uppercase;
+}
+.rail-item {
+  padding: 8px 12px; margin: 2px 8px;
+  border-radius: 7px;
+  font-size: 13px; color: var(--text-secondary);
+}
+.rail-item.active {
+  background: var(--overlay);
+  color: var(--text-primary);
+  border-left: 3px solid var(--violet);
+  padding-left: 9px;
+}
+.main-area { flex: 1; display: flex; flex-direction: column; }
+.top-bar {
+  height: 56px;
+  background: var(--base);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; padding: 0 24px; gap: 16px;
+}
+.content-shell {
+  flex: 1; padding: 32px 40px;
+  background: var(--canvas);
+}
+.shell-h1 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 22px; font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* ==================== Modal Backdrop ==================== */
+.modal-backdrop {
+  position: absolute;
+  top: 0; left: 0;
+  width: 1600px; height: 1024px;
+  background: rgba(11, 15, 23, 0.72);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==================== Edit Modal 960×760 ==================== */
+.modal {
+  width: 960px;
+  height: 760px;
+  max-height: calc(1024px - 40px);
+  background: var(--base);
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Header */
+.modal-header {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.header-text { flex: 1; }
+.modal-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px; font-weight: 700;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 6px;
+}
+.title-violet-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--violet-dim);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--violet);
+  flex-shrink: 0;
+}
+.modal-subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.modal-close:hover { background: var(--overlay); color: var(--text-primary); }
+
+/* Body */
+.modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 22px 28px;
+  min-height: 0;
+}
+
+/* Agent summary card */
+.agent-card {
+  background: linear-gradient(180deg, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.04) 100%);
+  border: 1px solid rgba(167,139,250,0.30);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.agent-icon {
+  width: 40px; height: 40px;
+  border-radius: 9px;
+  background: var(--violet-dim);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--violet);
+  flex-shrink: 0;
+}
+.agent-info { flex: 1; min-width: 0; }
+.agent-name-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 4px;
+}
+.agent-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--text-primary);
+}
+.agent-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--overlay);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.agent-status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px;
+  background: var(--pass-dim);
+  border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+  color: var(--pass);
+}
+.status-dot-pass {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--pass);
+  box-shadow: 0 0 4px var(--pass);
+}
+.agent-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex; gap: 14px;
+}
+.agent-meta span strong {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+}
+.agent-meta-divider {
+  color: var(--text-tertiary); opacity: 0.5;
+}
+
+/* Section label */
+.section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--text-tertiary); text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label .label-tag {
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 9px;
+  letter-spacing: 0.2px;
+  font-weight: 600;
+  text-transform: none;
+}
+.label-tag.required { background: var(--fail-dim); color: var(--fail); }
+.label-tag.optional { background: var(--overlay); color: var(--text-tertiary); }
+.label-tag.routing { background: var(--violet-dim); color: var(--violet); }
+
+/* Model dropdown (collapsed selected state) */
+.model-section {
+  margin-bottom: 20px;
+}
+.model-dropdown {
+  background: var(--canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.model-dropdown:hover {
+  border-color: var(--border-strong);
+}
+.model-dropdown.primary {
+  border-color: rgba(45,212,191,0.30);
+  background: rgba(45,212,191,0.04);
+}
+.provider-logo-sm {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.logo-groq { background: linear-gradient(135deg, #F97316, #EA580C); }
+.logo-gemini { background: linear-gradient(135deg, #4285F4, #1A73E8); }
+
+.model-dropdown-info { flex: 1; min-width: 0; }
+.model-dropdown-row1 {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 4px;
+}
+.provider-name-sm {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.provider-name-sm::after {
+  content: "·";
+  margin-left: 6px;
+  margin-right: 0;
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+.model-id-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.model-display-sm {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.model-tags-sm {
+  display: flex; gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tag-sm {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.tag-prod { background: var(--pass-dim); color: var(--pass); }
+.tag-preview { background: var(--warn-dim); color: var(--warn); }
+.tag-spec {
+  background: var(--overlay);
+  color: var(--text-tertiary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.dropdown-chevron {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.help-text {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* Routing rules card */
+.routing-card {
+  background: var(--overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+.routing-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 4px 0;
+}
+.routing-rule-num {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--violet-dim);
+  color: var(--violet);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.routing-rule code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: var(--canvas);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+.routing-rule strong {
+  color: var(--violet);
+  font-weight: 600;
+}
+
+/* Sample test panel */
+.sample-section {
+  background: var(--canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.sample-textarea {
+  width: 100%;
+  background: var(--base);
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  resize: none;
+  height: 64px;
+  margin-bottom: 12px;
+}
+.sample-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.btn-test {
+  height: 34px;
+  padding: 0 14px;
+  background: var(--teal);
+  border: 1px solid var(--teal);
+  border-radius: 7px;
+  color: var(--canvas);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.btn-test:hover { background: #5EEAD4; }
+.sample-result {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 0;
+}
+.sample-result-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--pass-dim);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--pass);
+  flex-shrink: 0;
+}
+.sample-result-text strong {
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+.sample-result-meta {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-tertiary);
+}
+
+/* Footer */
+.modal-footer {
+  height: 64px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--canvas);
+  padding: 0 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.footer-status {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 8px;
+}
+.footer-buttons {
+  display: flex; gap: 10px;
+}
+.btn-cancel {
+  height: 36px;
+  padding: 0 18px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-cancel:hover { background: var(--overlay); color: var(--text-primary); }
+.btn-primary {
+  height: 36px;
+  padding: 0 22px;
+  background: var(--teal);
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  color: var(--canvas);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover { background: #5EEAD4; }
+
+.modal-body::-webkit-scrollbar { width: 6px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Workspace shell (F26 Agents page in background, dimmed) -->
+<div class="workspace-shell">
+  <aside class="left-rail">
+    <div class="rail-brand">
+      <div class="brand-logo">Q</div>
+      <div class="brand-name">QA Nexus</div>
+    </div>
+    <div class="rail-section">PLAN</div>
+    <div class="rail-item">Home</div>
+    <div class="rail-item">Requirements</div>
+    <div class="rail-item">Test Cases</div>
+    <div class="rail-section">AUTHOR</div>
+    <div class="rail-item">Test Suites</div>
+    <div class="rail-item">Knowledge Base</div>
+    <div class="rail-section">RUN</div>
+    <div class="rail-item">Runs &amp; Sessions</div>
+    <div class="rail-section">ANALYSE</div>
+    <div class="rail-item">Run Results</div>
+    <div class="rail-item">Defects</div>
+    <div class="rail-item">Reports</div>
+    <div class="rail-item">QA Value</div>
+    <div class="rail-section">GOVERN</div>
+    <div class="rail-item active">Agents</div>
+    <div class="rail-item">Integrations</div>
+    <div class="rail-item">Users &amp; Roles</div>
+    <div class="rail-item">Settings &amp; Audit</div>
+  </aside>
+  <div class="main-area">
+    <div class="top-bar"></div>
+    <div class="content-shell">
+      <div class="shell-h1">Which agents are active, and how are they performing?</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop">
+  <div class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="header-text">
+        <div class="modal-title" id="modal-title">
+          <div class="title-violet-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1L8.5 5L13 5.5L9.5 8.5L10.5 13L7 10.5L3.5 13L4.5 8.5L1 5.5L5.5 5L7 1Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="currentColor"/>
+            </svg>
+          </div>
+          Configure A1 — Test Case Generator
+        </div>
+        <div class="modal-subtitle">Pick which models power A1 across primary, long-context, and fallback paths. Models must first be enabled in Settings → LLM Providers.</div>
+      </div>
+      <button class="modal-close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- Agent summary -->
+      <div class="agent-card">
+        <div class="agent-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 2L11.5 7L17 7.5L13 11L14 16.5L10 14L6 16.5L7 11L3 7.5L8.5 7L10 2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="agent-info">
+          <div class="agent-name-row">
+            <span class="agent-name">A1 Test Case Generator</span>
+            <span class="agent-version">v2.3</span>
+            <span class="agent-status-pill">
+              <span class="status-dot-pass"></span>
+              Active
+            </span>
+          </div>
+          <div class="agent-meta">
+            <span>Eval score <strong>87%</strong></span>
+            <span class="agent-meta-divider">·</span>
+            <span>Last run <strong>3 min ago</strong></span>
+            <span class="agent-meta-divider">·</span>
+            <span><strong>142</strong> runs · 7 days</span>
+            <span class="agent-meta-divider">·</span>
+            <span>Avg latency <strong>4.8s</strong> p95</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Primary model -->
+      <div class="model-section">
+        <div class="section-label">
+          Primary model
+          <span class="label-tag required">REQUIRED</span>
+        </div>
+        <div class="model-dropdown primary">
+          <div class="provider-logo-sm logo-groq">G</div>
+          <div class="model-dropdown-info">
+            <div class="model-dropdown-row1">
+              <span class="provider-name-sm">Groq</span>
+              <span class="model-id-sm">openai/gpt-oss-120b</span>
+              <span class="model-display-sm">GPT-OSS 120B</span>
+            </div>
+            <div class="model-tags-sm">
+              <span class="tag-sm tag-prod">PRODUCTION</span>
+              <span class="tag-sm tag-spec">131K ctx</span>
+              <span class="tag-sm tag-spec">500 tok/s</span>
+              <span class="tag-sm tag-spec">1K RPD free</span>
+            </div>
+          </div>
+          <svg class="dropdown-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="help-text">Used for the majority of A1 generations. Click to choose another enabled model from any connected provider.</div>
+      </div>
+
+      <!-- Long-context model -->
+      <div class="model-section">
+        <div class="section-label">
+          Long-context model
+          <span class="label-tag routing">ROUTING</span>
+        </div>
+        <div class="model-dropdown">
+          <div class="provider-logo-sm logo-groq">G</div>
+          <div class="model-dropdown-info">
+            <div class="model-dropdown-row1">
+              <span class="provider-name-sm">Groq</span>
+              <span class="model-id-sm">meta-llama/llama-4-scout-17b-16e-instruct</span>
+            </div>
+            <div class="model-tags-sm">
+              <span class="tag-sm tag-preview">PREVIEW</span>
+              <span class="tag-sm tag-spec">10M ctx ⭐</span>
+              <span class="tag-sm tag-spec">300 tok/s</span>
+              <span class="tag-sm tag-spec">multimodal</span>
+            </div>
+          </div>
+          <svg class="dropdown-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="help-text">Auto-activated when the prompt exceeds the primary model's context window (131K). Llama 4 Scout's 10M context handles full PRDs + linked Jira issues + KB chunks in one prompt.</div>
+      </div>
+
+      <!-- Fallback model -->
+      <div class="model-section">
+        <div class="section-label">
+          Fallback model
+          <span class="label-tag routing">ROUTING</span>
+        </div>
+        <div class="model-dropdown">
+          <div class="provider-logo-sm logo-gemini">✦</div>
+          <div class="model-dropdown-info">
+            <div class="model-dropdown-row1">
+              <span class="provider-name-sm">Google</span>
+              <span class="model-id-sm">gemini-2.5-flash</span>
+              <span class="model-display-sm">Gemini 2.5 Flash</span>
+            </div>
+            <div class="model-tags-sm">
+              <span class="tag-sm tag-prod">PRODUCTION</span>
+              <span class="tag-sm tag-spec">1M ctx</span>
+              <span class="tag-sm tag-spec">1.5K RPD free</span>
+              <span class="tag-sm tag-spec">multimodal</span>
+            </div>
+          </div>
+          <svg class="dropdown-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="help-text">Auto-activated when the primary model returns 429 / 503 / timeout. Calls write the failure reason to the audit log for free-tier quota tracking.</div>
+      </div>
+
+      <!-- Routing rules -->
+      <div class="section-label">
+        Routing rules <span class="label-tag optional">READ-ONLY · DERIVED FROM SELECTIONS ABOVE</span>
+      </div>
+      <div class="routing-card">
+        <div class="routing-rule">
+          <span class="routing-rule-num">1</span>
+          <span>If <code>prompt_tokens &gt; 100,000</code> → use <strong>Long-context</strong> (Llama 4 Scout, 10M ctx)</span>
+        </div>
+        <div class="routing-rule">
+          <span class="routing-rule-num">2</span>
+          <span>Else if primary returns <code>429</code> / <code>503</code> / timeout → retry once, then use <strong>Fallback</strong> (Gemini 2.5 Flash)</span>
+        </div>
+        <div class="routing-rule">
+          <span class="routing-rule-num">3</span>
+          <span>Otherwise → use <strong>Primary</strong> (GPT-OSS 120B on Groq)</span>
+        </div>
+      </div>
+
+      <!-- Sample test -->
+      <div class="section-label">
+        Test with sample prompt <span class="label-tag optional">VERIFY BEFORE SAVE</span>
+      </div>
+      <div class="sample-section">
+        <textarea class="sample-textarea" readonly>Generate test cases for REQ-088: 3DS authentication flow on Iksula Returns checkout. Cover happy path, declined card, network timeout, and frictionless 3DS.</textarea>
+        <div class="sample-controls">
+          <button class="btn-test">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M3 2L9 5.5L3 9V2Z" fill="currentColor"/></svg>
+            Run sample test
+          </button>
+          <div class="sample-result">
+            <div class="sample-result-icon">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5L4.5 8L9 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="sample-result-text">
+              <strong>8 test cases</strong> generated · routed to <strong>Primary</strong>
+              <span class="sample-result-meta"> · 4.2s · 2,847 tokens · gpt-oss-120b</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <div class="footer-status">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M6 1V6L9 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" fill="none"/>
+        </svg>
+        Model changes write to audit log · Effective immediately for new runs
+      </div>
+      <div class="footer-buttons">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-primary">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5L4.5 8L9 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Save &amp; activate
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

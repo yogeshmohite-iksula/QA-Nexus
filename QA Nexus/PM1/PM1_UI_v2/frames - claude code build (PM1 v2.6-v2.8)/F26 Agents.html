@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Agents · A1 Test Case Generator</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --pass-soft:rgba(52,211,153,0.12);
+    --fail-soft:rgba(248,113,113,0.12);
+    --warn-soft:rgba(251,191,36,0.12);
+    --info-soft:rgba(96,165,250,0.12);
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+    --ai-soft-2:rgba(167,139,250,0.06);
+    --ai-strong:rgba(167,139,250,0.32);
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;display:grid;grid-template-columns:272px 1fr;background:var(--canvas)}
+
+  /* RAIL */
+  .rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:4px;background:var(--canvas)}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px 6px}
+  .rail-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:inline-flex;align-items:center;justify-content:center;color:var(--primary-ink);font-family:'DM Sans';font-weight:700;font-size:14px}
+  .rail-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+  .nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px;text-decoration:none}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:6px;bottom:6px;width:3px;background:var(--secondary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:inherit}
+  .nav-count{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1}
+  .nav-item.active .nav-count{background:rgba(167,139,250,0.18);color:var(--secondary)}
+  .nav-pill-soft{font-family:'JetBrains Mono';font-size:9px;color:var(--t4);margin-left:auto;background:var(--base);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase;border:1px solid var(--border)}
+  .nav-badge{font-family:'JetBrains Mono';font-size:9px;color:var(--secondary);margin-left:auto;background:rgba(167,139,250,0.10);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-width:0}
+
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--canvas);flex:none}
+  .proj-switch{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:6px;background:var(--raised);border:1px solid var(--border);font-size:13px;color:var(--t1);font-weight:500;cursor:pointer}
+  .proj-dot{width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .proj-meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px;margin-left:2px}
+  .search{height:36px;flex:1;max-width:480px;background:var(--raised);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--t3);font-size:13px;cursor:text}
+  .search .kbd{font-family:'JetBrains Mono';font-size:10.5px;border:1px solid var(--border);color:var(--t3);padding:1px 5px;border-radius:4px;margin-left:auto;background:var(--base)}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);position:relative}
+  .icon-btn:hover{color:var(--t1)}
+  .icon-btn .dot{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:999px;background:var(--fail)}
+  .mode-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:36px}
+  .mode-toggle button{height:28px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;cursor:pointer}
+  .mode-toggle button.on{background:var(--overlay);color:var(--t1)}
+  .user-pill{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--raised);margin-left:4px}
+  .user-av{width:28px;height:28px;border-radius:999px;background:#FBBF24;color:#78350F;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .user-name{font-size:13px;color:var(--t1);font-weight:500}
+
+  /* CONTENT */
+  .content{flex:1;padding:28px 32px 56px;overflow-y:auto;display:flex;flex-direction:column;gap:22px}
+
+  /* Question header */
+  .qhead{display:flex;flex-direction:column;gap:6px}
+  .qhead h1{font-family:'DM Sans';font-size:26px;line-height:34px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+  .qhead h1 .ai{color:var(--secondary)}
+  .qhead .sub{font-size:14px;line-height:22px;color:var(--t3);margin:0}
+
+  /* Section title */
+  .sec-title{font-family:'DM Sans';font-size:13px;line-height:18px;font-weight:700;color:var(--t1);margin:0 0 12px 0;text-transform:uppercase;letter-spacing:0.08em;display:inline-flex;align-items:center;gap:8px}
+  .sec-title .count{font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;color:var(--t3);background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1;border:1px solid var(--border);text-transform:none;letter-spacing:0}
+  .sec-title svg{width:12px;height:12px;color:var(--secondary)}
+
+  /* Agent selector cards */
+  .agent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .agent-card{background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:border-color 200ms,transform 200ms,box-shadow 200ms;position:relative;display:flex;flex-direction:column;gap:9px;min-height:108px}
+  .agent-card:hover{border-color:var(--border-strong);transform:translateY(-1px)}
+  .agent-card.selected{background:var(--overlay);border:2px solid var(--secondary);padding:13px 15px;box-shadow:inset 3px 0 0 0 var(--secondary),0 12px 28px -12px rgba(167,139,250,0.32)}
+
+  .agent-card-head{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .agent-glyph-wrap{display:flex;align-items:center;gap:8px}
+  .agent-glyph{width:30px;height:30px;border-radius:7px;background:rgba(167,139,250,0.14);color:var(--secondary);border:1px solid rgba(167,139,250,0.28);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .agent-glyph svg{width:14px;height:14px}
+  .agent-name{display:flex;flex-direction:column;gap:1px}
+  .agent-id{font-family:'JetBrains Mono';font-size:10.5px;color:var(--secondary);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;line-height:1}
+  .agent-title{font-size:13.5px;font-weight:600;color:var(--t1);line-height:1.2}
+
+  .agent-status{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;font-family:'JetBrains Mono';padding:3px 7px;border-radius:4px;background:var(--pass-soft);color:var(--pass);border:1px solid rgba(52,211,153,0.32);height:20px;line-height:1;text-transform:uppercase;letter-spacing:0.06em}
+  .agent-status .dot{width:5px;height:5px;border-radius:999px;background:var(--pass);animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
+
+  .agent-metrics{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--t3);font-family:'Inter';line-height:1.4}
+  .agent-metrics .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .agent-metrics .v{color:var(--t1);font-weight:600;font-family:'JetBrains Mono'}
+  .agent-metrics .sep{color:var(--t4)}
+
+  /* Detail panel */
+  .detail{background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:24px 24px 18px 24px;display:flex;flex-direction:column;gap:22px}
+
+  /* Section 3.1 — Metadata grid */
+  .meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+  .meta-col{display:flex;flex-direction:column;gap:6px}
+  .meta-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);font-weight:700;margin-bottom:2px}
+  .meta-row{display:flex;flex-direction:column;gap:1px}
+  .meta-row .k{font-size:10.5px;color:var(--t4);font-family:'JetBrains Mono';font-weight:500}
+  .meta-row .v{font-size:12.5px;color:var(--t1);font-weight:500}
+  .meta-row .v.mono{font-family:'JetBrains Mono';font-size:11.5px}
+  .meta-row .v.violet{color:var(--secondary)}
+  .health-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:var(--pass-soft);color:var(--pass);border:1px solid rgba(52,211,153,0.32);height:22px;line-height:1;width:fit-content}
+  .health-pill .dot{width:6px;height:6px;border-radius:999px;background:var(--pass);animation:pulse 2s ease-in-out infinite}
+
+  /* Section 3.2 — Autonomy ladder */
+  .ladder-row{display:flex;flex-direction:column;gap:10px}
+  .ladder{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--canvas);border:1px solid var(--border);border-radius:8px;padding:4px;position:relative}
+  .ladder-step{padding:10px 14px;border-radius:5px;cursor:pointer;display:flex;flex-direction:column;gap:3px;position:relative;transition:background 200ms;border:0;background:transparent;color:var(--t2);font-family:inherit;text-align:left}
+  .ladder-step:hover{background:var(--overlay)}
+  .ladder-step.active{background:rgba(167,139,250,0.14);color:var(--t1);box-shadow:inset 0 0 0 1px var(--secondary)}
+  .ladder-step.disabled{cursor:not-allowed;opacity:0.5}
+  .ladder-step.locked{cursor:not-allowed}
+  .ladder-step .step-name{font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .ladder-step.active .step-name{color:var(--secondary)}
+  .ladder-step.locked .step-name{color:var(--t4)}
+  .ladder-step .step-desc{font-size:10.5px;color:var(--t3);font-family:'Inter';line-height:1.3}
+  .ladder-step.active .step-desc{color:var(--t2)}
+  .ladder-step .lock{font-family:'JetBrains Mono';font-size:9px;color:var(--t4);background:var(--canvas);border:1px solid var(--border);padding:1px 5px;border-radius:3px;letter-spacing:0.06em;font-weight:600;text-transform:uppercase;line-height:1;display:inline-flex;align-items:center;gap:3px;width:fit-content;margin-top:2px}
+  .ladder-step .lock svg{width:8px;height:8px}
+  .ladder-step .pm1-tag{font-family:'JetBrains Mono';font-size:9px;color:var(--secondary);background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.28);padding:1px 5px;border-radius:3px;letter-spacing:0.06em;font-weight:700;text-transform:uppercase;line-height:1;width:fit-content;margin-top:2px}
+  .ladder-axis{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--t4);font-family:'Inter';font-weight:500;padding:0 8px}
+  .ladder-axis .arrow{flex:1;height:1px;background:linear-gradient(to right,rgba(255,255,255,0.05),rgba(255,255,255,0.15));margin:0 12px}
+
+  /* Permission scope chips */
+  .scope-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .scope-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em}
+  .scope-chip{display:inline-flex;align-items:center;gap:6px;background:var(--overlay);border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--t1);font-weight:500;line-height:1;height:26px}
+  .scope-chip .x{margin-left:1px;color:var(--t3);cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:3px}
+  .scope-chip .x:hover{color:var(--fail);background:rgba(248,113,113,0.12)}
+  .scope-chip-add{display:inline-flex;align-items:center;gap:5px;background:transparent;border:1px dashed var(--border-strong);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--t3);cursor:pointer;line-height:1;height:26px;font-family:inherit;font-weight:500}
+  .scope-chip-add:hover{color:var(--t1);border-color:var(--t3)}
+  .scope-chip-add svg{width:10px;height:10px}
+
+  /* Guardrail toggles */
+  .guardrails{display:flex;flex-direction:column;gap:6px}
+  .guard-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--canvas);border:1px solid var(--border);border-radius:7px}
+  .guard-row.locked{opacity:0.6}
+  .toggle{width:34px;height:18px;border-radius:999px;position:relative;cursor:pointer;flex:none;border:1px solid var(--border-strong);background:var(--overlay);transition:background 200ms,border-color 200ms}
+  .toggle.on{background:var(--primary);border-color:var(--primary)}
+  .toggle.on.violet{background:var(--secondary);border-color:var(--secondary)}
+  .toggle::after{content:"";position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:999px;background:var(--t1);transition:left 200ms}
+  .toggle.on::after{left:17px;background:var(--primary-ink)}
+  .toggle.on.violet::after{background:var(--secondary-ink)}
+  .toggle.locked{cursor:not-allowed}
+  .guard-text{flex:1;display:flex;flex-direction:column;gap:1px}
+  .guard-name{font-size:12.5px;color:var(--t1);font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .guard-row.locked .guard-name{color:var(--t3)}
+  .guard-lock-tag{font-family:'JetBrains Mono';font-size:9px;color:var(--t4);background:var(--overlay);border:1px solid var(--border);padding:1px 5px;border-radius:3px;letter-spacing:0.06em;font-weight:600;text-transform:uppercase;line-height:1;display:inline-flex;align-items:center;gap:3px}
+  .guard-lock-tag svg{width:8px;height:8px}
+  .guard-desc{font-size:11px;color:var(--t3);font-family:'Inter'}
+  .guard-input{height:26px;background:var(--overlay);border:1px solid var(--border);border-radius:5px;padding:0 8px;color:var(--t1);font-size:11.5px;font-family:'JetBrains Mono';font-weight:600;width:62px;text-align:center;outline:none;flex:none}
+  .guard-input:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+
+  /* Two-col container */
+  .two-col-section{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+
+  /* Section 3.3 — Configuration */
+  .config-card{background:var(--canvas);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .config-card .label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);font-weight:700;margin-bottom:4px}
+  .config-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:10px;font-family:'JetBrains Mono';font-size:11.5px;line-height:18px;padding:3px 0}
+  .config-row .k{color:var(--t3)}
+  .config-row .v{color:var(--t1);font-weight:600}
+  .save-all{margin-top:6px;height:34px;padding:0 14px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:12.5px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;width:fit-content;transition:background 200ms,box-shadow 200ms}
+  .save-all:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 18px -4px rgba(45,212,191,0.45)}
+  .save-all svg{width:11px;height:11px}
+
+  /* Section 3.4 — Permission matrix */
+  .perm-matrix{background:var(--canvas);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .perm-matrix table{width:100%;border-collapse:collapse;font-size:12px}
+  .perm-matrix th{text-align:left;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);padding:10px 14px;background:var(--overlay);border-bottom:1px solid var(--border)}
+  .perm-matrix th:not(:first-child){text-align:center}
+  .perm-matrix td{padding:9px 14px;border-top:1px solid var(--border);color:var(--t2)}
+  .perm-matrix td:first-child{font-weight:600;color:var(--t1)}
+  .perm-matrix td:not(:first-child){text-align:center}
+  .perm-matrix .yes{color:var(--pass);font-weight:600;font-family:'JetBrains Mono'}
+  .perm-matrix .no{color:var(--t4);font-family:'JetBrains Mono'}
+  .perm-matrix .role-violet{color:var(--secondary);font-weight:700}
+  .perm-foot{font-size:10.5px;color:var(--t4);font-style:italic;padding:8px 14px;border-top:1px solid var(--border);background:var(--canvas)}
+
+  /* Section 3.6 — Recent decisions */
+  .decisions{background:var(--canvas);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+  .dec-row{display:grid;grid-template-columns:140px 1fr 70px 100px 80px;column-gap:14px;align-items:center;padding:11px 14px;border-top:1px solid var(--border);font-size:12px}
+  .dec-row:first-child{border-top:0}
+  .dec-row:hover{background:var(--raised);cursor:pointer}
+  .dec-input{font-family:'JetBrains Mono';font-size:11px;color:var(--secondary);font-weight:600}
+  .dec-input .ts{color:var(--t4);font-weight:400;display:block;font-size:9.5px;margin-top:2px}
+  .dec-output{color:var(--t1);font-size:12.5px;line-height:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dec-conf{font-family:'JetBrains Mono';font-size:11.5px;font-weight:700;text-align:center}
+  .dec-conf.high{color:var(--pass)}
+  .dec-conf.med{color:var(--warn)}
+  .dec-conf.low{color:var(--fail)}
+  .dec-action{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:4px;line-height:1;height:22px;border:1px solid;width:fit-content}
+  .dec-action.accepted{background:var(--pass-soft);color:var(--pass);border-color:rgba(52,211,153,0.32)}
+  .dec-action.edited{background:var(--info-soft);color:var(--info);border-color:rgba(96,165,250,0.32)}
+  .dec-action.rejected{background:var(--fail-soft);color:var(--fail);border-color:rgba(248,113,113,0.32)}
+  .dec-action svg{width:10px;height:10px}
+  .dec-drill{color:var(--t3);text-align:right;font-family:'JetBrains Mono';font-size:10.5px;text-decoration:none}
+  .dec-drill:hover{color:var(--t1)}
+
+  /* Section 3.7 — Guardrail events */
+  .guard-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+  .guard-stat{background:var(--canvas);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+  .guard-stat .v{font-family:'JetBrains Mono';font-size:18px;font-weight:700;color:var(--t1);line-height:1}
+  .guard-stat .v.zero{color:var(--t3)}
+  .guard-stat .lbl{font-size:10px;color:var(--t3);font-family:'Inter';font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+  .guard-events{background:var(--canvas);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+  .ge-row{display:grid;grid-template-columns:120px 130px 1fr 200px;column-gap:14px;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font-size:11.5px}
+  .ge-row:first-child{border-top:0}
+  .ge-ts{font-family:'JetBrains Mono';color:var(--t3);font-size:10.5px}
+  .ge-type{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:3px 7px;border-radius:4px;line-height:1;height:20px;border:1px solid;width:fit-content;text-transform:uppercase;letter-spacing:0.04em;font-family:'JetBrains Mono'}
+  .ge-type.pii{background:rgba(167,139,250,0.10);color:var(--secondary);border-color:rgba(167,139,250,0.28)}
+  .ge-type.rate{background:var(--warn-soft);color:var(--warn);border-color:rgba(251,191,36,0.32)}
+  .ge-detail{color:var(--t2);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ge-detail .code{font-family:'JetBrains Mono';font-size:11px;color:var(--secondary);background:rgba(167,139,250,0.10);padding:1px 5px;border-radius:3px}
+  .ge-action{font-size:11px;color:var(--t3);font-family:'Inter';font-style:italic}
+  .ge-action b{color:var(--pass);font-style:normal;font-weight:600}
+
+  /* Eval table */
+  .eval-table{background:var(--canvas);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .eval-row{display:grid;grid-template-columns:100px 1fr 60px 90px 1fr 80px;column-gap:14px;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font-size:11.5px}
+  .eval-row:first-child{border-top:0}
+  .eval-row.head{background:var(--overlay);font-size:9.5px;text-transform:uppercase;letter-spacing:0.08em;color:var(--t3);font-weight:700;padding-top:10px;padding-bottom:10px}
+  .eval-row .date{font-family:'JetBrains Mono';color:var(--t1);font-weight:600;font-size:11px}
+  .eval-row .suite{font-family:'JetBrains Mono';color:var(--secondary);font-size:11px;font-weight:500}
+  .eval-row .cases{font-family:'JetBrains Mono';color:var(--t2);text-align:center;font-weight:500}
+  .eval-row .pass{font-family:'JetBrains Mono';font-weight:700;color:var(--pass);text-align:center}
+  .eval-row .pass.med{color:var(--warn)}
+  .eval-row .fail-list{color:var(--t2);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .eval-row .trend{font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:3px;line-height:1;height:18px;border:1px solid}
+  .eval-row .trend.stable{background:var(--pass-soft);color:var(--pass);border-color:rgba(52,211,153,0.32)}
+  .eval-row .trend.up{background:var(--info-soft);color:var(--info);border-color:rgba(96,165,250,0.32)}
+
+  /* Action bar */
+  .action-bar{background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .action-bar .meta{font-size:11px;color:var(--t3);font-family:'JetBrains Mono';margin-right:auto;line-height:1.4}
+  .action-bar .meta b{color:var(--t2);font-weight:600}
+  .ab-btn{height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:12.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;line-height:1}
+  .ab-btn:hover{color:var(--t1);background:var(--overlay);border-color:var(--border-strong)}
+  .ab-btn.danger{color:var(--warn);border-color:rgba(251,191,36,0.32);background:rgba(251,191,36,0.05)}
+  .ab-btn.danger:hover{background:rgba(251,191,36,0.14);border-color:rgba(251,191,36,0.5)}
+  .ab-btn.rollback{color:var(--fail);border-color:rgba(248,113,113,0.32);background:rgba(248,113,113,0.05)}
+  .ab-btn.rollback:hover{background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.5)}
+  .ab-btn svg{width:11px;height:11px}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- LEFT RAIL -->
+  <aside class="rail" role="navigation" aria-label="Primary">
+    <div class="rail-brand"><span class="rail-logo">Q</span><span class="rail-word">QA Nexus</span></div>
+
+    <a class="nav-item" href="#F08a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg></span><span>Home</span></a>
+
+    <div class="nav-section">Plan</div>
+    <a class="nav-item" href="#F14"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span><span>Requirements</span><span class="nav-count">142</span></a>
+    <a class="nav-item" href="#F17"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span>Test Cases</span><span class="nav-count">1,284</span></a>
+
+    <div class="nav-section">Author</div>
+    <a class="nav-item" href="#F18"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg></span><span>Test Suites</span><span class="nav-count">18</span></a>
+    <a class="nav-item" href="#F15"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>Knowledge Base</span><span class="nav-count">87</span></a>
+
+    <div class="nav-section">Run</div>
+    <a class="nav-item" href="#F19"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21"/></svg></span><span>Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" href="#F20"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg></span><span>Run Results</span></a>
+    <a class="nav-item" href="#F21"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><span>Defects / Failures</span><span class="nav-count" style="color:var(--fail)">67</span></a>
+    <a class="nav-item" href="#F23"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12l3 3 7-7"/></svg></span><span>Reports</span></a>
+    <a class="nav-item" href="#F24"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg></span><span>QA Value</span><span class="nav-badge">Lead+</span></a>
+    <a class="nav-item" href="#F25"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span><span>Executive Dashboard</span><span class="nav-badge">Lead+</span></a>
+
+    <div class="nav-section">Govern</div>
+    <a class="nav-item active" href="#F26" aria-current="page"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span><span>Agents</span><span class="nav-count">3</span></a>
+    <a class="nav-item" href="#F11"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M6 13V8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4z"/></svg></span><span>Integrations</span></a>
+    <a class="nav-item" href="#F27"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span>Users &amp; Roles</span></a>
+    <a class="nav-item" href="#F28"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span>Settings &amp; Audit</span></a>
+  </aside>
+
+  <!-- MAIN -->
+  <section class="main">
+    <header class="topbar" role="banner">
+      <button class="proj-switch"><span class="proj-dot"></span><span>Iksula Commerce</span><span class="proj-meta">· main</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:2px"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>Search anywhere…<span class="kbd">⌘K</span></div>
+      <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
+      <button class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+      <div class="mode-toggle"><button class="on">Operate</button><button>Review</button><button>Prove</button></div>
+      <div class="user-pill"><span class="user-av">YM</span><span class="user-name">Yogesh M.</span></div>
+    </header>
+
+    <div class="content">
+
+      <!-- Question header -->
+      <div class="qhead">
+        <h1>What are our <span class="ai">AI agents</span> doing, how well, and under what rules?</h1>
+        <p class="sub">Monitor agent performance, configure HITL gates, audit recent decisions, and manage permissions. <span style="color:var(--secondary);font-weight:500">Lead/Admin only · QA Engineer + Stakeholder hidden.</span></p>
+      </div>
+
+      <!-- AGENT SELECTOR -->
+      <section aria-label="Agent selector">
+        <div class="agent-grid">
+          <!-- A1 SELECTED -->
+          <article class="agent-card selected" tabindex="0" aria-current="true">
+            <div class="agent-card-head">
+              <div class="agent-glyph-wrap">
+                <span class="agent-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span>
+                <div class="agent-name">
+                  <span class="agent-id">A1</span>
+                  <span class="agent-title">Test Case Generator</span>
+                </div>
+              </div>
+              <span class="agent-status"><span class="dot"></span>Healthy</span>
+            </div>
+            <div class="agent-metrics">
+              <div class="row">Acceptance <span class="v">87%</span><span class="sep">·</span>Confidence <span class="v">0.91</span></div>
+              <div class="row"><span class="v">621</span> generated<span class="sep">·</span><span class="v">184h</span> saved</div>
+            </div>
+          </article>
+
+          <!-- A2 -->
+          <article class="agent-card" tabindex="0">
+            <div class="agent-card-head">
+              <div class="agent-glyph-wrap">
+                <span class="agent-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg></span>
+                <div class="agent-name">
+                  <span class="agent-id">A2</span>
+                  <span class="agent-title">Duplicate Detection</span>
+                </div>
+              </div>
+              <span class="agent-status"><span class="dot"></span>Healthy</span>
+            </div>
+            <div class="agent-metrics">
+              <div class="row">Precision <span class="v">78%</span><span class="sep">·</span>Recall <span class="v">71%</span></div>
+              <div class="row"><span class="v">412</span> flags<span class="sep">·</span><span class="v">37h</span> saved</div>
+            </div>
+          </article>
+
+          <!-- A4 -->
+          <article class="agent-card" tabindex="0">
+            <div class="agent-card-head">
+              <div class="agent-glyph-wrap">
+                <span class="agent-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M12 2c4 4 4 16 0 20M12 2c-4 4-4 16 0 20"/></svg></span>
+                <div class="agent-name">
+                  <span class="agent-id">A4</span>
+                  <span class="agent-title">Defect Intelligence</span>
+                </div>
+              </div>
+              <span class="agent-status"><span class="dot"></span>Healthy</span>
+            </div>
+            <div class="agent-metrics">
+              <div class="row">Helpfulness <span class="v">84%</span><span class="sep">·</span>Accuracy <span class="v">78%</span></div>
+              <div class="row"><span class="v">89</span> RCAs<span class="sep">·</span><span class="v">~30h</span> saved</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- DETAIL PANEL — A1 selected -->
+      <article class="detail">
+
+        <!-- 3.1 Metadata -->
+        <section class="meta-grid">
+          <div class="meta-col">
+            <span class="meta-label">Identity</span>
+            <div class="meta-row"><span class="k">Agent name</span><span class="v">A1 Test Case Generator</span></div>
+            <div class="meta-row"><span class="k">Agent ID</span><span class="v mono violet">agent_a1_v3_2026q2</span></div>
+            <div class="meta-row"><span class="k">Model version</span><span class="v">Claude Sonnet 4.6 <span style="color:var(--t3);font-weight:400;font-size:11px">(latest)</span></span></div>
+            <div class="meta-row"><span class="k">Prompt revision</span><span class="v mono">v2.3 · updated 2026-04-18</span></div>
+          </div>
+          <div class="meta-col">
+            <span class="meta-label">Status &amp; uptime</span>
+            <div style="margin-bottom:4px"><span class="health-pill"><span class="dot"></span>Healthy · running</span></div>
+            <div class="meta-row"><span class="k">Uptime (last 7d)</span><span class="v mono" style="color:var(--pass)">99.7%</span></div>
+            <div class="meta-row"><span class="k">Last error</span><span class="v" style="color:var(--t3)">None (last 14 days)</span></div>
+            <div class="meta-row"><span class="k">Response time p95</span><span class="v mono">2.3 s</span></div>
+          </div>
+          <div class="meta-col">
+            <span class="meta-label">Access control</span>
+            <div class="meta-row"><span class="k">Enabled for roles</span><span class="v">All <span style="color:var(--t3);font-weight:400;font-size:11px">(QA Eng, Lead, Admin, Stakeholder)</span></span></div>
+            <div class="meta-row"><span class="k">Enabled projects</span><span class="v">3 of 3 <span style="color:var(--t3);font-weight:400;font-size:11px">(Returns · Commerce · Mobile)</span></span></div>
+            <div class="meta-row"><span class="k">Data scope</span><span class="v" style="font-size:11.5px">Read-only · Jira · GitHub · Figma · Confluence KB</span></div>
+          </div>
+        </section>
+
+        <!-- 3.2 Autonomy ladder + scope -->
+        <section>
+          <h3 class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M3 14l4-4 4 4 4-4 4 4"/></svg>Autonomy ladder &amp; permission scope</h3>
+
+          <div class="ladder-row">
+            <div class="ladder" role="radiogroup" aria-label="Autonomy level">
+              <button class="ladder-step disabled" role="radio" aria-checked="false">
+                <span class="step-name"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Monitor</span>
+                <span class="step-desc">Observe only · never acts or suggests</span>
+                <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Calibration only</span>
+              </button>
+              <button class="ladder-step active" role="radio" aria-checked="true">
+                <span class="step-name"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Suggest</span>
+                <span class="step-desc">HITL · human accepts/rejects every output</span>
+                <span class="pm1-tag">PM1 default</span>
+              </button>
+              <button class="ladder-step locked" role="radio" aria-checked="false">
+                <span class="step-name"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Act</span>
+                <span class="step-desc">Auto-act within guardrails · ≥ confidence threshold</span>
+                <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Unlocks v1.5</span>
+              </button>
+            </div>
+            <div class="ladder-axis">
+              <span>Lower autonomy · Lower risk</span>
+              <span class="arrow"></span>
+              <span>Higher autonomy · Higher risk</span>
+            </div>
+          </div>
+
+          <!-- Permission scope chips -->
+          <div class="scope-row" style="margin-top:14px">
+            <span class="scope-label">Project scope</span>
+            <span class="scope-chip">Iksula Returns<button class="x" aria-label="Remove">×</button></span>
+            <span class="scope-chip">Iksula Commerce<button class="x" aria-label="Remove">×</button></span>
+            <span class="scope-chip">Iksula Mobile App<button class="x" aria-label="Remove">×</button></span>
+            <button class="scope-chip-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add project</button>
+          </div>
+
+          <!-- Guardrail toggles -->
+          <div class="guardrails" style="margin-top:14px">
+            <div class="guard-row">
+              <span class="toggle on violet" role="switch" aria-checked="true"></span>
+              <div class="guard-text">
+                <span class="guard-name">Require HITL when confidence &lt; threshold</span>
+                <span class="guard-desc">Forces human review for low-confidence outputs · Editable by Admin</span>
+              </div>
+              <input class="guard-input" type="text" value="0.80" />
+            </div>
+            <div class="guard-row locked">
+              <span class="toggle on violet locked" role="switch" aria-checked="true" aria-disabled="true"></span>
+              <div class="guard-text">
+                <span class="guard-name">Deny on PII detection<span class="guard-lock-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Locked v1.6</span></span>
+                <span class="guard-desc">Always-on safety · masks personal data automatically</span>
+              </div>
+            </div>
+            <div class="guard-row locked">
+              <span class="toggle on violet locked" role="switch" aria-checked="true" aria-disabled="true"></span>
+              <div class="guard-text">
+                <span class="guard-name">Deny on secret leakage<span class="guard-lock-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Locked v1.6</span></span>
+                <span class="guard-desc">Detects API keys, tokens, credentials before output</span>
+              </div>
+            </div>
+            <div class="guard-row">
+              <span class="toggle on violet" role="switch" aria-checked="true"></span>
+              <div class="guard-text">
+                <span class="guard-name">Rate limit · max calls per user per hour</span>
+                <span class="guard-desc">Prevents runaway agent loops · Editable by Admin</span>
+              </div>
+              <input class="guard-input" type="text" value="50" />
+            </div>
+            <div class="guard-row">
+              <span class="toggle on violet" role="switch" aria-checked="true"></span>
+              <div class="guard-text">
+                <span class="guard-name">Max cost per call</span>
+                <span class="guard-desc">Auto-aborts requests exceeding budget threshold</span>
+              </div>
+              <input class="guard-input" type="text" value="$0.10" style="width:74px" />
+            </div>
+            <div class="guard-row locked">
+              <span class="toggle on violet locked" role="switch" aria-checked="true" aria-disabled="true"></span>
+              <div class="guard-text">
+                <span class="guard-name">Audit every action<span class="guard-lock-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Always on</span></span>
+                <span class="guard-desc">Every input/output logged immutably to F28 audit trail</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3.3 + 3.4 — two-col -->
+        <section class="two-col-section">
+          <!-- Configuration -->
+          <div>
+            <h3 class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Configuration <span class="count">Admin-editable</span></h3>
+            <div class="config-card">
+              <div class="config-row"><span class="k">Model</span><span class="v">Claude Sonnet 4.6</span></div>
+              <div class="config-row"><span class="k">Temperature</span><span class="v">0.7</span></div>
+              <div class="config-row"><span class="k">Max tokens</span><span class="v">2048</span></div>
+              <div class="config-row"><span class="k">Timeout</span><span class="v">30 seconds</span></div>
+              <div class="config-row"><span class="k">HITL threshold</span><span class="v">confidence &lt; 0.80</span></div>
+              <div class="config-row"><span class="k">HITL mode</span><span class="v">Hard <span style="color:var(--t3);font-weight:400">(blocks low-confidence)</span></span></div>
+              <div class="config-row"><span class="k">Retries</span><span class="v">2</span></div>
+              <div class="config-row"><span class="k">Rate limit</span><span class="v">100 calls / min</span></div>
+              <button class="save-all" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Save all changes</button>
+            </div>
+          </div>
+
+          <!-- Permission matrix -->
+          <div>
+            <h3 class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg>Permission matrix <span class="count">By role</span></h3>
+            <div class="perm-matrix">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Role</th>
+                    <th>Trigger</th>
+                    <th>View results</th>
+                    <th>Modify config</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>QA Engineer</td>
+                    <td><span class="yes">✓ Yes</span></td>
+                    <td><span class="yes">✓ Yes</span></td>
+                    <td><span class="no">— No</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="role-violet">QA Lead</span></td>
+                    <td><span class="yes">✓ Yes</span></td>
+                    <td><span class="yes">✓ Yes</span></td>
+                    <td><span class="no">— Read-only</span></td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--fail)">Admin</td>
+                    <td><span class="yes">✓ Yes</span></td>
+                    <td><span class="yes">✓ Yes</span></td>
+                    <td><span class="yes">✓ Yes</span></td>
+                  </tr>
+                  <tr>
+                    <td>Stakeholder</td>
+                    <td><span class="no">— No</span></td>
+                    <td><span class="yes">✓ Yes <span style="color:var(--t3);font-size:10px">(if shared)</span></span></td>
+                    <td><span class="no">— No</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="perm-foot">Permissions per Navigation Contract §2 · cannot be modified at agent level · governed by role definition.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3.5 — Eval history -->
+        <section>
+          <h3 class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Evaluation harness <span class="count">Last 4 runs · 50 cases each</span></h3>
+          <div class="eval-table">
+            <div class="eval-row head">
+              <span>Run date</span>
+              <span>Suite</span>
+              <span>Cases</span>
+              <span style="text-align:center">Pass rate</span>
+              <span>Failing cases</span>
+              <span style="text-align:center">Trend</span>
+            </div>
+            <div class="eval-row">
+              <span class="date">2026-04-22</span>
+              <span class="suite">PM1-A1-eval-comprehensive</span>
+              <span class="cases">50</span>
+              <span class="pass">98% <span style="color:var(--t3);font-weight:400;font-size:10px">(49/50)</span></span>
+              <span class="fail-list">test_case_from_legacy_spec.md</span>
+              <span style="text-align:center"><span class="trend stable">✓ Stable</span></span>
+            </div>
+            <div class="eval-row">
+              <span class="date">2026-04-19</span>
+              <span class="suite">PM1-A1-eval-comprehensive</span>
+              <span class="cases">50</span>
+              <span class="pass">96% <span style="color:var(--t3);font-weight:400;font-size:10px">(48/50)</span></span>
+              <span class="fail-list">2 cases · legacy_spec, ambiguous_req</span>
+              <span style="text-align:center"><span class="trend stable">✓ Stable</span></span>
+            </div>
+            <div class="eval-row">
+              <span class="date">2026-04-15</span>
+              <span class="suite">PM1-A1-eval-comprehensive</span>
+              <span class="cases">50</span>
+              <span class="pass">94% <span style="color:var(--t3);font-weight:400;font-size:10px">(47/50)</span></span>
+              <span class="fail-list">3 edge cases · 3DS callback timing</span>
+              <span style="text-align:center"><span class="trend up">↑ Improved</span></span>
+            </div>
+            <div class="eval-row">
+              <span class="date">2026-04-11</span>
+              <span class="suite">PM1-A1-eval-comprehensive</span>
+              <span class="cases">50</span>
+              <span class="pass med">91% <span style="color:var(--t3);font-weight:400;font-size:10px">(45/50)</span></span>
+              <span class="fail-list">5 ambiguous requirement parses</span>
+              <span style="text-align:center"><span class="trend up">↑ Improved</span></span>
+            </div>
+          </div>
+          <p style="font-size:10.5px;color:var(--t4);font-family:'JetBrains Mono';margin:8px 0 0 4px">Last harness run · 2026-04-22 14:30 UTC</p>
+        </section>
+
+        <!-- 3.6 — Recent decisions -->
+        <section>
+          <h3 class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l3 3 6-6 6 6 3-3"/></svg>Recent decisions <span class="count">Last 5 generations</span></h3>
+          <div class="decisions">
+            <div class="dec-row">
+              <span class="dec-input">req:PAY-1472:v3<span class="ts">Apr 22, 14:15</span></span>
+              <span class="dec-output">Given user has wallet balance ≥ amount · When submits payment · Then system deducts and confirms</span>
+              <span class="dec-conf high">0.92</span>
+              <span class="dec-action accepted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Accepted</span>
+              <a class="dec-drill" href="#">view →</a>
+            </div>
+            <div class="dec-row">
+              <span class="dec-input">req:RET-145:v1<span class="ts">Apr 22, 13:48</span></span>
+              <span class="dec-output">Multi-currency checkout with INR→USD conversion at checkout time</span>
+              <span class="dec-conf high">0.88</span>
+              <span class="dec-action edited"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Edited</span>
+              <a class="dec-drill" href="#">view →</a>
+            </div>
+            <div class="dec-row">
+              <span class="dec-input">req:CHK-880:v2<span class="ts">Apr 22, 11:32</span></span>
+              <span class="dec-output">Apply two gift cards at checkout · split remainder across credit card</span>
+              <span class="dec-conf high">0.91</span>
+              <span class="dec-action accepted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Accepted</span>
+              <a class="dec-drill" href="#">view →</a>
+            </div>
+            <div class="dec-row">
+              <span class="dec-input">req:ACM-881:v1<span class="ts">Apr 22, 10:05</span></span>
+              <span class="dec-output">Refund retry exhausted webhook receives event with idempotency key</span>
+              <span class="dec-conf med">0.74</span>
+              <span class="dec-action edited"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Edited</span>
+              <a class="dec-drill" href="#">view →</a>
+            </div>
+            <div class="dec-row">
+              <span class="dec-input">req:SAY-901:v1<span class="ts">Apr 21, 16:22</span></span>
+              <span class="dec-output">Promo code validation handles Unicode characters in code field</span>
+              <span class="dec-conf low">0.62</span>
+              <span class="dec-action rejected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>Rejected</span>
+              <a class="dec-drill" href="#">view →</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3.7 — Guardrail events -->
+        <section>
+          <h3 class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Guardrail events <span class="count">Last 30 days</span></h3>
+          <div class="guard-summary">
+            <div class="guard-stat"><span class="v" style="color:var(--secondary)">3</span><span class="lbl">PII redactions</span></div>
+            <div class="guard-stat"><span class="v zero">0</span><span class="lbl">Policy violations</span></div>
+            <div class="guard-stat"><span class="v" style="color:var(--warn)">1</span><span class="lbl">Rate-limit hits</span></div>
+            <div class="guard-stat"><span class="v zero">0</span><span class="lbl">Timeout events</span></div>
+          </div>
+          <div class="guard-events">
+            <div class="ge-row">
+              <span class="ge-ts">2026-04-20 11:22</span>
+              <span class="ge-type pii">PII redaction</span>
+              <span class="ge-detail">Email in requirement → masked <span class="code">[REDACTED_EMAIL]</span></span>
+              <span class="ge-action">Delivered with mask · <b>auto-handled</b></span>
+            </div>
+            <div class="ge-row">
+              <span class="ge-ts">2026-04-15 14:00</span>
+              <span class="ge-type rate">Rate limit</span>
+              <span class="ge-detail"><span class="code" style="color:var(--warn);background:rgba(251,191,36,0.10);border:1px solid rgba(251,191,36,0.28)">150/min</span> exceeded 100-call threshold</span>
+              <span class="ge-action">Queued 30s · re-submitted OK · <b>auto-recovered</b></span>
+            </div>
+            <div class="ge-row">
+              <span class="ge-ts">2026-04-12 09:15</span>
+              <span class="ge-type pii">PII redaction</span>
+              <span class="ge-detail">Phone number in Jira ticket → masked <span class="code">[REDACTED_PHONE]</span></span>
+              <span class="ge-action">Delivered with mask · <b>auto-handled</b></span>
+            </div>
+            <div class="ge-row">
+              <span class="ge-ts">2026-04-08 16:45</span>
+              <span class="ge-type pii">PII redaction</span>
+              <span class="ge-detail">Customer name in Confluence KB → masked <span class="code">[REDACTED_NAME]</span></span>
+              <span class="ge-action">Delivered with mask · <b>auto-handled</b></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3.8 — Action controls -->
+        <section class="action-bar">
+          <span class="meta">
+            <b>A1 v2.3</b> · running stable · <b>0 errors</b> in last 14 days<br/>
+            Last config change: <b>2026-04-18</b> by <b>Yogesh M.</b> (Admin) — temperature 0.65 → 0.7
+          </span>
+          <button class="ab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export audit log</button>
+          <button class="ab-btn rollback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 9 9"/><polyline points="3 4 3 9 8 9"/></svg>Rollback to v2.2</button>
+          <button class="ab-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Pause agent</button>
+        </section>
+
+      </article>
+
+    </div><!-- /content -->
+  </section>
+</div>
+
+<!--
+VALIDATION (F26 Agents · A1 selected)
+ 1. 1600×1024 full shell · rail with Agents active under GOVERN (violet active accent + count 3) · OK
+ 2. Question header DM Sans 26 with violet "AI agents" emphasis + sub explainer noting Lead/Admin only · OK
+ 3. Agent selector — 3 cards: A1 SELECTED (2px violet border + violet 3px left-accent + violet shadow), A2 Duplicate Detection, A4 Defect Intelligence · all show violet ✨ glyph + agent ID + name + green Healthy pulse pill + 2 metric rows (acceptance/precision/helpfulness + counts) · OK
+ 4. Detail panel header — A1 metadata 3-col grid: Identity (agent_a1_v3_2026q2 violet mono · Claude Sonnet 4.6 · v2.3 prompt) · Status (green Healthy + uptime 99.7% + p95 2.3s) · Access control (all roles · 3 of 3 projects · read-only data scope) · OK
+ 5. Autonomy ladder 3-step: Monitor (disabled, "Calibration only" lock tag) · Suggest (ACTIVE with violet box-shadow + violet step-name + "PM1 default" violet pill) · Act (locked, "Unlocks v1.5" tag) · with axis "Lower autonomy ← → Higher autonomy" · OK
+ 6. Permission scope chips: Iksula Returns + Iksula Commerce + Iksula Mobile App + dashed "Add project" affordance · OK
+ 7. Guardrail toggles (6 rows): HITL threshold 0.80 (editable violet on) · PII detection (locked violet on, "Locked v1.6" tag) · Secret leakage (locked violet on, "Locked v1.6") · Rate limit 50/h (editable violet on) · Max cost $0.10 (editable violet on) · Audit every action (locked, "Always on") · OK
+ 8. Two-col: Configuration card (8 mono key-value rows + teal "Save all changes" CTA) | Permission matrix table (4 roles × 3 columns: QA Engineer / QA Lead violet / Admin red / Stakeholder · with ✓ Yes green / — No tertiary) + footnote · OK
+ 9. Evaluation harness table (4 runs): 2026-04-22 98% Stable · 2026-04-19 96% Stable · 2026-04-15 94% Improved · 2026-04-11 91% Improved · last harness timestamp · OK
+10. Recent decisions list (5 rows): TC inputs (req:PAY-1472:v3 etc violet mono) + truncated outputs + confidence color-graded (high green / med amber / low red) + action chips (Accepted green / Edited info-blue / Rejected red) + view → drill · OK
+11. Guardrail events (4-stat summary + 4 detailed rows): 3 PII redactions violet · 0 policy violations · 1 rate-limit warn · 0 timeouts · per-row event type chip (PII violet / Rate amber) + detail with violet code refs + auto-handled/auto-recovered annotation · OK
+12. Action bar bottom: agent meta (v2.3 · 0 errors · last config change by Yogesh M.) + Export audit log + Rollback to v2.2 (red outline) + Pause agent (amber outline) · OK
+13. Anti-drift COLOR DISCIPLINE — F26 is the most violet-saturated frame in the system (the AI governance counterpart to F27 people governance):
+    - Violet ON ALL AI surfaces: agent IDs (A1/A2/A4) · agent glyphs · A1 selected card violet border/shadow · violet rail accent on Agents · agent_a1_v3_2026q2 ID · ladder Active step + PM1 default tag · scope chips imply system but all guardrail toggles are violet (AI governance) · Eval suite name violet mono · Recent decisions input refs violet mono · PII redaction event chips violet · code refs throughout violet
+    - Teal preserved for SYSTEM ACTIONS: "Save all changes" config CTA (system confirm) · QA Engineer avatars (would be teal in F27 RBAC) · permissions matrix yes pass-green
+    - Pass green: Healthy status pulses · 99.7% uptime · ✓ Yes permission · ≥0.85 high confidence · Stable trend · auto-handled/auto-recovered annotations
+    - Amber/Warn: rate-limit count + chip · Pause button outline · medium confidence
+    - Red: Defects/Failures count in rail · Rollback button outline · low-confidence rejected · Admin role label
+    - Info-blue: Edited action chip · Improved trend chip
+    - LOCKED tags use neutral gray (not semantic) · OK
+14. Typography: DM Sans 26 question + DM Sans 13 section titles · Inter 13 body · JetBrains Mono on agent IDs, prompt versions, response times, confidence scores, dates, all metric values, model names · OK
+15. AI provenance honored: A1/A2/A4 agent labels · version/prompt revision · per-decision confidence scores · evaluation harness with pass-rate trend · guardrail events with auto-handled annotation · permission matrix referencing Navigation Contract §2 · OK
+16. No PM3 features (no SAML/PAT/A3/A5) · No MD3 · No Tailwind · Hex hardcoded · prefers-reduced-motion respects pulse animation · OK
+-->
+</body>
+</html>

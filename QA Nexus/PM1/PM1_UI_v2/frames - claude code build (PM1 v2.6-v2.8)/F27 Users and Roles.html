@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Users &amp; Roles</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+    --pass-soft:rgba(52,211,153,0.10);
+    --fail-soft:rgba(248,113,113,0.10);
+    --warn-soft:rgba(251,191,36,0.10);
+    --admin-red:#EF4444;--admin-soft:rgba(239,68,68,0.10);
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;display:grid;grid-template-columns:272px 1fr;background:var(--canvas)}
+
+  /* ═══════════════════════ LEFT RAIL 272px ═══════════════════════ */
+  .rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:4px;background:var(--canvas)}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px 6px}
+  .rail-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:inline-flex;align-items:center;justify-content:center;color:var(--primary-ink);font-family:'DM Sans';font-weight:700;font-size:14px}
+  .rail-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+  .nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px;text-decoration:none}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:6px;bottom:6px;width:3px;background:var(--primary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:inherit}
+  .nav-count{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1}
+  .nav-item.active .nav-count{background:rgba(45,212,191,0.14);color:var(--primary)}
+  .nav-badge{font-family:'JetBrains Mono';font-size:9px;color:var(--secondary);margin-left:auto;background:var(--ai-soft);padding:2px 6px;border-radius:4px;line-height:1;letter-spacing:0.04em;font-weight:600;text-transform:uppercase}
+
+  /* ═══════════════════════ MAIN AREA ═══════════════════════ */
+  .main{display:flex;flex-direction:column;min-width:0}
+
+  /* Top bar 56 */
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--canvas);flex:none}
+  .proj-switch{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:6px;background:var(--raised);border:1px solid var(--border);font-size:13px;color:var(--t1);font-weight:500;cursor:pointer}
+  .proj-dot{width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .proj-meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px;margin-left:2px}
+  .search{height:36px;flex:1;max-width:480px;background:var(--raised);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--t3);font-size:13px;cursor:text}
+  .search .kbd{font-family:'JetBrains Mono';font-size:10.5px;border:1px solid var(--border);color:var(--t3);padding:1px 5px;border-radius:4px;margin-left:auto;background:var(--base)}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);position:relative}
+  .icon-btn:hover{color:var(--t1)}
+  .icon-btn .dot{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:999px;background:var(--fail)}
+
+  .mode-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:36px}
+  .mode-toggle button{height:28px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;cursor:pointer}
+  .mode-toggle button.on{background:var(--overlay);color:var(--t1)}
+
+  .user-pill{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--raised);margin-left:4px}
+  .user-av{width:28px;height:28px;border-radius:999px;background:#FBBF24;color:#78350F;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .user-name{font-size:13px;color:var(--t1);font-weight:500}
+  .role-pill{font-family:'JetBrains Mono';font-size:10px;padding:3px 7px;border-radius:4px;line-height:1;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;border:1px solid;white-space:nowrap}
+  .role-pill.lead{background:rgba(167,139,250,0.12);color:var(--secondary);border-color:rgba(167,139,250,0.3)}
+  .role-pill.engineer{background:rgba(45,212,191,0.12);color:var(--primary);border-color:rgba(45,212,191,0.3)}
+  .role-pill.admin{background:var(--admin-soft);color:var(--admin-red);border-color:rgba(239,68,68,0.3)}
+  .role-pill.stakeholder{background:var(--overlay);color:var(--t3);border-color:var(--border-strong)}
+
+  /* ═══════════════════════ CONTENT ═══════════════════════ */
+  .content{flex:1;padding:32px 32px 56px;overflow-y:auto;display:flex;flex-direction:column;gap:32px}
+
+  /* Question header */
+  .qhead{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+  .qhead-left h1{font-family:'DM Sans';font-size:26px;line-height:34px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+  .qhead-left .sub{font-size:14px;line-height:22px;color:var(--t3);margin-top:6px;max-width:720px}
+  .qhead-right{display:flex;align-items:center;gap:10px;flex:none;padding-top:4px}
+  .qhead-right .stat{font-size:12px;color:var(--t3);font-family:'JetBrains Mono'}
+  .qhead-right .stat .val{color:var(--t1);font-weight:600}
+
+  /* Invite panel 160 */
+  .invite-panel{background:var(--base);border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;align-items:center;gap:28px;min-height:120px;position:relative;overflow:hidden}
+  .invite-panel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--primary),var(--secondary));opacity:0.7}
+  .invite-left{display:flex;align-items:center;gap:20px;flex:1}
+  .invite-ico{width:48px;height:48px;border-radius:12px;background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.26);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .invite-body h2{font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:700;color:var(--t1);margin:0 0 4px 0}
+  .invite-body p{font-size:13px;line-height:20px;color:var(--t2);margin:0}
+  .invite-stats{display:flex;gap:24px;padding-left:24px;border-left:1px solid var(--border);align-items:center}
+  .stat-tile{display:flex;flex-direction:column;gap:2px;min-width:96px}
+  .stat-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);font-weight:600}
+  .stat-value{font-family:'JetBrains Mono';font-size:20px;color:var(--t1);font-weight:600;line-height:1}
+  .stat-value .sub{color:var(--t4);font-size:13px;font-weight:400;margin-left:4px}
+  .invite-cta{height:44px;padding:0 20px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:14px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background 200ms ease,box-shadow 200ms ease}
+  .invite-cta:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 20px -6px rgba(45,212,191,0.5),0 0 0 1px rgba(45,212,191,0.25)}
+
+  /* Section header */
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:16px}
+  .section-title{font-family:'DM Sans';font-size:15px;line-height:22px;font-weight:700;color:var(--t1);margin:0;display:inline-flex;align-items:center;gap:10px}
+  .section-title .count-pill{font-family:'JetBrains Mono';font-size:10px;font-weight:600;color:var(--t3);background:var(--raised);padding:3px 8px;border-radius:999px;line-height:1;border:1px solid var(--border)}
+  .section-tools{display:flex;align-items:center;gap:10px}
+  .ghost-btn{height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .ghost-btn:hover{color:var(--t1);border-color:var(--border-strong);background:var(--raised)}
+
+  /* Current team table */
+  .tbl-wrap{background:var(--base);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  table.team{width:100%;border-collapse:collapse;font-size:13px}
+  table.team thead th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--t3);padding:14px 16px;background:var(--raised);border-bottom:1px solid var(--border)}
+  table.team tbody td{padding:14px 16px;border-top:1px solid var(--border);color:var(--t1);vertical-align:middle}
+  table.team tbody tr:hover{background:rgba(45,212,191,0.03)}
+  .cell-user{display:flex;align-items:center;gap:10px}
+  .u-av{width:32px;height:32px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+  .u-av.violet{background:var(--secondary);color:var(--secondary-ink)}
+  .u-av.teal{background:var(--primary);color:var(--primary-ink)}
+  .u-av.amber{background:#FBBF24;color:#78350F}
+  .u-av.gray{background:var(--overlay);color:var(--t1)}
+  .u-name{font-weight:500;color:var(--t1);font-size:13px;line-height:18px}
+  .u-email{font-family:'JetBrains Mono';font-size:11px;color:var(--t3);line-height:16px}
+  .proj-chips{display:inline-flex;gap:4px;flex-wrap:wrap}
+  .proj-chip{font-size:11px;line-height:1;padding:4px 8px;border-radius:4px;background:var(--overlay);color:var(--t2);border:1px solid var(--border)}
+  .proj-more{font-family:'JetBrains Mono';font-size:10px;color:var(--t3);padding:4px 6px}
+  .status-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 8px;border-radius:999px;font-weight:500;line-height:1;height:22px}
+  .status-chip .dot{width:6px;height:6px;border-radius:999px;flex:none}
+  .status-chip.active{background:var(--pass-soft);color:var(--pass);border:1px solid rgba(52,211,153,0.3)}
+  .status-chip.active .dot{background:var(--pass)}
+  .status-chip.pending{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(251,191,36,0.3)}
+  .status-chip.pending .dot{background:var(--warn)}
+  .last-active{font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+  .row-actions{display:inline-flex;gap:4px;align-items:center}
+  .row-actions button{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .row-actions button:hover{color:var(--t1);border-color:var(--border-strong);background:var(--raised)}
+
+  /* Two-column layout: pending + audit */
+  .split-row{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+
+  /* Pending invites list */
+  .pending-list{background:var(--base);border:1px solid var(--border);border-radius:12px;padding:8px}
+  .pending-row{display:flex;align-items:center;gap:12px;padding:14px 12px;border-radius:8px}
+  .pending-row + .pending-row{border-top:1px solid var(--border)}
+  .pending-row:hover{background:var(--raised)}
+  .pending-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .pending-email{font-family:'JetBrains Mono';font-size:12px;color:var(--t1);font-weight:500}
+  .pending-sub{font-size:11px;color:var(--t3)}
+  .pending-sub .sep{color:var(--t4);margin:0 6px}
+  .pending-actions{display:inline-flex;gap:6px;flex:none}
+  .tiny-btn{height:26px;padding:0 10px;border-radius:5px;font-size:11px;font-weight:500;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer}
+  .tiny-btn:hover{color:var(--t1);background:var(--raised)}
+  .tiny-btn.danger{color:var(--fail)}
+  .tiny-btn.danger:hover{background:var(--fail-soft);border-color:rgba(248,113,113,0.3)}
+
+  /* Audit feed */
+  .audit-list{background:var(--base);border:1px solid var(--border);border-radius:12px;padding:8px;max-height:460px;overflow-y:auto}
+  .audit-row{display:flex;gap:12px;padding:12px;border-radius:8px;position:relative}
+  .audit-row + .audit-row{border-top:1px solid var(--border)}
+  .audit-gutter{width:24px;flex:none;display:flex;align-items:flex-start;justify-content:center;padding-top:2px}
+  .audit-dot{width:8px;height:8px;border-radius:999px;background:var(--primary);margin-top:5px}
+  .audit-dot.violet{background:var(--secondary)}
+  .audit-dot.warn{background:var(--warn)}
+  .audit-content{flex:1;min-width:0}
+  .audit-primary{font-size:13px;line-height:20px;color:var(--t1)}
+  .audit-primary .actor{font-weight:600}
+  .audit-primary .action{color:var(--t3)}
+  .audit-primary .target{color:var(--primary);font-weight:500}
+  .audit-primary .target.violet{color:var(--secondary)}
+  .audit-secondary{font-size:11px;color:var(--t3);font-family:'JetBrains Mono';margin-top:2px}
+
+  /* Role matrix */
+  .matrix{background:var(--base);border:1px solid var(--border);border-radius:12px;padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .matrix-card{padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--canvas);display:flex;flex-direction:column;gap:10px}
+  .matrix-card.engineer{border-color:rgba(45,212,191,0.25)}
+  .matrix-card.lead{border-color:rgba(167,139,250,0.25)}
+  .matrix-card.admin{border-color:rgba(239,68,68,0.22)}
+  .matrix-card.stakeholder{border-color:var(--border-strong)}
+  .matrix-head{display:flex;align-items:center;justify-content:space-between}
+  .matrix-title{font-family:'DM Sans';font-size:13px;font-weight:700;color:var(--t1)}
+  .matrix-count{font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+  .matrix-perms{font-size:11px;line-height:17px;color:var(--t2);font-family:'Inter'}
+  .matrix-perms li{list-style:none;padding:0;margin:0;display:flex;align-items:flex-start;gap:6px;padding-left:0}
+  .matrix-perms li::before{content:"·";color:var(--t4);margin-top:-2px}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ═══════════════════════ LEFT RAIL ═══════════════════════ -->
+  <aside class="rail" role="navigation" aria-label="Primary">
+    <div class="rail-brand">
+      <span class="rail-logo">Q</span>
+      <span class="rail-word">QA Nexus</span>
+    </div>
+
+    <a class="nav-item" href="#F08b">
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg></span>
+      <span>Home</span>
+    </a>
+
+    <div class="nav-section">Plan</div>
+    <a class="nav-item" href="#F14"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span><span>Requirements</span></a>
+    <a class="nav-item" href="#F15"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>Test Plans</span></a>
+    <a class="nav-item" href="#F17"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span>Test Cases</span><span class="nav-count">42</span></a>
+
+    <div class="nav-section">Run</div>
+    <a class="nav-item" href="#F19"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21"/></svg></span><span>Runs</span><span class="nav-count">3</span></a>
+    <a class="nav-item disabled" href="#"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></span><span>Environments</span></a>
+
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" href="#F20"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span><span>Results</span></a>
+    <a class="nav-item" href="#F21"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></span><span>Defects</span><span class="nav-count">14</span></a>
+    <a class="nav-item" href="#F23"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg></span><span>Reports</span></a>
+    <a class="nav-item" href="#F24"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>QA Value</span><span class="nav-badge">Lead+</span></a>
+
+    <div class="nav-section">Govern</div>
+    <a class="nav-item" href="#F26"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span><span>Agents</span></a>
+    <a class="nav-item" href="#F11"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M6 13V8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4z"/></svg></span><span>Integrations</span></a>
+    <a class="nav-item active" href="#F27" aria-current="page"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>Users &amp; Roles</span><span class="nav-count">12</span></a>
+    <a class="nav-item" href="#F28"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings &amp; Audit</span></a>
+  </aside>
+
+  <!-- ═══════════════════════ MAIN ═══════════════════════ -->
+  <section class="main">
+
+    <!-- Top bar -->
+    <header class="topbar" role="banner">
+      <button class="proj-switch">
+        <span class="proj-dot"></span>
+        <span>Iksula Commerce</span>
+        <span class="proj-meta">· main</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:2px"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>Search users, requirements, defects…<span class="kbd">⌘K</span></div>
+      <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
+      <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+      <div class="mode-toggle" role="tablist" aria-label="Mode">
+        <button class="on" role="tab" aria-selected="true">Operate</button>
+        <button role="tab">Review</button>
+        <button role="tab">Prove</button>
+      </div>
+      <span class="role-pill admin" title="Your role" aria-label="Admin">Admin</span>
+      <div class="user-pill">
+        <span class="user-av">YM</span>
+        <span class="user-name">Yogesh M.</span>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Question header -->
+      <div class="qhead">
+        <div class="qhead-left">
+          <h1>Who has access to what, and what changed recently?</h1>
+          <p class="sub">Manage your team, pending invites, and the audit trail. Lead role can invite; Admin has full control. Role matrix below.</p>
+        </div>
+        <div class="qhead-right">
+          <span class="stat"><span class="val">12</span> members</span>
+          <span style="color:var(--t4)">·</span>
+          <span class="stat"><span class="val">3</span> pending</span>
+          <span style="color:var(--t4)">·</span>
+          <span class="stat"><span class="val">21</span> events (14d)</span>
+        </div>
+      </div>
+
+      <!-- Invite panel 160 -->
+      <section class="invite-panel" aria-labelledby="invite-h">
+        <div class="invite-left">
+          <span class="invite-ico" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+          </span>
+          <div class="invite-body">
+            <h2 id="invite-h">Add people to Iksula Services Pvt Ltd</h2>
+            <p>Send email invites — invitees set their password and land on the onboarding tour. You assign role + projects per invitee.</p>
+          </div>
+        </div>
+        <div class="invite-stats" aria-label="Invite slot usage">
+          <div class="stat-tile">
+            <span class="stat-label">Slots remaining</span>
+            <span class="stat-value">4<span class="sub">of 25</span></span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-label">Expires after</span>
+            <span class="stat-value">7<span class="sub">days</span></span>
+          </div>
+        </div>
+        <button class="invite-cta" type="button" aria-label="Open Invite User modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Invite user
+        </button>
+      </section>
+
+      <!-- Current team table -->
+      <section aria-labelledby="team-h">
+        <div class="section-head">
+          <h3 id="team-h" class="section-title">Current team <span class="count-pill">12 members</span></h3>
+          <div class="section-tools">
+            <button class="ghost-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filter</button>
+            <button class="ghost-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+          </div>
+        </div>
+
+        <div class="tbl-wrap">
+          <table class="team" aria-label="Current team members">
+            <thead>
+              <tr>
+                <th style="width:26%">User</th>
+                <th style="width:11%">Role</th>
+                <th style="width:24%">Projects</th>
+                <th style="width:12%">Status</th>
+                <th style="width:13%">Last active</th>
+                <th style="width:14%">Joined</th>
+                <th style="width:auto">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Row 1 — Yogesh (inviter + Admin) -->
+              <tr>
+                <td><div class="cell-user"><span class="u-av amber">YM</span><div><div class="u-name">Yogesh M. <span style="color:var(--t3);font-weight:400;font-size:11px">(you)</span></div><div class="u-email">yogesh.m@iksula.com</div></div></div></td>
+                <td><span class="role-pill admin">Admin</span></td>
+                <td><div class="proj-chips"><span class="proj-chip">Returns</span><span class="proj-chip">Commerce</span><span class="proj-chip">Mobile App</span></div></td>
+                <td><span class="status-chip active"><span class="dot"></span>Active</span></td>
+                <td><span class="last-active">Just now</span></td>
+                <td><span class="last-active">2026-03-02</span></td>
+                <td><div class="row-actions"><button aria-label="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button aria-label="More"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+              </tr>
+              <!-- Row 2 — Ravi (Lead, recently invited via F07d) -->
+              <tr>
+                <td><div class="cell-user"><span class="u-av violet">RK</span><div><div class="u-name">Ravi K.</div><div class="u-email">ravi.k@iksula.com</div></div></div></td>
+                <td><span class="role-pill lead">QA Lead</span></td>
+                <td><div class="proj-chips"><span class="proj-chip">Returns</span><span class="proj-chip">Commerce</span><span class="proj-chip">Mobile App</span></div></td>
+                <td><span class="status-chip active"><span class="dot"></span>Active</span></td>
+                <td><span class="last-active">2 min ago</span></td>
+                <td><span class="last-active">2026-04-24</span></td>
+                <td><div class="row-actions"><button aria-label="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button aria-label="More"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+              </tr>
+              <!-- Row 3 — Priya (QA Engineer) -->
+              <tr>
+                <td><div class="cell-user"><span class="u-av teal">PS</span><div><div class="u-name">Priya S.</div><div class="u-email">priya.s@iksula.com</div></div></div></td>
+                <td><span class="role-pill engineer">QA Engineer</span></td>
+                <td><div class="proj-chips"><span class="proj-chip">Returns</span><span class="proj-chip">Commerce</span></div></td>
+                <td><span class="status-chip active"><span class="dot"></span>Active</span></td>
+                <td><span class="last-active">18 min ago</span></td>
+                <td><span class="last-active">2026-04-24</span></td>
+                <td><div class="row-actions"><button aria-label="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button aria-label="More"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+              </tr>
+              <!-- Row 4 — Senior QA -->
+              <tr>
+                <td><div class="cell-user"><span class="u-av teal">AR</span><div><div class="u-name">Amit R. <span class="role-pill" style="background:rgba(45,212,191,0.08);color:var(--primary);border-color:rgba(45,212,191,0.22);font-size:9px;padding:2px 5px;margin-left:4px">Senior QA</span></div><div class="u-email">amit.r@iksula.com</div></div></div></td>
+                <td><span class="role-pill engineer">QA Engineer</span></td>
+                <td><div class="proj-chips"><span class="proj-chip">Returns</span><span class="proj-chip">Commerce</span><span class="proj-more">+1</span></div></td>
+                <td><span class="status-chip active"><span class="dot"></span>Active</span></td>
+                <td><span class="last-active">1 h ago</span></td>
+                <td><span class="last-active">2026-03-15</span></td>
+                <td><div class="row-actions"><button aria-label="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button aria-label="More"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+              </tr>
+              <!-- Row 5 — Meera (Stakeholder) -->
+              <tr>
+                <td><div class="cell-user"><span class="u-av gray">MR</span><div><div class="u-name">Meera R.</div><div class="u-email">meera.r@iksula.com</div></div></div></td>
+                <td><span class="role-pill stakeholder">Stakeholder</span></td>
+                <td><div class="proj-chips"><span class="proj-chip">Returns</span><span class="proj-chip">Commerce</span></div></td>
+                <td><span class="status-chip active"><span class="dot"></span>Active</span></td>
+                <td><span class="last-active">4 h ago</span></td>
+                <td><span class="last-active">2026-04-19</span></td>
+                <td><div class="row-actions"><button aria-label="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button aria-label="More"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+              </tr>
+              <!-- Row 6 — Another QA engineer -->
+              <tr>
+                <td><div class="cell-user"><span class="u-av teal">NB</span><div><div class="u-name">Neha B.</div><div class="u-email">neha.b@iksula.com</div></div></div></td>
+                <td><span class="role-pill engineer">QA Engineer</span></td>
+                <td><div class="proj-chips"><span class="proj-chip">Commerce</span></div></td>
+                <td><span class="status-chip active"><span class="dot"></span>Active</span></td>
+                <td><span class="last-active">Yesterday</span></td>
+                <td><span class="last-active">2026-04-02</span></td>
+                <td><div class="row-actions"><button aria-label="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button aria-label="More"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Pending invites + Audit feed side-by-side -->
+      <div class="split-row">
+
+        <!-- Pending invites -->
+        <section aria-labelledby="pending-h">
+          <div class="section-head">
+            <h3 id="pending-h" class="section-title">Pending invites <span class="count-pill">3 pending</span></h3>
+          </div>
+
+          <div class="pending-list">
+            <div class="pending-row">
+              <span class="u-av teal" style="width:28px;height:28px;font-size:10px">SG</span>
+              <div class="pending-meta">
+                <span class="pending-email">sanjay.gupta@iksula.com</span>
+                <span class="pending-sub"><span class="role-pill engineer" style="font-size:9px;padding:2px 6px">QA Engineer</span><span class="sep">·</span>Returns<span class="sep">·</span>Expires in <span class="mono" style="color:var(--warn)">5d 14h</span></span>
+              </div>
+              <div class="pending-actions">
+                <button class="tiny-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Resend</button>
+                <button class="tiny-btn danger">Revoke</button>
+              </div>
+            </div>
+            <div class="pending-row">
+              <span class="u-av teal" style="width:28px;height:28px;font-size:10px">MR</span>
+              <div class="pending-meta">
+                <span class="pending-email">meena.rao@iksula.com</span>
+                <span class="pending-sub"><span class="role-pill engineer" style="font-size:9px;padding:2px 6px">QA Engineer</span><span class="sep">·</span>Returns, Commerce<span class="sep">·</span>Expires in <span class="mono" style="color:var(--pass)">6d 22h</span></span>
+              </div>
+              <div class="pending-actions">
+                <button class="tiny-btn">Resend</button>
+                <button class="tiny-btn danger">Revoke</button>
+              </div>
+            </div>
+            <div class="pending-row">
+              <span class="u-av violet" style="width:28px;height:28px;font-size:10px">VN</span>
+              <div class="pending-meta">
+                <span class="pending-email">vikram.nair@iksula.com</span>
+                <span class="pending-sub"><span class="role-pill lead" style="font-size:9px;padding:2px 6px">QA Lead</span><span class="sep">·</span>Returns, Commerce, Mobile<span class="sep">·</span>Expires in <span class="mono" style="color:var(--warn)">5d 14h</span></span>
+              </div>
+              <div class="pending-actions">
+                <button class="tiny-btn">Resend</button>
+                <button class="tiny-btn danger">Revoke</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Audit feed -->
+        <section aria-labelledby="audit-h">
+          <div class="section-head">
+            <h3 id="audit-h" class="section-title">Recent activity <span class="count-pill">Last 14 days</span></h3>
+            <button class="ghost-btn">View full audit log →</button>
+          </div>
+
+          <div class="audit-list">
+            <div class="audit-row">
+              <div class="audit-gutter"><span class="audit-dot violet"></span></div>
+              <div class="audit-content">
+                <div class="audit-primary"><span class="actor">Yogesh M.</span> <span class="action">invited</span> <span class="target violet">Ravi K.</span> as <span style="color:var(--secondary)">QA Lead</span></div>
+                <div class="audit-secondary">2026-04-24 · 10:32 · invite_sent</div>
+              </div>
+            </div>
+            <div class="audit-row">
+              <div class="audit-gutter"><span class="audit-dot"></span></div>
+              <div class="audit-content">
+                <div class="audit-primary"><span class="actor">Ravi K.</span> <span class="action">accepted invite and set password</span></div>
+                <div class="audit-secondary">2026-04-24 · 10:48 · invite_accepted</div>
+              </div>
+            </div>
+            <div class="audit-row">
+              <div class="audit-gutter"><span class="audit-dot"></span></div>
+              <div class="audit-content">
+                <div class="audit-primary"><span class="actor">Yogesh M.</span> <span class="action">invited</span> <span class="target">Priya S.</span> as QA Engineer</div>
+                <div class="audit-secondary">2026-04-24 · 09:12 · invite_sent</div>
+              </div>
+            </div>
+            <div class="audit-row">
+              <div class="audit-gutter"><span class="audit-dot warn"></span></div>
+              <div class="audit-content">
+                <div class="audit-primary"><span class="actor">Yogesh M.</span> <span class="action">changed</span> <span class="target">Amit R.</span>'s role — QA Engineer → QA Engineer <span style="color:var(--primary)">(Senior QA)</span></div>
+                <div class="audit-secondary">2026-04-22 · 16:45 · role_updated</div>
+              </div>
+            </div>
+            <div class="audit-row">
+              <div class="audit-gutter"><span class="audit-dot"></span></div>
+              <div class="audit-content">
+                <div class="audit-primary"><span class="actor">Yogesh M.</span> <span class="action">added</span> <span class="target">Neha B.</span> to Iksula Commerce</div>
+                <div class="audit-secondary">2026-04-20 · 11:20 · project_assigned</div>
+              </div>
+            </div>
+            <div class="audit-row">
+              <div class="audit-gutter"><span class="audit-dot"></span></div>
+              <div class="audit-content">
+                <div class="audit-primary"><span class="actor">Meera R.</span> <span class="action">joined via invite link</span></div>
+                <div class="audit-secondary">2026-04-19 · 14:05 · invite_accepted</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Role matrix reference -->
+      <section aria-labelledby="matrix-h">
+        <div class="section-head">
+          <h3 id="matrix-h" class="section-title">Role matrix <span class="count-pill">Reference</span></h3>
+          <span style="font-size:11px;color:var(--t3);font-style:italic">What each role can do in QA Nexus — see Settings &amp; Audit for per-permission detail.</span>
+        </div>
+
+        <div class="matrix">
+          <!-- QA Engineer -->
+          <article class="matrix-card engineer">
+            <div class="matrix-head">
+              <span class="matrix-title">QA Engineer</span>
+              <span class="matrix-count">7 members</span>
+            </div>
+            <span class="role-pill engineer" style="align-self:flex-start">QA Engineer</span>
+            <ul class="matrix-perms">
+              <li>Author &amp; edit test cases</li>
+              <li>Run tests, log defects</li>
+              <li>Review AI agent drafts</li>
+              <li>Cannot manage team or Govern</li>
+            </ul>
+          </article>
+
+          <!-- QA Lead -->
+          <article class="matrix-card lead">
+            <div class="matrix-head">
+              <span class="matrix-title">QA Lead</span>
+              <span class="matrix-count">2 members</span>
+            </div>
+            <span class="role-pill lead" style="align-self:flex-start">QA Lead</span>
+            <ul class="matrix-perms">
+              <li>Everything QA Engineer can</li>
+              <li>Invite users (not Admin role)</li>
+              <li>Approve agent policy</li>
+              <li>Read-only audit + QA Value access</li>
+            </ul>
+          </article>
+
+          <!-- Admin -->
+          <article class="matrix-card admin">
+            <div class="matrix-head">
+              <span class="matrix-title">Admin</span>
+              <span class="matrix-count">1 member</span>
+            </div>
+            <span class="role-pill admin" style="align-self:flex-start">Admin</span>
+            <ul class="matrix-perms">
+              <li>Everything QA Lead can</li>
+              <li>Assign any role (incl. Admin)</li>
+              <li>Full Settings &amp; Audit control</li>
+              <li>Billing &amp; workspace owner</li>
+            </ul>
+          </article>
+
+          <!-- Stakeholder -->
+          <article class="matrix-card stakeholder">
+            <div class="matrix-head">
+              <span class="matrix-title">Stakeholder</span>
+              <span class="matrix-count">2 members</span>
+            </div>
+            <span class="role-pill stakeholder" style="align-self:flex-start">Stakeholder</span>
+            <ul class="matrix-perms">
+              <li>Read-only dashboards &amp; reports</li>
+              <li>Approve strategy sign-offs</li>
+              <li>No test authoring or execution</li>
+              <li>Govern section hidden</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+    </div><!-- /content -->
+  </section><!-- /main -->
+</div><!-- /stage -->
+
+<!--
+VALIDATION (F27 quality gate)
+ 1. 1600×1024 full shell: 272px left rail + 56px top bar + content · OK
+ 2. Rail: Home + PLAN (Requirements/Test Plans/Test Cases) + RUN (Runs/Environments) + ANALYSE (Results/Defects/Reports/QA Value-Lead+) + GOVERN (Agents/Integrations/Users&Roles*active*/Settings&Audit) · OK
+ 3. Top bar: project switcher + search + quick-create + bell + theme + mode toggle (Operate on) + role pill Admin + user pill · OK
+ 4. Question header: "Who has access to what, and what changed recently?" + stats (12 members · 3 pending · 21 events 14d) · OK
+ 5. Invite panel 120px min-height: icon + title + slot stats (4 of 25) + expires (7 days) + teal primary "Invite user" CTA · OK
+ 6. Current team table: 7 columns (User/Role/Projects/Status/Last active/Joined/Actions), 6 rows showing Admin (Yogesh), Lead (Ravi), QA Engineer (Priya), Senior QA (Amit), Stakeholder (Meera), QA Engineer (Neha) · OK
+ 7. Role chip map: Admin red · Lead violet · QA Engineer teal · Stakeholder gray · OK
+ 8. Pending invites section: 3 rows (sanjay QA Eng, meena QA Eng, vikram Lead) with Resend + Revoke actions + expiry countdown · OK
+ 9. Audit feed: 6 events last 14 days with actor/action/target + timestamp + event_type mono · OK
+10. Role matrix 4 cards reference (QA Engineer / Lead / Admin / Stakeholder) with counts and permission summaries · OK
+11. Teal primary on Invite CTA, active rail accent · Violet ONLY on Lead role chip, violet audit dot for invites · No violet on first-action CTAs · OK
+12. Focus rings, :focus-visible violet 2px offset · prefers-reduced-motion respected · OK
+-->
+</body>
+</html>

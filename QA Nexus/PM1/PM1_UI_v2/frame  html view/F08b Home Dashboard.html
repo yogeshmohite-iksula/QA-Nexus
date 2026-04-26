@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — How is the team doing?</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+    --border:#2A3347; --border-strong:#3B4660;
+    --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#64748B;
+    --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+    --ai:#C4B5FD; --neutral:#94A3B8;
+    --primary:#2DD4BF;        /* teal — CTAs */
+    --primary-600:#14B8A6;
+    --secondary:#A78BFA;      /* violet — AI only */
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+    --ai-soft-2:rgba(196,181,253,0.08);
+    --pass-soft:rgba(52,211,153,0.10);
+    --fail-soft:rgba(248,113,113,0.10);
+    --warn-soft:rgba(251,191,36,0.10);
+    --info-soft:rgba(96,165,250,0.10);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;font-feature-settings:"cv11","ss01","ss03"}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  .bg-canvas{background:var(--canvas)} .bg-base{background:var(--base)}
+  .bg-raised{background:var(--raised)} .bg-overlay{background:var(--overlay)}
+  .text-t1{color:var(--t1)} .text-t2{color:var(--t2)} .text-t3{color:var(--t3)} .text-t4{color:var(--t4)}
+  .border-hair{border-color:var(--border)} .border-strong{border-color:var(--border-strong)}
+  .r-sm{border-radius:4px}.r-md{border-radius:6px}.r-lg{border-radius:10px}.r-xl{border-radius:14px}
+
+  /* Nav */
+  .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1)}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:5px;bottom:5px;width:3px;background:var(--secondary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-item.disabled:hover{background:transparent;color:var(--t4)}
+  .nav-section{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8A94A6;padding:0 10px;margin:18px 0 6px;font-weight:600}
+  .count{font-family:"JetBrains Mono";font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:1px 6px;border-radius:999px}
+
+  /* Chips */
+  .chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;white-space:nowrap}
+  .chip.ok{background:var(--pass-soft);color:var(--pass);border-color:color-mix(in srgb,var(--pass) 30%,transparent)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+  .chip.bad{background:var(--fail-soft);color:var(--fail);border-color:color-mix(in srgb,var(--fail) 30%,transparent)}
+  .chip.info{background:var(--info-soft);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+  .chip.ai{background:var(--ai-soft);color:var(--secondary);border-color:color-mix(in srgb,var(--secondary) 35%,transparent)}
+  .chip.teal{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,transparent)}
+  .chip.neutral{color:var(--t3)}
+
+  .kbd{font-family:"JetBrains Mono",monospace;font-size:10.5px;border:1px solid var(--border);background:var(--base);color:var(--t2);padding:1px 5px;border-radius:4px;line-height:14px;display:inline-block}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t1);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#0B2024;font-weight:600}
+  .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600)}
+  .btn-danger-ghost{color:var(--fail);border-color:color-mix(in srgb,var(--fail) 35%,transparent)}
+  .btn-danger-ghost:hover{background:var(--fail-soft)}
+
+  /* Cards */
+  .card{background:var(--base);border:1px solid var(--border);border-radius:10px}
+  .card-raised{background:var(--raised);border:1px solid var(--border);border-radius:10px}
+
+  /* Shape markers */
+  .sh{display:inline-block;width:10px;height:10px;flex:none}
+  .sh-pass{background:var(--pass);border-radius:999px}
+  .sh-fail{background:var(--fail);border-radius:1px}
+  .sh-warn{width:0;height:0;background:transparent;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--warn)}
+  .sh-info{border:1.5px solid var(--info);background:transparent;border-radius:999px}
+  .sh-ai{background:var(--secondary);clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
+  .sh-diamond{background:var(--secondary);transform:rotate(45deg);width:9px;height:9px}
+  .sh-diamond-n{background:var(--t3);transform:rotate(45deg);width:9px;height:9px}
+  .sh-tri{width:0;height:0;background:transparent;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid var(--warn)}
+
+  /* Confidence lane */
+  .lane{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+  .lane-high{background:var(--pass)}
+  .lane-med{background:var(--warn)}
+  .lane-low{background:var(--fail)}
+  .lane-ai{background:var(--secondary)}
+
+  /* Mode segmented */
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:32px}
+  .seg button{height:24px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--overlay);color:var(--t1);box-shadow:0 1px 0 rgba(255,255,255,0.04)}
+  .seg button.locked{color:var(--t4);cursor:not-allowed}
+
+  /* Worklist row */
+  .row{position:relative;display:flex;align-items:center;gap:12px;height:56px;padding:0 14px 0 14px;border-radius:8px;border:1px solid transparent}
+  .row + .row{margin-top:4px}
+  .row:hover{background:rgba(45,212,191,0.04);border-color:color-mix(in srgb,var(--primary) 18%,transparent)}
+  .row .chev{opacity:0;color:var(--t3)}
+  .row:hover .chev{opacity:1}
+
+  /* Tick */
+  .tick{width:18px;height:18px;border:1.25px solid var(--border-strong);border-radius:4px;display:inline-block;flex:none}
+
+  /* Quick actions */
+  .qa{height:28px;padding:0 10px;border-radius:6px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);color:var(--t2);background:transparent}
+  .qa:hover{background:var(--overlay);color:var(--t1)}
+  .qa.teal{background:var(--primary);border-color:var(--primary);color:#0B2024;font-weight:600}
+  .qa.teal:hover{background:var(--primary-600);border-color:var(--primary-600)}
+  .qa.danger{color:var(--fail);border-color:color-mix(in srgb,var(--fail) 30%,transparent)}
+  .qa.danger:hover{background:var(--fail-soft)}
+  .qa.icon{width:28px;padding:0;justify-content:center}
+
+  /* Logo */
+  .logo-flask{width:22px;height:22px;position:relative}
+
+  .divide-hair > * + *{border-top:1px solid var(--border)}
+
+  /* Tabs */
+  .tab{padding:10px 2px;margin-right:24px;color:var(--t3);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:8px}
+  .tab.on{color:var(--t1);border-bottom-color:var(--primary)}
+  .tab:hover{color:var(--t1)}
+  .tab .n{font-family:"JetBrains Mono";font-size:11px;color:var(--t4)}
+  .tab.on .n{color:var(--primary)}
+
+  /* RAG */
+  .rag{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;font-family:"JetBrains Mono";letter-spacing:0.04em}
+  .rag.green{background:var(--pass-soft);color:var(--pass)}
+  .rag.amber{background:var(--warn-soft);color:var(--warn)}
+  .rag.red{background:var(--fail-soft);color:var(--fail)}
+
+  /* Evidence thread */
+  .thread{position:relative;padding-left:18px}
+  .thread::before{content:"";position:absolute;left:7px;top:12px;bottom:12px;width:1px;background:var(--border)}
+  .thread .node{position:relative}
+  .thread .node::before{content:"";position:absolute;left:-15px;top:7px;width:9px;height:9px;border-radius:999px;background:var(--base);border:1.5px solid var(--border-strong)}
+  .thread .node.ai::before{background:var(--secondary);border-color:var(--secondary)}
+
+  /* Sparkline */
+  .spark path.line{fill:none;stroke-width:1.5}
+  .spark-teal path.line{stroke:var(--primary)}
+  .spark-violet path.line{stroke:var(--secondary)}
+
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+
+  /* Canvas scale */
+  #stage{width:1600px;margin:0 auto;position:relative}
+
+  /* Agent glyph square */
+  .aglyph{width:22px;height:22px;border-radius:6px;background:var(--ai-soft);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;font-family:"JetBrains Mono";font-size:10.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--secondary) 30%,transparent);flex:none}
+
+  /* Project glyph */
+  .pglyph{width:40px;height:40px;border-radius:10px;position:relative;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;color:#06131A;font-family:"DM Sans";font-weight:700;font-size:16px;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%)}
+
+  .ms{font-family:"Material Symbols Outlined";font-weight:400;font-size:18px;line-height:1;display:inline-block;vertical-align:middle;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20}
+
+</style>
+</head>
+<body>
+<div id="stage" class="bg-canvas">
+
+  <!-- ================== TOP COMMAND BAR (56px) ================== -->
+  <header class="h-14 flex items-center gap-3 px-5 bg-base" style="border-bottom:1px solid var(--border)">
+
+    <!-- 1. Logo -->
+    <a class="flex items-center gap-2.5 mr-1" href="#">
+      <span class="logo-flask" aria-hidden="true">
+        <svg viewBox="0 0 22 22" width="22" height="22" fill="none">
+          <path d="M8.5 2.5h5M9.5 2.5v4.2L5 15.2a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4.5-8.5V2.5"
+                stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="9.7" cy="13" r="0.9" fill="#A78BFA"/>
+          <circle cx="13.3" cy="15.3" r="0.7" fill="#2DD4BF"/>
+          <circle cx="11" cy="11.2" r="0.6" fill="#A78BFA"/>
+        </svg>
+      </span>
+      <span class="display text-t1" style="font-size:15px;font-weight:700;letter-spacing:-0.01em">QA Nexus</span>
+    </a>
+
+    <!-- 2. Project switcher -->
+    <button class="flex items-center gap-2 h-9 px-3 r-md ml-1 hover:bg-raised" style="border:1px solid var(--border);background:var(--raised)">
+      <span class="w-5 h-5 r-sm" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA)"></span>
+      <span class="text-t1 text-[13px] font-medium">Iksula Commerce</span>
+      <span class="text-t4 text-[13px] mono">·</span>
+      <span class="text-t3 text-[13px] mono">main</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="ml-1"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <!-- 3. Command palette -->
+    <div class="flex-1 flex justify-center">
+      <button class="flex items-center gap-3 h-9 px-3 r-md w-[520px] text-t3 text-[13px]" style="border:1px solid var(--border);background:var(--canvas)">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" class="flex-none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.4"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Search cases, defects, runs, docs, agents…</span>
+        <span class="ml-auto flex items-center gap-1"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+      </button>
+    </div>
+
+    <!-- 4. Quick create -->
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border)" aria-label="Quick create">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+
+    <!-- 5. Notifications -->
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised relative" style="border:1px solid var(--border)" aria-label="Notifications">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v2.2L3 11h10l-1-2.8V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0" stroke="currentColor" stroke-width="1.3"/></svg>
+      <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style="background:var(--fail)"></span>
+    </button>
+
+    <!-- 6. Theme toggle -->
+    <button class="w-9 h-9 flex items-center justify-center r-md hover:bg-raised" style="border:1px solid var(--border)" aria-label="Theme">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 9.5A5 5 0 0 1 6.5 3a1 1 0 0 0-1.2-1.3A6 6 0 1 0 14.3 10.7 1 1 0 0 0 13 9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+    </button>
+
+    <!-- 7. Mode toggle -->
+    <div class="seg">
+      <button class="on">Operate</button>
+      <button>Review</button>
+      <button>Prove</button>
+    </div>
+
+    <!-- 8. Avatar -->
+    <button class="flex items-center gap-2 h-9 pl-1 pr-2 r-md hover:bg-raised" style="border:1px solid var(--border)">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">YM</span>
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </header>
+
+  <!-- ================== BODY (below 56 header, 968 available; canvas 1024 total) ================== -->
+  <div class="flex" style="height:968px">
+
+    <!-- ========== LEFT RAIL (272px) ========== -->
+    <nav class="w-[272px] bg-base flex flex-col px-4 py-4 relative" style="border-right:1px solid var(--border);overflow:hidden" aria-label="Primary">
+
+      <a class="nav-item active" href="#" style="margin-bottom:2px">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8l5.5-5 5.5 5v5a1 1 0 0 1-1 1H9v-4H7v4H3.5a1 1 0 0 1-1-1V8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        <span class="flex-1">Home</span>
+      </a>
+
+      <div class="nav-section">Plan</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9H4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Requirements</span><span class="count">142</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6h11M5.5 3v10" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3.5l2.5 2.5L2 8.5M2 9.5L4.5 12 2 14.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 6h7M6.5 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Cases</span><span class="count">1,284</span></a>
+
+      <div class="nav-section">Author</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Test Suites</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h8l2 2v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 7h5M5.5 9.5h5M5.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Knowledge Base</span></a>
+      <a class="nav-item disabled" title="Coming in v1.5 (PM2)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5L2 8l3 4.5M11 3.5L14 8l-3 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Automation Studio</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t4);border-color:var(--border)">v1.5</span></a>
+      <a class="nav-item disabled" title="Coming in v1.5 (PM2)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M3 4v4c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8v4c0 1.1 2.2 2 5 2s5-.9 5-2V8" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Data &amp; Mocks</span><span class="chip" style="height:16px;font-size:9.5px;padding:0 6px;color:var(--t4);border-color:var(--border)">v1.5</span></a>
+
+      <div class="nav-section">Run</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 3.5v9l7-4.5-7-4.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="flex-1">Runs &amp; Sessions</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="3" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="2.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/><rect x="9.5" y="9" width="4" height="4" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Environments</span></a>
+
+      <div class="nav-section">Analyse</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 12.5L6 8.5l3 2 4.5-5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Run Results</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 7v3M8 11.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Defects / Failures</span><span class="count" style="color:var(--fail)">47</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 10l2-2 2 1.5 3-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="flex-1">Reports</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 6.5c0-1.4 1-2.5 2.5-2.5s2.5 1.1 2.5 2.5S7 9 5.5 9M8 9c2.5 0 4.5 1 4.5 2.5S10.5 14 8 14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">QA Value</span></a>
+
+      <div class="nav-section">Govern</div>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 14c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3"/></svg><span class="flex-1">Agents</span><span class="count">9</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 3l-3 5 3 5M10 3l3 5-3 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Integrations</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="6" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="10" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 13c0-1.4 1.2-2.5 2.8-2.5M8.5 3.5C10 3.5 11.5 4.5 12 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Users &amp; Roles</span></a>
+      <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.8 3.8l1.1 1.1M11.1 11.1l1.1 1.1M3.8 12.2l1.1-1.1M11.1 4.9l1.1-1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Settings &amp; Audit</span></a>
+
+      <div class="mt-auto pt-3" style="border-top:1px solid var(--border)">
+        <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 6.5A2 2 0 0 1 10 7c0 1-1 1.3-1.5 1.7-.3.2-.5.4-.5.8M8 11v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="flex-1">Support</span></a>
+        <div class="flex items-center gap-2.5 px-2.5 py-2 mt-1 r-md" style="border:1px solid var(--border);background:var(--raised)">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold mono" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA);color:#06131A">YM</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-t1 text-[12.5px] font-medium leading-tight">Yogesh M</div>
+            <div class="mono text-[10px] mt-0.5" style="color:var(--secondary)">QA LEAD</div>
+          </div>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="text-t3"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ========== MAIN ========== -->
+    <main class="flex-1 bg-canvas overflow-hidden" style="min-width:0">
+      <div class="flex h-full">
+
+        <!-- =========== CENTER COLUMN =========== -->
+        <section class="flex-1 min-w-0 px-8 py-6 overflow-hidden">
+
+          <!-- ===== Question Header ===== -->
+          <div class="flex items-start justify-between gap-6 mb-6">
+            <div class="min-w-0">
+              <h1 class="display text-t1" style="font-size:32px;line-height:40px;font-weight:600">How is the team doing, and what needs approval?</h1>
+              <p class="mt-2 text-[16px] leading-6" style="color:var(--t2)">Sprint 42 Day 9 of 14 · <span class="text-t1 font-medium">12 approvals pending</span> · <span class="text-t1 font-medium">2 A4 findings</span> worth triaging today.</p>
+            </div>
+            <div class="flex flex-col items-end gap-2 flex-none pt-1">
+              <div class="flex items-center gap-2">
+                <span class="chip neutral mono"><span class="ms" style="font-size:13px;color:var(--t3)">schedule</span> Thu · 2026-04-23 · 09:14 IST</span>
+                <span class="chip ai"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--secondary)"></span>A1 · A2 · A4 active</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="chip teal"><span class="ms" style="font-size:13px">rocket_launch</span>Sprint 42 · ships 2026-04-28</span>
+                <span class="chip neutral mono">R-2026-04-Sprint-42</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== AI VALUE STRIP (4 KPI cards — strict vertical stack) ===== -->
+          <style>
+            .kpi-card{display:flex;flex-direction:column;gap:0;padding:18px 20px 16px;min-height:200px}
+            .kpi-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+            .kpi-label{font-family:"Inter";font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:#8A94A6}
+            .kpi-hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+            .kpi-hero{font-family:"DM Sans";font-size:48px;line-height:52px;font-weight:700;color:var(--t1);letter-spacing:-0.02em}
+            .kpi-hero .unit{color:var(--t3);font-size:22px;font-weight:500;margin-left:4px}
+            .kpi-delta{display:inline-flex;align-items:center;gap:6px;font-family:"Inter";font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;margin-top:8px;align-self:flex-start}
+            .kpi-delta.pos{background:var(--pass-soft);color:var(--pass)}
+            .kpi-delta.neutral{background:var(--info-soft);color:var(--info)}
+            .kpi-foot{font-family:"Inter";font-size:11px;font-weight:400;line-height:15px;color:#94A3B8;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);word-break:break-word;overflow-wrap:anywhere}
+          </style>
+          <div class="grid grid-cols-4 gap-6 mb-5">
+
+            <!-- Card 1 Time Saved -->
+            <div class="card kpi-card group">
+              <div class="kpi-label-row">
+                <div class="kpi-label">Time saved</div>
+                <span class="ms text-t4 group-hover:text-t2" style="font-size:16px">chevron_right</span>
+              </div>
+              <div class="kpi-hero-row">
+                <div class="kpi-hero">184<span class="unit">h</span></div>
+                <svg viewBox="0 0 80 16" width="80" height="16" class="spark spark-teal flex-none"><path class="line" d="M0 13 L10 12 L20 10 L30 11 L40 8 L50 7 L60 5 L70 4 L80 3"/></svg>
+              </div>
+              <div class="kpi-delta pos">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L8.5 6H1.5L5 1.5z" fill="currentColor"/></svg>
+                +23 h vs last sprint
+              </div>
+              <div class="kpi-foot">= Σ(621 A1 × 18 min) + (412 A2 × 5 min) + (89 A4 × 25 min). Calibration 2026-03-15.</div>
+            </div>
+
+            <!-- Card 2 Cost Avoided -->
+            <div class="card kpi-card group">
+              <div class="kpi-label-row">
+                <div class="kpi-label">Cost avoided</div>
+                <span class="ms text-t4 group-hover:text-t2" style="font-size:16px">chevron_right</span>
+              </div>
+              <div class="kpi-hero-row">
+                <div class="kpi-hero">₹14.2<span class="unit">L</span></div>
+                <svg viewBox="0 0 80 16" width="80" height="16" class="spark spark-teal flex-none"><path class="line" d="M0 14 L10 12 L20 13 L30 10 L40 9 L50 7 L60 6 L70 5 L80 3"/></svg>
+              </div>
+              <div class="kpi-delta pos">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L8.5 6H1.5L5 1.5z" fill="currentColor"/></svg>
+                +8% · ≈ $17K
+              </div>
+              <div class="kpi-foot">= Σ(defects_caught × stage_mult). 21 pre-prod × 45 + 2 staging × 200 @ ₹8K/hr.</div>
+            </div>
+
+            <!-- Card 3 Defects Caught Early -->
+            <div class="card kpi-card group">
+              <div class="kpi-label-row">
+                <div class="kpi-label">Defects caught early</div>
+                <span class="ms text-t4 group-hover:text-t2" style="font-size:16px">chevron_right</span>
+              </div>
+              <div class="kpi-hero-row">
+                <div class="kpi-hero">23</div>
+                <svg viewBox="0 0 80 16" width="80" height="16" class="spark spark-teal flex-none"><path class="line" d="M0 11 L10 12 L20 10 L30 9 L40 11 L50 7 L60 6 L70 5 L80 4"/></svg>
+              </div>
+              <div class="kpi-delta pos">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1.5L8.5 6H1.5L5 1.5z" fill="currentColor"/></svg>
+                +5 vs previous · 0 prod escapes
+              </div>
+              <div class="kpi-foot">A4-classified as pre-prod. 21 at PR review, 2 in staging, 0 escaped to prod.</div>
+            </div>
+
+            <!-- Card 4 ROI -->
+            <div class="card kpi-card group">
+              <div class="kpi-label-row">
+                <div class="kpi-label">ROI this quarter</div>
+                <span class="ms text-t4 group-hover:text-t2" style="font-size:16px">chevron_right</span>
+              </div>
+              <div class="kpi-hero-row">
+                <div class="kpi-hero">342<span class="unit">%</span></div>
+                <svg viewBox="0 0 80 16" width="80" height="16" class="spark spark-teal flex-none"><path class="line" d="M0 14 L10 13 L20 11 L30 10 L40 8 L50 7 L60 5 L70 4 L80 2"/></svg>
+              </div>
+              <div class="kpi-delta neutral">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="2.5" fill="currentColor"/></svg>
+                90-day window
+              </div>
+              <div class="kpi-foot">= (184 h × ₹8,000/hr) ÷ ₹4.32 L infra cost. Calibration 2026-03-15.</div>
+            </div>
+
+          </div>
+
+          <!-- ===== SECONDARY OUTCOME BOARD ===== -->
+          <div class="grid grid-cols-4 gap-4 mb-5">
+
+            <div class="card-raised p-4" style="height:104px">
+              <div class="flex items-center justify-between">
+                <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--t3);letter-spacing:0.05em">Team pass rate</div>
+                <span class="chip ok" style="height:18px;font-size:10px;padding:0 6px">7d</span>
+              </div>
+              <div class="flex items-end justify-between mt-3">
+                <div class="display" style="font-size:28px;line-height:32px;font-weight:700;color:var(--t1)">87<span class="text-t3" style="font-size:16px;font-weight:500">%</span></div>
+                <svg viewBox="0 0 60 16" width="60" height="16" class="spark spark-teal flex-none"><path class="line" d="M0 12 L10 11 L20 9 L30 10 L40 7 L50 5 L60 4"/></svg>
+              </div>
+              <div class="text-[11px] mt-1.5" style="color:var(--pass)">▲ 1.8 pp vs Sprint 41</div>
+            </div>
+
+            <div class="card-raised p-4" style="height:104px">
+              <div class="flex items-center justify-between">
+                <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--t3);letter-spacing:0.05em">Defect trend</div>
+                <span class="chip neutral" style="height:18px;font-size:10px;padding:0 6px">7d</span>
+              </div>
+              <div class="flex items-end justify-between mt-3">
+                <div class="display" style="font-size:28px;line-height:32px;font-weight:700;color:var(--t1)">47<span class="text-t3" style="font-size:13px;font-weight:500;margin-left:4px">open</span></div>
+                <svg viewBox="0 0 60 16" width="60" height="16" class="spark spark-teal flex-none"><path class="line" d="M0 4 L10 6 L20 7 L30 9 L40 8 L50 11 L60 13"/></svg>
+              </div>
+              <div class="text-[11px] mt-1.5" style="color:var(--pass)">▼ 4 from last week · 3 P1, 12 P2</div>
+            </div>
+
+            <div class="card-raised p-4" style="height:104px">
+              <div class="flex items-center justify-between">
+                <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--t3);letter-spacing:0.05em">Release risk</div>
+                <span class="rag amber">AMBER</span>
+              </div>
+              <div class="flex items-end justify-between mt-3">
+                <div class="display" style="font-size:28px;line-height:32px;font-weight:700;color:var(--t1)">5<span class="text-t3" style="font-size:13px;font-weight:500;margin-left:4px">days to ship</span></div>
+                <span class="sh sh-warn" style="margin-bottom:6px"></span>
+              </div>
+              <div class="text-[11px] mt-1.5" style="color:var(--warn)">3 P1 open · Exit gate 3/5 passed</div>
+            </div>
+
+            <div class="card-raised p-4 relative" style="height:104px">
+              <div class="flex items-center justify-between">
+                <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--t3);letter-spacing:0.05em">Approvals on you</div>
+                <span class="chip teal" style="height:18px;font-size:10px;padding:0 6px">me</span>
+              </div>
+              <div class="flex items-end justify-between mt-3">
+                <div class="display" style="font-size:28px;line-height:32px;font-weight:700;color:var(--t1)">3<span class="text-t3" style="font-size:13px;font-weight:500;margin-left:4px">pending</span></div>
+                <span class="ms" style="color:var(--primary);font-size:22px;margin-bottom:4px">task_alt</span>
+              </div>
+              <div class="text-[11px] mt-1.5" style="color:var(--t2)">next deadline <span class="mono text-t1">Fri EOD</span></div>
+            </div>
+
+          </div>
+
+          <!-- ===== PER-PROJECT COCKPIT TILES ===== -->
+          <div class="grid grid-cols-3 gap-6 mb-6">
+
+            <div class="card p-4 flex items-center gap-3.5" style="height:84px">
+              <span class="pglyph">IC</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <div class="text-t1 text-[14px] font-medium truncate">Iksula Commerce</div>
+                  <span class="chip neutral mono" style="height:18px;font-size:10px;padding:0 6px">main</span>
+                </div>
+                <div class="flex items-center gap-3 mt-1">
+                  <span class="mono text-[11px] text-t3">Sprint 42</span>
+                  <span class="mono text-[11.5px] text-t1">91% <span class="text-t3">pass</span></span>
+                  <span class="mono text-[11.5px]" style="color:var(--t2)">6 <span class="text-t3">open</span></span>
+                </div>
+              </div>
+              <span class="rag green">GREEN</span>
+            </div>
+
+            <div class="card p-4 flex items-center gap-3.5" style="height:84px">
+              <span class="pglyph" style="background:linear-gradient(135deg,#2DD4BF 0%,#60A5FA 100%)">IP</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <div class="text-t1 text-[14px] font-medium truncate">Iksula Payments</div>
+                  <span class="chip warn" style="height:18px;font-size:10px;padding:0 6px">staging</span>
+                </div>
+                <div class="flex items-center gap-3 mt-1">
+                  <span class="mono text-[11px] text-t3">Sprint 42</span>
+                  <span class="mono text-[11.5px] text-t1">82% <span class="text-t3">pass</span></span>
+                  <span class="mono text-[11.5px]" style="color:var(--warn)">3 <span class="text-t3">open</span></span>
+                </div>
+              </div>
+              <span class="rag amber">AMBER</span>
+            </div>
+
+            <div class="card p-4 flex items-center gap-3.5" style="height:84px">
+              <span class="pglyph" style="background:linear-gradient(135deg,#A78BFA 0%,#2DD4BF 100%)">IM</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <div class="text-t1 text-[14px] font-medium truncate">Iksula Mobile App</div>
+                  <span class="chip neutral mono" style="height:18px;font-size:10px;padding:0 6px">main</span>
+                </div>
+                <div class="flex items-center gap-3 mt-1">
+                  <span class="mono text-[11px] text-t3">Sprint 41</span>
+                  <span class="mono text-[11.5px] text-t1">88% <span class="text-t3">pass</span></span>
+                  <span class="mono text-[11.5px]" style="color:var(--t2)">5 <span class="text-t3">open</span></span>
+                </div>
+              </div>
+              <span class="rag green">GREEN</span>
+            </div>
+
+          </div>
+
+          <!-- ===== APPROVALS QUEUE ===== -->
+          <div>
+            <div class="flex items-baseline justify-between mb-2">
+              <div class="flex items-baseline gap-3">
+                <h2 class="display text-t1" style="font-size:18px;font-weight:500">Approvals in your queue</h2>
+                <span class="chip teal mono" style="height:20px">12 pending</span>
+              </div>
+              <div class="flex items-center gap-2 text-[12px] text-t3">
+                <span class="mono">Sort:</span>
+                <button class="flex items-center gap-1 text-t1">Deadline <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+            </div>
+
+            <!-- Filter tabs -->
+            <div class="flex items-center" style="border-bottom:1px solid var(--border);margin-bottom:10px">
+              <button class="tab on">All <span class="n">12</span></button>
+              <button class="tab">Strategies <span class="n">4</span></button>
+              <button class="tab">Reports <span class="n">3</span></button>
+              <button class="tab">RTM changes <span class="n">4</span></button>
+              <button class="tab">Team defect triage <span class="n">1</span></button>
+            </div>
+
+            <!-- Rows -->
+            <div>
+              <!-- Row 1 — AI drafted, high conf -->
+              <div class="row" style="background:var(--base);border-color:var(--border)">
+                <div class="lane lane-high"></div>
+                <span class="tick ml-1"></span>
+                <span class="sh sh-diamond"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[14px] font-medium text-t1 truncate">Test Strategy for CHK-512 — Guest-to-member split checkout</span>
+                    <span class="aglyph">A1</span>
+                    <span class="chip ai mono" style="height:18px;font-size:10px;padding:0 6px">92%</span>
+                  </div>
+                  <div class="text-[12px] mt-0.5" style="color:var(--t3)">
+                    Priya S requested · <span class="mono" style="color:var(--t2)">Iksula Commerce</span> · submitted 2h ago · 14 cases · A1-assisted draft
+                  </div>
+                </div>
+                <svg viewBox="0 0 60 16" width="60" height="16" class="spark spark-violet flex-none"><path class="line" d="M0 12 L10 10 L20 11 L30 8 L40 6 L50 5 L60 3"/></svg>
+                <div class="flex items-center gap-1.5">
+                  <button class="qa teal">Approve</button>
+                  <button class="qa">Request changes</button>
+                  <button class="qa icon" title="Pin"><span class="ms" style="font-size:14px">push_pin</span></button>
+                  <button class="qa icon"><span class="ms" style="font-size:14px">more_horiz</span></button>
+                </div>
+                <span class="ms chev" style="font-size:14px">chevron_right</span>
+              </div>
+
+              <!-- Row 2 — human submission, no lane -->
+              <div class="row" style="background:var(--base);border-color:var(--border)">
+                <span class="tick ml-1"></span>
+                <span class="sh sh-diamond-n"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[14px] font-medium text-t1 truncate">Weekly Status Report — Sprint 42, week 2</span>
+                    <span class="chip neutral mono" style="height:18px;font-size:10px;padding:0 6px">report</span>
+                  </div>
+                  <div class="text-[12px] mt-0.5" style="color:var(--t3)">
+                    Rahul K submitted · ready for sign-off · due <span class="text-t1">Fri 2026-04-24 EOD</span> · 45 min ago
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button class="qa teal">Approve</button>
+                  <button class="qa">Request changes</button>
+                  <button class="qa icon"><span class="ms" style="font-size:14px">push_pin</span></button>
+                  <button class="qa icon"><span class="ms" style="font-size:14px">more_horiz</span></button>
+                </div>
+                <span class="ms chev" style="font-size:14px">chevron_right</span>
+              </div>
+
+              <!-- Row 3 — RTM change, amber -->
+              <div class="row" style="background:var(--base);border-color:var(--border)">
+                <span class="tick ml-1"></span>
+                <span class="sh sh-tri"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[14px] font-medium text-t1 truncate">RTM update — 14 new test-to-req links for PAY-1472, AUTH-891</span>
+                    <span class="chip warn" style="height:18px;font-size:10px;padding:0 6px">auto-merge queued</span>
+                  </div>
+                  <div class="text-[12px] mt-0.5" style="color:var(--t3)">
+                    Arjun M · <span class="mono" style="color:var(--t2)">Iksula Payments</span> · merges in 45 min unless held · 3h ago
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button class="qa teal">Approve now</button>
+                  <button class="qa">Hold</button>
+                  <button class="qa danger">Reject</button>
+                  <button class="qa icon"><span class="ms" style="font-size:14px">more_horiz</span></button>
+                </div>
+                <span class="ms chev" style="font-size:14px">chevron_right</span>
+              </div>
+
+              <!-- Row 4 — A4 defect triage, violet lane -->
+              <div class="row" style="background:var(--base);border-color:var(--border)">
+                <div class="lane lane-high"></div>
+                <span class="tick ml-1"></span>
+                <span class="sh sh-ai"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[14px] font-medium text-t1 truncate">A4 flagged <span class="mono" style="color:var(--t1)">PAY-1472</span> — Checkout hangs on Stripe 3DS redirect (Firefox)</span>
+                    <span class="aglyph">A4</span>
+                    <span class="chip ai mono" style="height:18px;font-size:10px;padding:0 6px">87%</span>
+                    <span class="chip bad" style="height:18px;font-size:10px;padding:0 6px">P1 · App Bug</span>
+                  </div>
+                  <div class="text-[12px] mt-0.5" style="color:var(--t3)">
+                    needs Lead triage · source <span class="mono" style="color:var(--t2)">nightly R-2026-04-22</span> · 6 runs · 2 stacks · <span class="mono" style="color:var(--t2)">PaymentIframe.tsx:241</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button class="qa teal">Open RCA</button>
+                  <button class="qa">Assign</button>
+                  <button class="qa icon"><span class="ms" style="font-size:14px">push_pin</span></button>
+                  <button class="qa icon"><span class="ms" style="font-size:14px">more_horiz</span></button>
+                </div>
+                <span class="ms chev" style="font-size:14px">chevron_right</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-3">
+              <button class="text-[12px] text-t3 hover:text-t1 flex items-center gap-1"><span class="ms" style="font-size:14px">expand_more</span>Show 8 more pending approvals</button>
+              <div class="text-[11px] text-t4 mono">updated 09:14 IST · auto-refresh 60s</div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- =========== RIGHT EVIDENCE RAIL =========== -->
+        <aside class="flex-none bg-base" style="width:380px;border-left:1px solid var(--border);overflow:hidden">
+          <div class="px-5 py-5 h-full flex flex-col gap-5">
+
+            <!-- Header strip -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="sh sh-ai" style="width:12px;height:12px"></span>
+                <span class="display text-t1" style="font-size:14px;font-weight:600">Evidence</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button class="qa icon" title="Collapse rail (⌘J)"><span class="ms" style="font-size:14px">dock_to_right</span></button>
+                <button class="qa icon" title="Close"><span class="ms" style="font-size:14px">close</span></button>
+              </div>
+            </div>
+
+            <!-- Section 1 — Recent team agent activity -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--t3);letter-spacing:0.08em">Recent team agent activity</div>
+                <span class="mono text-[10.5px] text-t4">last 2h</span>
+              </div>
+
+              <div class="thread">
+                <!-- Node 1 A4 -->
+                <div class="node ai pb-3.5">
+                  <div class="flex items-center gap-2">
+                    <span class="aglyph" style="width:20px;height:20px;font-size:10px">A4</span>
+                    <div class="text-[12px] text-t1 font-medium">RCA'd failure cluster → <span class="mono">PAY-1472</span></div>
+                  </div>
+                  <div class="text-[11.5px] mt-1" style="color:var(--t3);line-height:16px">
+                    Checkout 3DS · Firefox · <span class="mono" style="color:var(--ai)">conf 0.87</span> · 8 min ago
+                  </div>
+                  <div class="mt-1.5 flex items-center gap-1 flex-wrap">
+                    <span class="chip" style="height:18px;font-size:10px;padding:0 6px;background:var(--raised);border-color:var(--border);color:var(--t2)">6 runs</span>
+                    <span class="chip" style="height:18px;font-size:10px;padding:0 6px;background:var(--raised);border-color:var(--border);color:var(--t2)">2 stacks</span>
+                    <span class="chip" style="height:18px;font-size:10px;padding:0 6px;background:var(--raised);border-color:var(--border);color:var(--t2);font-family:'JetBrains Mono'">PaymentIframe.tsx:241</span>
+                  </div>
+                </div>
+
+                <!-- Node 2 A1 -->
+                <div class="node ai pb-3.5">
+                  <div class="flex items-center gap-2">
+                    <span class="aglyph" style="width:20px;height:20px;font-size:10px">A1</span>
+                    <div class="text-[12px] text-t1 font-medium">Generated 8 test cases from PRD Checkout v3</div>
+                  </div>
+                  <div class="text-[11.5px] mt-1" style="color:var(--t3);line-height:16px">
+                    <span class="mono" style="color:var(--ai)">conf 0.91</span> · 18 min ago · awaiting Priya's review
+                  </div>
+                  <div class="mt-1.5 flex items-center gap-1 flex-wrap">
+                    <span class="chip" style="height:18px;font-size:10px;padding:0 6px;background:var(--raised);border-color:var(--border);color:var(--t2);font-family:'JetBrains Mono'">confluence/checkout-v3</span>
+                    <span class="chip" style="height:18px;font-size:10px;padding:0 6px;background:var(--raised);border-color:var(--border);color:var(--t2)">CHK-512</span>
+                  </div>
+                </div>
+
+                <!-- Node 3 A2 -->
+                <div class="node ai pb-3.5">
+                  <div class="flex items-center gap-2">
+                    <span class="aglyph" style="width:20px;height:20px;font-size:10px">A2</span>
+                    <div class="text-[12px] text-t1 font-medium">Flagged 3 likely duplicates in Login module</div>
+                  </div>
+                  <div class="text-[11.5px] mt-1" style="color:var(--t3);line-height:16px">
+                    <span class="mono" style="color:var(--warn)">conf 0.72</span> · 32 min ago · needs HITL
+                  </div>
+                  <div class="mt-1.5 flex items-center gap-1 flex-wrap">
+                    <span class="chip" style="height:18px;font-size:10px;padding:0 6px;background:var(--raised);border-color:var(--border);color:var(--t2);font-family:'JetBrains Mono'">TC-AUTH-0112 ↔ 0188 ↔ 0231</span>
+                  </div>
+                </div>
+
+                <!-- Node 4 A1 clarify -->
+                <div class="node ai">
+                  <div class="flex items-center gap-2">
+                    <span class="aglyph" style="width:20px;height:20px;font-size:10px">A1</span>
+                    <div class="text-[12px] text-t1 font-medium">Asked 2 clarification questions on Cart API RTM</div>
+                  </div>
+                  <div class="text-[11.5px] mt-1" style="color:var(--t3);line-height:16px">
+                    awaiting reply from Arjun · 1h ago
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2 — Suggested next -->
+            <div class="relative r-lg" style="background:var(--primary-soft);border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);padding:14px 14px 14px 18px">
+              <div class="absolute left-0 top-0 bottom-0 w-[3px]" style="background:var(--primary);border-radius:3px 0 0 3px"></div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="ms" style="color:var(--primary);font-size:16px">auto_awesome</span>
+                <div class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--primary);letter-spacing:0.06em">Suggested next</div>
+              </div>
+              <p class="text-[13px] leading-5" style="color:var(--t1)">
+                Review <span class="mono" style="color:var(--secondary)">A4</span>'s RCA on <span class="mono">PAY-1472</span> first — it blocks the checkout regression, confidence is 0.87, and triage takes under 5 minutes.
+              </p>
+              <div class="flex items-center gap-2 mt-3">
+                <button class="btn btn-primary" style="height:30px">Open RCA <span class="ms" style="font-size:14px">arrow_forward</span></button>
+                <button class="btn" style="height:30px">Later</button>
+              </div>
+            </div>
+
+            <!-- Section 3 — Pinned knowledge -->
+            <div>
+              <div class="flex items-center justify-between mb-2.5">
+                <div class="text-[10.5px] font-semibold uppercase tracking-wider" style="color:var(--t3);letter-spacing:0.08em">Pinned knowledge</div>
+                <button class="text-[11px] text-t3 hover:text-t1 flex items-center gap-1"><span class="ms" style="font-size:13px">add</span>Pin</button>
+              </div>
+
+              <div class="r-md p-3 mb-2" style="background:var(--raised);border:1px solid var(--border)">
+                <div class="flex items-start gap-2.5">
+                  <span class="ms" style="color:var(--primary);font-size:16px;margin-top:1px">description</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[13px] font-medium text-t1">Checkout 3DS runbook</div>
+                    <div class="text-[11.5px] mt-0.5" style="color:var(--t3)"><span style="color:var(--pass)">● Approved</span> · v3 · updated last week</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="r-md p-3" style="background:var(--raised);border:1px solid var(--border)">
+                <div class="flex items-start gap-2.5">
+                  <span class="ms" style="color:var(--primary);font-size:16px;margin-top:1px">flag</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[13px] font-medium text-t1">Sprint 42 exit criteria</div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[11.5px] mono" style="color:var(--t2)">3 / 5 gates</span>
+                      <div class="flex gap-0.5 flex-1">
+                        <span class="h-1.5 flex-1 r-sm" style="background:var(--pass)"></span>
+                        <span class="h-1.5 flex-1 r-sm" style="background:var(--pass)"></span>
+                        <span class="h-1.5 flex-1 r-sm" style="background:var(--pass)"></span>
+                        <span class="h-1.5 flex-1 r-sm" style="background:var(--warn)"></span>
+                        <span class="h-1.5 flex-1 r-sm" style="background:var(--border-strong)"></span>
+                      </div>
+                    </div>
+                    <div class="text-[11px] mt-1" style="color:var(--t3)">2 open: perf budget · exec sign-off</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer rail -->
+            <div class="mt-auto pt-3 flex items-center justify-between" style="border-top:1px solid var(--border)">
+              <div class="text-[10.5px] mono text-t4">evidence-mesh v1.0 · ⌘J toggle</div>
+              <button class="text-[11px] text-t3 hover:text-t1 flex items-center gap-1">View all <span class="ms" style="font-size:13px">arrow_forward</span></button>
+            </div>
+
+          </div>
+        </aside>
+
+      </div>
+    </main>
+
+  </div>
+</div>
+</body>
+</html>

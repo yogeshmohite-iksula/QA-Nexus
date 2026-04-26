@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Invited Stakeholder First-Run</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    /* NOTE: --secondary (violet) intentionally NOT used on F07c.
+       Stakeholders don't operate AI agents — no violet surface anywhere. */
+    --focus:#A78BFA; /* violet retained only for focus ring a11y */
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;display:flex;flex-direction:column}
+
+  /* ── Top bar 56px ── */
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:var(--canvas);flex:none}
+  .brand-mark{display:flex;align-items:center;gap:10px}
+  .brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary) 0%,#A78BFA 120%);display:inline-flex;align-items:center;justify-content:center;color:var(--primary-ink);font-family:'DM Sans';font-weight:700;font-size:14px}
+  .brand-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+
+  .user-pill{display:flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;border:1px solid var(--border);border-radius:999px;background:var(--raised)}
+  .avatar{width:24px;height:24px;border-radius:999px;background:var(--overlay);color:var(--t1);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Inter'}
+  .user-name{font-size:13px;color:var(--t1);font-weight:500}
+
+  /* ── Scroll canvas ── */
+  .canvas-wrap{flex:1;padding:48px 0 56px 0;display:flex;flex-direction:column;align-items:center;gap:48px}
+
+  /* ── Region 1 Welcome Hero ── */
+  .hero{width:1344px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;animation:fadeUp 420ms cubic-bezier(0.2,0.8,0.2,1) both}
+  .hero-icon{width:64px;height:64px;border-radius:16px;background:rgba(45,212,191,0.10);border:1px solid rgba(45,212,191,0.28);display:inline-flex;align-items:center;justify-content:center;margin-bottom:4px;color:var(--primary);position:relative}
+  .hero-icon::before{content:"";position:absolute;inset:-6px;border-radius:20px;border:1px solid rgba(45,212,191,0.14)}
+  .hero-title{font-family:'DM Sans';font-size:32px;line-height:40px;font-weight:700;color:var(--t1);letter-spacing:-0.02em;margin:0}
+  .hero-title .name{color:var(--primary);font-weight:700}
+  .hero-sub{font-size:15px;line-height:22px;color:var(--t3);margin:0}
+  .hero-sub .role{color:var(--t1);font-weight:600}
+  .hero-meta{font-size:12px;line-height:18px;color:var(--t3);margin-top:2px;display:inline-flex;align-items:center;gap:8px}
+  .hero-meta .inviter{color:var(--t2);font-weight:500}
+
+  /* ── Region 2 Workspace Strip ── */
+  .strip{width:1344px;min-height:60px;background:var(--raised);border:1px solid var(--border);border-radius:12px;padding:16px 28px;display:flex;align-items:center;gap:32px;flex-wrap:wrap;animation:fadeUp 520ms cubic-bezier(0.2,0.8,0.2,1) both;animation-delay:80ms}
+  .strip-item{display:flex;align-items:center;gap:10px;min-height:28px}
+  .strip-label{font-size:11px;line-height:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--t3)}
+  .strip-val{font-size:13px;line-height:18px;color:var(--t1);font-weight:500;display:inline-flex;align-items:center;gap:8px}
+  .strip-avatar{width:20px;height:20px;border-radius:999px;background:#FBBF24;color:#78350F;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+  .strip-div{width:4px;height:4px;border-radius:999px;background:var(--border-strong)}
+  .strip-val.mono-val{font-family:'JetBrains Mono';font-size:12px;color:var(--t3);font-weight:400}
+
+  /* ── Shared section wrapper ── */
+  .section{width:1344px;display:flex;flex-direction:column;gap:20px}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px}
+  .eyebrow{font-size:11px;line-height:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.15em;color:var(--t3)}
+  .section-sub{font-size:13px;line-height:20px;color:var(--t2);font-style:italic}
+
+  /* ── Region 3 Dashboard Tour (TEAL accent, NO violet) ── */
+  .dash-row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;animation:fadeUp 620ms cubic-bezier(0.2,0.8,0.2,1) both;animation-delay:160ms}
+  .dash-card{background:var(--base);border:1px solid var(--border);border-radius:14px;padding:24px 24px 0 24px;display:flex;flex-direction:column;min-height:260px;position:relative;transition:border-color 200ms ease,transform 200ms ease,box-shadow 200ms ease;overflow:hidden}
+  .dash-card:hover{border-color:rgba(45,212,191,0.45);transform:translateY(-2px);box-shadow:0 12px 32px -16px rgba(45,212,191,0.28),0 0 0 1px rgba(45,212,191,0.18)}
+  .dash-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .dash-icon{width:32px;height:32px;border-radius:8px;background:rgba(45,212,191,0.12);border:1px solid rgba(45,212,191,0.2);display:inline-flex;align-items:center;justify-content:center;color:var(--primary)}
+  .dash-pill{font-family:'JetBrains Mono';font-size:11px;font-weight:600;line-height:1;padding:5px 8px;border-radius:4px;background:rgba(45,212,191,0.12);color:var(--primary);text-transform:uppercase;letter-spacing:0.08em;border:1px solid rgba(45,212,191,0.22)}
+  .dash-title{font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:700;color:var(--t1);margin:0 0 8px 0}
+  .dash-desc{font-size:13px;line-height:20px;color:var(--t2);margin:0 0 18px 0;flex:1}
+  .youll-strip{border-top:1px dashed var(--border-strong);padding:12px 0 16px 0;margin-top:auto;display:flex;flex-direction:column;gap:4px}
+  .youll-label{font-size:10px;line-height:14px;font-weight:700;letter-spacing:0.14em;color:var(--primary);text-transform:uppercase}
+  .youll-text{font-size:12px;line-height:18px;color:var(--t1);font-weight:500}
+
+  .dash-footnote{text-align:center;font-size:12px;line-height:18px;color:var(--t3);font-style:italic;margin-top:4px}
+
+  /* ── Region 4 First-Action Picker ── */
+  .picker-row{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;animation:fadeUp 720ms cubic-bezier(0.2,0.8,0.2,1) both;animation-delay:240ms}
+  .pick-card{background:var(--base);border:1px solid var(--border);border-radius:14px;padding:28px;display:flex;flex-direction:column;min-height:224px;position:relative;transition:border-color 200ms ease,transform 200ms ease,box-shadow 200ms ease}
+  .pick-card.teal:hover{border-color:rgba(45,212,191,0.55);transform:translateY(-2px);box-shadow:0 12px 32px -16px rgba(45,212,191,0.32),0 0 0 1px rgba(45,212,191,0.22)}
+  .pick-card.gray:hover{border-color:var(--border-strong);transform:translateY(-2px)}
+  .pick-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .pick-icon{width:36px;height:36px;border-radius:8px;background:rgba(45,212,191,0.10);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(45,212,191,0.22)}
+  .pick-icon.muted{background:var(--overlay);color:var(--t3);border-color:var(--border)}
+  .pick-chip{font-family:'JetBrains Mono';font-size:10px;font-weight:500;color:var(--t3);padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--raised);line-height:1}
+  .pick-chip .count{color:var(--primary);font-weight:600}
+  .pick-title{font-family:'DM Sans';font-size:17px;line-height:24px;font-weight:700;color:var(--t1);margin:0 0 6px 0}
+  .pick-desc{font-size:13px;line-height:20px;color:var(--t2);margin:0 0 16px 0;flex:1}
+  .pick-desc .count-inline{color:var(--primary);font-weight:700;font-family:'JetBrains Mono';font-size:13px}
+  .pick-cta{height:40px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter';font-size:14px;font-weight:600;cursor:pointer;transition:background 200ms ease,box-shadow 200ms ease;border:0;width:100%}
+  .pick-cta.primary{background:var(--primary);color:var(--primary-ink)}
+  .pick-cta.primary:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 20px -6px rgba(45,212,191,0.45),0 0 0 1px rgba(45,212,191,0.25)}
+  .pick-cta.ghost{background:transparent;color:var(--t2);border:1px solid var(--border)}
+  .pick-cta.ghost:hover{color:var(--t1);border-color:var(--border-strong);background:var(--raised)}
+
+  /* ── Region 5 Skip row ── */
+  .skip{width:640px;display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:8px;animation:fadeUp 820ms cubic-bezier(0.2,0.8,0.2,1) both;animation-delay:320ms}
+  .or-row{display:flex;align-items:center;width:100%;gap:16px}
+  .or-line{flex:1;height:1px;background:var(--border)}
+  .or-label{font-family:'JetBrains Mono';font-size:11px;font-weight:500;color:var(--t4);letter-spacing:0.14em}
+  .skip-link{font-size:13px;line-height:20px;font-weight:500;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:color 150ms ease}
+  .skip-link:hover{color:var(--t1)}
+  .help-footer{font-size:11px;line-height:16px;color:var(--t4);margin-top:2px}
+
+  /* ── Motion ── */
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(8px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hero,.strip,.dash-row,.picker-row,.skip{animation:none !important}
+    .dash-card,.pick-card{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ═══════════════════════ TOP BAR ═══════════════════════ -->
+  <header class="topbar" role="banner">
+    <div class="brand-mark">
+      <span class="brand-logo">Q</span>
+      <span class="brand-word">QA Nexus</span>
+    </div>
+    <div class="user-pill" aria-label="Signed in as Meera R.">
+      <span class="avatar">MR</span>
+      <span class="user-name">Meera R.</span>
+    </div>
+  </header>
+
+  <div class="canvas-wrap">
+
+    <!-- ═════════════════ REGION 1 — WELCOME HERO ═════════════════ -->
+    <section class="hero" aria-labelledby="welcome-title">
+      <span class="hero-icon" aria-hidden="true">
+        <!-- teal check (no violet ✨ for Stakeholder) -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      </span>
+      <h1 id="welcome-title" class="hero-title display">Welcome to QA Nexus, <span class="name">Meera!</span></h1>
+      <p class="hero-sub">You're a <span class="role">Stakeholder</span> on <span class="role">Iksula Returns</span> · <span class="role">Iksula Commerce</span></p>
+      <p class="hero-meta" aria-live="polite">
+        Invited by <span class="inviter">Yogesh M.</span>
+        <span aria-hidden="true" style="color:var(--t4)">·</span>
+        <span class="mono" style="color:var(--t4);font-size:11px">5 min ago</span>
+      </p>
+    </section>
+
+    <!-- ═════════════════ REGION 2 — WORKSPACE CONTEXT STRIP ═════════════════ -->
+    <section class="strip" aria-label="Workspace context">
+      <div class="strip-item">
+        <span class="strip-label">Workspace</span>
+        <span class="strip-val">Iksula Services Pvt Ltd</span>
+      </div>
+      <span class="strip-div" aria-hidden="true"></span>
+      <div class="strip-item">
+        <span class="strip-label">Invited by</span>
+        <span class="strip-val"><span class="strip-avatar">YM</span>Yogesh M. <span style="color:var(--t3);font-weight:400;margin-left:2px">(QA Lead)</span></span>
+      </div>
+      <span class="strip-div" aria-hidden="true"></span>
+      <div class="strip-item">
+        <span class="strip-label">Projects</span>
+        <span class="strip-val">Iksula Returns · Iksula Commerce</span>
+      </div>
+      <span class="strip-div" aria-hidden="true"></span>
+      <div class="strip-item">
+        <span class="strip-label">First login</span>
+        <span class="strip-val mono-val">Just now</span>
+      </div>
+    </section>
+
+    <!-- ═════════════════ REGION 3 — DASHBOARD TOUR (TEAL, NO VIOLET) ═════════════════ -->
+    <section class="section" aria-labelledby="dash-tour-head">
+      <div class="section-head">
+        <span id="dash-tour-head" class="eyebrow">What you'll see</span>
+        <span class="section-sub">Your stakeholder view focuses on outcomes, not execution.</span>
+      </div>
+
+      <div class="dash-row">
+
+        <!-- Card 1 · QA Value Dashboard -->
+        <article class="dash-card" tabindex="0" aria-label="QA Value dashboard: AI Impact and ROI. You will quantify ROI, report to execs, track trends.">
+          <div class="dash-top">
+            <span class="dash-icon" aria-hidden="true">
+              <!-- ROI / chart icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+              </svg>
+            </span>
+            <span class="dash-pill">QA Value</span>
+          </div>
+          <h3 class="dash-title">AI Impact &amp; ROI</h3>
+          <p class="dash-desc">Cost-avoidance metrics, agent-hour savings, defect-escape reduction. Updated live from team activity.</p>
+          <div class="youll-strip">
+            <span class="youll-label">You'll</span>
+            <span class="youll-text">Quantify ROI · Report to execs · Track trends</span>
+          </div>
+        </article>
+
+        <!-- Card 2 · Executive Reports -->
+        <article class="dash-card" tabindex="0" aria-label="Executive Reports: Sprint and Release Readiness. You will review, approve, escalate blockers.">
+          <div class="dash-top">
+            <span class="dash-icon" aria-hidden="true">
+              <!-- document icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>
+              </svg>
+            </span>
+            <span class="dash-pill">Reports</span>
+          </div>
+          <h3 class="dash-title">Sprint &amp; Release Readiness</h3>
+          <p class="dash-desc">Weekly sprint reports, release-readiness RAG, trend charts. Auto-generated and review-ready.</p>
+          <div class="youll-strip">
+            <span class="youll-label">You'll</span>
+            <span class="youll-text">Review · Approve · Escalate blockers</span>
+          </div>
+        </article>
+
+        <!-- Card 3 · Approvals Queue -->
+        <article class="dash-card" tabindex="0" aria-label="Approvals: Strategy Sign-offs. You will approve, request changes, comment.">
+          <div class="dash-top">
+            <span class="dash-icon" aria-hidden="true">
+              <!-- check shield icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/>
+              </svg>
+            </span>
+            <span class="dash-pill">Approvals</span>
+          </div>
+          <h3 class="dash-title">Strategy Sign-offs</h3>
+          <p class="dash-desc">Test strategy docs and high-risk test plans awaiting your approval before the team proceeds.</p>
+          <div class="youll-strip">
+            <span class="youll-label">You'll</span>
+            <span class="youll-text">Approve · Request changes · Comment</span>
+          </div>
+        </article>
+
+      </div>
+
+      <p class="dash-footnote">You won't see test execution or defect triage — those live with the QA team.</p>
+    </section>
+
+    <!-- ═════════════════ REGION 4 — FIRST-ACTION PICKER ═════════════════ -->
+    <section class="section" aria-labelledby="first-action-head">
+      <div class="section-head">
+        <span id="first-action-head" class="eyebrow">How do you want to start?</span>
+        <a class="skip-link" href="#F08b" style="font-size:12px" tabindex="1">
+          Skip setup — go to my dashboard
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="picker-row">
+
+        <!-- Card 1 · View AI Value dashboard (TEAL) -->
+        <article class="pick-card teal">
+          <div class="pick-top">
+            <span class="pick-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+              </svg>
+            </span>
+            <span class="pick-chip">~3 min</span>
+          </div>
+          <h3 class="pick-title">View AI Value dashboard</h3>
+          <p class="pick-desc">Live cost-avoidance, agent-hour savings, defect-escape reduction. <span class="count-inline">$28.4k</span> YTD impact so far.</p>
+          <button class="pick-cta primary" type="button" aria-label="Open dashboard — routes to F24 QA Value Dashboard">
+            Open dashboard
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </article>
+
+        <!-- Card 2 · Browse weekly reports (TEAL, count highlighted) -->
+        <article class="pick-card teal">
+          <div class="pick-top">
+            <span class="pick-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>
+              </svg>
+            </span>
+            <span class="pick-chip">~5 min · <span class="count">3 new</span></span>
+          </div>
+          <h3 class="pick-title">Browse this week's reports</h3>
+          <p class="pick-desc"><span class="count-inline">3</span> new reports for Sprint 42 — release-readiness RAG and trend charts ready to review.</p>
+          <button class="pick-cta primary" type="button" aria-label="Open reports — routes to F23 Reports filtered to weekly">
+            Open reports
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </article>
+
+        <!-- Card 3 · Explore dashboard (GRAY / GHOST) -->
+        <article class="pick-card gray">
+          <div class="pick-top">
+            <span class="pick-icon muted" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+              </svg>
+            </span>
+            <span class="pick-chip">Self-paced</span>
+          </div>
+          <h3 class="pick-title">Explore the dashboard first</h3>
+          <p class="pick-desc">Tour the home dashboard at your own pace. You can come back to reports and approvals anytime.</p>
+          <button class="pick-cta ghost" type="button" aria-label="Go to Dashboard — routes to F08b Home Dashboard">
+            Go to Dashboard
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ═════════════════ REGION 5 — SKIP / CONTINUE ═════════════════ -->
+    <section class="skip" aria-label="Skip onboarding">
+      <div class="or-row" aria-hidden="true">
+        <span class="or-line"></span>
+        <span class="or-label">OR</span>
+        <span class="or-line"></span>
+      </div>
+      <a class="skip-link" href="#F08b">
+        Skip and go to my dashboard
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <span class="help-footer">You can access this tour again from Settings → Help</span>
+    </section>
+
+  </div><!-- /canvas-wrap -->
+</div><!-- /stage -->
+
+<!--
+VALIDATION (10 checks from §3c)
+ 1. 1600 × 1024 canvas with logo-only top bar — no project switcher, rail, or mode toggle · OK
+ 2. Welcome header: Meera name + Stakeholder role + inviter + 5 min timestamp · OK
+ 3. Workspace strip: 4 labeled fields · OK
+ 4. 3 dashboard cards (QA Value / Reports / Approvals) all TEAL-accented, NO violet · OK
+ 5. Footnote: "You won't see test execution or defect triage — those live with the QA team." · OK
+ 6. 3 first-action cards routing to F24 / F23 / F08b · OK
+ 7. Skip link → F08b (dashboard, not queue) · OK
+ 8. No authenticated shell beyond logo · OK
+ 9. NO VIOLET anywhere on content surfaces — Stakeholder flow is AI-adjacent, not AI-operational. Violet retained ONLY on :focus-visible ring for a11y · OK
+10. Focus rings visible on interactive elements, tab-order skip-first (tabindex 1) · OK
+-->
+</body>
+</html>

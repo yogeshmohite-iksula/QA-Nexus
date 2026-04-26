@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Defects Hub</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--secondary-ink:#2E1065;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --p0:#EF4444;--p1:#F97316;--p2:#FBBF24;--p3:#60A5FA;
+    --pass-soft:rgba(52,211,153,0.12);
+    --fail-soft:rgba(248,113,113,0.12);
+    --warn-soft:rgba(251,191,36,0.12);
+    --info-soft:rgba(96,165,250,0.12);
+    --primary-soft:rgba(45,212,191,0.10);
+    --ai-soft:rgba(167,139,250,0.10);
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit}
+
+  #stage{width:1600px;margin:0 auto;min-height:1024px;display:grid;grid-template-columns:272px 1fr;background:var(--canvas)}
+
+  /* RAIL */
+  .rail{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:4px;background:var(--canvas)}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px 6px}
+  .rail-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:inline-flex;align-items:center;justify-content:center;color:var(--primary-ink);font-family:'DM Sans';font-weight:700;font-size:14px}
+  .rail-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1);letter-spacing:-0.01em}
+  .nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:0 10px;margin:14px 0 4px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);position:relative;cursor:pointer;font-size:13px;line-height:18px;text-decoration:none}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+  .nav-item.active::before{content:"";position:absolute;left:-16px;top:6px;bottom:6px;width:3px;background:var(--primary);border-radius:0 2px 2px 0}
+  .nav-item.disabled{color:var(--t4);cursor:not-allowed}
+  .nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:inherit}
+  .nav-count{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);margin-left:auto;background:var(--raised);padding:2px 7px;border-radius:999px;line-height:1}
+  .nav-item.active .nav-count{background:rgba(45,212,191,0.14);color:var(--primary)}
+  .nav-pill-soft{font-family:'JetBrains Mono';font-size:9px;color:var(--t4);margin-left:auto;background:var(--base);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase;border:1px solid var(--border)}
+  .nav-badge{font-family:'JetBrains Mono';font-size:9px;color:var(--secondary);margin-left:auto;background:rgba(167,139,250,0.10);padding:2px 6px;border-radius:4px;line-height:1;font-weight:600;text-transform:uppercase}
+
+  /* MAIN */
+  .main{display:flex;flex-direction:column;min-width:0}
+
+  .topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--canvas);flex:none}
+  .proj-switch{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:6px;background:var(--raised);border:1px solid var(--border);font-size:13px;color:var(--t1);font-weight:500;cursor:pointer}
+  .proj-dot{width:18px;height:18px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .proj-meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px;margin-left:2px}
+  .search{height:36px;flex:1;max-width:480px;background:var(--raised);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--t3);font-size:13px;cursor:text}
+  .search .kbd{font-family:'JetBrains Mono';font-size:10.5px;border:1px solid var(--border);color:var(--t3);padding:1px 5px;border-radius:4px;margin-left:auto;background:var(--base)}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);position:relative}
+  .icon-btn:hover{color:var(--t1)}
+  .icon-btn .dot{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:999px;background:var(--fail)}
+  .mode-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;padding:3px;background:var(--base);height:36px}
+  .mode-toggle button{height:28px;padding:0 10px;border-radius:5px;color:var(--t3);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;cursor:pointer}
+  .mode-toggle button.on{background:var(--overlay);color:var(--t1)}
+  .user-pill{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:1px solid var(--border);border-radius:999px;background:var(--raised);margin-left:4px}
+  .user-av{width:28px;height:28px;border-radius:999px;background:#FBBF24;color:#78350F;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .user-name{font-size:13px;color:var(--t1);font-weight:500}
+
+  /* CONTENT (2 col: list + evidence rail) */
+  .content-wrap{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0;overflow:hidden}
+
+  .content{display:flex;flex-direction:column;min-width:0;overflow:hidden;border-right:1px solid var(--border)}
+
+  .qhead{padding:24px 28px 14px 28px;display:flex;flex-direction:column;gap:10px;flex:none}
+  .qhead h1{font-family:'DM Sans';font-size:24px;line-height:32px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+  .stats-strip{background:var(--overlay);border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-size:12px;line-height:18px;color:var(--t3);font-family:'Inter';display:flex;flex-wrap:wrap;align-items:center;gap:0}
+  .stats-strip b{color:var(--t1);font-weight:600;font-family:'JetBrains Mono'}
+  .stats-strip .crit b{color:var(--fail)}
+  .stats-strip .review b{color:var(--warn)}
+  .stats-strip .flaky b{color:var(--secondary)}
+  .stats-strip .sep{color:var(--t4);margin:0 10px}
+  .stats-strip .jira{margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--pass);font-family:'JetBrains Mono';font-size:11px}
+  .stats-strip .jira svg{width:11px;height:11px}
+  .stats-strip .jira .last{color:var(--t3);margin-left:6px;font-weight:400}
+
+  /* Filter bar */
+  .filter-bar{padding:12px 28px;background:var(--raised);border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex:none;flex-wrap:wrap}
+  .filter-pill{height:30px;padding:0 11px;border-radius:6px;border:1px solid var(--border);background:var(--canvas);color:var(--t2);font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;line-height:1}
+  .filter-pill:hover{color:var(--t1);border-color:var(--border-strong)}
+  .filter-pill.on{background:rgba(45,212,191,0.10);color:var(--primary);border-color:rgba(45,212,191,0.32)}
+  .filter-pill .lbl{color:var(--t3);font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;font-family:'Inter'}
+  .filter-pill.on .lbl{color:var(--primary)}
+  .filter-pill .v{font-weight:600}
+  .filter-pill .chev{color:var(--t3);margin-left:1px}
+  .filter-pill.on .chev{color:var(--primary)}
+  .filter-pill .chev svg{width:9px;height:9px;display:block}
+
+  .filter-spacer{flex:1}
+  .view-toggle{display:inline-flex;border:1px solid var(--border);border-radius:6px;padding:2px;background:var(--canvas);height:30px}
+  .view-toggle button{height:24px;padding:0 11px;border-radius:4px;color:var(--t3);background:transparent;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;font-family:inherit}
+  .view-toggle button.on{background:var(--overlay);color:var(--t1)}
+  .view-toggle button svg{width:10px;height:10px}
+
+  /* Defect list */
+  .list-head{display:grid;grid-template-columns:36px 36px 100px 1fr 110px 64px 100px 110px 56px 32px;align-items:center;column-gap:12px;padding:8px 28px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);background:var(--canvas);border-bottom:1px solid var(--border);flex:none}
+  .list-rows{flex:1;overflow-y:auto;min-height:0}
+  .list-rows::-webkit-scrollbar{width:6px}
+  .list-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  .drow{display:grid;grid-template-columns:36px 36px 100px 1fr 110px 64px 100px 110px 56px 32px;align-items:center;column-gap:12px;padding:11px 28px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 150ms;position:relative;min-height:56px}
+  .drow:hover{background:var(--raised)}
+  .drow.selected{background:rgba(45,212,191,0.05);box-shadow:inset 3px 0 0 0 var(--primary)}
+
+  .d-stat{width:14px;height:14px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;flex:none;justify-self:center}
+  .d-stat.open{background:var(--overlay);border:1.5px solid var(--t3)}
+  .d-stat.progress{background:var(--info-soft);border:1.5px solid var(--info)}
+  .d-stat.progress::after{content:"";width:6px;height:6px;border-radius:999px;background:var(--info)}
+  .d-stat.review{background:var(--warn-soft);border:1.5px solid var(--warn);position:relative}
+  .d-stat.review::after{content:"";width:6px;height:6px;border-radius:999px;background:var(--warn)}
+  .d-stat.closed{background:var(--pass-soft);border:1.5px solid var(--pass);color:var(--pass)}
+  .d-stat.closed svg{width:8px;height:8px}
+
+  .pri{display:inline-flex;align-items:center;justify-content:center;height:24px;padding:0 8px;border-radius:5px;font-size:11px;font-weight:700;font-family:'JetBrains Mono';line-height:1;letter-spacing:0.02em;justify-self:center;border:1px solid}
+  .pri.p0{background:rgba(239,68,68,0.14);color:var(--p0);border-color:rgba(239,68,68,0.4)}
+  .pri.p1{background:rgba(249,115,22,0.14);color:var(--p1);border-color:rgba(249,115,22,0.4)}
+  .pri.p2{background:rgba(251,191,36,0.14);color:var(--p2);border-color:rgba(251,191,36,0.4)}
+  .pri.p3{background:rgba(96,165,250,0.14);color:var(--p3);border-color:rgba(96,165,250,0.4)}
+
+  .d-id{font-family:'JetBrains Mono';font-size:12px;color:var(--primary);font-weight:600;line-height:1.2}
+
+  .d-title{font-size:13px;line-height:18px;color:var(--t1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+  .d-title .sub{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);font-weight:400;flex:none;background:var(--canvas);border:1px solid var(--border);padding:2px 6px;border-radius:3px;line-height:1;height:18px;display:inline-flex;align-items:center;text-decoration:none}
+  .d-title .sub:hover{color:var(--primary);border-color:rgba(45,212,191,0.3)}
+
+  .a4-class{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;font-family:'JetBrains Mono';padding:3px 7px;border-radius:3px;line-height:1;height:20px;text-transform:uppercase;letter-spacing:0.06em;border:1px solid;justify-self:flex-start;white-space:nowrap}
+  .a4-class.app{background:rgba(248,113,113,0.10);color:var(--fail);border-color:rgba(248,113,113,0.32)}
+  .a4-class.env{background:rgba(96,165,250,0.10);color:var(--info);border-color:rgba(96,165,250,0.32)}
+  .a4-class.test{background:rgba(251,191,36,0.10);color:var(--warn);border-color:rgba(251,191,36,0.32)}
+  .a4-class.flaky{background:rgba(167,139,250,0.10);color:var(--secondary);border-color:rgba(167,139,250,0.32)}
+  .a4-class.mixed{background:var(--overlay);color:var(--t2);border-color:var(--border-strong)}
+  .a4-class.ui{background:rgba(167,139,250,0.10);color:var(--secondary);border-color:rgba(167,139,250,0.28)}
+  .a4-class svg{width:8px;height:8px;color:var(--secondary)}
+
+  .conf{font-family:'JetBrains Mono';font-size:11px;font-weight:600;justify-self:center;color:var(--t2);display:inline-flex;align-items:center;gap:4px}
+  .conf.high{color:var(--pass)}
+  .conf.med{color:var(--warn)}
+  .conf.low{color:var(--fail)}
+
+  .tc-link{font-family:'JetBrains Mono';font-size:11px;color:var(--primary);font-weight:500;text-decoration:none;line-height:1.2;justify-self:flex-start}
+  .tc-link:hover{text-decoration:underline}
+
+  .assignee{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--t2);font-weight:500;justify-self:flex-start;min-width:0}
+  .assignee .av{width:20px;height:20px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex:none}
+  .assignee .av.violet{background:var(--secondary);color:var(--secondary-ink)}
+  .assignee .av.teal{background:var(--primary);color:var(--primary-ink)}
+  .assignee .av.amber{background:#FBBF24;color:#78350F}
+  .assignee.unassigned{color:var(--t4);font-style:italic}
+  .assignee.unassigned .av{background:var(--overlay);color:var(--t4);border:1px dashed var(--border-strong)}
+  .assignee .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .age{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);justify-self:flex-end}
+
+  .sync{justify-self:center;width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center}
+  .sync.ok{background:var(--pass-soft);color:var(--pass);border:1px solid rgba(52,211,153,0.32)}
+  .sync.syncing{background:var(--info-soft);color:var(--info);border:1px solid rgba(96,165,250,0.32)}
+  .sync.error{background:var(--fail-soft);color:var(--fail);border:1px solid rgba(248,113,113,0.32)}
+  .sync svg{width:10px;height:10px}
+  .sync.syncing svg{animation:spin 1.6s linear infinite}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+  /* Pagination footer */
+  .list-footer{padding:12px 28px;text-align:center;font-size:11px;color:var(--t3);border-top:1px solid var(--border);flex:none;background:var(--canvas);font-family:'Inter'}
+  .list-footer .val{color:var(--t1);font-weight:600;font-family:'JetBrains Mono'}
+  .list-footer .load{color:var(--primary);text-decoration:none;font-weight:500;margin-left:8px}
+  .list-footer .load:hover{color:var(--t1)}
+
+  /* EVIDENCE RAIL (right 380px) */
+  .ev-rail{background:var(--canvas);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .ev-head{padding:14px 18px 12px 18px;border-bottom:1px solid var(--border);flex:none}
+  .ev-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .ev-id-row{display:flex;align-items:center;gap:8px}
+  .ev-id{font-family:'JetBrains Mono';font-size:13px;color:var(--primary);font-weight:600}
+  .ev-pri{display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 7px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono';line-height:1;border:1px solid;background:rgba(239,68,68,0.14);color:var(--p0);border-color:rgba(239,68,68,0.4)}
+  .ev-close-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--t3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .ev-close-btn:hover{color:var(--t1);background:var(--raised)}
+  .ev-close-btn svg{width:11px;height:11px}
+  .ev-title{font-size:13.5px;line-height:18px;color:var(--t1);font-weight:500;margin:0}
+  .ev-meta{font-size:11px;color:var(--t3);font-family:'JetBrains Mono';margin-top:4px}
+  .ev-meta .sep{color:var(--t4);margin:0 4px}
+  .ev-meta .open{color:var(--t2);font-weight:600}
+
+  .ev-body{flex:1;overflow-y:auto;padding:14px 18px 8px 18px;display:flex;flex-direction:column;gap:14px;min-height:0}
+  .ev-body::-webkit-scrollbar{width:6px}
+  .ev-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  .ev-section{display:flex;flex-direction:column;gap:7px}
+  .ev-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);font-weight:700;display:flex;align-items:center;gap:6px}
+  .ev-label .agent-tag{font-family:'JetBrains Mono';font-size:9.5px;color:var(--secondary);background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.28);padding:1px 5px;border-radius:3px;letter-spacing:0.04em;font-weight:600;line-height:1;height:16px;display:inline-flex;align-items:center}
+
+  /* A4 RCA preview block */
+  .a4-rca{background:var(--overlay);border:1px solid rgba(167,139,250,0.28);border-radius:8px;padding:12px 13px;display:flex;flex-direction:column;gap:9px;position:relative;overflow:hidden}
+  .a4-rca::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary)}
+  .a4-rca-head{display:flex;align-items:center;gap:7px}
+  .a4-glyph{width:22px;height:22px;border-radius:5px;background:rgba(167,139,250,0.16);color:var(--secondary);border:1px solid rgba(167,139,250,0.32);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .a4-glyph svg{width:11px;height:11px}
+  .a4-name{font-size:11.5px;font-weight:700;color:var(--t1);font-family:'Inter'}
+  .a4-name .ver{font-family:'JetBrains Mono';font-size:9.5px;color:var(--secondary);margin-left:3px;font-weight:600}
+  .a4-conf{font-family:'JetBrains Mono';font-size:10px;color:var(--secondary);font-weight:600;margin-left:auto;background:rgba(167,139,250,0.14);padding:2px 6px;border-radius:3px;line-height:1;border:1px solid rgba(167,139,250,0.28)}
+  .a4-text{font-size:11.5px;line-height:16px;color:var(--t1)}
+  .a4-text b{color:var(--secondary);font-weight:600}
+  .a4-text .code{font-family:'JetBrains Mono';font-size:11px;color:var(--secondary);background:var(--canvas);padding:1px 5px;border-radius:3px;border:1px solid rgba(167,139,250,0.22)}
+  .a4-layers{display:flex;flex-direction:column;gap:4px}
+  .a4-layer-row{display:grid;grid-template-columns:60px 1fr 36px;align-items:center;gap:8px;font-size:10.5px}
+  .a4-layer-name{font-family:'JetBrains Mono';font-size:9.5px;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;font-weight:600}
+  .a4-layer-bar{height:4px;background:var(--canvas);border-radius:999px;overflow:hidden}
+  .a4-layer-fill{height:100%;background:var(--secondary);border-radius:999px}
+  .a4-layer-pct{font-family:'JetBrains Mono';font-size:10px;color:var(--secondary);font-weight:600;text-align:right}
+  .a4-cta{height:36px;border-radius:6px;background:var(--secondary);color:var(--secondary-ink);font-size:12px;font-weight:600;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;width:100%;transition:background 200ms,box-shadow 200ms}
+  .a4-cta:hover{background:rgba(167,139,250,0.92);box-shadow:0 0 22px -4px rgba(167,139,250,0.5)}
+  .a4-cta svg{width:11px;height:11px}
+
+  /* A2 Duplicate detection chip */
+  .a2-chip{background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.28);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+  .a2-chip::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary)}
+  .a2-chip-head{display:flex;align-items:center;gap:7px}
+  .a2-text{font-size:11.5px;line-height:16px;color:var(--t1)}
+  .a2-text b{color:var(--secondary);font-weight:600;font-family:'JetBrains Mono'}
+  .a2-actions{display:flex;gap:6px}
+  .a2-btn{height:28px;padding:0 10px;border-radius:5px;border:1px solid rgba(167,139,250,0.32);background:transparent;color:var(--secondary);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1;display:inline-flex;align-items:center;gap:4px}
+  .a2-btn:hover{background:rgba(167,139,250,0.10);border-color:var(--secondary)}
+  .a2-btn.fill{background:var(--secondary);color:var(--secondary-ink);border-color:var(--secondary)}
+  .a2-btn.fill:hover{background:rgba(167,139,250,0.92)}
+
+  /* Linked defects table */
+  .linked-table{display:flex;flex-direction:column;background:var(--canvas);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .linked-row{display:grid;grid-template-columns:1fr 56px 70px 22px;gap:8px;align-items:center;padding:8px 12px;border-top:1px solid var(--border);font-size:11.5px}
+  .linked-row:first-child{border-top:0}
+  .linked-row:hover{background:var(--raised)}
+  .linked-row .id{font-family:'JetBrains Mono';color:var(--primary);font-weight:600}
+  .linked-row .sim{font-family:'JetBrains Mono';color:var(--secondary);font-weight:600;text-align:right}
+  .linked-row .stat{font-family:'JetBrains Mono';font-size:9.5px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;text-align:center;padding:2px 6px;border-radius:3px;line-height:1;height:18px;display:inline-flex;align-items:center;justify-content:center}
+  .linked-row .stat.closed{background:var(--pass-soft);color:var(--pass);border:1px solid rgba(52,211,153,0.3)}
+  .linked-row .stat.review{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(251,191,36,0.3)}
+  .linked-row .arrow-go{color:var(--t3);text-align:right;cursor:pointer}
+  .linked-row .arrow-go:hover{color:var(--t1)}
+  .linked-row .arrow-go svg{width:11px;height:11px}
+
+  /* Comments accordion */
+  .comments{background:var(--canvas);border:1px solid var(--border);border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:9px}
+  .comments textarea{width:100%;min-height:50px;background:var(--base);border:1px solid var(--border);border-radius:5px;padding:7px 10px;color:var(--t1);font-size:11.5px;line-height:16px;outline:none;resize:none;font-family:inherit}
+  .comments textarea::placeholder{color:var(--t4)}
+  .comments textarea:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  .jira-mirror{font-size:10.5px;color:var(--pass);font-family:'JetBrains Mono';display:inline-flex;align-items:center;gap:5px}
+  .jira-mirror svg{width:10px;height:10px}
+  .jira-mirror .last{color:var(--t3);margin-left:auto}
+
+  .comment{display:flex;gap:9px;padding-top:8px;border-top:1px solid var(--border)}
+  .comment .av{width:22px;height:22px;border-radius:999px;background:var(--primary);color:var(--primary-ink);display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none}
+  .comment .av.amber{background:#FBBF24;color:#78350F}
+  .comment-body{flex:1;min-width:0}
+  .comment-meta{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--t3);font-family:'Inter';margin-bottom:2px}
+  .comment-meta .nm{color:var(--t1);font-weight:600;font-size:11px}
+  .comment-meta .when{font-family:'JetBrains Mono';color:var(--t4)}
+  .comment-text{font-size:11.5px;line-height:16px;color:var(--t2);font-family:'Inter'}
+
+  /* Quick actions bottom */
+  .ev-actions{padding:10px 14px;border-top:1px solid var(--border);background:var(--base);display:flex;gap:6px;flex-wrap:wrap;flex:none}
+  .qa-btn{height:30px;padding:0 11px;border-radius:5px;border:1px solid var(--border);background:var(--raised);color:var(--t2);font-size:11.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;line-height:1}
+  .qa-btn:hover{color:var(--t1);border-color:var(--border-strong)}
+  .qa-btn svg{width:10px;height:10px}
+  .qa-btn.primary{background:var(--primary);color:var(--primary-ink);border-color:var(--primary);font-weight:600}
+  .qa-btn.primary:hover{background:rgba(45,212,191,0.92)}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- LEFT RAIL -->
+  <aside class="rail" role="navigation" aria-label="Primary">
+    <div class="rail-brand"><span class="rail-logo">Q</span><span class="rail-word">QA Nexus</span></div>
+
+    <a class="nav-item" href="#F08a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg></span><span>Home</span></a>
+
+    <div class="nav-section">Plan</div>
+    <a class="nav-item" href="#F14"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span><span>Requirements</span><span class="nav-count">142</span></a>
+    <a class="nav-item" href="#F15a"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span>Test Plans &amp; Cycles</span></a>
+    <a class="nav-item" href="#F17"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span>Test Cases</span><span class="nav-count">1,284</span></a>
+
+    <div class="nav-section">Author</div>
+    <a class="nav-item" href="#F18"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg></span><span>Test Suites</span><span class="nav-count">18</span></a>
+    <a class="nav-item" href="#F15"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span>Knowledge Base</span><span class="nav-count">87</span></a>
+    <a class="nav-item disabled"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></span><span>Automation Studio</span><span class="nav-pill-soft">v1.5</span></a>
+
+    <div class="nav-section">Run</div>
+    <a class="nav-item" href="#F19"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21"/></svg></span><span>Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+    <a class="nav-item"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><span>Environments</span></a>
+
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" href="#F20"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg></span><span>Run Results</span></a>
+    <a class="nav-item active" href="#F21" aria-current="page"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><span>Defects / Failures</span><span class="nav-count">67</span></a>
+    <a class="nav-item" href="#F23"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12l3 3 7-7"/></svg></span><span>Reports</span></a>
+    <a class="nav-item" href="#F24"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>QA Value</span><span class="nav-badge">Lead+</span></a>
+
+    <div class="nav-section">Govern</div>
+    <a class="nav-item" href="#F26"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span><span>Agents</span></a>
+    <a class="nav-item" href="#F11"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5M9 7V2M15 7V2M6 13V8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4z"/></svg></span><span>Integrations</span></a>
+    <a class="nav-item" href="#F27"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span><span>Users &amp; Roles</span></a>
+    <a class="nav-item" href="#F28"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/></svg></span><span>Settings &amp; Audit</span></a>
+  </aside>
+
+  <!-- MAIN -->
+  <section class="main">
+    <header class="topbar" role="banner">
+      <button class="proj-switch"><span class="proj-dot"></span><span>Iksula Commerce</span><span class="proj-meta">· main</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="margin-left:2px"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>Search anywhere…<span class="kbd">⌘K</span></div>
+      <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
+      <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+      <div class="mode-toggle"><button class="on">Operate</button><button>Review</button><button>Prove</button></div>
+      <div class="user-pill"><span class="user-av">YM</span><span class="user-name">Yogesh M.</span></div>
+    </header>
+
+    <!-- 2-col: list + evidence rail -->
+    <div class="content-wrap">
+
+      <div class="content">
+
+        <!-- Question header + stats strip -->
+        <div class="qhead">
+          <h1>Which defects are active, and which need attention?</h1>
+          <div class="stats-strip">
+            <span><b>67</b> open</span>
+            <span class="sep">·</span>
+            <span class="crit"><b>12</b> P0/P1</span>
+            <span class="sep">·</span>
+            <span class="review"><b>8</b> in review</span>
+            <span class="sep">·</span>
+            <span class="flaky"><b>23</b> flaky-related</span>
+            <span class="jira">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Jira sync healthy
+              <span class="last">Last sync · 2 min ago</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar" role="toolbar" aria-label="Filters">
+          <button class="filter-pill on"><span class="lbl">Severity</span><span class="v">All</span><span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+          <button class="filter-pill"><span class="lbl">Status</span><span class="v">Open + In Progress</span><span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+          <button class="filter-pill"><span class="lbl">A4 class</span><span class="v">All</span><span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+          <button class="filter-pill"><span class="lbl">Assignee</span><span class="v">All</span><span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+          <button class="filter-pill"><span class="lbl">Sprint</span><span class="v">Sprint 42</span><span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+          <button class="filter-pill"><span class="lbl">Age</span><span class="v">All</span><span class="chev"><svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+
+          <div class="filter-spacer"></div>
+
+          <div class="view-toggle" role="tablist">
+            <button class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>List</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="18"/><rect x="9" y="3" width="6" height="14"/><rect x="15" y="3" width="6" height="10"/></svg>Kanban</button>
+            <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="6" cy="18" r="2"/></svg>Cluster</button>
+          </div>
+        </div>
+
+        <!-- List header -->
+        <div class="list-head" role="row">
+          <span></span>
+          <span style="text-align:center">Sev</span>
+          <span>ID</span>
+          <span>Title</span>
+          <span>A4 class</span>
+          <span style="text-align:center">Conf</span>
+          <span>Test case</span>
+          <span>Assignee</span>
+          <span style="text-align:right">Age</span>
+          <span style="text-align:center">Sync</span>
+        </div>
+
+        <!-- Defect rows -->
+        <div class="list-rows">
+
+          <!-- 1 PAY-1472 SELECTED P0 Open App Bug 87% -->
+          <div class="drow selected" role="row" aria-selected="true">
+            <span class="d-stat open" title="Open"></span>
+            <span class="pri p0">P0</span>
+            <span class="d-id">PAY-1472</span>
+            <span class="d-title">Checkout hangs on Stripe 3DS redirect in Firefox</span>
+            <span class="a4-class app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>App Bug</span>
+            <span class="conf high">87%</span>
+            <a class="tc-link" href="#TC-CHK-0142">TC-CHK-0142</a>
+            <span class="assignee"><span class="av teal">PS</span><span class="nm">Priya S.</span></span>
+            <span class="age">2h</span>
+            <span class="sync ok" title="Jira synced"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 2 RET-1465 P1 Open App Bug 91% -->
+          <div class="drow" role="row">
+            <span class="d-stat open"></span>
+            <span class="pri p1">P1</span>
+            <span class="d-id">RET-1465</span>
+            <span class="d-title">Refund webhook timeout under retry storm</span>
+            <span class="a4-class app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>App Bug</span>
+            <span class="conf high">91%</span>
+            <a class="tc-link" href="#TC-RET-401">TC-RET-401</a>
+            <span class="assignee"><span class="av amber">YM</span><span class="nm">Yogesh M.</span></span>
+            <span class="age">4h</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 3 CHK-1458 P0 In Progress App Bug 78% -->
+          <div class="drow" role="row">
+            <span class="d-stat progress" title="In progress"></span>
+            <span class="pri p0">P0</span>
+            <span class="d-id">CHK-1458</span>
+            <span class="d-title">Cart total recalculation lag on qty change &gt; 10</span>
+            <span class="a4-class app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>App Bug</span>
+            <span class="conf med">78%</span>
+            <a class="tc-link" href="#TC-CHK-0167">TC-CHK-0167</a>
+            <span class="assignee"><span class="av violet">RK</span><span class="nm">Ravi K.</span></span>
+            <span class="age">1d</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 4 PAY-1454 P1 In Progress Mixed 64% -->
+          <div class="drow" role="row">
+            <span class="d-stat progress"></span>
+            <span class="pri p1">P1</span>
+            <span class="d-id">PAY-1454</span>
+            <span class="d-title">3DS challenge timeout on Visa Premium</span>
+            <span class="a4-class mixed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>Mixed</span>
+            <span class="conf med">64%</span>
+            <a class="tc-link" href="#TC-CHK-0144">TC-CHK-0144</a>
+            <span class="assignee"><span class="av teal">PS</span><span class="nm">Priya S.</span></span>
+            <span class="age">1d</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 5 CHK-1448 P2 Review UI Bug 68% -->
+          <div class="drow" role="row">
+            <span class="d-stat review" title="Review"></span>
+            <span class="pri p2">P2</span>
+            <span class="d-id">CHK-1448</span>
+            <span class="d-title">Multi-currency display flicker on INR→USD</span>
+            <span class="a4-class ui"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>UI Bug</span>
+            <span class="conf med">68%</span>
+            <a class="tc-link" href="#TC-CHK-0172">TC-CHK-0172</a>
+            <span class="assignee"><span class="av teal">NB</span><span class="nm">Neha B.</span></span>
+            <span class="age">2d</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 6 RET-1442 P1 Open Env Issue 63% UNASSIGNED + sync error -->
+          <div class="drow" role="row">
+            <span class="d-stat open"></span>
+            <span class="pri p1">P1</span>
+            <span class="d-id">RET-1442</span>
+            <span class="d-title">Apple Pay button missing on Safari iOS 17</span>
+            <span class="a4-class env"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>Env Issue</span>
+            <span class="conf med">63%</span>
+            <a class="tc-link" href="#TC-CHK-0203">TC-CHK-0203</a>
+            <span class="assignee unassigned"><span class="av">?</span><span class="nm">Unassigned</span></span>
+            <span class="age">2d</span>
+            <span class="sync error" title="Jira sync error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+          </div>
+
+          <!-- 7 ENV-1438 P2 In Progress Env Issue 91% -->
+          <div class="drow" role="row">
+            <span class="d-stat progress"></span>
+            <span class="pri p2">P2</span>
+            <span class="d-id">ENV-1438</span>
+            <span class="d-title">Staging DB connection pool exhausted (40→128)</span>
+            <span class="a4-class env"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>Env Issue</span>
+            <span class="conf high">91%</span>
+            <a class="tc-link" href="#TC-CHK-0145">TC-CHK-0145</a>
+            <span class="assignee"><span class="av amber">YM</span><span class="nm">Yogesh M.</span></span>
+            <span class="age">3d</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 8 CHK-1431 P3 Open Test Bug 45% syncing -->
+          <div class="drow" role="row">
+            <span class="d-stat open"></span>
+            <span class="pri p3">P3</span>
+            <span class="d-id">CHK-1431</span>
+            <span class="d-title">Promo code validation fails on Unicode chars</span>
+            <span class="a4-class test"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>Test Bug</span>
+            <span class="conf low">45%</span>
+            <a class="tc-link" href="#TC-CHK-0181">TC-CHK-0181</a>
+            <span class="assignee"><span class="av teal">AR</span><span class="nm">Amit R.</span></span>
+            <span class="age">4d</span>
+            <span class="sync syncing" title="Syncing to Jira"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
+          </div>
+
+          <!-- 9 PAY-1428 P0 Review Flaky 52% -->
+          <div class="drow" role="row">
+            <span class="d-stat review"></span>
+            <span class="pri p0">P0</span>
+            <span class="d-id">PAY-1428</span>
+            <span class="d-title">Stored card autofill misses CVV mask in Chrome</span>
+            <span class="a4-class flaky"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>Flaky</span>
+            <span class="conf low">52%</span>
+            <a class="tc-link" href="#TC-CHK-0194">TC-CHK-0194</a>
+            <span class="assignee"><span class="av teal">PS</span><span class="nm">Priya S.</span></span>
+            <span class="age">4d</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+          <!-- 10 CHK-1422 P2 Open App Bug 75% -->
+          <div class="drow" role="row">
+            <span class="d-stat open"></span>
+            <span class="pri p2">P2</span>
+            <span class="d-id">CHK-1422</span>
+            <span class="d-title">Order confirmation email · footer link broken</span>
+            <span class="a4-class app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg>App Bug</span>
+            <span class="conf med">75%</span>
+            <a class="tc-link" href="#TC-CHK-0189">TC-CHK-0189</a>
+            <span class="assignee"><span class="av teal">NB</span><span class="nm">Neha B.</span></span>
+            <span class="age">5d</span>
+            <span class="sync ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          </div>
+
+        </div>
+
+        <div class="list-footer">
+          Showing <span class="val">10</span> of <span class="val">67</span> open defects
+          <span style="color:var(--t4);margin:0 6px">·</span>
+          <a class="load" href="#">Load 10 more ↓</a>
+        </div>
+
+      </div><!-- /content -->
+
+      <!-- EVIDENCE RAIL (right) -->
+      <aside class="ev-rail" aria-label="Defect detail preview">
+        <header class="ev-head">
+          <div class="ev-head-top">
+            <div class="ev-id-row">
+              <span class="ev-id">PAY-1472</span>
+              <span class="ev-pri">P0</span>
+            </div>
+            <button class="ev-close-btn" aria-label="Close rail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+          <p class="ev-title">Checkout hangs on Stripe 3DS redirect in Firefox</p>
+          <p class="ev-meta">
+            <span class="open">Open</span><span class="sep">·</span>filed by <span style="color:var(--t2);font-weight:600">Priya S.</span><span class="sep">·</span>2h ago
+          </p>
+        </header>
+
+        <div class="ev-body">
+
+          <!-- A4 RCA preview -->
+          <section class="ev-section">
+            <span class="ev-label">A4 Root cause analysis <span class="agent-tag">A4 v1.4 · 87%</span></span>
+            <article class="a4-rca">
+              <div class="a4-rca-head">
+                <span class="a4-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span>
+                <span class="a4-name">5-Layer RCA<span class="ver">v1.4</span></span>
+                <span class="a4-conf">87%</span>
+              </div>
+              <p class="a4-text"><b>Likely root cause:</b> Race condition in <span class="code">PaymentIframe.tsx:241</span> when 3DS redirect resolves before <span class="code">IFRAME_READY</span> event. Reproducible on Firefox 120+, seen in 6 of last 50 runs.</p>
+              <div class="a4-layers">
+                <div class="a4-layer-row"><span class="a4-layer-name">Stack</span><span class="a4-layer-bar"><span class="a4-layer-fill" style="width:90%"></span></span><span class="a4-layer-pct">90%</span></div>
+                <div class="a4-layer-row"><span class="a4-layer-name">Env</span><span class="a4-layer-bar"><span class="a4-layer-fill" style="width:80%"></span></span><span class="a4-layer-pct">80%</span></div>
+                <div class="a4-layer-row"><span class="a4-layer-name">Config</span><span class="a4-layer-bar"><span class="a4-layer-fill" style="width:60%"></span></span><span class="a4-layer-pct">60%</span></div>
+                <div class="a4-layer-row"><span class="a4-layer-name">Code</span><span class="a4-layer-bar"><span class="a4-layer-fill" style="width:50%"></span></span><span class="a4-layer-pct">50%</span></div>
+                <div class="a4-layer-row"><span class="a4-layer-name">Data</span><span class="a4-layer-bar"><span class="a4-layer-fill" style="width:40%"></span></span><span class="a4-layer-pct">40%</span></div>
+              </div>
+              <button class="a4-cta" type="button">
+                Show full A4 detail
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+            </article>
+          </section>
+
+          <!-- A2 Duplicate detection -->
+          <section class="ev-section">
+            <span class="ev-label">A2 Duplicate detection <span class="agent-tag">A2 v1.1</span></span>
+            <article class="a2-chip">
+              <div class="a2-chip-head">
+                <span class="a4-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span>
+                <span class="a4-name">Possible duplicate<span class="ver">87% similar</span></span>
+              </div>
+              <p class="a2-text">This defect is <b>≈ 87% similar</b> to <b>PAY-1302</b> (Stripe 3DS Firefox, closed 2026-03-18). Embedding distance: <b>0.13</b>.</p>
+              <div class="a2-actions">
+                <button class="a2-btn">Link as related</button>
+                <button class="a2-btn fill">Merge as duplicate →</button>
+              </div>
+            </article>
+          </section>
+
+          <!-- Linked defects -->
+          <section class="ev-section">
+            <span class="ev-label">Linked &amp; related defects</span>
+            <div class="linked-table">
+              <div class="linked-row">
+                <span class="id">PAY-1302</span>
+                <span class="sim">87%</span>
+                <span class="stat closed">Closed</span>
+                <span class="arrow-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+              </div>
+              <div class="linked-row">
+                <span class="id">PAY-1298</span>
+                <span class="sim">63%</span>
+                <span class="stat review">Review</span>
+                <span class="arrow-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Comments + Jira mirror -->
+          <section class="ev-section">
+            <span class="ev-label">Comments &amp; Jira mirror</span>
+            <div class="comments">
+              <textarea placeholder="Write a comment… (mirrors to Jira PAY-1472)"></textarea>
+              <span class="jira-mirror">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+                Jira sync active
+                <span class="last">2 min ago</span>
+              </span>
+
+              <div class="comment">
+                <span class="av">PS</span>
+                <div class="comment-body">
+                  <div class="comment-meta"><span class="nm">Priya S.</span><span>·</span><span class="when">2h ago · via Jira</span></div>
+                  <p class="comment-text">Reproducible only on Firefox 120+ when 3DS callback returns &lt; 200ms. Filed RUN-CHK-2026-04-23-018 evidence.</p>
+                </div>
+              </div>
+
+              <div class="comment">
+                <span class="av amber">YM</span>
+                <div class="comment-body">
+                  <div class="comment-meta"><span class="nm">Yogesh M.</span><span>·</span><span class="when">1h ago</span></div>
+                  <p class="comment-text">Cluster confirmed by A4 (87% conf · matches PAY-1302 pattern). Assigning to payments squad.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Quick actions -->
+        <footer class="ev-actions">
+          <button class="qa-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Assign to me</button>
+          <button class="qa-btn">Assign to…<svg viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="qa-btn">File related</button>
+          <button class="qa-btn">Merge as duplicate</button>
+        </footer>
+
+      </aside>
+
+    </div><!-- /content-wrap -->
+  </section><!-- /main -->
+</div><!-- /stage -->
+
+<!--
+VALIDATION (F21 Defects Hub)
+ 1. 1600×1024 full shell · 272 rail with Defects/Failures active under ANALYSE (red 67 count) · 56 top bar · OK
+ 2. Question header DM Sans 24 + stats strip (67 open · 12 P0/P1 fail-red · 8 in review warn-amber · 23 flaky-related violet · Jira sync healthy ✓ green · last sync 2 min ago) · OK
+ 3. Filter bar (raised bg) with 6 filter pills (Severity ALL active teal · Status Open+In Progress · A4 class · Assignee · Sprint 42 · Age) + view toggle (List active / Kanban / Cluster) · OK
+ 4. Defect list 10 rows, status icons + severity pills + ID mono teal + title + A4 class chip + confidence% (color-graded) + TC-link mono teal + assignee avatar + age mono + Jira sync icon · OK
+ 5. Severity colors: P0 red · P1 orange · P2 amber · P3 blue · OK
+ 6. Status icons: Open (gray ring) · In Progress (info-blue dot) · Review (amber dot) · Closed (green check, defined for completeness)
+ 7. A4 classification chips: App Bug red · Env Issue info-blue · Test Bug amber · Flaky violet · UI Bug violet · Mixed gray (each with violet ✨ A4 prefix to signal A4 source) · OK
+ 8. PAY-1472 row SELECTED (teal-tinted bg + 3px teal left-accent) · OK
+ 9. Sync states: 8 ok green ✓ · 1 syncing info-blue (animated spin) · 1 error red ✗ · OK
+10. Pagination: "Showing 10 of 67 open defects · Load 10 more ↓" · OK
+11. Evidence rail (380px): PAY-1472 header (mono teal ID + P0 red pill) + title + meta (Open · filed by Priya S. · 2h ago) · OK
+12. A4 RCA preview block (violet AI surface): A4 v1.4 · 87% conf · root cause narrative w/ violet code refs (PaymentIframe.tsx:241, IFRAME_READY) · 5-layer RCA bars (Stack 90 · Env 80 · Config 60 · Code 50 · Data 40) · violet "Show full A4 detail" CTA · OK
+13. A2 Duplicate detection (violet AI surface): "≈87% similar to PAY-1302 closed" + embedding distance 0.13 + Link as related ghost + Merge as duplicate violet primary · OK
+14. Linked defects table: PAY-1302 87% Closed green / PAY-1298 63% Review amber · OK
+15. Comments accordion: textarea + Jira sync active green ✓ · 2 mirrored comments (Priya S. via Jira + Yogesh M. local) · OK
+16. Quick actions footer: teal "+ Assign to me" primary + Assign to dropdown + File related + Merge as duplicate · OK
+17. Anti-drift COLOR DISCIPLINE:
+    - Violet ONLY on AI surfaces: A4 RCA block (left-accent + glyph + name + 5-Layer RCA pill + layer bars + Show full A4 CTA) · A2 Duplicate detection block (left-accent + glyph + Merge violet primary CTA) · A2 similarity % chips on linked-defects table · A4 ✨ prefix on classification chips · Flaky/UI Bug classification chips · "23 flaky-related" stats strip
+    - Teal ONLY on system: defect IDs · TC-IDs · Severity ALL filter pill (active state) · Assign to me primary CTA · pagination Load more · selected row accent · QA Engineer avatars
+    - Severity palette correct: P0 red / P1 orange / P2 amber / P3 blue
+    - Pass green: Jira sync healthy + Closed status + sync ok icon + 87/91% high confidence
+    - Fail red: 12 P0/P1 stat + sync error · App Bug classification body
+    - Amber/Warn: review status icon + 8 in review stat + Test Bug classification + medium confidence + Review stat chip
+    - Info-blue: In Progress status icon + Env Issue classification + syncing animation
+    - NO violet on Assign/Resolve system actions · OK
+18. Typography: DM Sans 24 question · Inter 13 body · JetBrains Mono on counts (67/12/8/23/10/87/91/78/63/64/68/45/52/75), defect IDs (PAY-1472 / RET-1465 / etc), TC-IDs, age (2h/4h/1d/etc), confidence % · OK
+19. No PM3 features (no SAML/PAT/cloud-grid) · No MD3 · No Tailwind config · Hex hardcoded · :focus-visible violet 2px · prefers-reduced-motion respected · OK
+-->
+</body>
+</html>

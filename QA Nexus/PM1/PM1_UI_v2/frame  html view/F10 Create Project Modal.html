@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Create new project</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --primary-soft:rgba(45,212,191,0.10);--ai-soft:rgba(167,139,250,0.10);--info-soft:rgba(96,165,250,0.10);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  .bg-base{background:var(--base)}.bg-raised{background:var(--raised)}.bg-overlay{background:var(--overlay)}
+  .text-t1{color:var(--t1)}.text-t2{color:var(--t2)}.text-t3{color:var(--t3)}.text-t4{color:var(--t4)}
+
+  .lbl{font-size:11px;font-weight:600;color:var(--t3);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .fld{background:var(--raised);border:1px solid var(--border);border-radius:4px;color:var(--t1);padding:12px 14px;font-size:14px;width:100%;outline:none}
+  .fld:focus{border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)}
+  .fld::placeholder{color:var(--t4)}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;white-space:nowrap}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;padding:0 16px;border-radius:4px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised);color:var(--t1)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+  .btn-primary:hover{background:rgba(45,212,191,0.9)}
+  .btn-ghost{border:none;color:var(--t2)}
+
+  .glyph-sw{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-family:"DM Sans";font-size:12px;font-weight:700;color:#fff;flex:none;cursor:pointer;position:relative}
+  .glyph-sw.on{box-shadow:0 0 0 2px var(--primary),0 0 0 4px var(--base)}
+
+  .radio-card{background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:18px;cursor:pointer;position:relative;height:160px;display:flex;flex-direction:column;gap:8px}
+  .radio-card.on{border-color:transparent;background:rgba(45,212,191,0.04);box-shadow:inset 3px 0 0 var(--primary)}
+  .radio-card .ind{width:16px;height:16px;border-radius:999px;border:1.5px solid var(--border);position:absolute;top:16px;right:16px;background:var(--base)}
+  .radio-card.on .ind{border-color:var(--primary);background:var(--primary);box-shadow:inset 0 0 0 3px var(--base)}
+
+  #bg-shell{filter:blur(4px);opacity:0.75;pointer-events:none;transform:scale(1.01);transform-origin:center}
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px)}
+</style>
+</head>
+<body>
+<div style="position:relative;width:1600px;min-height:1024px;margin:0 auto">
+
+  <!-- BACKGROUND F09 (dimmed + blurred) -->
+  <div id="bg-shell">
+    <!-- Top bar -->
+    <div class="h-14 flex items-center gap-3 px-5 bg-base" style="border-bottom:1px solid var(--border)">
+      <div class="flex items-center gap-2.5">
+        <svg viewBox="0 0 22 22" width="22" height="22" fill="none"><path d="M8.5 2.5h5M9.5 2.5v4.2L5 15.2a2 2 0 0 0 1.8 3h8.4a2 2 0 0 0 1.8-3l-4.5-8.5V2.5" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="display text-t1" style="font-size:15px;font-weight:700">QA Nexus</span>
+      </div>
+      <div class="flex items-center gap-2 h-9 px-3 ml-1" style="border:1px solid color-mix(in srgb,var(--primary) 40%,var(--border));background:var(--primary-soft);border-radius:6px">
+        <span class="w-5 h-5" style="border-radius:4px;background:linear-gradient(135deg,#2DD4BF,#A78BFA)"></span>
+        <span class="text-t1 text-[13px] font-medium">All projects</span>
+        <span class="mono text-[11px]" style="color:var(--primary)">· 3</span>
+      </div>
+      <div class="flex-1 flex justify-center">
+        <div class="flex items-center gap-3 h-9 px-3 w-[520px] text-t3 text-[13px]" style="border:1px solid var(--border);background:var(--canvas);border-radius:6px">Search cases, defects, runs, docs…</div>
+      </div>
+      <div class="flex gap-2">
+        <div class="w-9 h-9" style="border:1px solid var(--border);border-radius:6px"></div>
+        <div class="w-9 h-9" style="border:1px solid var(--border);border-radius:6px"></div>
+        <div class="w-9 h-9" style="border:1px solid var(--border);border-radius:6px"></div>
+      </div>
+      <div class="flex items-center h-9 px-3" style="border:1px solid var(--border);border-radius:6px;width:240px;color:var(--t3);font-size:12px">Operate / Review / Prove</div>
+      <div class="w-10 h-9" style="border:1px solid var(--border);border-radius:6px"></div>
+    </div>
+    <div class="flex">
+      <div style="width:272px;background:var(--base);border-right:1px solid var(--border);min-height:968px;padding:16px">
+        <div class="h-7 mb-2" style="background:var(--overlay);border-radius:6px;width:90px"></div>
+        <div class="h-3 mt-5 mb-2" style="background:var(--border);width:40px;border-radius:3px"></div>
+        <div class="space-y-2">
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:80%"></div>
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:75%"></div>
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:70%"></div>
+        </div>
+        <div class="h-3 mt-5 mb-2" style="background:var(--border);width:40px;border-radius:3px"></div>
+        <div class="space-y-2">
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:85%"></div>
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:70%"></div>
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:75%"></div>
+          <div class="h-6" style="background:var(--raised);border-radius:4px;width:65%"></div>
+        </div>
+        <div class="h-3 mt-5 mb-2" style="background:var(--border);width:40px;border-radius:3px"></div>
+        <div class="space-y-2"><div class="h-6" style="background:var(--raised);border-radius:4px;width:80%"></div><div class="h-6" style="background:var(--raised);border-radius:4px;width:70%"></div></div>
+      </div>
+      <div class="flex-1" style="padding:28px 32px">
+        <div style="font-family:'DM Sans';font-size:30px;font-weight:500;color:#F1F5F9">Which project do you want to work on?</div>
+        <div class="mt-2" style="color:var(--t2);font-size:15px">3 projects · you're a Lead on all 3 · Iksula Commerce is new today</div>
+        <div class="mt-6 bg-base" style="height:56px;border:1px solid var(--border);border-radius:4px"></div>
+        <div class="mt-8 text-[14px] font-semibold text-t1">★ Pinned</div>
+        <div class="mt-3 bg-base" style="border:1px solid color-mix(in srgb,var(--primary) 25%,var(--border));border-radius:8px;height:150px;padding:24px;box-shadow:0 0 20px rgba(45,212,191,0.08)">
+          <div class="flex items-center gap-4">
+            <span style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2DD4BF,#A78BFA)"></span>
+            <div><div class="text-t1 font-semibold text-[18px]">Iksula Commerce</div><div class="mono text-[11px] text-t3 mt-1">main · created today</div></div>
+          </div>
+        </div>
+        <div class="mt-8 text-[14px] font-semibold text-t1">All projects</div>
+        <div class="grid mt-3" style="grid-template-columns:1fr 1fr;gap:24px">
+          <div class="bg-base" style="border:1px solid var(--border);border-radius:8px;height:160px;padding:22px">
+            <div class="flex items-center gap-3"><span style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#A78BFA,#7C3AED)"></span><div class="text-t1 font-semibold">Iksula Payments</div></div>
+          </div>
+          <div class="bg-base" style="border:1px solid var(--border);border-radius:8px;height:160px;padding:22px">
+            <div class="flex items-center gap-3"><span style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2DD4BF,#14B8A6)"></span><div class="text-t1 font-semibold">Iksula Mobile App</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKDROP -->
+  <div class="backdrop"></div>
+
+  <!-- MODAL -->
+  <div style="position:absolute;top:82px;left:50%;transform:translateX(-50%);width:1120px;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 48px rgba(0,0,0,0.4);overflow:hidden">
+
+    <!-- HEADER -->
+    <div class="flex items-center justify-between" style="height:64px;padding:0 24px 0 32px;border-bottom:1px solid var(--border)">
+      <div>
+        <h1 class="display text-t1" style="font-size:22px;font-weight:600">Create new project</h1>
+      </div>
+      <button class="w-10 h-10 flex items-center justify-center hover:bg-raised" style="color:var(--t3);border-radius:6px">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- BODY -->
+    <div style="padding:28px 32px 24px;max-height:720px;overflow-y:auto">
+
+      <!-- SECTION A — IDENTITY -->
+      <section>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:20px">
+          <!-- Name -->
+          <div>
+            <label class="lbl">Project name</label>
+            <input class="fld" value="Iksula Returns" style="border-color:var(--primary);box-shadow:0 0 0 1px rgba(45,212,191,0.2)" placeholder="e.g. Iksula Returns, Iksula Loyalty, Iksula B2B…">
+            <div class="mono mt-2" style="font-size:11px;color:#94A3B8">Slug auto-generated: <span class="text-t2">iksula-returns</span></div>
+          </div>
+          <!-- Jira key short -->
+          <div>
+            <label class="lbl">Jira project key <span style="color:var(--t4);text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
+            <input class="fld mono" style="font-family:'JetBrains Mono';font-size:13px" placeholder="e.g. RET" value="RET">
+            <div class="mt-2" style="font-size:11px;color:#94A3B8">Uppercase, 2–10 chars. Leave blank to connect later.</div>
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <label class="lbl">Description <span style="color:var(--t4);text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label>
+          <div style="position:relative">
+            <textarea class="fld" style="height:80px;resize:none;padding:12px 14px" placeholder="What's in scope? e.g. customer returns flows, partner portal integration…">Customer returns &amp; refunds across web + mobile. Integrates with Iksula Payments for refund execution.</textarea>
+            <div style="position:absolute;right:10px;bottom:8px;font-size:11px;color:#94A3B8" class="mono">114 / 500</div>
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <label class="lbl">Project glyph</label>
+          <div class="flex items-center gap-3">
+            <span class="glyph-sw on" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA)">IR</span>
+            <span class="glyph-sw" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6)">IR</span>
+            <span class="glyph-sw" style="background:linear-gradient(135deg,#A78BFA,#7C3AED)">IR</span>
+            <span class="glyph-sw" style="background:linear-gradient(135deg,#60A5FA,#2DD4BF)">IR</span>
+            <span class="glyph-sw" style="background:linear-gradient(135deg,#475569,#1E293B)">IR</span>
+            <span class="glyph-sw" style="background:transparent;color:var(--t3);border:1.5px dashed var(--border-strong)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v8M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="ml-3" style="font-size:12px;color:#94A3B8">Auto-generated from project name. Pick a color or upload custom.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION B — JIRA -->
+      <section style="margin-top:28px;padding-top:24px;border-top:1px solid var(--border)">
+        <div class="flex items-center justify-between mb-3">
+          <div class="lbl" style="margin:0">Jira connection</div>
+          <label class="flex items-center gap-2 cursor-pointer" style="font-size:12.5px;color:var(--t2)">
+            <span style="width:16px;height:16px;border-radius:3px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center">
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5l2.3 2.3L9.5 3.5" stroke="#003732" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Connect Jira now <span style="color:var(--t3)">(recommended)</span>
+          </label>
+        </div>
+
+        <div class="grid" style="grid-template-columns:1fr;gap:12px">
+          <div>
+            <label class="lbl">Jira base URL</label>
+            <input class="fld mono" style="font-family:'JetBrains Mono';font-size:13px" value="https://iksula.atlassian.net" placeholder="https://iksula.atlassian.net">
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 mt-4" style="background:var(--info-soft);border:1px solid color-mix(in srgb,var(--info) 25%,transparent);border-left:3px solid var(--info);border-radius:6px;padding:14px 16px">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" style="color:var(--info);flex:none;margin-top:1px"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 6v4M5.5 6h5M5.5 10h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <div style="font-size:13px;color:var(--t2);line-height:20px">
+            Connect Jira to fetch stories, epics, and test plans automatically.
+            <span style="color:var(--secondary);font-weight:500">A1</span> uses Jira context when generating test cases — linked requirements become evidence chips on every draft.
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION C — DATA SOURCE -->
+      <section style="margin-top:28px;padding-top:24px;border-top:1px solid var(--border)">
+        <div class="lbl" style="margin-bottom:12px">How will you add test content?</div>
+        <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:16px">
+          <!-- Card A -->
+          <div class="radio-card on">
+            <span class="ind"></span>
+            <span style="position:absolute;top:14px;left:50px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--primary);background:var(--primary-soft);padding:2px 6px;border-radius:999px;border:1px solid color-mix(in srgb,var(--primary) 35%,transparent)">Recommended</span>
+            <div class="flex items-center gap-2" style="margin-top:12px">
+              <span style="width:32px;height:32px;background:var(--info-soft);border-radius:7px;display:inline-flex;align-items:center;justify-content:center;color:var(--info)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h4M9 8h4M7 4l-4 4 4 4M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <div class="display text-t1" style="font-size:15px;font-weight:600">Connect to Jira</div>
+            </div>
+            <div style="font-size:12.5px;color:var(--t2);line-height:18px;margin-top:4px">Fetch requirements + link cases to issues. <span style="color:var(--secondary);font-weight:500">A1</span> enriches drafts with context.</div>
+            <div class="mono mt-auto" style="font-size:10.5px;color:var(--t3)">→ routes to Source Connect (F11)</div>
+          </div>
+
+          <!-- Card B -->
+          <div class="radio-card">
+            <span class="ind"></span>
+            <div class="flex items-center gap-2">
+              <span style="width:32px;height:32px;background:var(--ai-soft);border-radius:7px;display:inline-flex;align-items:center;justify-content:center;color:var(--secondary)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 10.5A3 3 0 0 1 4.5 4.6a4 4 0 0 1 7.7 1.2A2.8 2.8 0 0 1 11.5 11" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 7.5v4M5.8 9.5L8 7.3l2.2 2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <div class="display text-t1" style="font-size:15px;font-weight:600">Upload files</div>
+            </div>
+            <div style="font-size:12.5px;color:var(--t2);line-height:18px;margin-top:4px">Drop XLSX, CSV, Jira exports, test-case docs. <span style="color:var(--secondary);font-weight:500">A2</span> checks for dupes + gaps.</div>
+            <div class="mono mt-auto" style="font-size:10.5px;color:var(--t3)">→ routes to Upload (F12)</div>
+          </div>
+
+          <!-- Card C -->
+          <div class="radio-card">
+            <span class="ind"></span>
+            <div class="flex items-center gap-2">
+              <span style="width:32px;height:32px;background:var(--raised);border-radius:7px;display:inline-flex;align-items:center;justify-content:center;color:#94A3B8;border:1px solid var(--border)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 12.5L11.5 4l1.5 1.5L4.5 14l-2 .5.5-2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+              </span>
+              <div class="display text-t1" style="font-size:15px;font-weight:600">Start blank</div>
+            </div>
+            <div style="font-size:12.5px;color:var(--t2);line-height:18px;margin-top:4px">Empty project. Add cases manually as you go. Good for greenfield work.</div>
+            <div class="mono mt-auto" style="font-size:10.5px;color:var(--t3)">→ back to Projects list</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION D — INVITES -->
+      <section style="margin-top:28px;padding-top:24px;border-top:1px solid var(--border)">
+        <div class="flex items-center justify-between mb-3">
+          <div class="lbl" style="margin:0">Invite teammates <span style="color:var(--t4);text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></div>
+          <div class="flex items-center gap-2">
+            <span class="text-[12px]" style="color:var(--t3)">Default role</span>
+            <button class="btn" style="height:32px;padding:0 10px;font-size:12px;color:var(--t2)">QA Engineer <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap" style="background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:12px;min-height:56px">
+          <span class="chip" style="background:var(--overlay);height:26px">
+            <span class="w-4 h-4 rounded-full mono text-[9px] font-semibold flex items-center justify-center" style="background:linear-gradient(135deg,#60A5FA,#2DD4BF);color:#06131A">PS</span>
+            <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9dedeff4e4fcb3eeddf4f6eee8f1fcb3fef2f0">[email&#160;protected]</a>
+            <button style="color:var(--t3);margin-left:2px"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+          </span>
+          <span class="chip" style="background:var(--overlay);height:26px">
+            <span class="w-4 h-4 rounded-full mono text-[9px] font-semibold flex items-center justify-center" style="background:linear-gradient(135deg,#A78BFA,#7C3AED);color:#fff">RK</span>
+            <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a7d5c6cfd2cb89cce7ceccd4d2cbc689c4c8ca">[email&#160;protected]</a>
+            <button style="color:var(--t3);margin-left:2px"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+          </span>
+          <input style="flex:1;min-width:200px;background:transparent;border:none;outline:none;color:var(--t1);font-size:13px" placeholder="Add email… (comma or enter to confirm)">
+        </div>
+
+        <div class="mt-4">
+          <div class="text-[12px] mb-2" style="color:var(--t3)">Add existing team members:</div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="chip" style="height:28px;background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,transparent);padding:0 10px">
+              <span class="w-4 h-4 rounded-full mono text-[9px] font-semibold flex items-center justify-center" style="background:linear-gradient(135deg,#60A5FA,#2DD4BF);color:#06131A">PS</span>
+              Priya S
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.2 2.2L9.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="chip" style="height:28px;background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,transparent);padding:0 10px">
+              <span class="w-4 h-4 rounded-full mono text-[9px] font-semibold flex items-center justify-center" style="background:linear-gradient(135deg,#A78BFA,#7C3AED);color:#fff">RK</span>
+              Rahul K
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3l2.2 2.2L9.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="chip" style="height:28px;padding:0 10px">
+              <span class="w-4 h-4 rounded-full mono text-[9px] font-semibold flex items-center justify-center" style="background:linear-gradient(135deg,#F59E0B,#B45309);color:#fff">AM</span>
+              Arjun M
+            </button>
+            <button class="chip" style="height:28px;padding:0 10px">
+              <span class="w-4 h-4 rounded-full mono text-[9px] font-semibold flex items-center justify-center" style="background:linear-gradient(135deg,#2DD4BF,#14B8A6);color:#06131A">ND</span>
+              Neha D
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="flex items-center justify-between" style="height:72px;padding:0 32px;border-top:1px solid var(--border);background:var(--base)">
+      <button class="btn-ghost text-[14px]" style="background:none;border:none;color:var(--t2);cursor:pointer;font-weight:500">Cancel</button>
+      <div class="flex items-center gap-3">
+        <div class="mono mr-2" style="font-size:11px;color:var(--t3)"><span style="color:var(--primary)">●</span> Valid — ready to create</div>
+        <button class="btn" style="height:40px;padding:0 18px;font-size:14px">Save as draft</button>
+        <button class="btn btn-primary" style="height:40px;padding:0 22px;font-size:14px;font-weight:600">
+          Create project
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>

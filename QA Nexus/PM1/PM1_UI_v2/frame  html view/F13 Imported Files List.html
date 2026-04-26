@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Imported Files · Iksula Returns</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --primary:#2DD4BF;--primary-600:#14B8A6;--primary-ink:#003732;
+    --secondary:#A78BFA;
+    --primary-soft:rgba(45,212,191,0.10);--ai-soft:rgba(167,139,250,0.14);
+    --pass-soft:rgba(52,211,153,0.14);--fail-soft:rgba(248,113,113,0.14);
+    --warn-soft:rgba(251,191,36,0.14);--info-soft:rgba(96,165,250,0.14);
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+  button{font-family:inherit;cursor:pointer}
+  a{text-decoration:none;color:inherit}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent}
+  .btn:hover{background:var(--raised);color:var(--t1)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600;box-shadow:0 0 20px rgba(45,212,191,0.2)}
+  .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600);color:var(--primary-ink)}
+  .chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:0.02em}
+  .chip-teal{background:var(--primary-soft);color:var(--primary);border:1px solid rgba(45,212,191,0.25)}
+  .chip-violet{background:var(--ai-soft);color:var(--secondary);border:1px solid rgba(167,139,250,0.3)}
+  .chip-pass{background:var(--pass-soft);color:var(--pass);border:1px solid rgba(52,211,153,0.3)}
+  .chip-warn{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(251,191,36,0.3)}
+  .chip-fail{background:var(--fail-soft);color:var(--fail);border:1px solid rgba(248,113,113,0.3)}
+  .chip-overlay{background:var(--overlay);color:var(--t3);border:1px solid var(--border)}
+  .pill{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:3px;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase}
+  .pill-violet{background:var(--ai-soft);color:var(--secondary)}
+  .pill-pass{background:var(--pass-soft);color:var(--pass)}
+  .pill-teal{background:var(--primary-soft);color:var(--primary)}
+  .filter-chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:6px;font-size:12px;color:var(--t2);background:var(--overlay);border:1px solid var(--border);white-space:nowrap}
+  .filter-chip:hover{background:var(--raised);color:var(--t1)}
+  .filter-chip b{color:var(--t3);font-weight:500;margin-right:4px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.45}}
+  .pulse{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.6)}50%{box-shadow:0 0 0 6px rgba(167,139,250,0)}}
+  .pulse-dot{animation:pulseDot 1.8s ease-out infinite}
+  .rail-scroll::-webkit-scrollbar{width:6px}
+  .rail-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div style="width:1600px;min-height:1024px;margin:0 auto;background:var(--canvas)">
+
+  <!-- ============ TOP BAR 56 ============ -->
+  <header style="height:56px;background:var(--base);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px">
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 3h6v5l4 10a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l4-10V3z" stroke="#0B0F17" stroke-width="2" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="display" style="font-size:17px;font-weight:700;color:var(--primary)">QA Nexus</span>
+    </div>
+
+    <!-- Project switcher -->
+    <button style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:6px;background:var(--raised);border:1px solid var(--border);color:var(--t1)">
+      <div style="width:20px;height:20px;border-radius:4px;background:linear-gradient(135deg,var(--primary),var(--secondary));font-size:9px;font-weight:700;color:#0B0F17;display:flex;align-items:center;justify-content:center">IR</div>
+      <span style="font-size:13px;font-weight:500">Iksula Returns</span>
+      <span class="mono" style="font-size:11px;color:var(--t3)">· main</span>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+
+    <!-- Search ⌘K -->
+    <div style="flex:1;max-width:480px;height:36px;background:var(--raised);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;padding:0 12px;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span style="flex:1;font-size:13px;color:var(--t3)">Search everything…</span>
+      <span class="mono" style="font-size:11px;color:var(--t3);background:var(--overlay);padding:2px 6px;border-radius:3px">⌘K</span>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <!-- Icons -->
+    <button style="width:36px;height:36px;border-radius:6px;background:none;border:none;color:var(--t3);display:flex;align-items:center;justify-content:center">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <button style="width:36px;height:36px;border-radius:6px;background:none;border:none;color:var(--t3);position:relative;display:flex;align-items:center;justify-content:center">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v3L3 11h10l-1-2V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 12a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span style="position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:999px;background:var(--primary)"></span>
+    </button>
+    <button style="width:36px;height:36px;border-radius:6px;background:none;border:none;color:var(--t3);display:flex;align-items:center;justify-content:center">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v2M8 12v2M2 8h2M12 8h2M4 4l1.5 1.5M10.5 10.5L12 12M4 12l1.5-1.5M10.5 5.5L12 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+
+    <!-- Mode toggle -->
+    <div style="display:inline-flex;height:32px;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px;margin-left:4px">
+      <button style="height:26px;padding:0 12px;border-radius:4px;background:var(--primary);color:var(--primary-ink);font-size:11px;font-weight:600;border:none">Operate</button>
+      <button style="height:26px;padding:0 12px;border-radius:4px;background:none;color:var(--t3);font-size:11px;font-weight:500;border:none">Review</button>
+      <button style="height:26px;padding:0 12px;border-radius:4px;background:none;color:var(--t3);font-size:11px;font-weight:500;border:none">Prove</button>
+    </div>
+
+    <!-- Avatar -->
+    <div style="width:32px;height:32px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#0B0F17;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:4px">Y</div>
+  </header>
+
+  <!-- ============ MAIN LAYOUT ============ -->
+  <div style="display:flex;min-height:968px">
+
+    <!-- ============ LEFT RAIL 240 ============ -->
+    <aside style="width:240px;flex:none;background:var(--base);border-right:1px solid var(--border);display:flex;flex-direction:column">
+      <nav style="flex:1;padding:16px 8px;font-size:13px">
+        <!-- Home -->
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 7L8 2.5 13.5 7V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span>Home</span>
+        </a>
+
+        <!-- PLAN -->
+        <div class="mono" style="font-size:10px;letter-spacing:0.1em;color:var(--t4);padding:14px 12px 6px;font-weight:600">PLAN</div>
+        <!-- Requirements active (parent of Imports) -->
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t1);background:var(--raised);border-left:3px solid var(--primary);margin-left:-1px;font-weight:500;position:relative">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span style="flex:1">Requirements</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(6)</span>
+        </a>
+        <!-- Imports sub-item (active) -->
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:6px 10px 6px 32px;border-radius:6px;color:var(--primary);font-weight:600;font-size:12px">
+          <span style="width:5px;height:5px;border-radius:999px;background:var(--primary)"></span>
+          <span style="flex:1">↳ Imports</span>
+          <span class="mono" style="font-size:11px;color:var(--primary)">(242)</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M2 6h12" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span style="flex:1">Test Plans &amp; Cycles</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h10v10H3z" stroke="currentColor" stroke-width="1.5"/><path d="M6 7l1.5 1.5L10 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="flex:1">Test Cases</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(8)</span>
+        </a>
+
+        <!-- AUTHOR -->
+        <div class="mono" style="font-size:10px;letter-spacing:0.1em;color:var(--t4);padding:14px 12px 6px;font-weight:600">AUTHOR</div>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span style="flex:1">Test Suites</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 2.5h10v11l-5-2-5 2v-11z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span style="flex:1">Knowledge Base</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t4);opacity:0.55">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="flex:1">Automation Studio</span>
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="7" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6 7V5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t4);opacity:0.55">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 4v4c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8v4c0 1.1 2.2 2 5 2s5-.9 5-2V8" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span style="flex:1">Data &amp; Mocks</span>
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="7" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6 7V5a2 2 0 0 1 4 0v2" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+
+        <!-- RUN -->
+        <div class="mono" style="font-size:10px;letter-spacing:0.1em;color:var(--t4);padding:14px 12px 6px;font-weight:600">RUN</div>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 3l8 5-8 5V3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span style="flex:1">Runs &amp; Sessions</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span style="flex:1">Environments</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+
+        <!-- ANALYSE -->
+        <div class="mono" style="font-size:10px;letter-spacing:0.1em;color:var(--t4);padding:14px 12px 6px;font-weight:600">ANALYSE</div>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span style="flex:1">Run Results</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.7L14 6.3l-3 2.9L11.6 13 8 11.1 4.4 13l.6-3.8-3-2.9 4.2-.6L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span style="flex:1">Defects</span>
+          <span class="mono" style="font-size:11px;color:var(--t3)">(0)</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="3" y="3" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M6 10V7M8 10V5M10 10V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>Reports</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 1 0 12 0 6 6 0 0 0-12 0zM8 5v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span style="flex:1">QA Value</span>
+          <span style="font-size:9.5px;color:var(--secondary);background:var(--ai-soft);padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:0.04em">LEAD+</span>
+        </a>
+
+        <!-- GOVERN -->
+        <div class="mono" style="font-size:10px;letter-spacing:0.1em;color:var(--t4);padding:14px 12px 6px;font-weight:600">GOVERN</div>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 13a5 5 0 0 1 10 0" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>Agents</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 2L4 8h3l-1 6 5-8H8l1-4H6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span>Integrations</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="6" r="2.5" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="7" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 13a4 4 0 0 1 8 0M9.5 13a3 3 0 0 1 5 0" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>Users &amp; Roles</span>
+        </a>
+        <a href="#" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M13 8l1.5-1-1-2-2 .5-.5-1-2-.5-1 1.5h-1.5l-1-1.5-2 .5-.5 1L2 6.5 1 8l1 1.5L1.5 10l.5 2 2-.5.5 1 2 .5 1-1.5h1.5l1 1.5 2-.5.5-1 1.5-.5L13 8z" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>Settings &amp; Audit</span>
+        </a>
+      </nav>
+
+      <!-- Footer -->
+      <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#0B0F17;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">YM</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Yogesh M.</div>
+          <div class="mono" style="font-size:9.5px;color:var(--secondary);letter-spacing:0.05em;font-weight:600">QA LEAD</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--t3)"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main style="flex:1;display:flex;min-width:0">
+
+      <!-- Center content (1080) -->
+      <section style="width:1080px;flex:none;padding:20px 24px;display:flex;flex-direction:column;gap:20px;overflow:hidden">
+
+        <!-- Breadcrumb -->
+        <div style="font-size:13px;color:var(--t3);display:flex;align-items:center;gap:6px">
+          <a href="#" style="color:var(--t3)">Home</a>
+          <span style="color:var(--t4)">›</span>
+          <a href="#" style="color:var(--t3)">Plan</a>
+          <span style="color:var(--t4)">›</span>
+          <a href="#" style="color:var(--t3)">Requirements</a>
+          <span style="color:var(--t4)">›</span>
+          <span style="color:var(--t1);font-weight:600">Imports</span>
+        </div>
+
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+          <div>
+            <h1 class="display" style="font-size:24px;line-height:32px;font-weight:700;color:var(--t1);margin:0">Imported Files</h1>
+            <div style="font-size:13px;color:var(--t3);margin-top:4px">Track every import into Iksula Returns and across your projects</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <button class="btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4 7l4 4 4-4M3 14h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Export history</span>
+            </button>
+            <button class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>New Import</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats strip -->
+        <div style="display:flex;align-items:stretch;background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:14px 0">
+          <div style="flex:1;padding:0 20px">
+            <div class="display" style="font-size:22px;line-height:28px;font-weight:700;color:var(--t1)">242 <span style="font-size:13px;font-weight:500;color:var(--t2)">imports total</span></div>
+            <div style="font-size:11px;line-height:16px;color:var(--t3);margin-top:2px">since project created</div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div style="flex:1;padding:0 20px">
+            <div class="display" style="font-size:22px;line-height:28px;font-weight:700;color:var(--pass)">198 <span style="font-size:13px;font-weight:500;color:var(--t2)">completed</span></div>
+            <div style="font-size:11px;line-height:16px;color:var(--t3);margin-top:2px">3.1k cases generated</div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div style="flex:1;padding:0 20px">
+            <div class="display" style="font-size:22px;line-height:28px;font-weight:700;color:var(--warn)">12 <span style="font-size:13px;font-weight:500;color:var(--t2)">in progress</span></div>
+            <div style="font-size:11px;line-height:16px;color:var(--t3);margin-top:2px;display:flex;align-items:center;gap:6px">
+              <span>4 with active</span>
+              <span class="pill pill-violet">A1</span>
+              <span>generation</span>
+            </div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div style="flex:1;padding:0 20px">
+            <div class="display" style="font-size:22px;line-height:28px;font-weight:700;color:var(--fail)">32 <span style="font-size:13px;font-weight:500;color:var(--t2)">need attention</span></div>
+            <div style="font-size:11px;line-height:16px;color:var(--t3);margin-top:2px">24 failed · 8 pending action</div>
+          </div>
+        </div>
+
+        <!-- Filter + search bar -->
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="width:240px;height:36px;background:var(--raised);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;padding:0 12px;gap:8px;flex:none">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--t3)"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span style="flex:1;font-size:13px;color:var(--t3);white-space:nowrap">Search imports…</span>
+          </div>
+          <div style="flex:1;display:flex;gap:8px;align-items:center;overflow:hidden">
+            <button class="filter-chip"><b>Type:</b>All<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="filter-chip"><b>Status:</b>All<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="filter-chip"><b>Source:</b>All<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="filter-chip" style="border-color:rgba(45,212,191,0.4);color:var(--t1);flex-shrink:0;white-space:nowrap"><span style="width:6px;height:6px;border-radius:999px;background:var(--primary);flex:none"></span><b style="color:var(--t3)">Project:</b><span style="white-space:nowrap">Iksula Returns</span><svg width="10" height="10" viewBox="0 0 16 16" fill="none" style="flex:none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="filter-chip"><b>Date:</b>Last 30 days<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="filter-chip"><b>Owner:</b>All<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <a href="#" style="font-size:12px;color:var(--primary);white-space:nowrap;margin-left:4px">Clear filters</a>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex:none">
+            <button class="filter-chip"><b>Sort:</b>Newest first<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <div style="display:inline-flex;height:32px;background:var(--overlay);border:1px solid var(--border);border-radius:6px;padding:2px">
+              <button style="height:26px;padding:0 10px;border-radius:4px;background:var(--primary);color:var(--primary-ink);font-size:11px;font-weight:600;border:none">Table</button>
+              <button style="height:26px;padding:0 10px;border-radius:4px;background:none;color:var(--t3);font-size:11px;font-weight:500;border:none">Compact</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Imports table -->
+        <div style="background:var(--raised);border:1px solid var(--border);border-radius:12px;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column">
+          <!-- Column headers -->
+          <div class="mono" style="height:36px;background:var(--overlay);border-bottom:1px solid var(--border);display:flex;align-items:center;font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600;text-transform:uppercase;padding:0 20px">
+            <div style="width:80px">Import</div>
+            <div style="width:300px">Files</div>
+            <div style="width:110px">Type</div>
+            <div style="width:120px">Source</div>
+            <div style="width:150px">Status</div>
+            <div style="width:130px">Cases</div>
+            <div style="width:100px">By</div>
+            <div style="flex:1;text-align:right">Actions</div>
+          </div>
+
+          <!-- Row template helper notes used inline below -->
+          <!-- ROW 1 — #242 SELECTED In Progress -->
+          <div style="position:relative;display:flex;align-items:center;height:72px;padding:0 20px;background:rgba(45,212,191,0.06);border-bottom:1px solid var(--border)">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--primary)"></span>
+            <!-- Import ID -->
+            <div style="width:80px;display:flex;flex-direction:column;gap:4px">
+              <a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#242</a>
+              <span class="pill pill-pass pulse" style="width:fit-content">● NEW</span>
+            </div>
+            <!-- Files -->
+            <div style="width:300px;padding-right:12px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--pass-soft);color:var(--pass);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">XLS</span>
+                <span style="font-size:13px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" class="mono">return_policy_v2.xlsx</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:3px;padding-left:30px">
+                <a href="#" style="font-size:11px;color:var(--t3)">+ 2 more</a>
+                <span class="mono" style="font-size:11px;color:var(--t4)">· 14.4 MB total</span>
+              </div>
+            </div>
+            <!-- Type -->
+            <div style="width:110px"><span class="chip chip-teal">Requirements</span></div>
+            <!-- Source -->
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span style="font-size:12px;color:var(--t2)">File upload</span>
+            </div>
+            <!-- Status -->
+            <div style="width:150px;padding-right:12px">
+              <span class="chip chip-warn">● In Progress</span>
+              <div style="height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden"><div style="width:23%;height:100%;background:var(--primary);border-radius:2px"></div></div>
+              <div class="mono" style="font-size:10px;color:var(--t3);margin-top:3px">23% · ~47s remaining</div>
+            </div>
+            <!-- Cases -->
+            <div style="width:130px;display:flex;align-items:center;gap:8px">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t1)">8</span>
+              <span class="pill pill-violet pulse"><span class="pulse-dot" style="width:5px;height:5px;border-radius:999px;background:var(--secondary)"></span>A1 DRAFTING</span>
+            </div>
+            <!-- By -->
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">YM</div>
+              <span style="font-size:12px;color:var(--t2)">Yogesh M.</span>
+            </div>
+            <!-- Actions -->
+            <div style="flex:1;display:flex;justify-content:flex-end">
+              <button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button>
+            </div>
+          </div>
+
+          <!-- ROW 2 — #241 Jira sync Completed -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--base);border-bottom:1px solid var(--border)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#241</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--info-soft);color:var(--info);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 3h5v5H3zM8 8h5v5H8z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+                <span style="font-size:13px;color:var(--t1)"><span class="mono" style="color:var(--info)">RET</span> · Jira sync</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">142 issues · 9:58 AM</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-teal">Requirements</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--info-soft);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">J</span>
+              <span style="font-size:12px;color:var(--t2)">Jira sync</span>
+            </div>
+            <div style="width:150px"><span class="chip chip-pass">✓ Completed</span></div>
+            <div style="width:130px;display:flex;align-items:center;gap:8px">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t1)">142</span>
+              <span class="pill pill-teal">Imported</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">YM</div>
+              <span style="font-size:12px;color:var(--t2)">Yogesh M.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+
+          <!-- ROW 3 — #240 Figma Pending Action -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--raised);border-bottom:1px solid var(--border)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#240</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--ai-soft);color:var(--secondary);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">FIG</span>
+                <span class="mono" style="font-size:13px;color:var(--t1)">figma_mocks_checkout.fig</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">8.2 MB · yesterday 4:12 PM</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-overlay">Other</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--ai-soft);color:var(--secondary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">F</span>
+              <span style="font-size:12px;color:var(--t2)">Figma</span>
+            </div>
+            <div style="width:150px;padding-right:12px">
+              <span class="chip chip-warn">⚠ Pending Action</span>
+              <div class="mono" style="font-size:10px;color:var(--warn);margin-top:4px">OAuth re-auth needed</div>
+            </div>
+            <div style="width:130px;display:flex;align-items:center">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t4)">0</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--ai-soft);color:var(--secondary);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">PS</div>
+              <span style="font-size:12px;color:var(--t2)">Priya S.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+
+          <!-- ROW 4 — #239 Sprint 42 xlsx Completed A1 -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--base);border-bottom:1px solid var(--border)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#239</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--pass-soft);color:var(--pass);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">XLS</span>
+                <span class="mono" style="font-size:13px;color:var(--t1)">q2_sprint_42_stories.xlsx</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">2.1 MB · yesterday 2:48 PM</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-teal">Requirements</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span style="font-size:12px;color:var(--t2)">File upload</span>
+            </div>
+            <div style="width:150px"><span class="chip chip-pass">✓ Completed</span></div>
+            <div style="width:130px;display:flex;align-items:center;gap:8px">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t1)">34</span>
+              <span class="pill pill-violet">A1</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">RK</div>
+              <span style="font-size:12px;color:var(--t2)">Rahul K.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+
+          <!-- ROW 5 — #238 Confluence Failed -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--raised);border-bottom:1px solid var(--border)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#238</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--overlay);color:var(--t2);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">HTM</span>
+                <span class="mono" style="font-size:13px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px">confluence_auth_module_prd.html</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">640 KB · 2d ago</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-teal">Requirements</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--info-soft);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">C</span>
+              <span style="font-size:12px;color:var(--t2)">Confluence</span>
+            </div>
+            <div style="width:150px;padding-right:12px">
+              <span class="chip chip-fail">✕ Failed</span>
+              <div class="mono" style="font-size:10px;color:var(--fail);margin-top:4px">403 Forbidden</div>
+            </div>
+            <div style="width:130px;display:flex;align-items:center">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t4)">0</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--pass-soft);color:var(--pass);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">AM</div>
+              <span style="font-size:12px;color:var(--t2)">Arjun M.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+
+          <!-- ROW 6 — #237 bulk_defect_export.csv Completed defects -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--base);border-bottom:1px solid var(--border)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#237</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--primary-soft);color:var(--primary);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">CSV</span>
+                <span class="mono" style="font-size:13px;color:var(--t1)">bulk_defect_export.csv</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">1.4 MB · 3d ago</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-teal">Test Cases</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span style="font-size:12px;color:var(--t2)">File upload</span>
+            </div>
+            <div style="width:150px"><span class="chip chip-pass">✓ Completed</span></div>
+            <div style="width:130px;display:flex;align-items:center;gap:6px">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t1)">0</span>
+              <span style="font-size:10px;color:var(--t4);font-style:italic">defects only</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--fail-soft);color:var(--fail);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">ND</div>
+              <span style="font-size:12px;color:var(--t2)">Neha D.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+
+          <!-- ROW 7 — #236 mp4 Completed no A1 -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--raised);border-bottom:1px solid var(--border)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#236</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--ai-soft);color:var(--secondary);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">MP4</span>
+                <span class="mono" style="font-size:13px;color:var(--t1)">customer_flow_demo.mp4</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">42 MB · 4d ago</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-overlay">Video</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span style="font-size:12px;color:var(--t2)">File upload</span>
+            </div>
+            <div style="width:150px;padding-right:12px">
+              <span class="chip chip-pass">✓ Completed</span>
+              <div style="font-size:10px;color:var(--t4);margin-top:4px;font-style:italic">no A1</div>
+            </div>
+            <div style="width:130px;display:flex;align-items:center">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t4)">0</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">YM</div>
+              <span style="font-size:12px;color:var(--t2)">Yogesh M.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+
+          <!-- ROW 8 — #235 cart_regression Completed -->
+          <div style="display:flex;align-items:center;height:72px;padding:0 20px;background:var(--base)">
+            <div style="width:80px"><a href="#" class="mono" style="color:var(--primary);font-size:12px;font-weight:600">#235</a></div>
+            <div style="width:300px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:22px;height:22px;border-radius:4px;background:var(--pass-soft);color:var(--pass);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center">XLS</span>
+                <span class="mono" style="font-size:13px;color:var(--t1)">cart_regression_suite.xlsx</span>
+              </div>
+              <div class="mono" style="font-size:11px;color:var(--t4);margin-top:3px;padding-left:30px">3.8 MB · 5d ago</div>
+            </div>
+            <div style="width:110px"><span class="chip chip-teal">Test Cases</span></div>
+            <div style="width:120px;display:flex;align-items:center;gap:8px">
+              <span style="width:18px;height:18px;border-radius:4px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M2 5a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span style="font-size:12px;color:var(--t2)">File upload</span>
+            </div>
+            <div style="width:150px"><span class="chip chip-pass">✓ Completed</span></div>
+            <div style="width:130px;display:flex;align-items:center">
+              <span class="display" style="font-size:16px;font-weight:700;color:var(--t1)">89</span>
+            </div>
+            <div style="width:100px;display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">RK</div>
+              <span style="font-size:12px;color:var(--t2)">Rohan K.</span>
+            </div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><button style="width:28px;height:28px;border-radius:4px;background:none;border:none;color:var(--t3)">⋯</button></div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============ EVIDENCE RAIL 280 ============ -->
+      <aside style="width:280px;flex:none;background:var(--base);border-left:1px solid var(--border);display:flex;flex-direction:column;max-height:968px">
+        <!-- Header -->
+        <div style="height:56px;background:var(--overlay);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:none">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;color:var(--t2)">Import</span>
+            <span class="mono" style="color:var(--primary);font-size:13px;font-weight:700">#242</span>
+            <span class="pill pill-pass pulse">● NEW</span>
+          </div>
+          <button style="width:24px;height:24px;border-radius:4px;background:none;border:none;color:var(--t3);font-size:16px;line-height:1">×</button>
+        </div>
+
+        <!-- Scrollable body -->
+        <div class="rail-scroll" style="flex:1;overflow-y:auto">
+
+          <!-- Metadata strip -->
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+              <a href="#" style="color:var(--primary);font-weight:600">Iksula Returns</a>
+              <span class="mono" style="font-size:10px;color:var(--t4)">· ORG-IKS / PRJ-RET</span>
+            </div>
+            <div style="font-size:11px;color:var(--t3)">
+              Started <span class="mono" style="color:var(--t2)">Apr 24, 2026 · 10:12 AM</span> by <span style="color:var(--t2);font-weight:500">Yogesh M.</span>
+            </div>
+            <div style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:4px">
+              <span>📁 File upload · 3 files · </span><span class="mono" style="color:var(--t2)">14.4 MB</span>
+            </div>
+            <div style="font-size:11px;color:var(--t3)">
+              Platform: <span style="color:var(--t2);font-weight:500">Web</span> · A1 enrichment: <span style="color:var(--secondary);font-weight:600">On</span>
+            </div>
+          </div>
+
+          <!-- Progress block -->
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600;text-transform:uppercase;margin-bottom:8px">Overall progress</div>
+            <div style="background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+                <span class="display" style="font-size:28px;line-height:32px;font-weight:700;color:var(--t1)">23<span style="font-size:18px;color:var(--t3)">%</span></span>
+                <span class="mono" style="font-size:10px;color:var(--t3)">~47s remaining</span>
+              </div>
+              <div style="height:5px;background:var(--overlay);border-radius:3px;overflow:hidden">
+                <div style="width:23%;height:100%;background:var(--primary)"></div>
+              </div>
+              <!-- Phase chips -->
+              <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
+                <span class="pill pill-pass" style="gap:3px">✓ Uploaded</span>
+                <span class="pill pill-pass" style="gap:3px">✓ Parsed</span>
+                <span class="pill pill-violet pulse" style="gap:4px"><span style="width:5px;height:5px;border-radius:999px;background:var(--secondary)"></span>A1 drafting</span>
+                <span class="pill" style="background:var(--overlay);color:var(--t4)">○ Review</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Files block -->
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600;text-transform:uppercase;margin-bottom:8px">Files</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--raised);border-radius:6px">
+                <span style="width:18px;height:18px;border-radius:3px;background:var(--pass-soft);color:var(--pass);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">XLS</span>
+                <div style="flex:1;min-width:0">
+                  <div class="mono" style="font-size:11px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">return_policy_v2.xlsx</div>
+                  <div style="font-size:10px;color:var(--t3);margin-top:1px"><span class="mono">1.8 MB</span> · <span style="color:var(--pass)">✓ parsed</span> · 34 reqs</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--raised);border-radius:6px">
+                <span style="width:18px;height:18px;border-radius:3px;background:var(--primary-soft);color:var(--primary);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">CSV</span>
+                <div style="flex:1;min-width:0">
+                  <div class="mono" style="font-size:11px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">legacy_refund_test_cases.csv</div>
+                  <div style="font-size:10px;color:var(--t3);margin-top:1px"><span class="mono">240 KB</span> · <span style="color:var(--pass)">✓ parsed</span> · 12 cases</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:var(--raised);border-radius:6px">
+                <span style="width:18px;height:18px;border-radius:3px;background:var(--ai-soft);color:var(--secondary);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px">MP4</span>
+                <div style="flex:1;min-width:0">
+                  <div class="mono" style="font-size:11px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">customer_return_flow.mp4</div>
+                  <div style="font-size:10px;color:var(--t3);margin-top:1px"><span class="mono">12.4 MB</span> · <span style="color:var(--pass)">✓ stored</span> · <span style="font-style:italic">no A1</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- A1 Live Log -->
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600;text-transform:uppercase">A1 Generation Log</span>
+              <span class="pill pill-violet pulse" style="gap:4px"><span class="pulse-dot" style="width:5px;height:5px;border-radius:999px;background:var(--secondary)"></span>LIVE</span>
+            </div>
+            <div style="background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto">
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px">
+                <span class="mono" style="color:var(--t4);flex:none">10:12:14</span>
+                <span style="color:var(--t3)">Reading return_policy_v2.xlsx</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px">
+                <span class="mono" style="color:var(--t4);flex:none">10:12:16</span>
+                <span style="color:var(--t3)">Found 34 requirements across 4 sheets</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px">
+                <span class="mono" style="color:var(--t4);flex:none">10:12:19</span>
+                <span style="color:var(--t3)">Drafting for <span style="color:var(--t2);font-weight:500">REQ-001</span>: Refund within 30 days</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px">
+                <span class="mono" style="color:var(--t4);flex:none">10:12:22</span>
+                <span style="color:var(--pass)">✓ Drafted 4 cases (BDD)</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:6px;font-size:11px">
+                <span class="mono" style="color:var(--secondary);flex:none;font-weight:600">10:12:24</span>
+                <span style="color:var(--t1);font-weight:500;display:flex;align-items:flex-start;gap:4px"><span class="pulse-dot" style="width:5px;height:5px;border-radius:999px;background:var(--secondary);margin-top:5px;flex:none"></span>Drafting for <span style="color:var(--t1);font-weight:600;margin-left:2px">REQ-002</span>: Return shipping label…</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Actions footer -->
+        <div style="padding:12px 16px;border-top:1px solid var(--border);flex:none">
+          <button style="width:100%;height:36px;background:var(--ai-soft);border:1px solid rgba(167,139,250,0.35);border-radius:6px;color:var(--secondary);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px">
+            View 8 A1 drafts
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t3)">
+            <a href="#" style="color:var(--t2)">Pause</a>
+            <span style="color:var(--t4)">·</span>
+            <a href="#" style="color:var(--t2)">Cancel import</a>
+            <span style="color:var(--t4)">·</span>
+            <a href="#" style="color:var(--t2)">Download logs</a>
+          </div>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

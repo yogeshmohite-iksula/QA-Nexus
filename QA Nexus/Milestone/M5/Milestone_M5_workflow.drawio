@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1419" dy="1190" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#ffffff" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="pool" value="M5 Automation + Reports + Launch Workflow" style="swimlane;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;horizontal=0;startSize=20;horizontalStack=0;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="40" y="40" width="1100" height="750" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane1" value="Playwright Runner" style="swimlane;startSize=20;horizontal=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="pool">
+      <mxGeometry x="20" width="1080" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="step1" value="Test Spec&#10;(JSON/TS)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane1">
+      <mxGeometry x="60" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="step2" value="Automation&#10;Spec Parse" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane1">
+      <mxGeometry x="240" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="step3" value="Playwright&#10;Exec" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane1">
+      <mxGeometry x="420" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="step4" value="Capture&#10;(Screenshot&#10;+ HAR + Logs)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane1">
+      <mxGeometry x="600" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="step5" value="R2 Upload&#10;Artifacts" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane1">
+      <mxGeometry x="780" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="step1" target="step2" parent="lane1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="step2" target="step3" parent="lane1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="step3" target="step4" parent="lane1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edge4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="step4" target="step5" parent="lane1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane2" value="Basic Reports" style="swimlane;startSize=20;horizontal=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="pool">
+      <mxGeometry x="20" y="150" width="1080" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="rep1" value="Data Query&#10;(Runs &amp;&#10;Defects)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane2">
+      <mxGeometry x="420" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="rep2" value="Template&#10;Render&#10;(3 Dashboards)" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane2">
+      <mxGeometry x="600" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="rep3" value="PDF Export" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="lane2">
+      <mxGeometry x="780" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="rep4" value="Email via&#10;Resend" style="rounded=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="lane2">
+      <mxGeometry x="960" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="edger1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="rep1" target="rep2" parent="lane2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edger2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="rep2" target="rep3" parent="lane2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edger3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="rep3" target="rep4" parent="lane2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane3" value="Command-K Omnibox" style="swimlane;startSize=20;horizontal=0;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="pool">
+      <mxGeometry x="20" y="300" width="1080" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="cmd1" value="Keyboard&#10;Shortcut&#10;(Cmd+K)" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="lane3">
+      <mxGeometry x="180" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="cmd2" value="Global Search&#10;(PG Full-Text&#10;+ pgVector)" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="lane3">
+      <mxGeometry x="420" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="cmd3" value="Semantic&#10;Vector Search" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="lane3">
+      <mxGeometry x="600" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="cmd4" value="Result&#10;Navigation" style="rounded=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="lane3">
+      <mxGeometry x="780" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgec1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="cmd1" target="cmd2" parent="lane3">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgec2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="cmd2" target="cmd3" parent="lane3">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgec3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="cmd3" target="cmd4" parent="lane3">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane4" value="WCAG 2.2 AA Audit &amp; Remediation" style="swimlane;startSize=20;horizontal=0;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="pool">
+      <mxGeometry x="20" y="450" width="1080" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="wcag1" value="axe-core&#10;Scan" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="lane4">
+      <mxGeometry x="300" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="wcag2" value="Findings&#10;Report" style="rounded=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="lane4">
+      <mxGeometry x="480" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="wcag3" value="Remediation&#10;PRs" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="lane4">
+      <mxGeometry x="660" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="wcag4" value="Re-Audit&#10;&amp; Sign-Off" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="lane4">
+      <mxGeometry x="840" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgew1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="wcag1" target="wcag2" parent="lane4">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgew2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="wcag2" target="wcag3" parent="lane4">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgew3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="wcag3" target="wcag4" parent="lane4">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="lane5" value="Pilot Launch &amp; Go-Live" style="swimlane;startSize=20;horizontal=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="pool">
+      <mxGeometry x="20" y="600" width="1080" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="pilot1" value="Onboarding&#10;(2–3 Projects)" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="lane5">
+      <mxGeometry x="240" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="pilot2" value="Training &amp;&#10;Kickoff" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="lane5">
+      <mxGeometry x="420" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="pilot3" value="Go-Live" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="lane5">
+      <mxGeometry x="600" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="pilot4" value="Feedback&#10;Collection" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="lane5">
+      <mxGeometry x="780" y="45" width="100" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgep1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="pilot1" target="pilot2" parent="lane5">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgep2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="pilot2" target="pilot3" parent="lane5">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="edgep3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=2;" edge="1" source="pilot3" target="pilot4" parent="lane5">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

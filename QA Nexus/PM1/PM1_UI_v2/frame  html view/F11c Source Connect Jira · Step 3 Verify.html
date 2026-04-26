@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Connect Jira · Step 3 Verify · Iksula Returns</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --pass:#34D399;--fail:#F87171;--warn:#FBBF24;--info:#60A5FA;
+    --secondary:#A78BFA;--primary:#2DD4BF;--primary-ink:#003732;
+    --primary-soft:rgba(45,212,191,0.10);--ai-soft:rgba(167,139,250,0.12);--fail-soft:rgba(248,113,113,0.14);--pass-soft:rgba(52,211,153,0.12);--warn-soft:rgba(251,191,36,0.14);
+  }
+  html,body{background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;white-space:nowrap}
+  .chip-teal{background:var(--primary-soft);color:var(--primary);border-color:color-mix(in srgb,var(--primary) 35%,transparent)}
+  .chip-fail{background:var(--fail-soft);color:var(--fail);border-color:color-mix(in srgb,var(--fail) 30%,transparent)}
+  .chip-pass{background:var(--pass-soft);color:var(--pass);border-color:color-mix(in srgb,var(--pass) 30%,transparent)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+  .btn:hover{background:var(--raised);color:var(--t1)}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600;box-shadow:0 0 24px rgba(45,212,191,0.18)}
+  .btn-primary:hover{background:rgba(45,212,191,0.9)}
+  .btn-ghost{border:none;color:var(--t2);background:none}
+
+  .itype{width:10px;height:10px;border-radius:2px;flex:none;display:inline-block}
+  .it-story{background:#2684FF}
+  .it-bug{background:#E5493A}
+  .it-task{background:#65BA43}
+
+  @keyframes pulse-violet{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.5)}50%{box-shadow:0 0 0 5px rgba(167,139,250,0)}}
+  .pulse{animation:pulse-violet 1.6s ease-out infinite}
+</style>
+</head>
+<body>
+<div style="width:1600px;min-height:1024px;margin:0 auto;position:relative;background:var(--canvas)">
+
+  <!-- BG F09 dimmed -->
+  <div style="filter:blur(4px);opacity:0.35;pointer-events:none">
+    <div class="h-14 flex items-center gap-3 px-5" style="background:var(--base);border-bottom:1px solid var(--border)">
+      <div style="width:22px;height:22px;background:#2DD4BF;border-radius:4px"></div>
+      <div style="height:14px;width:100px;background:var(--overlay);border-radius:3px"></div>
+    </div>
+    <div class="flex">
+      <div style="width:272px;min-height:968px;background:var(--base);border-right:1px solid var(--border);padding:16px">
+        <div class="space-y-2 mt-4"><div class="h-6" style="background:var(--raised);border-radius:4px;width:85%"></div><div class="h-6" style="background:var(--raised);border-radius:4px;width:70%"></div><div class="h-6" style="background:var(--raised);border-radius:4px;width:80%"></div></div>
+      </div>
+      <div class="flex-1 p-8">
+        <div style="font-family:'DM Sans';font-size:30px;color:var(--t1)">Which project do you want to work on?</div>
+        <div class="grid mt-6" style="grid-template-columns:1fr 1fr;gap:24px">
+          <div style="height:160px;background:var(--base);border:1px solid var(--border);border-radius:8px"></div>
+          <div style="height:160px;background:var(--base);border:1px solid var(--border);border-radius:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(2px)"></div>
+
+  <!-- MODAL -->
+  <div style="position:absolute;top:82px;left:50%;transform:translateX(-50%);width:1120px;height:860px;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 48px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden">
+
+    <button style="position:absolute;top:16px;right:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--t3);border-radius:6px;z-index:5">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+
+    <!-- STEPPER HEADER -->
+    <header style="height:120px;padding:24px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:32px;flex:none">
+      <div style="flex:1;min-width:0">
+        <h1 class="display" style="font-size:20px;line-height:28px;color:var(--t1);font-weight:500">Connect Jira to <span style="font-weight:600">Iksula Returns</span></h1>
+        <div class="mono mt-1" style="font-size:11px;color:var(--t3);letter-spacing:0.08em;text-transform:uppercase">Step 3 of 3 · Verify connection</div>
+      </div>
+
+      <div class="flex items-end gap-0">
+        <!-- Step 1 done -->
+        <div class="flex flex-col items-center" style="width:180px">
+          <div style="width:32px;height:32px;border-radius:999px;background:var(--pass);display:flex;align-items:center;justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 8l3 3 6-6" stroke="#083025" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mt-2 text-[12px] font-medium" style="color:var(--t1)">Authorize</div>
+          <div class="mono text-[10px]" style="color:var(--t3);margin-top:2px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="770e181012041f371e1c04021b165914181a">[email&#160;protected]</a></div>
+        </div>
+        <div style="flex:none;width:20px;height:2px;background:var(--pass);margin:0 -6px 42px -6px"></div>
+        <!-- Step 2 done -->
+        <div class="flex flex-col items-center" style="width:220px">
+          <div style="width:32px;height:32px;border-radius:999px;background:var(--pass);display:flex;align-items:center;justify-content:center">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 8l3 3 6-6" stroke="#083025" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mt-2 text-[12px] font-medium" style="color:var(--t1)">Map</div>
+          <div class="mono text-[10px]" style="color:var(--t3);margin-top:2px">5 types · 4 priorities · 3 fields</div>
+        </div>
+        <div style="flex:none;width:20px;height:2px;background:var(--pass);margin:0 -6px 42px -6px"></div>
+        <!-- Step 3 current violet -->
+        <div class="flex flex-col items-center" style="width:140px">
+          <div class="pulse" style="width:32px;height:32px;border-radius:999px;background:var(--secondary);display:flex;align-items:center;justify-content:center">
+            <span class="mono" style="color:#1A0F2E;font-size:12px;font-weight:700">3</span>
+          </div>
+          <div class="mt-2 text-[12px] font-semibold" style="color:var(--t1)">Verify</div>
+          <div class="mono text-[10px]" style="color:var(--secondary);margin-top:2px">Verifying</div>
+        </div>
+      </div>
+
+      <span class="mono" style="font-size:11px;color:var(--t2);background:var(--overlay);border:1px solid var(--border);padding:4px 10px;border-radius:999px;align-self:flex-start;margin-top:28px;margin-right:8px">3 of 3</span>
+    </header>
+
+    <!-- BODY -->
+    <div style="flex:1;display:flex;min-height:0;overflow:hidden">
+
+      <div style="width:820px;padding:18px 20px 18px 24px;display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto">
+
+        <!-- Block 1 — Test Connection Banner -->
+        <div style="background:rgba(52,211,153,0.10);border:1px solid var(--pass);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex:none">
+          <span style="width:32px;height:32px;border-radius:999px;background:var(--pass);display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 8l3 3 6-6" stroke="#083025" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="display" style="font-size:15px;line-height:22px;font-weight:700;color:var(--pass)">✓ All 5 sample issues mapped successfully</div>
+            <div style="font-size:12px;line-height:18px;color:var(--t2);margin-top:2px">Fetched from <span class="mono" style="color:var(--t1)">iksula.atlassian.net</span> · Test took <span class="mono" style="color:var(--t1);font-weight:600">1.8s</span> · Field mapping validated</div>
+          </div>
+          <a href="#" class="flex items-center gap-1" style="font-size:12px;color:var(--t3);flex-shrink:0">
+            Refresh test
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M14 3v4h-4M2 13v-4h4M3 8a5 5 0 0 1 8.5-3.5L14 7M13 8a5 5 0 0 1-8.5 3.5L2 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+
+        <!-- Block 2 — Sample Issues Table -->
+        <section style="flex:none">
+          <div class="flex items-end justify-between" style="margin-bottom:4px">
+            <div>
+              <div class="display" style="font-size:14px;font-weight:700;color:var(--t1)">Sample Issues from RET</div>
+              <div style="font-size:11.5px;color:var(--t3);margin-top:0px">Most recent 5 of <span class="mono" style="color:var(--t2)">142</span> · fetched via Jira REST API</div>
+            </div>
+            <a href="#" class="flex items-center gap-1 text-[11.5px]" style="color:var(--t3)">Sort: Newest first <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></a>
+          </div>
+
+          <div style="background:var(--raised);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+            <!-- header -->
+            <div style="display:grid;grid-template-columns:90px 1fr 180px 100px;align-items:center;height:32px;background:var(--overlay);padding:0 14px;gap:14px">
+              <div class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600">ISSUE</div>
+              <div class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600">TITLE</div>
+              <div class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600">MAPPED TO</div>
+              <div class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);font-weight:600;text-align:right">VALIDATION</div>
+            </div>
+            <!-- rows -->
+            <div style="display:grid;grid-template-columns:90px 1fr 180px 100px;align-items:center;height:52px;padding:0 14px;gap:14px;background:var(--base);border-bottom:1px solid var(--border)">
+              <div class="flex items-center gap-2"><span class="itype it-story"></span><a class="mono" style="font-size:12px;color:var(--primary);font-weight:600" href="#">RET-142</a></div>
+              <div style="font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Implement refund API for failed orders</div>
+              <div class="flex items-center gap-2 min-w-0">
+                <span style="font-size:11.5px;color:var(--t3);flex:none">Story</span>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style="color:var(--t3);flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="chip chip-teal" style="flex:none">Requirement</span>
+              </div>
+              <div class="flex items-center justify-end gap-1"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="color:var(--pass)"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12px;color:var(--pass);font-weight:500">Valid</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:90px 1fr 180px 100px;align-items:center;height:52px;padding:0 14px;gap:14px;background:var(--raised);border-bottom:1px solid var(--border)">
+              <div class="flex items-center gap-2"><span class="itype it-bug"></span><a class="mono" style="font-size:12px;color:var(--primary);font-weight:600" href="#">RET-141</a></div>
+              <div style="font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Return tracking page shows wrong status</div>
+              <div class="flex items-center gap-2 min-w-0">
+                <span style="font-size:11.5px;color:var(--t3);flex:none">Bug</span>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style="color:var(--t3);flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="chip chip-fail" style="flex:none">Defect</span>
+              </div>
+              <div class="flex items-center justify-end gap-1"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="color:var(--pass)"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12px;color:var(--pass);font-weight:500">Valid</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:90px 1fr 180px 100px;align-items:center;height:52px;padding:0 14px;gap:14px;background:var(--base);border-bottom:1px solid var(--border)">
+              <div class="flex items-center gap-2"><span class="itype it-bug"></span><a class="mono" style="font-size:12px;color:var(--primary);font-weight:600" href="#">RET-140</a></div>
+              <div style="font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Refund processed twice for order #A8891</div>
+              <div class="flex items-center gap-2 min-w-0">
+                <span style="font-size:11.5px;color:var(--t3);flex:none">Bug</span>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style="color:var(--t3);flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="chip chip-fail" style="flex:none">Defect</span>
+              </div>
+              <div class="flex items-center justify-end gap-1"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="color:var(--pass)"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12px;color:var(--pass);font-weight:500">Valid</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:90px 1fr 180px 100px;align-items:center;height:52px;padding:0 14px;gap:14px;background:var(--raised);border-bottom:1px solid var(--border)">
+              <div class="flex items-center gap-2"><span class="itype it-story"></span><a class="mono" style="font-size:12px;color:var(--primary);font-weight:600" href="#">RET-139</a></div>
+              <div style="font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Return policy UI copy needs legal review</div>
+              <div class="flex items-center gap-2 min-w-0">
+                <span style="font-size:11.5px;color:var(--t3);flex:none">Story</span>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style="color:var(--t3);flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="chip chip-teal" style="flex:none">Requirement</span>
+              </div>
+              <div class="flex items-center justify-end gap-1"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="color:var(--pass)"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12px;color:var(--pass);font-weight:500">Valid</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:90px 1fr 180px 100px;align-items:center;height:52px;padding:0 14px;gap:14px;background:var(--base)">
+              <div class="flex items-center gap-2"><span class="itype it-task"></span><a class="mono" style="font-size:12px;color:var(--primary);font-weight:600" href="#">RET-138</a></div>
+              <div style="font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Test: refund webhook retry logic</div>
+              <div class="flex items-center gap-2 min-w-0">
+                <span style="font-size:11.5px;color:var(--t3);flex:none">Task</span>
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style="color:var(--t3);flex:none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="chip chip-teal" style="flex:none">Test Case</span>
+              </div>
+              <div class="flex items-center justify-end gap-1"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="color:var(--pass)"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12px;color:var(--pass);font-weight:500">Valid</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Block 3 — Integration Health -->
+        <section style="flex:none">
+          <div class="flex items-center justify-between mb-2">
+            <div class="display" style="font-size:14px;font-weight:700;color:var(--t1)">Integration Health</div>
+            <div class="flex items-center gap-1.5" style="font-size:12px;color:var(--pass);font-weight:500">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              All systems ready
+            </div>
+          </div>
+          <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:12px">
+            <div style="background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div class="flex items-center gap-1.5">
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--pass)"></span>
+                <span class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase;font-weight:600">Connection</span>
+              </div>
+              <div class="display mt-1" style="font-size:16px;line-height:22px;color:var(--t1);font-weight:600">Healthy</div>
+              <div class="mono" style="font-size:10.5px;color:var(--t3);margin-top:2px">312ms · iksula.atlassian.net</div>
+            </div>
+            <div style="background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div class="flex items-center gap-1.5">
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--pass)"></span>
+                <span class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase;font-weight:600">Webhook</span>
+              </div>
+              <div class="display mt-1" style="font-size:16px;line-height:22px;color:var(--t1);font-weight:600">Ready</div>
+              <div style="font-size:10.5px;color:var(--t3);margin-top:2px">Registers on save · 2-min fallback poll</div>
+            </div>
+            <div style="background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div class="flex items-center gap-1.5">
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--pass)"></span>
+                <span class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase;font-weight:600">Field Mapping</span>
+              </div>
+              <div class="display mt-1" style="font-size:16px;line-height:22px;color:var(--t1);font-weight:600"><span class="mono">8 / 8</span> valid</div>
+              <div style="font-size:10.5px;color:var(--t3);margin-top:2px">3 auto-mapped · 5 standard</div>
+            </div>
+            <div style="background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:12px">
+              <div class="flex items-center gap-1.5">
+                <span style="width:7px;height:7px;border-radius:999px;background:var(--pass)"></span>
+                <span class="mono" style="font-size:10px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase;font-weight:600">Sync Mode</span>
+              </div>
+              <div class="display mt-1" style="font-size:16px;line-height:22px;color:var(--t1);font-weight:600">Bidirectional</div>
+              <div style="font-size:10.5px;color:var(--t3);margin-top:2px">QA Nexus ↔ Jira · comments mirrored</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Block 4 — On-Save Info Strip -->
+        <div style="background:var(--overlay);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;flex:none">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--t3);flex:none;margin-top:2px"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.5v3M8 10.5v.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <div style="font-size:12px;line-height:18px;color:var(--t2)">On finish: QA Nexus backfills <span class="text-t1 font-semibold">142 issues</span> in <span class="mono" style="color:var(--t1)">~2 min</span>, registers the webhook listener, and begins 2-way sync. Activity appears in <span class="text-t2">Settings → Integrations → Health</span>.</div>
+        </div>
+
+      </div>
+
+      <!-- ACTIVITY SIDEBAR -->
+      <aside style="width:280px;flex:none;background:var(--overlay);border-left:1px solid var(--border);padding:20px 18px;display:flex;flex-direction:column;min-height:0">
+        <div class="mono" style="font-size:11px;color:var(--t3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:16px">Integration history</div>
+
+        <div style="position:relative;padding-left:20px">
+          <div style="position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--border)"></div>
+
+          <div style="position:relative;margin-bottom:12px">
+            <span style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:999px;background:var(--pass);border:2px solid var(--overlay);box-shadow:0 0 0 1px var(--pass)"></span>
+            <div class="mono" style="font-size:10.5px;color:var(--t3)">09:41 AM</div>
+            <div style="font-size:12px;color:var(--t2);line-height:16px;margin-top:1px">OAuth authorized — <span class="mono" style="color:var(--t1)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bcc5d3dbd9cfd4fcd5d7cfc9d0dd92dfd3d1">[email&#160;protected]</a></span></div>
+          </div>
+          <div style="position:relative;margin-bottom:12px">
+            <span style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:999px;background:var(--pass);border:2px solid var(--overlay);box-shadow:0 0 0 1px var(--pass)"></span>
+            <div class="mono" style="font-size:10.5px;color:var(--t3)">09:42 AM</div>
+            <div style="font-size:12px;color:var(--t2);line-height:16px;margin-top:1px">Workspace detected — <span class="mono" style="color:var(--t1)">iksula.atlassian.net</span> <span style="color:var(--t3)">(12 projects)</span></div>
+          </div>
+          <div style="position:relative;margin-bottom:12px">
+            <span style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:999px;background:var(--pass);border:2px solid var(--overlay);box-shadow:0 0 0 1px var(--pass)"></span>
+            <div class="mono" style="font-size:10.5px;color:var(--t3)">09:43 AM</div>
+            <div style="font-size:12px;color:var(--t2);line-height:16px;margin-top:1px">Mapping saved — <span class="mono" style="color:var(--t1)">RET</span> → Iksula Returns · 5 types, 4 priorities, 3 custom fields</div>
+          </div>
+          <div style="position:relative;margin-bottom:12px">
+            <span style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:999px;background:var(--pass);border:2px solid var(--overlay);box-shadow:0 0 0 1px var(--pass)"></span>
+            <div class="mono" style="font-size:10.5px;color:var(--t3)">09:44 AM</div>
+            <div style="font-size:12px;color:var(--t2);line-height:16px;margin-top:1px">Test fetch successful — <span class="mono" style="color:var(--t1)">5 / 5</span> sample issues validated</div>
+          </div>
+          <div style="position:relative;margin-bottom:12px">
+            <span class="pulse" style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:999px;background:var(--secondary);border:2px solid var(--overlay);box-shadow:0 0 0 1px var(--secondary)"></span>
+            <div class="mono" style="font-size:10.5px;color:var(--t3)">09:44 AM</div>
+            <div style="font-size:12px;color:var(--t1);line-height:16px;margin-top:1px;font-weight:500">Verifying connection…</div>
+          </div>
+          <div style="position:relative">
+            <span style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:999px;background:var(--raised);border:2px solid var(--border-strong)"></span>
+            <div class="mono" style="font-size:10.5px;color:var(--t3)">—</div>
+            <div style="font-size:12px;color:var(--t3);line-height:16px;margin-top:1px">Next: Import <span class="mono">142</span> issues + register webhook</div>
+          </div>
+        </div>
+
+        <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="mono" style="font-size:10px;color:var(--t3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:8px">Webhook health</div>
+          <span class="chip chip-pass mono" style="height:24px;font-size:10.5px"><span style="width:6px;height:6px;border-radius:999px;background:var(--pass)"></span> Ready · listener registers on save</span>
+        </div>
+      </aside>
+    </div>
+
+    <!-- FOOTER -->
+    <footer style="height:120px;padding:20px 32px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:24px;flex:none;background:var(--base)">
+      <div style="min-width:0">
+        <div class="mono" style="font-size:11px;color:var(--t3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600">Step 3 of 3 · Verify</div>
+        <div style="font-size:12.5px;color:var(--t2);margin-top:6px;line-height:18px">
+          Connection verified · <span class="text-t1 font-semibold mono">5 / 5 issues validated</span> · <span class="text-t1 font-semibold mono">142 issues ready to import</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="btn btn-ghost">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back to Map
+        </button>
+        <button class="btn btn-ghost">Cancel</button>
+        <button class="btn btn-primary" style="padding:0 22px">
+          Finish setup · Import 142 issues
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body>
+</html>
