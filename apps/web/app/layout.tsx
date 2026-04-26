@@ -38,11 +38,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning on <body> only -- silences the well-known
+    // false-positive React hydration mismatch caused by browser extensions
+    // (Grammarly, ColorZilla, dark-reader, etc.) that inject attributes
+    // into <body> between SSR and client hydration. Does NOT suppress real
+    // hydration errors in our own component subtree.
+    // Ref: https://nextjs.org/docs/messages/react-hydration-error
     <html
       lang="en"
       className={`${inter.variable} ${dmSans.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

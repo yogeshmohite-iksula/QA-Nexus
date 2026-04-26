@@ -1,9 +1,16 @@
 // Implements F06 Sign In · see PM1_UI_v2/frame  html view/F06 Sign In.html
 // Backend wiring deferred to MS0-T021 (BetterAuth integration).
 //
-// Two-panel layout (1600x1024):
-//   LEFT  brand panel  - Evidence Mesh constellation + brand mark + hero + status meta
-//   RIGHT auth panel   - centered 384px form with email + password + Authenticate
+// RESPONSIVE LAYOUT (per CLAUDE.md hard rule 12, established 2026-04-26):
+//   < 1024px (mobile + tablet portrait): brand panel HIDDEN; the auth panel
+//     takes the full viewport. A mobile-only BrandMark renders above the
+//     form so brand identity stays visible. Form container max-w-[440px].
+//   >= 1024px (lg+, desktop): two columns, brand panel left + auth panel
+//     right, each flex-1. Hero typography scales up at xl: (1280+).
+// The locked HTML F06 frame is a 1600x1024 design REFERENCE per CLAUDE.md
+// rule 12 + PM1_PRD §10 NFR-001 -- the React port MUST be fully responsive.
+// No fixed pixel widths on layout containers. No horizontal scroll >= 320px.
+//
 // Anti-drift: TEAL #2dd4bf for ALL system actions (Authenticate, Forgot password link).
 // VIOLET #a78bfa is reserved for AI surfaces; on F06 the "Contact Site Admin"
 // link uses violet because it's an admin-escalation route (the canonical
@@ -26,11 +33,11 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-[1600px]" id="stage">
-      {/* LEFT BRAND PANEL */}
+    <div className="flex min-h-screen flex-col lg:flex-row" id="stage">
+      {/* LEFT BRAND PANEL -- hidden < lg (1024px); flex-1 on desktop */}
       <section
-        aria-label="QA Nexus"
-        className="border-border-subtle relative flex w-[800px] flex-none flex-col justify-between overflow-hidden border-r p-12"
+        aria-label="QA Nexus brand"
+        className="border-border-subtle relative hidden flex-1 flex-col justify-between overflow-hidden border-r p-8 lg:flex xl:p-12"
         style={{
           background: [
             'linear-gradient(to right, transparent 0%, transparent 55%, rgba(11,15,23,0.4) 100%)',
@@ -43,30 +50,30 @@ export default function SignInPage() {
       >
         <EvidenceMesh />
 
-        {/* Brand mark (top-left) */}
+        {/* Brand mark (top-left, desktop only -- mobile gets its own copy above form) */}
         <BrandMark />
 
-        {/* Hero (middle) */}
+        {/* Hero (middle) -- typography scales up at xl: (1280+) */}
         <div className="relative z-10 max-w-[480px]">
           <h1
             className="m-0 leading-[1.05] tracking-[-0.02em]"
             style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
           >
-            <span className="text-text-primary block text-[56px] font-bold">
+            <span className="text-text-primary block text-[40px] font-bold xl:text-[56px]">
               Operational Intelligence.
             </span>
-            <span className="text-primary block text-[56px] font-medium">
+            <span className="text-primary block text-[40px] font-medium xl:text-[56px]">
               Engineered for quality.
             </span>
           </h1>
-          <p className="text-text-secondary mt-6 max-w-[420px] text-[17px] font-normal leading-[1.5] tracking-[0.01em]">
+          <p className="text-text-secondary mt-6 max-w-[420px] text-[15px] font-normal leading-[1.5] tracking-[0.01em] xl:text-[17px]">
             Centralized test case management, AI-assisted defect intelligence, and real-time release
             posture &mdash; for QA teams that ship quality under pressure.
           </p>
         </div>
 
         {/* Meta (bottom-left): version chip + status indicator */}
-        <div className="relative z-10 flex items-center gap-4">
+        <div className="relative z-10 flex flex-wrap items-center gap-4">
           <span
             className="border-border-subtle bg-canvas text-text-tertiary rounded-[4px] border px-2 py-1 text-[12px]"
             style={{
@@ -87,25 +94,30 @@ export default function SignInPage() {
         </div>
       </section>
 
-      {/* RIGHT AUTH PANEL */}
+      {/* RIGHT AUTH PANEL -- always visible; full width on mobile, flex-1 on desktop */}
       <section
         aria-label="Sign in"
-        className="bg-canvas flex w-[800px] flex-none items-center justify-center p-12"
+        className="bg-canvas flex flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:px-8"
       >
-        <div className="w-[384px]">
+        <div className="w-full max-w-[440px]">
+          {/* Mobile-only BrandMark -- desktop's brand panel handles brand identity at lg+ */}
+          <div className="mb-10 flex justify-center lg:hidden">
+            <BrandMark />
+          </div>
+
           <div className="text-center">
             <h2
-              className="text-text-primary m-0 mb-2 text-[30px] font-semibold leading-9"
+              className="text-text-primary m-0 mb-2 text-[28px] font-semibold leading-9 sm:text-[30px]"
               style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
             >
               Sign in to workspace
             </h2>
-            <p className="text-text-secondary m-0 text-[16px] font-normal leading-[1.5]">
+            <p className="text-text-secondary m-0 text-[15px] font-normal leading-[1.5] sm:text-[16px]">
               Enter your credentials to access the workbench.
             </p>
           </div>
 
-          <form className="mt-12 flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
+          <form className="mt-10 flex flex-col gap-6 sm:mt-12" onSubmit={handleSubmit} noValidate>
             {/* Email */}
             <div>
               <label
@@ -201,7 +213,7 @@ export default function SignInPage() {
           </form>
 
           {/* Contact Site Admin -- violet link is canonical for admin escalation */}
-          <p className="text-text-tertiary mt-12 text-center text-[14px] font-normal">
+          <p className="text-text-tertiary mt-10 text-center text-[14px] font-normal sm:mt-12">
             Need emergency access?{' '}
             <Link href="#" className="text-secondary no-underline hover:underline">
               Contact Site Admin

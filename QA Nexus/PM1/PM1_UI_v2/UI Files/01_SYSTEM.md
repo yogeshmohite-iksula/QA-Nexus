@@ -228,7 +228,7 @@ Home                               ← role-aware destination
 
 ## 4.4 Shell geometry
 
-**Canvas:** 1600 × 1024 (desktop primary).
+**Canvas:** 1600 × 1024 (desktop **primary** — design reference size only; NOT a mandated React implementation width). All ported React components MUST be fully responsive (mobile-first, 320px → 1920px+, no horizontal scroll at any viewport ≥320px) per PM1_PRD §10 NFR-001 strengthened addendum + CLAUDE_KICKOFF_PROMPT §3 hard rule 10. The 1600×1024 canvas is where the locked HTML reference frames live — the React port adapts fluidly via Tailwind breakpoints (sm 640 / md 768 / lg 1024 / xl 1280 / 2xl 1536).
 **Modal:** 1120 × 860.
 **Inspection sheet:** 420 × 1024 (right-docked).
 

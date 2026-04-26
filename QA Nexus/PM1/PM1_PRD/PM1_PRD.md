@@ -429,7 +429,7 @@ All MVP AI features must follow these controls:
 
 | ID | Requirement |
 |---|---|
-| NFR-001 | The product shall present core dashboard and workspace views with acceptable responsiveness for daily use on modern desktop browsers. |
+| NFR-001 | The product shall present core dashboard and workspace views with acceptable responsiveness for daily use on modern desktop browsers. **Strengthened (v8.1, post-T028 finding 2026-04-26):** All React-ported frames MUST be **fully responsive (mobile-first)** across viewports 320px → 1920px+. NO horizontal scroll at any viewport ≥ 320px. Standard Tailwind breakpoints (sm 640 / md 768 / lg 1024 / xl 1280 / 2xl 1536). Tap targets ≥ 44×44px (WCAG 2.5.5). Modals (Stage 1120×860, Edit 960×720, Picker 720×640, Confirm 480×360 per 01_SYSTEM.md §4.4) become full-screen Drawer sheets on mobile. The 41 locked HTML frames in PM1_UI_v2/ are **design references at 1600×1024 canvas size — NOT mandated widths**. Test minimum 320 / 768 / 1024 / 1440 / 1920 before commit. Enforced by `enforce-rwd.sh` PreToolUse hook (MS0-T034). |
 | NFR-002 | The product shall enforce role-based authorization on all project-scoped data access (RLS + NestJS guards). |
 | NFR-003 | The product shall maintain auditability for user actions and AI-assisted operations relevant to governance. |
 | NFR-004 | The product shall support secure storage of integration tokens and sensitive configuration (AES-256 encryption). |
