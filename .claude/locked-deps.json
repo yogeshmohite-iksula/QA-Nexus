@@ -1,0 +1,16 @@
+{
+  "_comment": "QA Nexus PM1 — locked major versions enforced by .claude/hooks/pre-tool-use/enforce-pm1-stack.sh. Source: PM1_PRD v8.1 §12.3 + kickoff §5. Edits to this file change what the hook will block. Do NOT bump majors without an ADR + Yogesh approval.",
+  "_version": "1.0 (MS0-T033, 2026-04-26)",
+  "next": 15,
+  "react": 19,
+  "react-dom": 19,
+  "tailwindcss": 4,
+  "@nestjs/core": 10,
+  "@nestjs/common": 10,
+  "@nestjs/platform-express": 10,
+  "@nestjs/platform-ws": 10,
+  "@nestjs/websockets": 10,
+  "prisma": 5,
+  "@prisma/client": 5,
+  "node": 20
+}

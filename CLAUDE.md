@@ -84,7 +84,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 - **PreToolUse Bash:** `block-dangerous.sh` — blocks `rm -rf`, `DROP TABLE`, `--force`, etc.
 - **PreToolUse Edit|Write:** `enforce-design-tokens.sh` — blocks non-whitelisted hex / Tailwind color classes / MD3 tokens in `apps/web/**/*.{ts,tsx,css}`
-- **PreToolUse Edit|Write:** `enforce-pm1-stack.sh` — blocks ban-list deps in `package.json` / `pnpm-lock.yaml`
+- **PreToolUse Edit|Write:** `enforce-pm1-stack.sh` — blocks ban-list deps in `package.json` / `pnpm-lock.yaml`; ALSO (MS0-T033) blocks major-version drift on locked deps per `.claude/locked-deps.json` (next=15, react=19, tailwindcss=4, @nestjs/\*=10, prisma=5, node>=20)
 - **PostToolUse \*:** `audit-log.sh` — appends one JSONL line per tool call to `.claude/audit.jsonl`
 - **UserPromptSubmit \*:** `load-binding-context.sh` — prepends a 7-line binding-context note to every Claude session
 
