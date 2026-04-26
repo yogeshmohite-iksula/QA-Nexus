@@ -37,13 +37,29 @@ export function PasswordStrengthCard({
   requirements = DEFAULT_REQUIREMENTS,
   className,
 }: PasswordStrengthCardProps) {
-  // Segment colors per F06b: s1=red, s2=amber, s3=teal, s4=teal (when filled).
+  // Segment colors per locked design (F06b "Good" + F06c "Strong"):
+  //   s1 = fail (red), s2 = warn (amber), s3 = primary (teal),
+  //   s4 = pass (green) when 4/4 is hit (Strong state, F06c).
+  // Empty segments fall back to overlay.
   const segColor = (i: number) => {
     if (i >= filledSegments) return 'bg-overlay';
     if (i === 0) return 'bg-fail';
     if (i === 1) return 'bg-warn';
-    return 'bg-primary';
+    if (i === 2) return 'bg-primary';
+    return 'bg-pass';
   };
+
+  // Level label color follows the dominant segment per locked F06c rule:
+  // Strong -> pass (green), Good -> primary (teal), Fair -> warn (amber),
+  // Weak -> fail (red). Keeps semantic parity with the meter.
+  const levelColor =
+    level === 'Strong'
+      ? 'text-pass'
+      : level === 'Good'
+        ? 'text-primary'
+        : level === 'Fair'
+          ? 'text-warn'
+          : 'text-fail';
 
   return (
     <div
@@ -55,7 +71,7 @@ export function PasswordStrengthCard({
           PASSWORD STRENGTH
         </span>
         <span
-          className="text-primary text-[12px] font-semibold"
+          className={cn('text-[12px] font-semibold', levelColor)}
           style={{
             fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
             fontVariantNumeric: 'tabular-nums',
