@@ -14,7 +14,7 @@
 | **Owner** | DevOps + Backend Lead |
 | **Duration** | **2 weeks** (2026-04-27 → 2026-05-10) |
 | **Team Size** | 3 FTE (1 DevOps/Backend Lead, 2 Backend) — reduced from 3 dedicated due to simpler stack |
-| **Estimated Effort** | **~290 hours** (33 tasks: 31 v8.0 + 1 R3 mitigation T032 + 1 hook-hardening T033) — down from v1.0's 480 hours / 35 tasks |
+| **Estimated Effort** | **~294 hours** (34 tasks: 31 v8.0 + 1 R3 mitigation T032 + 1 hook-hardening T033 + 1 RWD enforcement T034) — down from v1.0's 480 hours / 35 tasks |
 
 ---
 
@@ -127,7 +127,7 @@
 
 ---
 
-## 3. M0 Task List (v8.0 — 33 tasks, ~290 hours; +1 R3 add-on T032 + 1 hook-hardening T033, both patched 2026-04-26)
+## 3. M0 Task List (v8.0 — 34 tasks, ~294 hours; +1 R3 add-on T032 + 1 hook-hardening T033 + 1 RWD enforcement T034, all patched 2026-04-26)
 
 ### Phase 1: Bootstrapping (Days 1–3) — ~70 hours
 
@@ -176,6 +176,7 @@
 | **MS0-T031** | E2E smoke test | Playwright test: visit Cloudflare Pages URL → click Sign In → magic link in Resend mailbox → click → redirected to F07. Runs in CI on every PR. | P0 | 8 | DevOps |
 | **MS0-T032** | A1/A2/A4 golden-set seed (R3 mitigation add-on, parallel to T020–T031) | Build evaluation seed for the 3 PM1 agents. Deliverables: (a) 20 RET requirements with hand-graded "expected test cases" → A1 golden set; (b) 50 known-duplicate defect pairs from prior CART/RET sprints → A2 golden set; (c) 50 historical defects with manually-classified root-cause layers (L1 Stack / L2 Env / L3 Config / L4 Code / L5 Data) → A4 golden set. Storage: `apps/api/test/golden-sets/{a1,a2,a4}/*.json` + `apps/api/test/golden-sets/README.md`. Drives weekly DeepEval runs starting M3. Patched into v8.0 on 2026-04-26 per Phase 0.5 R3 mitigation; cheap insurance against late eval-failure surprises that would risk PM1_ERD §10 acceptance gates 2/3/4. | P1 | 16 | Yogesh + Akshay |
 | **MS0-T033** | Hook hardening — version-pin enforcement on locked deps | Upgrade `.claude/hooks/pre-tool-use/enforce-pm1-stack.sh` to enforce major-version constraints (not just package names) on the PM1 locked stack. Block Edit|Write to package.json / pnpm-lock.yaml when: (a) `next` major != 15, (b) `react` major != 19, (c) `tailwindcss` major != 4, (d) `@nestjs/core` major != 10, (e) `prisma` major != 5, (f) `engines.node` not matching `>=20`. Use `jq` + minimal semver compare. Rationale: original hook caught the **Next.js 16 scaffold slip on 2026-04-26 only at the dry-run stage** (post-scaffold, pre-install) — version-pin enforcement would have blocked at scaffold time. Patched into v8.0 on 2026-04-26 per the post-MS0-T002 finding. | P0 | 4 | DevOps |
+| **MS0-T034** | Hook hardening — RWD enforcement on layout containers | Add new `.claude/hooks/pre-tool-use/enforce-rwd.sh` to block fixed-pixel widths on layout containers in `apps/web/**/*.{ts,tsx}`. Block patterns: `w-\[(1[0-9]{3,}|[2-9][0-9]{2,})px\]` (any fixed width ≥200px on a layout container) and `max-w-\[1600px\]` (the canvas-width anti-pattern). Allow semantic content max-widths: `max-w-md`, `max-w-2xl`, `max-w-[480px]`, `max-w-[440px]` (form readability widths). Wire into `.claude/settings.json` PreToolUse Edit\|Write matcher alongside `enforce-design-tokens.sh` and `enforce-pm1-stack.sh`. Rationale: F06 + F06b initial ports used `w-[1600px]` + `w-[800px]` per locked HTML, causing horizontal scroll on Yogesh's 1440×900 MacBook (the binding worst case for the pilot fleet). Manual RWD refactor on 2026-04-26 fixed F06+F06b but **hook-level enforcement of CLAUDE.md Rule 12 prevents recurrence** on the remaining 39 frame ports (F07, F07b/c/d, F08, F08a/b/c, F09–F28). Done criteria: hook script + chmod +x + wired in settings.json + dry-run test that an attempted edit injecting `w-[1600px]` is BLOCKED with exit 2 + clear error message citing CLAUDE.md Rule 12. Patched into v8.0 on 2026-04-26 per the post-RWD-refactor finding. | P1 | 4 | DevOps |
 
 ---
 
