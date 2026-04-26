@@ -1,0 +1,25 @@
+# QA Nexus PM1 — Cloudflare Pages config for the web frontend (MS0-T010)
+#
+# Project: qa-nexus-web
+# Account: yogesh.mohite@iksula.com (Iksula corporate; account ID
+#          1ec3036cd3c742f44d00f013b344d221)
+# Production URL: https://qa-nexus-web.pages.dev/
+#
+# Mode: Direct Upload (NOT GitHub-connected). Deploys are triggered by
+# `pnpm deploy:web` from the repo root. GitHub auto-deploy on push to
+# main is a follow-up task -- requires authorizing the Cloudflare Pages
+# GitHub App on yogeshmohite-iksula/QA-Nexus via the CF dashboard UI.
+#
+# Build pipeline:
+#   1. `pnpm --filter web build` produces `apps/web/out/` via
+#      `output: 'export'` (see next.config.ts).
+#   2. `wrangler pages deploy apps/web/out --project-name=qa-nexus-web`
+#      uploads the static files to CF object storage.
+#   3. CF Pages serves them globally from edge -- $0/month at 8-user
+#      pilot scale (free tier: unlimited requests, 500 builds/month).
+#
+# Cost: $0/month. Pilot stays well within free-tier limits.
+
+name = "qa-nexus-web"
+pages_build_output_dir = "out"
+compatibility_date = "2026-04-26"

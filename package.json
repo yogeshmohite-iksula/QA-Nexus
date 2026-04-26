@@ -21,6 +21,7 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "test:e2e": "pnpm --filter web run test:e2e",
+    "deploy:web": "pnpm --filter web build && pnpm dlx wrangler@latest pages deploy apps/web/out --project-name=qa-nexus-web --branch=main --commit-dirty=true",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -48,6 +49,26 @@
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
-    ]
+    ],
+    "rules": {
+      "type-enum": [
+        2,
+        "always",
+        [
+          "build",
+          "chore",
+          "ci",
+          "docs",
+          "feat",
+          "fix",
+          "perf",
+          "refactor",
+          "revert",
+          "style",
+          "test",
+          "ops"
+        ]
+      ]
+    }
   }
 }
