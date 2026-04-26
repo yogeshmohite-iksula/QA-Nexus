@@ -9,7 +9,7 @@
    ---------------------------------------------------------------------- */
 
 :root {
-  /* Surface ladder (4 canvas values) */
+  /* Surface ladder (4 canvas values + borders) */
   --canvas: #0b0f17;
   --base: #111827;
   --raised: #1a2233;
@@ -23,10 +23,11 @@
   --text-tertiary: #8a94a6;
   --text-disabled: #94a3b8;
 
-  /* Brand — exactly 2 colors, no tertiary */
-  --primary: #2dd4bf; /* TEAL — system actions ONLY (Save/Approve/Generate/+Add) */
-  --secondary: #a78bfa; /* VIOLET — AI surfaces ONLY (agents, confidence, AI badges) */
-  --ai-accent: #c4b5fd; /* lighter violet — AI background tints, confidence-lane glow */
+  /* Brand -- exactly 2 colors, no tertiary */
+  --primary: #2dd4bf; /* TEAL -- system actions ONLY (Save/Approve/Generate/+Add) */
+  --primary-ink: #003732; /* dark teal -- button text on teal bg (F06 .btn-auth contrast) */
+  --secondary: #a78bfa; /* VIOLET -- AI surfaces ONLY (agents, confidence, AI badges) */
+  --ai-accent: #c4b5fd; /* lighter violet -- AI background tints, confidence-lane glow */
 
   /* Semantic */
   --pass: #34d399;
@@ -34,11 +35,12 @@
   --warn: #fbbf24;
   --info: #60a5fa;
 
-  /* F25 Prove mode — the ONLY frame that flips canvas */
+  /* F25 Prove mode -- the ONLY frame that flips canvas */
   --canvas-prove: #fafaf8; /* ivory; only used inside F25 Executive Dashboard */
 }
 
-/* Tailwind 4 @theme — exposes tokens as Tailwind utilities (bg-canvas, text-primary, etc.)
+/* Tailwind 4 @theme -- exposes tokens as Tailwind utilities (bg-canvas, text-primary, etc.).
+   Font variables come from next/font in app/layout.tsx; here we map them to Tailwind utility names.
    Do NOT add color utilities here that aren't in the locked palette above. */
 @theme inline {
   /* Surface */
@@ -66,17 +68,25 @@
   --color-warn: var(--warn);
   --color-info: var(--info);
 
-  /* Typography — exactly 4 stacks, no others (PM1_UI_v2 §3.3) */
-  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
-  --font-code: 'JetBrains Mono', ui-monospace, monospace;
+  /* Typography -- next/font CSS variables wired in app/layout.tsx */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-dm-sans), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 body {
   background: var(--canvas);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 22px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus ring -- matches PM1 design system: violet outline 2px + 2px offset */
+:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
