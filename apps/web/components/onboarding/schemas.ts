@@ -91,3 +91,49 @@ export const wizardDefaults: FounderWizardForm = {
     { email: '', role: 'qa-engineer' },
   ],
 };
+
+// ---------------------------------------------------------------------------
+// Display helpers + atomic-commit payload mapper.
+// ---------------------------------------------------------------------------
+
+export const inviteRoleLabel: Record<InviteRole, string> = {
+  lead: 'Lead',
+  'qa-engineer': 'QA Engineer',
+};
+
+export const dataSourceLabel: Record<DataSource, string> = {
+  jira: 'Connect Jira',
+  upload: 'Upload files',
+};
+
+/**
+ * Atomic-commit payload shape the backend will eventually accept
+ * (POST /onboarding/founder, gated behind MS0-T021 BetterAuth + MS0-T030.4).
+ * Field-name translation keeps FE-form ergonomics (`name`, `jiraKey`) while
+ * exposing a stable backend contract (`projectName`, `projectKey`).
+ */
+export interface FounderAtomicPayload {
+  projectName: string;
+  projectDescription?: string;
+  projectGlyph: GlyphId;
+  projectKey?: string;
+  source?: DataSource;
+  invites: Array<{ email: string; role: InviteRole }>;
+}
+
+/**
+ * Maps wizard form state to the atomic-commit payload. Empty invite rows
+ * are filtered out so the backend never sees blank emails.
+ */
+export function buildFounderAtomicPayload(form: FounderWizardForm): FounderAtomicPayload {
+  return {
+    projectName: form.name.trim(),
+    projectDescription: form.description?.trim() || undefined,
+    projectGlyph: form.glyph,
+    projectKey: form.jiraKey?.trim() || undefined,
+    source: form.source,
+    invites: form.invites
+      .filter((i) => i.email.trim().length > 0)
+      .map((i) => ({ email: i.email.trim(), role: i.role })),
+  };
+}

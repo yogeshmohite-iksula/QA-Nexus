@@ -20,7 +20,12 @@ import { WizardProgress } from './wizard-progress';
 import { StepProject } from './step-project';
 import { StepDataSource } from './step-data-source';
 import { StepTeamInvite } from './step-team-invite';
-import { founderWizardSchema, wizardDefaults, type FounderWizardForm } from './schemas';
+import {
+  buildFounderAtomicPayload,
+  founderWizardSchema,
+  wizardDefaults,
+  type FounderWizardForm,
+} from './schemas';
 
 type StepNum = 1 | 2 | 3;
 
@@ -76,18 +81,23 @@ export function FounderWizard() {
     const ok = await methods.trigger();
     if (!ok) return;
     const values = methods.getValues();
+    const payload = buildFounderAtomicPayload(values);
 
-    // TODO(M1, MS0-T021 + MS0-T020): atomic commit via BetterAuth + Prisma.
-    // For now, log only — backend wiring deferred per CHAT 2 brief.
-    // eslint-disable-next-line no-console
-    console.log('[F07] atomic commit (no-op):', values);
+    // Pattern A enforcement (PM1_PRD §F07):
+    //   - This handler ONLY logs deferred-flow markers. It MUST NOT issue
+    //     any network call: no fetch, no TanStack Query mutation, no
+    //     POST /onboarding/founder. Those land in MS0-T030.4 once
+    //     MS0-T021 (BetterAuth) provides a session.
+    //   - The data-source flow (Jira OAuth handshake / Upload modal)
+    //     fires AFTER the atomic commit succeeds — also in T030.4.
+    //
+    // Marker format: `pattern-a:deferred:<phase>` so log-grep tooling can
+    // verify no network side-effects shipped from FE in M0.
 
-    // TODO(M1) Pattern A: ONLY after the atomic commit above succeeds, trigger
-    // the data-source flow:
-    //   - if values.source === 'jira'   → start Jira OAuth handshake
-    //   - if values.source === 'upload' → open Upload modal
-    // eslint-disable-next-line no-console
-    console.log('[F07] TODO Pattern A: trigger data-source flow for', values.source);
+    console.info('pattern-a:deferred:atomic-commit', payload);
+    console.info('pattern-a:deferred:data-source-flow', {
+      source: payload.source ?? null,
+    });
   }, [methods]);
 
   return (
