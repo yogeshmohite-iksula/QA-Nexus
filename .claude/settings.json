@@ -124,7 +124,16 @@
 
       "Bash(node --version)",
       "Bash(npx --yes @nestjs/cli@10:*)",
-      "Bash(ruby -ryaml:*)"
+      "Bash(ruby -ryaml:*)",
+
+      "Ctx search:*",
+      "Ctx_search:*",
+      "Ctx index:*",
+      "Ctx list:*",
+      "Ctx read:*",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "mcp__plugin_context-mode_context-mode__ctx_index",
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index"
     ],
     "deny": [
       "Bash(rm -rf:*)",
