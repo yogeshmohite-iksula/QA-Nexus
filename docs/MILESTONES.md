@@ -8,10 +8,12 @@
 
 ## Milestone 0 — Infrastructure & Setup
 
-**Window:** 2026-04-27 → 2026-05-10 (2 weeks, ~270h + 16h R3 add-on, **3 FTE**)
-**Goal:** End-to-end deploy pipeline on free tiers; F06/F06b/F07 shells render; pilot users CANNOT use the system yet (only infra).
+**Window:** 2026-04-27 → 2026-05-10 (2 weeks, ~298h total = 270h v8.0 + 16h T032 R3 + 4h T033 hook + 4h T034 RWD + 4h T035 token-savings, **3 FTE**)
+**Goal:** End-to-end deploy pipeline on free tiers; F06/F06b/F06c/F07 shells render; pilot users CANNOT use the system yet (only infra).
 
-### Tasks (32 total — 31 from v8.0 + new T032 per R3)
+### Tasks (35 total — 31 from v8.0 + T032 R3 + T033 hook hardening + T034 RWD enforcement + T035 token-savings hook)
+
+> **Drift note (2026-04-27):** Phase 3 hardening tasks T033 (commit `661249c`) and T034 (commit `bfe44dc` backlog entry) were patched into `Milestone_M0_Setup_v8.md` on 2026-04-26. T035 was added 2026-04-27 per skill alignment audit P1.11 (BE chat owns implementation). Task count rolled 31 → 32 → 33 → 34 → 35; hours rolled 270 → 286 → 290 → 294 → 298.
 
 **Phase 1 Bootstrapping (Days 1–3, ~70h):**
 
@@ -22,7 +24,7 @@
 - MS0-T005 GitHub Actions CI (lint + typecheck + test + build, on PR + main)
 - MS0-T006 Pre-commit hooks (husky + lint-staged + commitlint)
 - MS0-T007 README + onboarding doc
-- MS0-T008 `.env.example` (DATABASE*URL, GROQ_API_KEY, GEMINI_API_KEY, RESEND_API_KEY, R2*_, BETTER*AUTH*_, JIRA*OAUTH*_, OTEL\__, BETTER_STACK_TOKEN)
+- MS0-T008 `.env.example` (DATABASE*URL, GROQ_API_KEY, GEMINI_API_KEY, RESEND_API_KEY, R2*_, BETTER*AUTH*_, JIRA*OAUTH*\_, OTEL\_\_, BETTER_STACK_TOKEN)
 - MS0-T009 Local dev with Docker Compose (Postgres 15 + pgvector for offline only; NOT prod)
 
 **Phase 2 Hosting (Days 4–6, ~60h):**
@@ -61,6 +63,17 @@
   - Deliverable C: 50 historical defects with manually-classified root-cause layers (L1–L5) → A4 golden set
   - Storage: `apps/api/test/golden-sets/{a1,a2,a4}/*.json` + `apps/api/test/golden-sets/README.md`
   - Drives weekly DeepEval runs starting M3 — early warning if eval scores drift below acceptance gates
+
+**Phase 4 Hardening (parallel to Phases 1–3 — patched 2026-04-26 / 2026-04-27 from real-build learnings):**
+
+- **MS0-T033 — Hook hardening: version-pin enforcement on locked deps** (~4h, P0, DevOps) — DONE (commit `661249c`).
+  Upgrade `.claude/hooks/pre-tool-use/enforce-pm1-stack.sh` to enforce major-version constraints on the locked stack (next 15, react 19, tailwindcss 4, @nestjs/\* 10, prisma 5, node ≥ 20). Block Edit|Write to package.json / pnpm-lock.yaml on mismatch. Rationale: Next 16.2.4 scaffold slip caught at dry-run only on 2026-04-26 — version-pin enforcement at the hook layer prevents recurrence.
+
+- **MS0-T034 — Hook hardening: RWD enforcement on layout containers** (~4h, P1, DevOps) — backlog entry committed (commit `bfe44dc`); implementation owned by FE chat (`feature/frontend-ports` worktree, P1.1).
+  Add new `.claude/hooks/pre-tool-use/enforce-rwd.sh` to block fixed-pixel widths in `apps/web/**/*.{ts,tsx}`. Pattern bans: `w-\[(1[0-9]{3,}|[2-9][0-9]{2,})px\]` (any fixed width ≥ 200px on layout containers) + `max-w-\[1600px\]` (canvas-width anti-pattern). Allow semantic content max-widths: `max-w-md`, `max-w-2xl`, `max-w-[480px]`, `max-w-[440px]`. Codifies CLAUDE.md Rule 12 at the hook layer so the remaining 38 frame ports cannot regress on RWD.
+
+- **MS0-T035 — Hook: token-savings tracker** (~4h, P1, DevOps) — backlog entry added 2026-04-27; implementation owned by BE chat (`feature/backend-wiring` worktree, P1.11).
+  Add new `.claude/hooks/post-tool-use/token-savings.sh`. Each tool call where memory-injection fires writes one JSONL line to `.claude/token-savings.jsonl`: `{"ts":"YYYY-MM-DDTHH:MM:SSZ","session":"<session-id>","action":"memory-inject","tokens_saved":N,"avg_per_call":N,"calls":N}`. Powers the `/token-savings` slash command (P1.3 main, commit `8cfeaba`) which surfaces last-7-days + cumulative + recommendation. Quantifies the value of the memory system + helps Yogesh decide when to run `/reorganize-memory`.
 
 ### Acceptance Criteria (19 from v8.0)
 
@@ -141,8 +154,8 @@ AC001 FE@CF Pages HTTPS + F06 renders · AC002 /health 200 + all subsystem pings
 ## Risky Assumptions to Validate Early (per Phase 0.5 confirmation)
 
 **R1 — Render free dyno cold-start vs NFR-003 (p95 latencies).**
-_Status:_ ACCEPTED. UptimeRobot 5-min keep-alive (MS0-T015 + AC009) is the locked mitigation per PM1_ERD §11 Q-PM1-13. **Added:** Better Stack alert if ping missed >10 min (wired in MS0-T019).
-_Owner:_ DevOps (M0).
+_Status:_ ACCEPTED. UptimeRobot 5-min keep-alive (MS0-T015 + AC009) is the locked mitigation per PM1*ERD §11 Q-PM1-13. **Added:** Better Stack alert if ping missed >10 min (wired in MS0-T019).
+\_Owner:* DevOps (M0).
 _Re-test:_ M5 pilot week — measure p95 first-request latency.
 
 **R2 — 8-user single-project pilot generalizes to other Iksula projects.**
