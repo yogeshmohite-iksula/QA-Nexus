@@ -38,5 +38,26 @@
         "hooks": [{ "type": "command", "command": ".claude/hooks/stop/update-docs-check.sh" }]
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(rm -r:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git restore --:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(DROP TABLE:*)",
+      "Bash(TRUNCATE:*)",
+      "Edit(QA Nexus/PM1/PM1_UI_v2/**)",
+      "Write(QA Nexus/PM1/PM1_UI_v2/**)",
+      "Edit(.env)",
+      "Write(.env)",
+      "Edit(apps/**/.env)",
+      "Write(apps/**/.env)"
+    ]
   }
 }
