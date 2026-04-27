@@ -1,0 +1,77 @@
+# .gitleaks.toml — secret-scanning rules for QA Nexus PM1
+#
+# Used by: .github/workflows/ci.yml (gitleaks job, MS0-T005).
+# Pairs with: .claude/hooks/pre-tool-use/check-secrets.sh (same patterns,
+#             enforced at author-time so secrets never reach a commit).
+# Spec: P1.5 of docs/audits/2026-04-27-skill-alignment-audit.md.
+
+title = "QA Nexus PM1 secret-scanning rules"
+
+# Inherit gitleaks' 200+ default rules (AWS, Azure, GitHub PATs, Slack,
+# Stripe, generic high-entropy, etc.) and layer PM1-specific rules on top.
+[extend]
+useDefault = true
+
+# ─────────────────────────────────────────────────────────────────────
+# PM1 provider keys (mirrors check-secrets.sh)
+# ─────────────────────────────────────────────────────────────────────
+
+[[rules]]
+id = "groq-api-key"
+description = "Groq API key (gsk_...)"
+regex = '''GROQ_API_KEY\s*=\s*"?gsk_[A-Za-z0-9]{20,}"?'''
+tags = ["key", "groq"]
+
+[[rules]]
+id = "google-gemini-api-key"
+description = "Google AI / Gemini API key (AIza...)"
+regex = '''(GEMINI_API_KEY|GOOGLE_API_KEY)\s*=\s*"?AIza[A-Za-z0-9_\-]{35,}"?'''
+tags = ["key", "google", "gemini"]
+
+[[rules]]
+id = "cloudflare-api-token"
+description = "Cloudflare API token (40+ char alphanumeric)"
+regex = '''CLOUDFLARE_API_TOKEN\s*=\s*"?[A-Za-z0-9_\-]{40,}"?'''
+tags = ["key", "cloudflare"]
+
+[[rules]]
+id = "betterauth-secret"
+description = "BetterAuth session-signing secret (32+ char base64)"
+regex = '''BETTERAUTH_SECRET\s*=\s*"?[A-Za-z0-9+/=]{32,}"?'''
+tags = ["key", "betterauth"]
+
+[[rules]]
+id = "resend-api-key"
+description = "Resend email API key (re_...)"
+regex = '''RESEND_API_KEY\s*=\s*"?re_[A-Za-z0-9_]{20,}"?'''
+tags = ["key", "resend"]
+
+[[rules]]
+id = "pem-private-key-block"
+description = "PEM-encoded private key block"
+regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----'''
+tags = ["key", "private-key"]
+
+# ─────────────────────────────────────────────────────────────────────
+# Allowlist — files allowed to contain pattern-matching strings
+# ─────────────────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Files allowed to contain pattern-matching placeholder strings"
+paths = [
+  '''(.*?)\.env\.example''',
+  '''docs/audits/.*''',
+  '''docs/SECURITY\.md''',
+  '''\.claude/memory/.*''',
+  '''\.claude/hooks/pre-tool-use/check-secrets\.sh''',
+  '''\.gitleaks\.toml''',
+  '''\.github/workflows/.*\.ya?ml''',
+]
+regexes = [
+  '''<your-[a-z\-]+>''',
+  '''REPLACE_ME''',
+  '''REPLACE-ME''',
+  '''EXAMPLE_KEY''',
+  '''gsk_fake[A-Za-z0-9]+''',
+  '''AIzaSyEXAMPLE[A-Za-z0-9_\-]+''',
+]
