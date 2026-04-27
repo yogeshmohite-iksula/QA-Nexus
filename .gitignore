@@ -65,6 +65,8 @@ e2e-results/
 
 # ───── Claude Code (project-local) ─────
 .claude/audit.jsonl
+.claude/preloads.jsonl
+.claude/token-savings.jsonl
 .claude/settings.local.json
 .claude/skill-feedback.json
 

@@ -12,6 +12,7 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
+          { "type": "command", "command": ".claude/hooks/pre-tool-use/check-secrets.sh" },
           { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-design-tokens.sh" },
           { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-pm1-stack.sh" }
         ]
@@ -21,6 +22,12 @@
       {
         "matcher": "*",
         "hooks": [{ "type": "command", "command": ".claude/hooks/post-tool-use/audit-log.sh" }]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/post-tool-use/report-token-savings.sh" }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -30,6 +37,36 @@
           { "type": "command", "command": ".claude/hooks/prompt-submit/load-binding-context.sh" }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/stop/update-docs-check.sh" },
+          { "type": "command", "command": ".claude/hooks/stop/cumulative-savings-report.sh" }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(rm -r:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git restore --:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(DROP TABLE:*)",
+      "Bash(TRUNCATE:*)",
+      "Edit(QA Nexus/PM1/PM1_UI_v2/**)",
+      "Write(QA Nexus/PM1/PM1_UI_v2/**)",
+      "Edit(.env)",
+      "Write(.env)",
+      "Edit(apps/**/.env)",
+      "Write(apps/**/.env)"
     ]
   }
 }
