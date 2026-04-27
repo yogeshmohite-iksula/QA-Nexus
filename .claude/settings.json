@@ -31,6 +31,12 @@
           { "type": "command", "command": ".claude/hooks/prompt-submit/load-binding-context.sh" }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [{ "type": "command", "command": ".claude/hooks/stop/update-docs-check.sh" }]
+      }
     ]
   }
 }
