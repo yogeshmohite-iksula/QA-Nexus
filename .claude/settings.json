@@ -133,7 +133,30 @@
       "Ctx read:*",
       "mcp__plugin_context-mode_context-mode__ctx_search",
       "mcp__plugin_context-mode_context-mode__ctx_index",
-      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index"
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+
+      "Bash(cd /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus-frontend && pnpm --filter web typecheck:*)",
+      "Bash(cd /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus-backend && pnpm --filter api typecheck:*)",
+      "Bash(curl -s -o /dev/null -w * --max-time * http://localhost:3000*:*)",
+      "Bash(curl -s -L -o /dev/null -w * --max-time * 'http://localhost:3000/*':*)",
+      "Bash(for i in 1 2 3 4 5 6 7 8 9 10; do *curl*localhost:3000*; done:*)",
+      "Bash(mkdir -p /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/docs/screenshots*:*)",
+      "Bash(mkdir -p /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/packages/shared*:*)",
+      "Bash(mkdir -p /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/api/prisma/migrations*:*)",
+      "Bash(git -C * status:*)",
+      "Bash(git -C * log:*)",
+      "Bash(git -C * diff:*)",
+      "Bash(git -C * branch:*)",
+      "Bash(git -C * fetch:*)",
+      "Bash(git -C * ls-files:*)",
+
+      "Write(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/.claude/commands/**)",
+      "Write(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/docs/screenshots/**)",
+      "Write(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/docs/parallel-work/**)",
+      "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/web/components/onboarding/**)",
+      "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/web/app/(onboarding)/**)",
+      "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/api/prisma/**)",
+      "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/packages/shared/**)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
