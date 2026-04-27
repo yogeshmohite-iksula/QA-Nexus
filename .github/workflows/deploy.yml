@@ -1,0 +1,43 @@
+name: Deploy
+
+# Spec: MS0-T005 + P1.7 of docs/audits/2026-04-27-skill-alignment-audit.md.
+# Triggered on every push to main (i.e., after a PR is merged).
+# Deploys apps/web to Cloudflare Pages (project `qa-nexus-web`, free tier).
+# apps/api lives on Render free Hobby with auto-deploy from main, so it is
+# NOT deployed from here — Render watches the repo directly.
+
+on:
+  push:
+    branches: [main]
+
+# Never cancel an in-flight production deploy.
+concurrency:
+  group: deploy-${{ github.workflow }}-main
+  cancel-in-progress: false
+
+jobs:
+  deploy-cf-pages:
+    name: deploy apps/web to Cloudflare Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web build
+      - name: Deploy to Cloudflare Pages
+        # Required GitHub repo secret: CLOUDFLARE_API_TOKEN (Pages:Edit scope)
+        # Optional secret: CLOUDFLARE_ACCOUNT_ID (newer wrangler auto-detects
+        # from the API token, but pinning is safer). Set both via:
+        #   gh secret set CLOUDFLARE_API_TOKEN  --body "$CLOUDFLARE_API_TOKEN"  -R yogeshmohite-iksula/QA-Nexus
+        #   gh secret set CLOUDFLARE_ACCOUNT_ID --body "$CLOUDFLARE_ACCOUNT_ID" -R yogeshmohite-iksula/QA-Nexus
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/web/out --project-name=qa-nexus-web --branch=main --commit-dirty=true
