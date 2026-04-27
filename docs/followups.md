@@ -53,7 +53,28 @@ Convention: append at top with `[YYYY-MM-DD]` header. Cross-link to commit SHAs 
 
 ---
 
-## [2026-04-27] (c) Lucide-react install decision
+## [2026-04-27] (c) Zod schema coupling — `packages/shared` ↔ `@hookform/resolvers/zod`
+
+**Context:** Surfaced during FE PR #5 (F07 Founder Onboarding) review. The 3-step wizard uses `react-hook-form` + `@hookform/resolvers/zod` to validate fields against `LoginRequestSchema`-style Zod schemas. Once `MS0-T004` lands `packages/shared` as the canonical Zod-schema home (BE↔FE contract per `apps/api` Rule "Every endpoint must have a corresponding Zod schema in `packages/shared`"), the FE will import those same schemas instead of the local copies it carries today.
+
+**The coupling risk:** `@hookform/resolvers/zod` peer-depends on a specific Zod major. If `packages/shared` upgrades Zod (e.g., 3.x → 4.x) without the FE simultaneously bumping `@hookform/resolvers`, the `zodResolver(schema)` call type-checks against a stale resolver shape and either (a) blows up at runtime with `zod.ZodError is not a constructor`-class issues, or (b) silently passes type validation but mis-parses fields. Tested today: works at Zod 3.23 + resolvers 3.9 (current), but no CI gate enforces the pairing.
+
+**Sub-bullet — actions to land alongside `MS0-T004`:**
+
+- Pin Zod in **root** `package.json` as a single `dependencies` entry (not in apps/web + apps/api + packages/shared independently). pnpm hoists, but explicit root pin is the contract.
+- Add Zod and `@hookform/resolvers` to `.claude/locked-deps.json` as a **paired-major** entry: `{ "zod": "3", "@hookform/resolvers": "3" }`. Update `enforce-pm1-stack.sh` to fail the Edit if one moves without the other.
+- Document in `apps/api/README.md` (or new `packages/shared/README.md` when created): "Zod major bumps require coordinated PR across api + web + shared + hookform/resolvers. No standalone Zod upgrade PRs."
+- Add a 1-line CI assertion in `.github/workflows/ci.yml`: `node -e "const z=require('zod/package.json').version.split('.')[0]; const r=require('@hookform/resolvers/package.json').peerDependencies.zod; if (!r.includes(z)) process.exit(1)"`
+
+**Owner:** BE chat (paired with `MS0-T004` packages/shared landing) + FE chat (verify `LoginRequestSchema`, `OnboardingStep1Schema`, etc. import from `@qa-nexus/shared` not local files).
+
+**ETA:** ~30 min once `MS0-T004` is in flight (5 min per task above; no new code, just contract + lock).
+
+**Cross-link:** see follow-up (a) ADR-002 — same "shared infrastructure has implicit version coupling" pattern as Prisma's `prisma/raw/` ↔ Prisma client major.
+
+---
+
+## [2026-04-27] (d) Lucide-react install decision
 
 **Context:** F06 / F06b / F06c / F07 all use inline SVGs for icons (eye toggle, arrow, checkmark, X). Each is ~5-15 lines of JSX. The skill default was to install `lucide-react` and use `<EyeIcon />` etc.; PM1 deferred this on Day 0 to avoid premature optimization.
 
@@ -76,7 +97,7 @@ Convention: append at top with `[YYYY-MM-DD]` header. Cross-link to commit SHAs 
 
 ---
 
-## [2026-04-27] (d) Bonus: missing `db:apply-raw` script — surfaced during PR #4 review
+## [2026-04-27] (e) Bonus: missing `db:apply-raw` script — surfaced during PR #4 review
 
 **Context:** BE chat's PR #4 added `apps/api/prisma/raw/init_rls_hnsw.sql` but did NOT add a `db:apply-raw` script in `apps/api/package.json`. Currently the file must be applied via the verbose `prisma db execute --file prisma/raw/init_rls_hnsw.sql --schema prisma/schema.prisma` command from the README/commit message.
 
