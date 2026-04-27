@@ -66,6 +66,13 @@ paths = [
   '''\.claude/hooks/pre-tool-use/check-secrets\.sh''',
   '''\.gitleaks\.toml''',
   '''\.github/workflows/.*\.ya?ml''',
+  # P1.14 (corrected) — vendored NestJS scaffold README contains a public
+  # shields.io badge URL with `?token=abc123def456` placeholder. Not a real
+  # secret. Earlier `regexes` entry matched the URL pattern, but gitleaks
+  # `regexes` field matches against the SECRET value (`abc123def456`),
+  # not the surrounding context — so the URL regex never fired. Path-based
+  # allowlist is the correct mechanism here.
+  '''apps/api/README\.md''',
 ]
 regexes = [
   '''<your-[a-z\-]+>''',
@@ -74,4 +81,7 @@ regexes = [
   '''EXAMPLE_KEY''',
   '''gsk_fake[A-Za-z0-9]+''',
   '''AIzaSyEXAMPLE[A-Za-z0-9_\-]+''',
+  # (URL-pattern allowlist removed — `regexes` matches the secret value,
+  #  not the surrounding URL. Replaced with the path-based allowlist below
+  #  in P1.14 (corrected).)
 ]

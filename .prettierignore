@@ -24,6 +24,8 @@ apps/api/node_modules/.prisma/
 pnpm-lock.yaml
 .claude/audit.jsonl
 .claude/settings.local.json
+# P1.14b — Claude Code transient worktrees (from /run-in-worktree etc.)
+.claude/worktrees/
 
 # ───── Model cache ─────
 .cache/
