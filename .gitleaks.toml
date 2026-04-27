@@ -74,4 +74,9 @@ regexes = [
   '''EXAMPLE_KEY''',
   '''gsk_fake[A-Za-z0-9]+''',
   '''AIzaSyEXAMPLE[A-Za-z0-9_\-]+''',
+  # P1.14 — false positive on the public NestJS scaffold README badge URL.
+  # `apps/api/README.md` line 5 ships the canonical CircleCI shields.io
+  # snippet `?token=abc123def456` from the NestJS starter, not a real key.
+  # Matches both the abc123def456 placeholder and any real shields.io token shape.
+  '''img\.shields\.io/circleci/build/github/nestjs/nest/master\?token=[A-Za-z0-9]+''',
 ]
