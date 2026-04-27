@@ -22,7 +22,7 @@
 - MS0-T005 GitHub Actions CI (lint + typecheck + test + build, on PR + main)
 - MS0-T006 Pre-commit hooks (husky + lint-staged + commitlint)
 - MS0-T007 README + onboarding doc
-- MS0-T008 `.env.example` (DATABASE*URL, GROQ_API_KEY, GEMINI_API_KEY, RESEND_API_KEY, R2*_, BETTER*AUTH*_, JIRA*OAUTH*_, OTEL\__, BETTER_STACK_TOKEN)
+- MS0-T008 `.env.example` (DATABASE*URL, GROQ_API_KEY, GEMINI_API_KEY, RESEND_API_KEY, R2*_, BETTER*AUTH*_, JIRA*OAUTH*\_, OTEL\_\_, BETTER_STACK_TOKEN)
 - MS0-T009 Local dev with Docker Compose (Postgres 15 + pgvector for offline only; NOT prod)
 
 **Phase 2 Hosting (Days 4–6, ~60h):**
@@ -61,6 +61,24 @@
   - Deliverable C: 50 historical defects with manually-classified root-cause layers (L1–L5) → A4 golden set
   - Storage: `apps/api/test/golden-sets/{a1,a2,a4}/*.json` + `apps/api/test/golden-sets/README.md`
   - Drives weekly DeepEval runs starting M3 — early warning if eval scores drift below acceptance gates
+
+- **MS0-T035 — Token-savings reporting + memory hygiene cron** (NEW, ~4h, P1, owner: DevOps)
+  - Source: P1.11 of `docs/audits/2026-04-27-skill-alignment-audit.md`. Makes the
+    memory-management ROI visible after every `git push` so the value of
+    `.claude/memory/` + `inject-memory.sh` + `load-binding-context.sh` is observable.
+  - Deliverable A: `.claude/hooks/post-tool-use/report-token-savings.sh` —
+    PostToolUse Bash hook gated on `^git push`; counts session-scoped fires of
+    inject-memory + load-binding-context + Skill activations from
+    `.claude/audit.jsonl` + `.claude/preloads.jsonl`; appends a per-session row to
+    `.claude/token-savings.jsonl` with cumulative; prints summary block to stdout.
+  - Deliverable B: `.claude/hooks/stop/cumulative-savings-report.sh` — Stop hook
+    that prints the cumulative footer (tokens × sessions × estimated $) at session end.
+  - Deliverable C: `.github/workflows/memory-reorg.yml` — weekly cron (Sat 20:30 UTC
+    = Sun 02:00 IST) + `workflow_dispatch`; placeholder reminder job for now,
+    automation deferred to PM2 (needs Claude Code auth in CI).
+  - Side-changes: patched `audit-log.sh` (added `session_id`) + `load-binding-context.sh`
+    (logs preload markers); added `.claude/preloads.jsonl` + `.claude/token-savings.jsonl`
+    to `.gitignore`.
 
 ### Acceptance Criteria (19 from v8.0)
 
@@ -141,8 +159,8 @@ AC001 FE@CF Pages HTTPS + F06 renders · AC002 /health 200 + all subsystem pings
 ## Risky Assumptions to Validate Early (per Phase 0.5 confirmation)
 
 **R1 — Render free dyno cold-start vs NFR-003 (p95 latencies).**
-_Status:_ ACCEPTED. UptimeRobot 5-min keep-alive (MS0-T015 + AC009) is the locked mitigation per PM1_ERD §11 Q-PM1-13. **Added:** Better Stack alert if ping missed >10 min (wired in MS0-T019).
-_Owner:_ DevOps (M0).
+_Status:_ ACCEPTED. UptimeRobot 5-min keep-alive (MS0-T015 + AC009) is the locked mitigation per PM1*ERD §11 Q-PM1-13. **Added:** Better Stack alert if ping missed >10 min (wired in MS0-T019).
+\_Owner:* DevOps (M0).
 _Re-test:_ M5 pilot week — measure p95 first-request latency.
 
 **R2 — 8-user single-project pilot generalizes to other Iksula projects.**

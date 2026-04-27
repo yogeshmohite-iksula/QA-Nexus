@@ -1,6 +1,14 @@
 #!/bin/bash
 # UserPromptSubmit * — prepend PM1 binding context to every Claude session.
 # Spec: kickoff §1.4. Reminds Claude what's binding before each user prompt.
+# 2026-04-27 (P1.11): also append a session-scoped marker to
+# .claude/preloads.jsonl so report-token-savings.sh can count fires.
+INPUT=$(cat 2>/dev/null || true)
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null)
+if [ -n "$SESSION_ID" ]; then
+  mkdir -p .claude
+  echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"event\":\"context_preload\",\"session_id\":\"$SESSION_ID\"}" >> .claude/preloads.jsonl
+fi
 cat <<'NOTE'
 === PM1 BINDING CONTEXT (load-binding-context hook) ===
 - BINDING SPECS: PM1_PRD v8.1 + PM1_ERD v2.1 (in QA Nexus/PM1/)

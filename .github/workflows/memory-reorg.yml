@@ -1,0 +1,46 @@
+name: Memory Reorganization (placeholder)
+
+# Spec: P1.11 PART 2 / MS0-T035 of docs/audits/2026-04-27-skill-alignment-audit.md.
+#
+# Currently a manual-trigger / scheduled-reminder placeholder. Full automation
+# requires Claude Code authentication in CI, which is deferred to PM2. For now
+# the cron schedule fires on its weekly cadence and the job emits a reminder
+# rather than actually invoking /reorganize-memory.
+#
+# When PM2 lands Claude-in-CI, replace the placeholder step with a real
+# `claude code` invocation that runs the /reorganize-memory slash command
+# against the .claude/memory/ tree and opens a PR with the diff.
+
+on:
+  schedule:
+    # Saturday 20:30 UTC = Sunday 02:00 IST.
+    # Pilot runs 7d/wk 10AM-10PM IST so weekend off-hours are safe.
+    - cron: "30 20 * * 6"
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+# Don't pile up if the previous reorg job is still running.
+concurrency:
+  group: memory-reorg
+  cancel-in-progress: false
+
+jobs:
+  reorganize:
+    name: weekly memory hygiene reminder (PM1 placeholder)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder reminder
+        run: |
+          echo "📅 Weekly memory hygiene reminder"
+          echo "================================="
+          echo
+          echo "This is a placeholder workflow per P1.11 / MS0-T035."
+          echo
+          echo "Full automation is deferred to PM2 — it requires Claude Code"
+          echo "authentication in CI which is out of scope for PM1."
+          echo
+          echo "For now, please run /reorganize-memory manually in your"
+          echo "Claude Code session at least once a week to keep .claude/memory/"
+          echo "files compact and accurate."
+          echo
+          echo "Last reminder fired at: $(date -u +%FT%TZ)"
