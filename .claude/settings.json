@@ -14,7 +14,8 @@
         "hooks": [
           { "type": "command", "command": ".claude/hooks/pre-tool-use/check-secrets.sh" },
           { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-design-tokens.sh" },
-          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-pm1-stack.sh" }
+          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-pm1-stack.sh" },
+          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-rwd.sh" }
         ]
       }
     ],
