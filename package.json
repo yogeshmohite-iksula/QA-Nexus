@@ -22,6 +22,13 @@
     "test": "pnpm -r run test",
     "test:e2e": "pnpm --filter web run test:e2e",
     "deploy:web": "pnpm --filter web build && pnpm dlx wrangler@latest pages deploy apps/web/out --project-name=qa-nexus-web --branch=main --commit-dirty=true",
+    "db:generate": "pnpm --filter api prisma:generate",
+    "db:format": "pnpm --filter api prisma:format",
+    "db:validate": "pnpm --filter api prisma:validate",
+    "db:migrate:dev": "pnpm --filter api prisma:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter api prisma:migrate:deploy",
+    "db:studio": "pnpm --filter api prisma:studio",
+    "db:seed": "pnpm --filter api prisma:seed",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -1,0 +1,751 @@
+// QA Nexus PM1 — Prisma schema
+// =============================================================================
+// Spec: PM1_ERD §3 (TB-001..TB-021) — see QA Nexus/PM1/PM1_ERD/PM1_ERD.md
+// Rules: .claude/rules/database.md (binding) + .claude/memory/tools/database.md
+// Task: MS0-T020 (Day 2). Migration deferred until Yogesh provisions Neon DB.
+//
+// Authoring decisions (documented in PR + docs/parallel-work/chat3-status-day2.md):
+//   1. Vector dim = 1024 (Qwen3-Embedding-0.6B), overriding ERD §5's stale
+//      vector(384) BGE-small. Per database.md (binding) + ERD §7 A2 (v2.0
+//      upgrade note). ERD §5 column tables are doc-bug to fix.
+//   2. Table names: plural snake_case (workspaces, users, ...) per
+//      database.md hard rule, mapped from PascalCase singular Prisma models
+//      via @@map.
+//   3. workspaces.created_by NULL initially to break the
+//      workspaces ↔ users circular FK; backfilled by seed script (§3.8
+//      Day-0 Workspace Bootstrap).
+//   4. audit_log + agent_run columns are NOT in ERD §5 ("auxiliary"). Designed
+//      from policy in database.md + CLAUDE.md Hard Rule 7. agent_run is a
+//      first-pass minimum; refine in M3 when A1/A2/A4 specs solidify.
+//   5. kb_documents.template_kind = text (not enum) — ERD doesn't enumerate
+//      the 12 PM1 templates. Enum-ify in M2 when KB templates land.
+//   6. BetterAuth integration deferred to MS0-T021. This schema defines users
+//      per ERD TB-002 (with password_hash); T021 will configure BetterAuth
+//      Postgres adapter to use this table OR add a parallel auth-shadow
+//      table — that's a T021 design call, not T020.
+//   7. Token-encryption columns (jira_connections.oauth_*_token_encrypted,
+//      llm_providers.api_key_encrypted) are plain `text` here. App-layer
+//      AES-GCM with BETTER_AUTH_SECRET is added in T013/T021. Vault is on
+//      kickoff §6 ban list — explicitly NOT used.
+//   8. RLS policies, HNSW indexes, audit_log triggers, pgvector extension
+//      are in apps/api/prisma/migrations/0_init_rls_hnsw/migration.sql
+//      because Prisma 5 cannot express them.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  Admin
+  Lead
+  QAEngineer
+  Stakeholder
+
+  @@map("user_role")
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  expired
+  revoked
+
+  @@map("invitation_status")
+}
+
+enum Priority {
+  P0
+  P1
+  P2
+  P3
+
+  @@map("priority")
+}
+
+enum RequirementStatus {
+  draft
+  active
+  done
+  archived
+
+  @@map("requirement_status")
+}
+
+enum RequirementSource {
+  manual
+  jira
+  upload
+
+  @@map("requirement_source")
+}
+
+enum TestCaseStatus {
+  ai_draft
+  manual_draft
+  reviewed
+  active
+  flaky
+  deprecated
+
+  @@map("test_case_status")
+}
+
+enum TestSuiteStatus {
+  healthy
+  warning
+  stale
+  archived
+
+  @@map("test_suite_status")
+}
+
+enum RunTrigger {
+  manual
+  webhook
+  cron
+
+  @@map("run_trigger")
+}
+
+enum TestRunStatus {
+  queued
+  running
+  passed
+  failed
+  blocked
+  aborted
+
+  @@map("test_run_status")
+}
+
+enum TestResultStatus {
+  passed
+  failed
+  blocked
+  skipped
+
+  @@map("test_result_status")
+}
+
+enum JiraAuthMethod {
+  oauth_3lo
+
+  @@map("jira_auth_method")
+}
+
+enum JiraConnectionStatus {
+  active
+  expired
+  revoked
+
+  @@map("jira_connection_status")
+}
+
+enum DefectStatus {
+  new
+  triaged
+  in_progress
+  resolved
+  verified
+  closed
+  reopened
+  blocked
+
+  @@map("defect_status")
+}
+
+enum LlmProviderKind {
+  groq
+  gemini
+  openrouter
+  cerebras
+  openai
+  anthropic
+  kimi
+  mistral
+  together
+  fireworks
+  custom_oai
+
+  @@map("llm_provider_kind")
+}
+
+enum LlmProviderStatus {
+  connected
+  error
+  unverified
+
+  @@map("llm_provider_status")
+}
+
+enum AgentKind {
+  A1
+  A2
+  A4
+
+  @@map("agent_kind")
+}
+
+enum AgentRole {
+  primary
+  long_context
+  fallback
+  fast_layer
+
+  @@map("agent_role")
+}
+
+enum AgentRunStatus {
+  queued
+  running
+  complete
+  failed
+
+  @@map("agent_run_status")
+}
+
+// =============================================================================
+// CORE TABLES (TB-001..TB-021 + auxiliary audit_log, agent_run)
+// =============================================================================
+
+/// TB-001 — top-level tenant container ("Iksula" for the pilot).
+/// NOT RLS-scoped (it IS the workspace).
+model Workspace {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  // Nullable to break the workspaces ↔ users circular FK; backfilled by seed.
+  createdBy String?  @map("created_by") @db.Uuid
+  settings  Json     @default("{}") @db.JsonB
+
+  creator               User?                  @relation("WorkspaceCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  users                 User[]                 @relation("WorkspaceUsers")
+  projects              Project[]
+  invitations           UserInvitation[]
+  llmProviders          LlmProvider[]
+  agentModelAssignments AgentModelAssignment[]
+  auditLogs             AuditLog[]
+  agentRuns             AgentRun[]
+
+  @@map("workspaces")
+}
+
+/// TB-002 — individual account (8 named pilot users).
+/// Has workspace_id FK but is RLS-exempt (top-level lookup).
+model User {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  email               String    @unique
+  displayName         String    @map("display_name")
+  role                UserRole
+  organizationalLabel String?   @map("organizational_label")
+  passwordHash        String    @map("password_hash") // argon2id
+  activatedAt         DateTime? @map("activated_at") @db.Timestamptz(6)
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace               Workspace              @relation("WorkspaceUsers", fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspacesCreated       Workspace[]            @relation("WorkspaceCreator")
+  projectsCreated         Project[]              @relation("ProjectCreator")
+  projectMemberships      ProjectMember[]
+  invitationsSent         UserInvitation[]       @relation("InvitedBy")
+  requirementsCreated     Requirement[]
+  testCasesCreated        TestCase[]
+  testSuitesOwned         TestSuite[]
+  testRunsTriggered       TestRun[]              @relation("TestRunTriggeredBy")
+  defectsAssigned         Defect[]               @relation("DefectAssignee")
+  kbDocumentsAuthored     KbDocument[]
+  llmProvidersCreated     LlmProvider[]
+  agentAssignmentsCreated AgentModelAssignment[]
+  auditActions            AuditLog[]
+
+  @@index([workspaceId])
+  @@map("users")
+}
+
+/// TB-003 — a QA project within a workspace ("Iksula Returns", key "RET").
+/// RLS-scoped via workspace_id.
+model Project {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  key         String
+  name        String
+  description String?
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator         User             @relation("ProjectCreator", fields: [createdBy], references: [id])
+  members         ProjectMember[]
+  requirements    Requirement[]
+  testCases       TestCase[]
+  testSuites      TestSuite[]
+  testRuns        TestRun[]
+  jiraConnections JiraConnection[]
+  defects         Defect[]
+  kbDocuments     KbDocument[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+/// TB-004 — per-project user assignment with optional role override.
+/// RLS via parent project.
+model ProjectMember {
+  projectId    String    @map("project_id") @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  roleOverride UserRole? @map("role_override")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+/// TB-005 — pending magic-link invites + password resets.
+/// RLS via workspace_id.
+model UserInvitation {
+  id               String           @id @default(uuid()) @db.Uuid
+  workspaceId      String           @map("workspace_id") @db.Uuid
+  invitedEmail     String           @map("invited_email")
+  role             UserRole
+  projectScopeJson Json             @default("[]") @map("project_scope_json") @db.JsonB
+  invitedBy        String           @map("invited_by") @db.Uuid
+  tokenHash        String           @map("token_hash")
+  expiresAt        DateTime         @map("expires_at") @db.Timestamptz(6)
+  status           InvitationStatus @default(pending)
+  acceptedAt       DateTime?        @map("accepted_at") @db.Timestamptz(6)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter   User      @relation("InvitedBy", fields: [invitedBy], references: [id])
+
+  @@index([workspaceId])
+  @@index([invitedEmail])
+  @@map("user_invitations")
+}
+
+/// TB-006 — imported/manual requirements (Jira RET-### or upload REQ-###).
+/// RLS via project.
+model Requirement {
+  id          String            @id @default(uuid()) @db.Uuid
+  projectId   String            @map("project_id") @db.Uuid
+  key         String
+  title       String
+  description String
+  epicKey     String?           @map("epic_key")
+  priority    Priority
+  status      RequirementStatus @default(draft)
+  sprint      String?
+  source      RequirementSource @default(manual)
+  sourceRef   String?           @map("source_ref")
+  createdBy   String            @map("created_by") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator       User           @relation(fields: [createdBy], references: [id])
+  testCaseLinks TestCaseLink[]
+  jiraIssues    JiraIssue[]    @relation("JiraIssueRequirement")
+
+  @@unique([projectId, key])
+  @@index([projectId])
+  @@map("requirements")
+}
+
+/// TB-007 — test case records (AI-generated or manual).
+/// RLS via project. Has 1024-dim vector embedding (HNSW index in raw SQL).
+model TestCase {
+  id               String                       @id @default(uuid()) @db.Uuid
+  projectId        String                       @map("project_id") @db.Uuid
+  key              String
+  title            String
+  preconditions    String                       @default("")
+  stepsJson        Json                         @default("[]") @map("steps_json") @db.JsonB
+  expectedResult   String                       @map("expected_result")
+  priority         Priority
+  status           TestCaseStatus               @default(ai_draft)
+  confidenceScore  Float?                       @map("confidence_score")
+  aiProvenanceJson Json?                        @map("ai_provenance_json") @db.JsonB
+  /// 1024-dim Qwen3-Embedding-0.6B vector. HNSW (vector_cosine_ops, m=16,
+  /// ef_construction=64) index added in raw SQL migration.
+  embedding        Unsupported("vector(1024)")?
+  createdBy        String                       @map("created_by") @db.Uuid
+  createdAt        DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator          User              @relation(fields: [createdBy], references: [id])
+  requirementLinks TestCaseLink[]
+  suiteMembers     TestSuiteMember[]
+  runResults       TestRunResult[]
+  defectsTriggered Defect[]          @relation("DefectTriggeredByTestCase")
+
+  @@unique([projectId, key])
+  @@index([projectId])
+  @@map("test_cases")
+}
+
+/// TB-008 — M:N join: test_case ↔ requirement.
+/// RLS transitive via parents.
+model TestCaseLink {
+  testCaseId    String @map("test_case_id") @db.Uuid
+  requirementId String @map("requirement_id") @db.Uuid
+
+  testCase    TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  requirement Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@id([testCaseId, requirementId])
+  @@index([requirementId])
+  @@map("test_case_links")
+}
+
+/// TB-009 — named bundle of test cases.
+/// RLS via project.
+model TestSuite {
+  id          String          @id @default(uuid()) @db.Uuid
+  projectId   String          @map("project_id") @db.Uuid
+  name        String
+  description String          @default("")
+  ownerId     String          @map("owner_id") @db.Uuid
+  status      TestSuiteStatus @default(healthy)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  project Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner   User              @relation(fields: [ownerId], references: [id])
+  members TestSuiteMember[]
+  runs    TestRun[]
+
+  @@index([projectId])
+  @@map("test_suites")
+}
+
+/// TB-010 — ordered M:N join: suite ↔ test_case.
+/// RLS transitive via parents.
+model TestSuiteMember {
+  suiteId      String @map("suite_id") @db.Uuid
+  testCaseId   String @map("test_case_id") @db.Uuid
+  displayOrder Int    @map("display_order")
+
+  suite    TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  testCase TestCase  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@id([suiteId, testCaseId])
+  @@index([testCaseId])
+  @@map("test_suite_members")
+}
+
+/// TB-011 — a single execution of a suite/cases.
+/// RLS via project.
+model TestRun {
+  id                String        @id @default(uuid()) @db.Uuid
+  projectId         String        @map("project_id") @db.Uuid
+  suiteId           String?       @map("suite_id") @db.Uuid
+  name              String
+  triggeredBy       RunTrigger    @map("triggered_by")
+  triggeredByUserId String?       @map("triggered_by_user") @db.Uuid
+  status            TestRunStatus @default(queued)
+  startedAt         DateTime?     @map("started_at") @db.Timestamptz(6)
+  completedAt       DateTime?     @map("completed_at") @db.Timestamptz(6)
+  environment       String
+
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite            TestSuite?      @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  triggeredByUser  User?           @relation("TestRunTriggeredBy", fields: [triggeredByUserId], references: [id])
+  results          TestRunResult[]
+  defectsTriggered Defect[]        @relation("DefectTriggeredByRun")
+
+  @@index([projectId])
+  @@index([suiteId])
+  @@map("test_runs")
+}
+
+/// TB-012 — per-case outcome within a run.
+/// RLS transitive via parent run.
+model TestRunResult {
+  id             String           @id @default(uuid()) @db.Uuid
+  runId          String           @map("run_id") @db.Uuid
+  testCaseId     String           @map("test_case_id") @db.Uuid
+  status         TestResultStatus
+  durationMs     Int              @map("duration_ms")
+  evidenceUri    String?          @map("evidence_uri")
+  failureMessage String?          @map("failure_message")
+  stackTrace     String?          @map("stack_trace")
+
+  run      TestRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([testCaseId])
+  @@map("test_run_results")
+}
+
+/// TB-013 — OAuth 3LO state for an Iksula Atlassian project.
+/// RLS via project. PM1 = OAuth 3LO only; PM3 adds api_token / pat / custom_oauth.
+/// Token columns hold AES-GCM-encrypted payloads (encrypt at app layer with
+/// BETTER_AUTH_SECRET — Vault is on the ban-list).
+model JiraConnection {
+  id                         String               @id @default(uuid()) @db.Uuid
+  projectId                  String               @map("project_id") @db.Uuid
+  authMethod                 JiraAuthMethod       @default(oauth_3lo) @map("auth_method")
+  jiraBaseUrl                String               @map("jira_base_url")
+  oauthAccessTokenEncrypted  String               @map("oauth_access_token_encrypted")
+  oauthRefreshTokenEncrypted String               @map("oauth_refresh_token_encrypted")
+  oauthExpiresAt             DateTime             @map("oauth_expires_at") @db.Timestamptz(6)
+  status                     JiraConnectionStatus @default(active)
+  lastSyncAt                 DateTime?            @map("last_sync_at") @db.Timestamptz(6)
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues  JiraIssue[]
+
+  @@index([projectId])
+  @@map("jira_connections")
+}
+
+/// TB-014 — mirror of issues sync'd from Jira.
+/// RLS transitive via parent connection → project.
+model JiraIssue {
+  id                  String   @id @default(uuid()) @db.Uuid
+  jiraConnectionId    String   @map("jira_connection_id") @db.Uuid
+  jiraKey             String   @map("jira_key")
+  issueType           String   @map("issue_type")
+  status              String
+  linkedDefectId      String?  @map("linked_defect_id") @db.Uuid
+  linkedRequirementId String?  @map("linked_requirement_id") @db.Uuid
+  lastSyncedAt        DateTime @map("last_synced_at") @db.Timestamptz(6)
+
+  jiraConnection    JiraConnection @relation(fields: [jiraConnectionId], references: [id], onDelete: Cascade)
+  linkedDefect      Defect?        @relation("JiraIssueDefect", fields: [linkedDefectId], references: [id], onDelete: SetNull)
+  linkedRequirement Requirement?   @relation("JiraIssueRequirement", fields: [linkedRequirementId], references: [id], onDelete: SetNull)
+
+  @@unique([jiraConnectionId, jiraKey])
+  @@index([linkedDefectId])
+  @@index([linkedRequirementId])
+  @@map("jira_issues")
+}
+
+/// TB-015 — bug records (PM1 defect lifecycle).
+/// RLS via project.
+model Defect {
+  id                    String       @id @default(uuid()) @db.Uuid
+  projectId             String       @map("project_id") @db.Uuid
+  key                   String
+  title                 String
+  description           String
+  severity              Priority
+  status                DefectStatus @default(new)
+  triggeredByRunId      String?      @map("triggered_by_run_id") @db.Uuid
+  triggeredByTestCaseId String?      @map("triggered_by_test_case_id") @db.Uuid
+  assigneeId            String?      @map("assignee_id") @db.Uuid
+  jiraIssueId           String?      @map("jira_issue_id") @db.Uuid
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  resolvedAt            DateTime?    @map("resolved_at") @db.Timestamptz(6)
+
+  project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggeredByRun      TestRun?    @relation("DefectTriggeredByRun", fields: [triggeredByRunId], references: [id], onDelete: SetNull)
+  triggeredByTestCase TestCase?   @relation("DefectTriggeredByTestCase", fields: [triggeredByTestCaseId], references: [id], onDelete: SetNull)
+  assignee            User?       @relation("DefectAssignee", fields: [assigneeId], references: [id])
+  rcaReports          RcaReport[]
+  jiraIssues          JiraIssue[] @relation("JiraIssueDefect")
+
+  @@unique([projectId, key])
+  @@index([projectId])
+  @@index([assigneeId])
+  @@map("defects")
+}
+
+/// TB-016 — 5-Layer RCA output for a defect (A4 agent).
+/// RLS transitive via parent defect.
+model RcaReport {
+  id                  String   @id @default(uuid()) @db.Uuid
+  defectId            String   @map("defect_id") @db.Uuid
+  layer1StackJson     Json     @map("layer1_stack_json") @db.JsonB
+  layer2EnvJson       Json     @map("layer2_env_json") @db.JsonB
+  layer3ConfigJson    Json     @map("layer3_config_json") @db.JsonB
+  layer4CodeJson      Json     @map("layer4_code_json") @db.JsonB
+  layer5DataJson      Json     @map("layer5_data_json") @db.JsonB
+  topHypothesis       String   @map("top_hypothesis")
+  createdByAgentRunId String   @map("created_by_agent_run_id") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  defect            Defect   @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  createdByAgentRun AgentRun @relation(fields: [createdByAgentRunId], references: [id])
+
+  @@index([defectId])
+  @@map("rca_reports")
+}
+
+/// TB-017 — knowledge base documents (TipTap markdown body).
+/// RLS via project; null project_id = workspace-scoped.
+/// template_kind kept as text until M2 enumerates the 12 PM1 templates.
+model KbDocument {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String?  @map("project_id") @db.Uuid
+  title        String
+  bodyMd       String   @map("body_md")
+  templateKind String   @map("template_kind")
+  pinned       Boolean  @default(false)
+  authorId     String   @map("author_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  project Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id])
+  chunks  KbChunk[]
+
+  @@index([projectId])
+  @@map("kb_documents")
+}
+
+/// TB-018 — chunked KB content for semantic search.
+/// RLS transitive via parent document. 1024-dim vector embedding.
+model KbChunk {
+  id           String                       @id @default(uuid()) @db.Uuid
+  documentId   String                       @map("document_id") @db.Uuid
+  chunkText    String                       @map("chunk_text")
+  /// 1024-dim Qwen3-Embedding-0.6B vector. HNSW index in raw SQL migration.
+  embedding    Unsupported("vector(1024)")?
+  chunkIndex   Int                          @map("chunk_index")
+  metadataJson Json                         @default("{}") @map("metadata_json") @db.JsonB
+
+  document KbDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@map("kb_chunks")
+}
+
+/// TB-019 — per-workspace registered LLM provider credentials (F28m1).
+/// RLS via workspace_id (Admin-only visibility per ERD §3 L940).
+/// api_key_encrypted holds AES-GCM-encrypted payload (BETTER_AUTH_SECRET).
+model LlmProvider {
+  id              String            @id @default(uuid()) @db.Uuid
+  workspaceId     String            @map("workspace_id") @db.Uuid
+  providerKind    LlmProviderKind   @map("provider_kind")
+  displayName     String            @map("display_name")
+  apiKeyEncrypted String            @map("api_key_encrypted")
+  endpointUrl     String            @map("endpoint_url")
+  extraConfigJson Json              @default("{}") @map("extra_config_json") @db.JsonB
+  status          LlmProviderStatus @default(unverified)
+  lastTestAt      DateTime?         @map("last_test_at") @db.Timestamptz(6)
+  lastTestResult  Json?             @map("last_test_result") @db.JsonB
+  createdBy       String            @map("created_by") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator   User               @relation(fields: [createdBy], references: [id])
+  models    LlmProviderModel[]
+
+  @@index([workspaceId])
+  @@map("llm_providers")
+}
+
+/// TB-020 — catalog of fetched models per provider.
+/// RLS transitive via parent.
+model LlmProviderModel {
+  id                  String   @id @default(uuid()) @db.Uuid
+  providerId          String   @map("provider_id") @db.Uuid
+  modelId             String   @map("model_id")
+  displayName         String   @map("display_name")
+  capabilityJson      Json     @default("{}") @map("capability_json") @db.JsonB
+  enabledForWorkspace Boolean  @default(true) @map("enabled_for_workspace")
+  fetchedAt           DateTime @default(now()) @map("fetched_at") @db.Timestamptz(6)
+
+  provider         LlmProvider            @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  agentAssignments AgentModelAssignment[]
+
+  @@unique([providerId, modelId])
+  @@index([providerId])
+  @@map("llm_provider_models")
+}
+
+/// TB-021 — maps an agent×role → a specific model.
+/// RLS via workspace_id (Admin + Lead per ERD §3 L940).
+model AgentModelAssignment {
+  id                      String    @id @default(uuid()) @db.Uuid
+  workspaceId             String    @map("workspace_id") @db.Uuid
+  agentKind               AgentKind @map("agent_kind")
+  role                    AgentRole
+  modelPk                 String    @map("model_pk") @db.Uuid
+  activationThresholdJson Json?     @map("activation_threshold_json") @db.JsonB
+  createdBy               String    @map("created_by") @db.Uuid
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  model     LlmProviderModel @relation(fields: [modelPk], references: [id], onDelete: Restrict)
+  creator   User             @relation(fields: [createdBy], references: [id])
+
+  @@unique([workspaceId, agentKind, role])
+  @@index([workspaceId])
+  @@map("agent_model_assignments")
+}
+
+// =============================================================================
+// AUXILIARY TABLES (not in ERD §5 — designed from policy)
+// =============================================================================
+
+/// auxiliary — every A1/A2/A4 invocation. ERD describes intent ("status,
+/// latency, eval result, runId") but no column list. First-pass minimum;
+/// refine in M3 when agent specs solidify.
+model AgentRun {
+  id          String         @id @default(uuid()) @db.Uuid
+  workspaceId String         @map("workspace_id") @db.Uuid
+  agentKind   AgentKind      @map("agent_kind")
+  status      AgentRunStatus @default(queued)
+  startedAt   DateTime?      @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime?      @map("completed_at") @db.Timestamptz(6)
+  durationMs  Int?           @map("duration_ms")
+  evalResult  Json?          @map("eval_result") @db.JsonB
+  errorClass  String?        @map("error_class")
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rcaReports RcaReport[]
+
+  @@index([workspaceId])
+  @@index([agentKind, status])
+  @@map("agent_runs")
+}
+
+/// auxiliary — HMAC-SHA256 chained immutable rows (visible in F28).
+/// NOT RLS-scoped; admin-only visibility enforced at app layer.
+/// Append-only via REVOKE UPDATE,DELETE in raw SQL migration.
+/// Genesis row: prev_hash = '0' * 64.
+/// this_hash = HMAC_SHA256(BETTERAUTH_SECRET, prev_hash || row_payload_json).
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  actorId     String?  @map("actor_id") @db.Uuid // nullable for system actions
+  entityType  String   @map("entity_type") // "test_case", "defect", ...
+  entityId    String?  @map("entity_id") @db.Uuid
+  action      String // "created", "updated", "deleted", "redacted", ...
+  payload     Json     @db.JsonB
+  prevHash    String   @map("prev_hash") @db.Char(64)
+  thisHash    String   @map("this_hash") @db.Char(64)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  actor     User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_log")
+}
