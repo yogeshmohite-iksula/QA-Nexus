@@ -116,7 +116,7 @@ Hook wiring: `.claude/settings.json`. Permission grants: `.claude/settings.local
 - Cite sources (cite §X of PM1_PRD or PM1_ERD when basing decisions on them).
 - No "let me think out loud" detours. Decide, act, summarize.
 - Run the relevant validation gate after each task, report result before moving on.
-- **End-of-day status at 17:00 IST:** 5 lines — completed today, in flight, blockers, tomorrow, free-tier quota usage.
+- **End-of-day status at 17:00 IST:** 5 sections per kickoff §5 (completed today, in flight, blockers, tomorrow, free-tier quota usage). **Canonical location: `docs/eod-reports/YYYY-MM-DD-day-N.md`** (filename convention + template in `docs/eod-reports/README.md`, established 2026-04-27 per audit P1.10). Commit + push every EOD as `docs(eod): post Day N EOD report`.
 
 ## Compact instructions
 

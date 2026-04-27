@@ -8,10 +8,12 @@
 
 ## Milestone 0 — Infrastructure & Setup
 
-**Window:** 2026-04-27 → 2026-05-10 (2 weeks, ~270h + 16h R3 add-on, **3 FTE**)
-**Goal:** End-to-end deploy pipeline on free tiers; F06/F06b/F07 shells render; pilot users CANNOT use the system yet (only infra).
+**Window:** 2026-04-27 → 2026-05-10 (2 weeks, ~298h total = 270h v8.0 + 16h T032 R3 + 4h T033 hook + 4h T034 RWD + 4h T035 token-savings, **3 FTE**)
+**Goal:** End-to-end deploy pipeline on free tiers; F06/F06b/F06c/F07 shells render; pilot users CANNOT use the system yet (only infra).
 
-### Tasks (32 total — 31 from v8.0 + new T032 per R3)
+### Tasks (35 total — 31 from v8.0 + T032 R3 + T033 hook hardening + T034 RWD enforcement + T035 token-savings hook)
+
+> **Drift note (2026-04-27):** Phase 3 hardening tasks T033 (commit `661249c`) and T034 (commit `bfe44dc` backlog entry) were patched into `Milestone_M0_Setup_v8.md` on 2026-04-26. T035 was added 2026-04-27 per skill alignment audit P1.11 (BE chat owns implementation). Task count rolled 31 → 32 → 33 → 34 → 35; hours rolled 270 → 286 → 290 → 294 → 298.
 
 **Phase 1 Bootstrapping (Days 1–3, ~70h):**
 
@@ -62,23 +64,20 @@
   - Storage: `apps/api/test/golden-sets/{a1,a2,a4}/*.json` + `apps/api/test/golden-sets/README.md`
   - Drives weekly DeepEval runs starting M3 — early warning if eval scores drift below acceptance gates
 
-- **MS0-T035 — Token-savings reporting + memory hygiene cron** (NEW, ~4h, P1, owner: DevOps)
-  - Source: P1.11 of `docs/audits/2026-04-27-skill-alignment-audit.md`. Makes the
-    memory-management ROI visible after every `git push` so the value of
-    `.claude/memory/` + `inject-memory.sh` + `load-binding-context.sh` is observable.
-  - Deliverable A: `.claude/hooks/post-tool-use/report-token-savings.sh` —
-    PostToolUse Bash hook gated on `^git push`; counts session-scoped fires of
-    inject-memory + load-binding-context + Skill activations from
-    `.claude/audit.jsonl` + `.claude/preloads.jsonl`; appends a per-session row to
-    `.claude/token-savings.jsonl` with cumulative; prints summary block to stdout.
-  - Deliverable B: `.claude/hooks/stop/cumulative-savings-report.sh` — Stop hook
-    that prints the cumulative footer (tokens × sessions × estimated $) at session end.
-  - Deliverable C: `.github/workflows/memory-reorg.yml` — weekly cron (Sat 20:30 UTC
-    = Sun 02:00 IST) + `workflow_dispatch`; placeholder reminder job for now,
-    automation deferred to PM2 (needs Claude Code auth in CI).
-  - Side-changes: patched `audit-log.sh` (added `session_id`) + `load-binding-context.sh`
-    (logs preload markers); added `.claude/preloads.jsonl` + `.claude/token-savings.jsonl`
-    to `.gitignore`.
+**Phase 4 Hardening (parallel to Phases 1–3 — patched 2026-04-26 / 2026-04-27 from real-build learnings):**
+
+- **MS0-T033 — Hook hardening: version-pin enforcement on locked deps** (~4h, P0, DevOps) — DONE (commit `661249c`).
+  Upgrade `.claude/hooks/pre-tool-use/enforce-pm1-stack.sh` to enforce major-version constraints on the locked stack (next 15, react 19, tailwindcss 4, @nestjs/\* 10, prisma 5, node ≥ 20). Block Edit|Write to package.json / pnpm-lock.yaml on mismatch. Rationale: Next 16.2.4 scaffold slip caught at dry-run only on 2026-04-26 — version-pin enforcement at the hook layer prevents recurrence.
+
+- **MS0-T034 — Hook hardening: RWD enforcement on layout containers** (~4h, P1, DevOps) — DONE (commit `d350a7a` on `feature/frontend-ports`, awaiting FE PR merge).
+  New `.claude/hooks/pre-tool-use/enforce-rwd.sh` blocks fixed-pixel widths in `apps/web/**/*.{ts,tsx}`. Pattern bans: `w-\[(1[0-9]{3,}|[2-9][0-9]{2,})px\]` (any fixed width ≥ 200px on layout containers) + `max-w-\[1600px\]` (canvas-width anti-pattern). Allow semantic content max-widths: `max-w-md`, `max-w-2xl`, `max-w-[480px]`, `max-w-[440px]`. Codifies CLAUDE.md Rule 12 at the hook layer so the remaining 38 frame ports cannot regress on RWD.
+
+- **MS0-T035 — Token-savings reporting + memory hygiene cron** (~4h, P1, DevOps) — DONE (commit `63512f2` on `feature/backend-wiring`, awaiting BE PR merge).
+  Source: P1.11 of `docs/audits/2026-04-27-skill-alignment-audit.md`. Makes the memory-management ROI visible after every `git push` so the value of `.claude/memory/` + `inject-memory.sh` + `load-binding-context.sh` is observable. Powers the `/token-savings` slash command (P1.3 main, commit `8cfeaba`).
+  - **Deliverable A:** `.claude/hooks/post-tool-use/report-token-savings.sh` — PostToolUse Bash hook gated on `^git push`; counts session-scoped fires of inject-memory + load-binding-context + Skill activations from `.claude/audit.jsonl` + `.claude/preloads.jsonl`; appends a per-session row to `.claude/token-savings.jsonl` with cumulative; prints summary block to stdout.
+  - **Deliverable B:** `.claude/hooks/stop/cumulative-savings-report.sh` — Stop hook that prints the cumulative footer (tokens × sessions × estimated $) at session end.
+  - **Deliverable C:** `.github/workflows/memory-reorg.yml` — weekly cron (Sat 20:30 UTC = Sun 02:00 IST) + `workflow_dispatch`; placeholder reminder job for now, automation deferred to PM2 (needs Claude Code auth in CI).
+  - **Side-changes:** patched `audit-log.sh` (added `session_id`) + `load-binding-context.sh` (logs preload markers); added `.claude/preloads.jsonl` + `.claude/token-savings.jsonl` to `.gitignore`.
 
 ### Acceptance Criteria (19 from v8.0)
 
