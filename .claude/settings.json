@@ -47,6 +47,12 @@
           { "type": "command", "command": ".claude/hooks/stop/cumulative-savings-report.sh" }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [{ "type": "command", "command": ".claude/hooks/session-start/sync-hooks.sh" }]
+      }
     ]
   },
   "permissions": {
