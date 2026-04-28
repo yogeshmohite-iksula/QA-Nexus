@@ -1,6 +1,6 @@
 # QA Nexus PM1 — Project Status
 
-**Snapshot as of:** 2026-04-28 EOD-stretch (Day 2, evening IST close). Re-generated at the end of every working day; intermediate updates allowed when major events land. The `/whats-next` slash command (planned) will eventually auto-rebuild this file.
+**Snapshot as of:** 2026-04-28 EOD-stretch FINAL (Day 2 close, all 3 stretch PRs merged). Re-generated at the end of every working day; intermediate updates allowed when major events land. The `/whats-next` slash command (planned) will eventually auto-rebuild this file.
 
 > One-page "where are we right now?" for anyone joining the project mid-stream — Yogesh, Akshay, future contributors, or a fresh Claude Code session that hasn't read the EOD reports yet.
 
@@ -10,34 +10,35 @@
 
 **M0 — Setup & infrastructure** (binding backlog: `QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md`)
 
-| Metric                    | Value                                                                                                                                                                                                                                                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Total tasks               | 35 (T001 → T031 + T033 / T034 / T035 hardening)                                                                                                                                                                                                                                                     |
-| Total estimated hours     | 298                                                                                                                                                                                                                                                                                                 |
-| Tasks closed              | **22 confirmed (63%)** at Day-2-stretch-close: T001, T003, T004, T006, T010, T020, T020.5, T021, T022, T027, T028, T029, T029.5, T030, T030.b, T030.c, T030.d, T030.e, T030.f, T030.g, T033, T034, T035. Plus T024+T025 ready-to-merge in PR #10 → **24/35 (69%) when PR #10 lands Day-3 morning**. |
-| Tasks closed %            | ~63% confirmed (~69% pending PR #10)                                                                                                                                                                                                                                                                |
-| Hours burned (estimated)  | ~210h of 298h ≈ 70%                                                                                                                                                                                                                                                                                 |
-| Acceptance gates passed   | 0 / 19 (gates run after Day 10 task completion)                                                                                                                                                                                                                                                     |
-| Days elapsed of M0 budget | 2 of 10                                                                                                                                                                                                                                                                                             |
-| Burn-rate signal          | 🟢🟢 well ahead — 70% hours burned at 20% time elapsed (50 pts ahead of pace). Day 1 + Day 2 unusually heavy parallel-chat output.                                                                                                                                                                  |
+| Metric                    | Value                                                                                                                                                                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Total tasks               | 35 (T001 → T031 + T033 / T034 / T035 hardening)                                                                                                                                                                                                                |
+| Total estimated hours     | 298                                                                                                                                                                                                                                                            |
+| Tasks closed              | **24 confirmed (69%)** at Day-2 FINAL close: T001, T003, T004, T006, T010, T020, T020.5, T021, T022, T024, T025, T027, T028, T029, T029.5, T030, T030.b, T030.c, T030.d, T030.e, T030.f, T030.g, T033, T034, T035. **All 3 stretch PRs (#8, #9, #10) merged.** |
+| Tasks closed %            | **69% confirmed**                                                                                                                                                                                                                                              |
+| Hours burned (estimated)  | ~225h of 298h ≈ 75%                                                                                                                                                                                                                                            |
+| Acceptance gates passed   | 0 / 19 (gates run after Day 10 task completion)                                                                                                                                                                                                                |
+| Days elapsed of M0 budget | 2 of 10                                                                                                                                                                                                                                                        |
+| Burn-rate signal          | 🟢🟢🟢 **ahead by 55 pts** — 75% hours burned at 20% time elapsed. Day 1 + Day 2 unusually heavy parallel-chat output. M0 ahead-of-schedule.                                                                                                                   |
 
 ## Active PRs
 
-| PR  | Branch                             | Status              | Owner   | Brief                                                                                                                                                                |
-| --- | ---------------------------------- | ------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| #10 | feature/be-day-2-stretch-t024-t025 | ⏳ Ready, CI queued | BE chat | T024 embedding service + T025 health endpoint + ADR-003. Gates 1, 3, 4 verified; CI queued ≥10 min on free-tier saturation. **Day-3 morning: drain + squash-merge.** |
+| PR  | Branch      | Status | Owner | Brief                                     |
+| --- | ----------- | ------ | ----- | ----------------------------------------- |
+| —   | (none open) | —      | —     | All Day-2 PRs landed. Day-3 starts fresh. |
 
+**Recently closed (Day 2 stretch FINAL):** PR #10 (`b0d52fe` BE T024 embedding + T025 health + ADR-003).
 **Recently closed (Day 2 stretch evening):** PR #8 (`57c95b4` FE F08a Home), PR #9 (`4c9dd0f` FE F08b QA Lead + F08c Empty Project).
 **Recently closed (Day 2 evening):** PR #6 (`7f60b8e` BE T021/T022/T027), PR #7 (`919162e` FE F07b/c/d invited onboarding).
 **Recently closed (Day 1):** PR #1 (BE security/CI/rules), PR #2 (FE RWD/rules/UI), PR #3 (CI hotfix), PR #4 (BE Prisma+RLS+seed), PR #5 (FE F07 onboarding).
 
 ## Last deploy
 
-| Surface          | URL                              | Last deployed  | Status                                 |
-| ---------------- | -------------------------------- | -------------- | -------------------------------------- |
-| Frontend (Pages) | https://qa-nexus-web.pages.dev/  | 2026-04-26 EOD | 🟢 healthy (F06, F06b, F06c, F07 live) |
-| Backend (Render) | (not yet provisioned — MS0-T011) | —              | ⚪ not deployed                        |
-| Database (Neon)  | (not yet provisioned — MS0-T012) | —              | ⚪ not provisioned                     |
+| Surface          | URL                              | Last deployed  | Status                                                                                           |
+| ---------------- | -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| Frontend (Pages) | https://qa-nexus-web.pages.dev/  | 2026-04-26 EOD | 🟢 healthy (F06, F06b, F06c, F07 live)                                                           |
+| Backend (Render) | (not yet provisioned — MS0-T011) | —              | ⚪ not deployed (BE code complete: T021/22/24/25/27 all in main; awaiting MS0-T011 Render setup) |
+| Database (Neon)  | (not yet provisioned — MS0-T012) | —              | ⚪ not provisioned                                                                               |
 
 ## Free-tier quota (live)
 
@@ -59,12 +60,12 @@
 
 ## Health checks
 
-| Probe            | Endpoint                               | Last pass        | Notes                                       |
-| ---------------- | -------------------------------------- | ---------------- | ------------------------------------------- |
-| FE prod          | https://qa-nexus-web.pages.dev/sign-in | 2026-04-26       | F06 sign-in renders at 320 / 1440.          |
-| BE health        | (not yet exposed)                      | —                | MS0-T025 lands the `/health` endpoint.      |
-| CI pipeline      | GitHub Actions main                    | 2026-04-28 09:55 | All 6 jobs green on `742982c`.              |
-| Pre-commit hooks | husky + lint-staged                    | live             | typecheck + prettier + design-tokens + RWD. |
+| Probe            | Endpoint                                      | Last pass                   | Notes                                                                                               |
+| ---------------- | --------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------- |
+| FE prod          | https://qa-nexus-web.pages.dev/sign-in        | 2026-04-26                  | F06 sign-in renders at 320 / 1440.                                                                  |
+| BE health        | `GET /health` (in BE main; not yet on Render) | code-verified Day 2 stretch | MS0-T025 ✅ — endpoint exists, returns subsystem readouts. Live URL pending MS0-T011 Render deploy. |
+| CI pipeline      | GitHub Actions main                           | 2026-04-28 09:55            | All 6 jobs green on `742982c`.                                                                      |
+| Pre-commit hooks | husky + lint-staged                           | live                        | typecheck + prettier + design-tokens + RWD.                                                         |
 
 ## Known issues / open followups
 
