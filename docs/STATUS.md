@@ -91,6 +91,19 @@ Parallel-chat coordination items live in `docs/parallel-work/follow-ups.md`.
 - MS0-T031 Playwright E2E smoke test — FE or QA chat
 - MS0-T032 A1/A2/A4 golden-set seed (R3 mitigation) — Yogesh + Akshay
 
+## Observability
+
+| Surface                   | Path                                             | What it tracks                                                  |
+| ------------------------- | ------------------------------------------------ | --------------------------------------------------------------- |
+| **Token-savings Excel**   | `docs/observability/Token_Savings_Log.xlsx`      | Per-session + daily + per-chat token-savings rollup (3 sheets). |
+| **Token-savings JSONL**   | `.claude/token-savings.jsonl` (per worktree)     | Append-only log written by Stop hook on every session end.      |
+| **Methodology + privacy** | `docs/observability/token-tracking.md`           | What's measured, estimation formulas, privacy posture.          |
+| **Slash command**         | `/eod-tokens`                                    | Runs aggregator + prints day's totals (use at EOD).             |
+| **Audit log**             | `.claude/audit.jsonl` (gitignored, per worktree) | One line per tool call (PostToolUse `*` hook).                  |
+| **Skill conformance**     | `docs/audits/<date>-skill-alignment-audit.md`    | Latest: 2026-04-28 = 96% (eval-by-eval ledger).                 |
+
+Day-2 baseline: ~109,500 tokens saved across MAIN sessions (Day 1 + Day 2). FE + BE worktrees not yet generating data — their first Stop event populates their respective JSONL files; the aggregator picks them up on the next `/eod-tokens` run.
+
 ## Cross-references
 
 - `CLAUDE.md` — the binding context (loaded on every session start)

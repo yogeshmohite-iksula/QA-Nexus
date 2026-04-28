@@ -44,7 +44,8 @@
         "matcher": "*",
         "hooks": [
           { "type": "command", "command": ".claude/hooks/stop/update-docs-check.sh" },
-          { "type": "command", "command": ".claude/hooks/stop/cumulative-savings-report.sh" }
+          { "type": "command", "command": ".claude/hooks/stop/cumulative-savings-report.sh" },
+          { "type": "command", "command": ".claude/hooks/stop/log-token-savings.sh" }
         ]
       }
     ],
