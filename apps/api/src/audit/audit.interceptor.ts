@@ -98,7 +98,7 @@ export class AuditInterceptor implements NestInterceptor {
           // Interceptor must never throw — would mask the actual response.
           // AuditService.writeNonBlocking already logs; this catch is belt+
           // suspenders for resolveSession() failures.
-           
+
           console.warn('[AuditInterceptor] background error:', err);
         }
       }),
