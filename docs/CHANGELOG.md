@@ -13,12 +13,16 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
-### Added — Day 2 stretch (2026-04-28 evening)
+### Added — Day 2 stretch evening (2026-04-28)
 
 - **`feat(api)`** — **MS0-T025 Health endpoint** — public unauthenticated `GET /health` returns subsystem readouts (db/embedding/llm/r2/quota) for UptimeRobot's 5-min ping + Render's deploy-time health-check. DB ping with 2s timeout; embedding ping reads `EmbeddingService.status()`; quota = `pg_database_size()` vs Neon's 512 MB free tier (currently 1.78%). LLM + R2 marked `deferred` with notes pointing to MS0-T023/T013. HTTP semantics: 200 if all required up + quota ≤ 90%, 503 if any required down or quota > 90%. Curl-verified.
 - **`feat(api)`** — **MS0-T024 Embedding service** via `@xenova/transformers` (in-process WASM). New `EmbeddingService.embed(text)` returns 1024-dim Float32Array, eager-loads at NestJS bootstrap, exposes `.isWarm()` + `.status()` for /health. Two dev-only Admin-gated probes: `GET /embedding/test` + `GET /embedding/cosine`. Cold load 38s (HF download), warm 1.7s, per-embed warm latency 19-31ms (well under CLAUDE.md's "~50ms" target). Cosine sanity: `('test case','test scenario')=0.80` vs `('test case','fox')=0.46`. **ADR-003** documents the model choice — PM1 ships with `Xenova/bge-large-en-v1.5` instead of Qwen3-Embedding-0.6B because Xenova hasn't ONNX-converted Qwen3 yet; same dim, same schema, hot-swap via `EMBEDDING_MODEL_ID` env var when Xenova ships it. CLAUDE.md + PM1_PRD + PM1_ERD updated with implementation notes pointing to ADR-003.
+- **`feat(web)`** — **MS0-T030.e F08a Home** QA Engineer landing page with Iksula canon (Pattern A deferred routing) — squash-merged via PR #8 at `57c95b4`. Three roles (QA Engineer / Lead / Stakeholder) supported; Akshay as Lead, Yogesh as Admin, 6 named QA Engineers per `IKSULA_CONTEXT.md`. RWD verified at 320 + 1440 (305 KB / 255 KB PNGs).
+- **`feat(web)`** — **MS0-T030.f F08b QA Lead Home** + **MS0-T030.g F08c Empty Project Home** (Pattern A deferred) — squash-merged via PR #9 at `4c9dd0f`. F08b = QA Lead's approvals queue + outcome board; F08c = onboarding empty-project state for new workspaces. 4 PNGs: rwd-home-{empty,lead}-{320,1440}.png (170-319 KB).
+- **`docs(followups)`** — Filed (g) Stakeholder Home design ambiguity — no locked HTML frame exists for "Stakeholder Home"; F07c skip routing implies F08b sharing OR F24 fallback. Two candidate resolutions documented; engineering recommendation = option 2 (deprecate concept, route Stakeholder skip → F24 directly). Owner: PM + Yogesh + designer review at design freeze.
+- **`feat(observability)`** — Per-chat token-savings tracking infrastructure — see `feat(observability)` entry below; landed during stretch session block 4-5.
 
-### Changed — Day 2 stretch
+### Changed — Day 2 stretch evening
 
 - **`chore(security)`** — Root `package.json` gained `pnpm.onlyBuiltDependencies` allowlist (sharp, prisma, @nestjs/core, unrs-resolver) — pnpm 10's default-block of install scripts was preventing sharp's libvips binary from being downloaded, which `@xenova/transformers` needs at runtime. Documented as a security trade-off in `docs/SECURITY.md` → "Dependency hygiene"; future additions require ADR + Yogesh sign-off.
 - **`fix(api)`** — Restored runtime imports for `AppService` + `AuthService` in `app.controller.ts` and `auth.controller.ts` (lint-staged had auto-converted them to `import type` in a prior session, silently breaking Nest DI at runtime; the eslint override merged in `07c97ea` now prevents future drift).
