@@ -1,6 +1,6 @@
 // TB-009 test_suites + TB-010 test_suite_members.
 import { z } from 'zod';
-import { Uuid, Timestamp, TestSuiteStatus, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, TestSuiteStatus, NonEmpty } from './enums';
 
 export const TestSuiteSchema = z.object({
   id: Uuid,

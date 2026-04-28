@@ -1,6 +1,6 @@
 // TB-003 projects + TB-004 project_members.
 import { z } from 'zod';
-import { Uuid, Timestamp, UserRole, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, UserRole, NonEmpty } from './enums';
 
 export const ProjectSchema = z.object({
   id: Uuid,

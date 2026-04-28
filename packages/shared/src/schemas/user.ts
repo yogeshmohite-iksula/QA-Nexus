@@ -1,6 +1,6 @@
 // TB-002 users + TB-005 user_invitations.
 import { z } from 'zod';
-import { Uuid, Timestamp, UserRole, InvitationStatus, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, UserRole, InvitationStatus, NonEmpty } from './enums';
 
 export const UserSchema = z.object({
   id: Uuid,

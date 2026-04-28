@@ -725,6 +725,95 @@ model AgentRun {
   @@map("agent_runs")
 }
 
+// =============================================================================
+// BETTERAUTH TABLES (added MS0-T021)
+// =============================================================================
+// BetterAuth's Prisma adapter manages these. We prefix the Postgres tables
+// with `auth_` via @@map so they don't collide with our application `users`
+// (TB-002). The link from BetterAuth identity → our application user is by
+// `email` — the seed gives every TB-002 user a unique email, and BetterAuth's
+// AuthUser.email is unique, so we resolve at the /auth/session boundary.
+//
+// Column shape per BetterAuth core schema (better-auth v1.x). The prismaAdapter
+// expects these exact field names; do NOT rename without verifying BetterAuth's
+// model-mapping config in apps/api/src/auth/auth.config.ts.
+// =============================================================================
+
+/// BetterAuth-managed identity. Linked to TB-002 `users` by email match
+/// at the /auth/session boundary. Magic-link-only auth in PM1 — no password.
+model AuthUser {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions AuthSession[]
+  accounts AuthAccount[]
+
+  @@map("auth_user")
+}
+
+/// BetterAuth session — issued after successful magic-link verification.
+/// Token is opaque random; cookie name `better-auth.session_token`.
+model AuthSession {
+  id        String   @id @default(uuid())
+  userId    String  
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("auth_session")
+}
+
+/// BetterAuth account — links AuthUser to a credential provider. For PM1
+/// magic-link-only this is mostly empty (no oauth providers yet) but
+/// BetterAuth's adapter requires the table to exist.
+model AuthAccount {
+  id                    String    @id @default(uuid())
+  userId                String   
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("auth_account")
+}
+
+/// BetterAuth verification — short-lived tokens for magic-link, email
+/// verification, password reset (latter two unused in PM1 magic-link-only).
+model AuthVerification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("auth_verification")
+}
+
 /// auxiliary — HMAC-SHA256 chained immutable rows (visible in F28).
 /// NOT RLS-scoped; admin-only visibility enforced at app layer.
 /// Append-only via REVOKE UPDATE,DELETE in raw SQL migration.

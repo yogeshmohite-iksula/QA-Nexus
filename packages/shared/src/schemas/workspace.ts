@@ -1,6 +1,6 @@
 // TB-001 workspaces — top-level tenant container.
 import { z } from 'zod';
-import { Uuid, Timestamp } from './enums.js';
+import { Uuid, Timestamp } from './enums';
 
 export const WorkspaceSchema = z.object({
   id: Uuid,

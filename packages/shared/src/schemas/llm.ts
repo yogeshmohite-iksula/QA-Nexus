@@ -8,7 +8,7 @@ import {
   AgentKind,
   AgentRole,
   NonEmpty,
-} from './enums.js';
+} from './enums';
 
 // TB-019
 export const LlmProviderSchema = z.object({

@@ -1,6 +1,6 @@
 // TB-017 kb_documents + TB-018 kb_chunks.
 import { z } from 'zod';
-import { Uuid, Timestamp, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, NonEmpty } from './enums';
 
 export const KbDocumentSchema = z.object({
   id: Uuid,
