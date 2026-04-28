@@ -166,7 +166,27 @@
       "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/web/components/onboarding/**)",
       "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/web/app/(onboarding)/**)",
       "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/api/prisma/**)",
-      "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/packages/shared/**)"
+      "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/packages/shared/**)",
+
+      "Bash(mkdir -p */.claude/hooks/session-start*:*)",
+      "Bash(mkdir -p */.claude/hooks/stop*:*)",
+      "Bash(mkdir -p */docs/architecture*:*)",
+      "Bash(mkdir -p */docs/observability*:*)",
+      "Bash(for i in *; do code=$(curl*); *break*; *sleep * done:*)",
+      "Bash(pkill -f \"next dev\"*:*)",
+      "Bash(pkill -f \"node.*dist/main\"*:*)",
+      "Bash(nohup node */apps/api/dist/main.js*:*)",
+      "Bash(node */apps/web/scripts/screenshot-frame.mjs*:*)",
+      "Bash(grep -rnE \"fetch.*useMutation.*axios.*api\" apps/**:*)",
+      "Bash(find */.claude -name \"SKILL.md\"*:*)",
+      "Bash(ls -la */apps/api/dist/*:*)",
+      "Bash(prisma migrate diff:*)",
+
+      "Write(*/.claude/memory/**)",
+      "Write(*/.claude/hooks/session-start/**)",
+      "Write(*/.claude/hooks/stop/**)",
+      "Write(*/docs/architecture/**)",
+      "Write(*/docs/observability/**)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
