@@ -15,6 +15,7 @@ updates land here at the end of every working day.
 
 ### Added — Day 2 stretch (2026-04-28 evening)
 
+- **`feat(api)`** — **MS0-T025 Health endpoint** — public unauthenticated `GET /health` returns subsystem readouts (db/embedding/llm/r2/quota) for UptimeRobot's 5-min ping + Render's deploy-time health-check. DB ping with 2s timeout; embedding ping reads `EmbeddingService.status()`; quota = `pg_database_size()` vs Neon's 512 MB free tier (currently 1.78%). LLM + R2 marked `deferred` with notes pointing to MS0-T023/T013. HTTP semantics: 200 if all required up + quota ≤ 90%, 503 if any required down or quota > 90%. Curl-verified.
 - **`feat(api)`** — **MS0-T024 Embedding service** via `@xenova/transformers` (in-process WASM). New `EmbeddingService.embed(text)` returns 1024-dim Float32Array, eager-loads at NestJS bootstrap, exposes `.isWarm()` + `.status()` for /health. Two dev-only Admin-gated probes: `GET /embedding/test` + `GET /embedding/cosine`. Cold load 38s (HF download), warm 1.7s, per-embed warm latency 19-31ms (well under CLAUDE.md's "~50ms" target). Cosine sanity: `('test case','test scenario')=0.80` vs `('test case','fox')=0.46`. **ADR-003** documents the model choice — PM1 ships with `Xenova/bge-large-en-v1.5` instead of Qwen3-Embedding-0.6B because Xenova hasn't ONNX-converted Qwen3 yet; same dim, same schema, hot-swap via `EMBEDDING_MODEL_ID` env var when Xenova ships it. CLAUDE.md + PM1_PRD + PM1_ERD updated with implementation notes pointing to ADR-003.
 
 ### Changed — Day 2 stretch
