@@ -2,13 +2,14 @@
 // AuthController (sign-up/in/out/session) and by the rest of the app
 // (e.g., RBAC guard fetching the active user from a request).
 //
-// Spec: MS0-T021. The audit_log writes here are inline for now; T027 will
-// refactor them behind an AuditService + interceptor.
+// Spec: MS0-T021. T027 refactored the inline audit writes to delegate to
+// AuditService — chain semantics unchanged, single entry point for any
+// future audit consumer (interceptor, deny-handler, etc.).
 import type { OnModuleInit } from '@nestjs/common';
 import { Injectable, Logger } from '@nestjs/common';
-import type { PrismaService } from '../prisma/prisma.service';
-import type { EmailService } from '../email/email.service';
-import { writeAuditRow } from '../audit/audit-helper';
+import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { AuditService } from '../audit/audit.service';
 import { buildAuth, type AuthInstance } from './auth.config';
 
 export interface ResolvedSession {
@@ -33,6 +34,7 @@ export class AuthService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly auditService: AuditService,
   ) {}
 
   onModuleInit(): void {
@@ -106,46 +108,33 @@ export class AuthService implements OnModuleInit {
    * if no app user exists yet (sign-up before seed match), uses the seeded
    * Iksula workspace as a fallback so the chain stays unbroken.
    */
+  /**
+   * Append an audit_log row for a state-changing auth event. Delegates to
+   * AuditService — the chain semantics (HMAC, prev_hash linking, advisory
+   * lock) live there. Refactored in T027 from the T021 inline helper.
+   *
+   * `action` is now `string` (not a tight union) because AuditService
+   * accepts arbitrary verbs — RolesGuard's `rbac_denied` action would
+   * otherwise force every auth-side caller to widen.
+   */
   async writeAuthAudit(params: {
     actorEmail: string;
     actorAuthUserId: string | null;
-    action:
-      | 'sign_up_link_sent'
-      | 'sign_in_link_sent'
-      | 'magic_link_verified'
-      | 'sign_out';
+    action: string;
     payload: Record<string, unknown>;
   }): Promise<{ id: string; thisHash: string }> {
-    const appUser = await this.prisma.user.findUnique({
-      where: { email: params.actorEmail },
-      select: { id: true, workspaceId: true },
-    });
-    let workspaceId: string;
-    let actorId: string | null = null;
-    if (appUser) {
-      workspaceId = appUser.workspaceId;
-      actorId = appUser.id;
-    } else {
-      const fallback = await this.prisma.workspace.findFirstOrThrow({
-        select: { id: true },
-      });
-      workspaceId = fallback.id;
-    }
-    // entity_id is a UUID column. The BetterAuth auth_user.id is now TEXT
-    // (it doesn't fit), so we point entity_id at the matched TB-002 users.id
+    const { workspaceId, actorId } =
+      await this.auditService.resolveActorByEmail(params.actorEmail);
+    // entity_id is a UUID column. The BetterAuth auth_user.id is TEXT (it
+    // doesn't fit), so we point entity_id at the matched TB-002 users.id
     // (always UUID) and stash the BetterAuth id inside the payload.
-    const enrichedPayload = {
-      ...params.payload,
-      auth_user_id: params.actorAuthUserId,
-    };
-    const row = await writeAuditRow(this.prisma, {
+    return await this.auditService.write({
       workspaceId,
       actorId,
       entityType: 'auth',
-      entityId: actorId, // TB-002 users.id (UUID) when known, else null
+      entityId: actorId,
       action: params.action,
-      payload: enrichedPayload,
+      payload: { ...params.payload, auth_user_id: params.actorAuthUserId },
     });
-    return { id: row.id, thisHash: row.thisHash };
   }
 }

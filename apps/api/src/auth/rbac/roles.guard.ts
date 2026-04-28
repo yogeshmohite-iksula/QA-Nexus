@@ -11,18 +11,17 @@
 //
 // Future T023 may register this globally via APP_GUARD; for now per-controller
 // keeps the surface obvious in code review.
-import type {
-  CanActivate,
-  ExecutionContext} from '@nestjs/common';
+import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import {
   ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { Reflector } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { Role } from '@qa-nexus/shared';
-import type { AuthService } from '../auth.service';
+import { AuthService } from '../auth.service';
+import { AuditService } from '../../audit/audit.service';
 import { ROLES_KEY } from './roles.decorator';
 
 function reqHeaders(req: Request): Headers {
@@ -39,6 +38,7 @@ export class RolesGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authService: AuthService,
+    private readonly auditService: AuditService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -60,18 +60,20 @@ export class RolesGuard implements CanActivate {
     if (required.includes(session.appUser.role as Role)) {
       return true;
     }
-    // Audit the denial (SOC-2 trail). Don't await — non-blocking.
-    void this.authService.writeAuthAudit({
-      actorEmail: session.appUser.email,
-      actorAuthUserId: session.authUser.id,
-      action: 'sign_out', // reuse a known action to keep TS union tight; future:
-      // AuditService (T027) will accept arbitrary action strings.
+    // Audit the denial (SOC-2 trail) via T027's AuditService.
+    // Non-blocking — the response is already 403 by the time this fires.
+    this.auditService.writeNonBlocking({
+      workspaceId: session.appUser.workspaceId,
+      actorId: session.appUser.id,
+      entityType: 'rbac',
+      entityId: session.appUser.id,
+      action: 'rbac_denied',
       payload: {
-        kind: 'rbac_denied',
         path: req.path,
         method: req.method,
         required_roles: required,
         actor_role: session.appUser.role,
+        auth_user_id: session.authUser.id,
       },
     });
     throw new ForbiddenException(
