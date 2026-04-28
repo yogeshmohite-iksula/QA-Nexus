@@ -1,7 +1,9 @@
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+// With esModuleInterop=true (set during MS0-T021), supertest's CJS export
+// must be reached via .default OR called as a function via the namespace.
+import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
 describe('AppController (e2e)', () => {

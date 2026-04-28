@@ -1,7 +1,7 @@
 {
-  "name": "api",
+  "name": "@qa-nexus/api",
   "version": "0.0.1",
-  "description": "",
+  "description": "QA Nexus PM1 — NestJS API service (REST + WebSocket; Prisma + BetterAuth + LLM gateway + embedding service)",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
@@ -36,7 +36,10 @@
     "@nestjs/platform-express": "^10.0.0",
     "@prisma/client": "5.22.0",
     "@qa-nexus/shared": "workspace:*",
+    "better-auth": "^1.2.0",
+    "express": "^5.0.0",
     "reflect-metadata": "^0.2.0",
+    "resend": "^4.0.0",
     "rxjs": "^7.8.1",
     "zod": "^3.23.8"
   },

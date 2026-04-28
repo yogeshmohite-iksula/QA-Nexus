@@ -32,4 +32,16 @@ export default [
   {
     ignores: ['dist/**', 'coverage/**'],
   },
+
+  // NestJS DI requires runtime class imports for constructor parameters
+  // (the @Controller/@Injectable decorators emit metadata that needs the
+  // value, not just the type). The root `consistent-type-imports: error`
+  // rule auto-converts these to `import type`, which silently breaks Nest
+  // DI at runtime. Disable for apps/api/src/** so Nest sees runtime refs.
+  {
+    files: ['src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
 ];
