@@ -23,6 +23,7 @@ updates land here at the end of every working day.
   - `pnpm db:apply-raw` script in root + `prisma:apply-raw` in `apps/api` (closes followup e bonus).
 - **`feat(skill-features)`** — Husky pre-push CHANGELOG guard (this commit). Blocks pushes where any commit touches `apps/**/src/` or `packages/**/src/` without a matching `docs/CHANGELOG.md` edit somewhere in the push range. Permissive: only requires CHANGELOG to be touched ONCE in the range, not per-commit. Bypass via `--no-verify` (intentional friction).
 - **`feat(skill-features)`** — `.claude/memory/RETROS.md` seed file for per-session and per-milestone retrospectives. Format documented; first entry seeded with Day 2 reflection.
+- **`docs(eod)`** — Day 2 EOD report + Tech-project-forge skill alignment audit (this commit). Skill drift check: zero. Conformance lifted 89% → 96% (+7 pts) with SessionStart hook + STATUS.md + pre-push CHANGELOG guard + Status Line. Token-savings: ~43,800 tokens saved Day 2; ~50,250 cumulative across Days 0–2.
 
 ---
 
