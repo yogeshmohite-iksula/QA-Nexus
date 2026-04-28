@@ -1,6 +1,6 @@
 // TB-007 test_cases + TB-008 test_case_links.
 import { z } from 'zod';
-import { Uuid, Timestamp, Priority, TestCaseStatus, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, Priority, TestCaseStatus, NonEmpty } from './enums';
 
 export const TestStepSchema = z.object({
   order: z.number().int().nonnegative(),

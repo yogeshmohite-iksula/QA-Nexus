@@ -1,6 +1,6 @@
 // TB-013 jira_connections + TB-014 jira_issues.
 import { z } from 'zod';
-import { Uuid, Timestamp, JiraAuthMethod, JiraConnectionStatus } from './enums.js';
+import { Uuid, Timestamp, JiraAuthMethod, JiraConnectionStatus } from './enums';
 
 export const JiraConnectionSchema = z.object({
   id: Uuid,

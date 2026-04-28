@@ -1,6 +1,6 @@
 // audit_log + agent_runs (auxiliary, not in ERD §5).
 import { z } from 'zod';
-import { Uuid, Timestamp, AgentKind, AgentRunStatus, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, AgentKind, AgentRunStatus, NonEmpty } from './enums';
 
 // 64-char hex string for HMAC-SHA256 hashes.
 export const Sha256Hex = z
