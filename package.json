@@ -29,6 +29,7 @@
     "db:migrate:deploy": "pnpm --filter @qa-nexus/api prisma:migrate:deploy",
     "db:studio": "pnpm --filter @qa-nexus/api prisma:studio",
     "db:seed": "pnpm --filter @qa-nexus/api prisma:seed",
+    "db:apply-raw": "pnpm --filter @qa-nexus/api prisma:apply-raw",
     "prepare": "husky"
   },
   "devDependencies": {

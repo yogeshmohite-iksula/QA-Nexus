@@ -13,6 +13,40 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 2 (2026-04-28)
+
+- **`feat(skill-features)`** — Memory System v1.3 — 4 curated logs (`5dcdb38`): `CLAUDE_DECISIONS.md` (decisions tied to ADRs), `STACK_LEARNINGS.md` (8 gotchas: zod/resolvers, hook regex boundary, static-export redirect, Grammarly hydration, CI bootstrap, Prisma shadow-DB, gitleaks paths-vs-regexes, WCAG tap targets), `IKSULA_CONTEXT.md` (8-user roster, anchor project RET, ID patterns, sample files), `PM1_PATTERNS.md` (Pattern A deferred routing, Pattern B visual confirmation gate, Pattern C full RWD, Pattern D audit log, Pattern E shared schemas).
+- **`docs(skill-features)`** — Status Line + `/changelog-add` slash command + `docs/STATUS.md` project-at-a-glance (`945c3ef`). Status line renders Model | Branch | ctx% | Cost | Duration with color-coded ctx (yellow ≥50%, red ≥75%) per CLAUDE.md compact rule.
+- **`chore(infra)`** — Closed 3 Day-1 followups in one commit (`742982c`):
+  - `.claude/hooks/session-start/sync-hooks.sh` — auto-syncs `.claude/hooks/` from `origin/main` on every chat start (closes followup b / P1.17 worktree drift).
+  - `docs/architecture/adr-002-prisma-raw-split.md` — formalizes the `prisma/migrations/` vs `prisma/raw/` convention with idempotent-by-default contract (closes followup a).
+  - `pnpm db:apply-raw` script in root + `prisma:apply-raw` in `apps/api` (closes followup e bonus).
+- **`feat(skill-features)`** — Husky pre-push CHANGELOG guard (this commit). Blocks pushes where any commit touches `apps/**/src/` or `packages/**/src/` without a matching `docs/CHANGELOG.md` edit somewhere in the push range. Permissive: only requires CHANGELOG to be touched ONCE in the range, not per-commit. Bypass via `--no-verify` (intentional friction).
+- **`feat(skill-features)`** — `.claude/memory/RETROS.md` seed file for per-session and per-milestone retrospectives. Format documented; first entry seeded with Day 2 reflection.
+- **`docs(eod)`** — Day 2 EOD report + Tech-project-forge skill alignment audit (this commit). Skill drift check: zero. Conformance lifted 89% → 96% (+7 pts) with SessionStart hook + STATUS.md + pre-push CHANGELOG guard + Status Line. Token-savings: ~43,800 tokens saved Day 2; ~50,250 cumulative across Days 0–2.
+
+---
+
+## [0.1.0] — 2026-04-27 (Day 1 milestone marker)
+
+> **Symbolic milestone, not a release tag.** Day 1 closed the audit-driven scaffolding push (skill conformance 18% → 89%), shipped Prisma + RLS + 8-user seed, and the F07 Founder Onboarding wizard. Captured as a Keep-a-Changelog release section so anyone joining mid-stream can see "what shipped on Day 1" at a glance. Numbered release tagging starts at `[0.1.0-m0]` at end of M0 (target Day 10) per the convention below.
+
+### Added — Database (BE PR #4, `a6644c1`)
+
+- **`feat(db)`** — Prisma schema for TB-001..TB-021: 23 models + 18 enums covering users, projects, requirements, test cases, defects, runs, audit log, embeddings. Pgvector + HNSW indexes on embedding columns.
+- **`feat(db)`** — Hand-written `apps/api/prisma/raw/init_rls_hnsw.sql`: enables `pgvector`, declares all RLS policies for the 23 tables, creates HNSW indexes for embeddings.
+- **`feat(db)`** — Idempotent 8-user pilot seed at `apps/api/prisma/seed.ts`: Akshay Panchal (Lead), Yogesh Mohite (Admin), 6 named QA Engineers per CLAUDE.md Iksula data canon.
+
+### Added — Frontend (FE PR #5, `711fa00`)
+
+- **`feat(web)`** — F07 Founder Onboarding 3-step wizard at `/onboarding/`: organization details → invite team → confirm. Pattern A deferred routing (no `fetch` / `useMutation` / `axios` in onboarding components — routing is intent-only until backend wires up at MS0-T021). Implements PM1_UI_v2 F07 frame.
+
+### Added — Conformance + workflow
+
+- **89% Tech-project-forge skill conformance** (25/28 eval.json assertions met) — up from 18% baseline. Three remaining are justified deviations or P2 deferrals.
+- **Worktree-based parallel-chat workflow proven** — 3 chats × 6+ commits each, merged with 1 minor MILESTONES.md conflict + 1 CI hotfix batch.
+- **5 PRs squash-merged on Day 1**: PR #1 (BE security/CI/rules), PR #2 (FE RWD/rules/UI commands), PR #3 (baseline-CI hotfix), PR #4 (BE Prisma+RLS+seed), PR #5 (FE F07 wizard).
+
 ### Added — Memory + audit (Day 1, 2026-04-27)
 
 - **`feat(hooks)`** — `inject-memory.sh` PreToolUse `*` hook (`dd1c8a3`). Auto-prepends `.claude/memory/memory.md` to every tool call so future Claude sessions on any machine see project memory without depending on user-session memory. Lifts eval.json assertion 24.

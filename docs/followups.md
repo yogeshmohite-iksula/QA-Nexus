@@ -6,7 +6,13 @@ Convention: append at top with `[YYYY-MM-DD]` header. Cross-link to commit SHAs 
 
 ---
 
-## [2026-04-27] (a) ADR-002 — Prisma migrations vs `prisma/raw/` split
+## [2026-04-27] (a) ADR-002 — Prisma migrations vs `prisma/raw/` split ✅ CLOSED 2026-04-28
+
+**Closed by:** `docs/architecture/adr-002-prisma-raw-split.md` (this commit). Three open questions resolved: (1) raw applied manually with human gate, formalized via `pnpm db:apply-raw`; (2) tracking via git history + idempotency contract; (3) idempotent-by-default rule. Pairs with closure of bonus (e) below.
+
+---
+
+## [2026-04-27] (a) [original] ADR-002 — Prisma migrations vs `prisma/raw/` split
 
 **Context:** During MS0-T020, hand-written infra migrations (RLS policies, HNSW indexes, pgvector extension, audit-log triggers) couldn't live in Prisma's `migrations/` directory because Prisma's shadow-DB validator applies migrations in lex order. The original file `0_init_rls_hnsw/migration.sql` was failing because it referenced tables that hadn't been created yet by Prisma's auto-generated init migration.
 
@@ -31,7 +37,13 @@ Convention: append at top with `[YYYY-MM-DD]` header. Cross-link to commit SHAs 
 
 ---
 
-## [2026-04-27] (b) P1.17 — Worktree hook drift, structural fix
+## [2026-04-27] (b) P1.17 — Worktree hook drift, structural fix ✅ CLOSED 2026-04-28
+
+**Closed by:** `.claude/hooks/session-start/sync-hooks.sh` (this commit). Picked option (i) from the original three candidates: SessionStart hook auto-syncs `.claude/hooks/` from `origin/main` on every chat start. Non-blocking; respects local uncommitted hook edits (skips auto-sync if `git diff -- .claude/hooks/` is dirty). Wired in `.claude/settings.json` under `hooks.SessionStart`.
+
+---
+
+## [2026-04-27] (b) [original] P1.17 — Worktree hook drift, structural fix
 
 **Symptom:** Each new disposable Claude worktree starts off whatever SHA the parent process happened to be on, NOT the latest `origin/main`. This means new worktrees may not have the latest `.claude/hooks/` updates (e.g., `block-dangerous.sh` regex fix from P1.13 took 2 iterations to land in FE worktree because of stale hook).
 
@@ -97,7 +109,13 @@ Convention: append at top with `[YYYY-MM-DD]` header. Cross-link to commit SHAs 
 
 ---
 
-## [2026-04-27] (e) Bonus: missing `db:apply-raw` script — surfaced during PR #4 review
+## [2026-04-27] (e) Bonus: missing `db:apply-raw` script — surfaced during PR #4 review ✅ CLOSED 2026-04-28
+
+**Closed by:** `apps/api/package.json` `prisma:apply-raw` script + root `package.json` `db:apply-raw` proxy (this commit). Also referenced in ADR-002 §Decision and §Cross-references. Engineers can now run `pnpm db:apply-raw` from the repo root.
+
+---
+
+## [2026-04-27] (e) [original] Bonus: missing `db:apply-raw` script — surfaced during PR #4 review
 
 **Context:** BE chat's PR #4 added `apps/api/prisma/raw/init_rls_hnsw.sql` but did NOT add a `db:apply-raw` script in `apps/api/package.json`. Currently the file must be applied via the verbose `prisma db execute --file prisma/raw/init_rls_hnsw.sql --schema prisma/schema.prisma` command from the README/commit message.
 
