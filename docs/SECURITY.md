@@ -66,6 +66,27 @@ If a key is suspected exposed, rotate within **1 hour** of discovery. Each provi
 
 Test fixtures (`gsk_fake...`, `AIzaSyEXAMPLE...`) used to verify the `check-secrets.sh` hook are allowlisted globally so the hook can be self-tested without tripping itself.
 
+## Dependency hygiene
+
+pnpm 10 blocks **all** install-time scripts by default — defence against supply-chain attacks where a malicious package's `postinstall` hook executes arbitrary code on `pnpm install`. We allow scripts only for an explicit short list of packages whose native binaries we genuinely need:
+
+| Package                                         | Why we allow its install scripts                                                                                                                                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@nestjs/core`                                  | Framework metadata setup at install (low risk; Nest is a top-level direct dep).                                                                                                                                         |
+| `@prisma/client` + `@prisma/engines` + `prisma` | Downloads the Prisma query engine binary — required for any DB call. Without this, `prisma generate` and `pnpm --filter api start` both fail.                                                                           |
+| `sharp`                                         | Transitive dep of `@xenova/transformers`. Downloads + verifies the libvips binary for image preprocessing inside the embedding model. Without this, `EmbeddingService` fails to load on first run (MS0-T024 confirmed). |
+| `unrs-resolver`                                 | Module-resolution helper used by ESLint flat-config; native bindings for path resolution speed. Low risk.                                                                                                               |
+
+The list lives in root `package.json` under the `pnpm.onlyBuiltDependencies` key, with a `_pnpm_security_note` comment above it.
+
+**To add an entry:**
+
+1. ADR documenting why the package needs install scripts + what the script does + why it's safe.
+2. Yogesh sign-off in PR review.
+3. Add to the list with a one-line note in this doc.
+
+**Never add `*` (allow all) — that defeats the entire defence.**
+
 ## What NOT to do
 
 - ❌ Do not `git rm` the leaked file as the only response — the secret is in git history forever. **Always rotate the credential first.**

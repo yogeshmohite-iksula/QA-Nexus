@@ -25,7 +25,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import type { AuthService } from './auth.service';
+import { AuthService } from './auth.service';
 
 const SignUpBody = z.object({
   email: z.string().email(),
