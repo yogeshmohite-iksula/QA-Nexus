@@ -2,9 +2,56 @@
 
 ---
 
-## [2026-04-28] (f) P0 Day-3 morning — zod 3 ↔ zod 4 dual-install after BE PR #6 merge
+## [2026-04-28] (g) Stakeholder Home — no locked frame, design ambiguity
+
+**Identified during:** Day-2 stretch session, FE F08b port.
+
+**Symptom:** The FE chat's brief described a "Stakeholder Home" frame, but **no such locked HTML exists in `PM1_UI_v2/`** (neither in `frame  html view/` nor in `frames - claude code build (PM1 v2.6-v2.8)/`). F07c's "Skip → F08b" routing assumes Stakeholder uses the same dashboard frame as Lead with role-gated content. Alternative interpretation: Stakeholder lands on F24 (QA Value Dashboard) directly, since they're a read-only/exec persona who'd prefer a value-summary view over a queue/board.
+
+**Two candidate resolutions (pick ONE Day 3+ after design review):**
+
+1. **Lock a new F08d Stakeholder Home frame.** Use F08b as the starting point; prune to read-only widgets (no "Take" actions, no inline edit, drop the My Queue card or replace with "Recently Reviewed"). Designer + Yogesh own the frame creation. Once locked, FE re-routes F07c Skip → `/home/stakeholder/`. Adds ~1 frame to the 41-frame inventory (now 42).
+2. **Deprecate the "Stakeholder Home" concept.** Update F07c routing to land Stakeholders on F24 (QA Value Dashboard) directly — that frame already exists, already locked, already read-only by design. No new frame needed; just a routing tweak. Costs nothing in design budget but means Stakeholders lose the "today's status" lens until they navigate to the workspace's project-board view.
+
+**Recommendation (engineering perspective):** option (2) is the lower-risk path — F24 already exists, already locked, designed for the exec persona. Option (1) re-opens the design-freeze door, which is risky 8 days into a 10-day M0. But this is a UX call, not engineering's to make alone.
+
+**Owner:** PM (this chat) + Yogesh. Designer review to confirm intent.
+
+**When:** after PM1 design freeze review (post-M0 review window, target Day 10–11).
+
+**Action items if option (2) chosen:**
+
+- Update F07c routing constant: `STAKEHOLDER_NEXT = '/value-dashboard'` (or whatever F24's route is) instead of `/home/stakeholder/`.
+- Update PM1_PRD §<wherever Stakeholder onboarding flow is documented> to clarify "Stakeholder skips home" if PRD currently implies a Stakeholder home.
+- Update `IKSULA_CONTEXT.md` memory note: "no Stakeholder users in pilot — reserved for future PM2/PM3" already explains why this is low-priority for PM1.
+
+**Action items if option (1) chosen:**
+
+- Designer creates `F08d Stakeholder Home.html` in `PM1_UI_v2/frame  html view/`.
+- Frame inventory updates from 41 → 42 across CLAUDE.md + skill audit + binding-context hook.
+- FE chat ports F08d as MS0-T030.f (or post-M0 if past freeze).
+
+**Cross-references:**
+
+- `PM1_UI_v2/frame  html view/F07c Invited - Stakeholder.html` — the source of the routing question
+- `PM1_UI_v2/frames - claude code build (PM1 v2.6-v2.8)/F08b ...` — the QA-Engineer home that Stakeholder might or might not share
+- `PM1_UI_v2/frames - claude code build (PM1 v2.6-v2.8)/F24 QA Value Dashboard.html` — the alternative-2 landing target
+- `IKSULA_CONTEXT.md` § "Stakeholder role" — context that pilot has no Stakeholders, lowering urgency
+
+---
+
+## [2026-04-28] (f) P0 Day-3 morning — zod 3 ↔ zod 4 dual-install after BE PR #6 merge ✅ CLOSED 2026-04-28 EVENING
+
+**Closed by:** root `package.json` `pnpm.overrides.zod = "^3.25.76"` (Day-2 stretch session, Block 1). Option 1 from the candidate list applied. **Plus a discovered gotcha:** clearing `apps/web/tsconfig.tsbuildinfo` and `apps/api/.tsbuildinfo` was REQUIRED — TypeScript's incremental compilation cache had stale Zod 4 type resolutions even after the lockfile re-resolved. Without the cache clear, typecheck kept showing `$ZodTypeInternals` errors despite only zod@3.25.76 being symlinked into apps/web/node_modules/zod. Documented in `STACK_LEARNINGS.md` `[ZOD]` entry as a recovery step for future workspace-wide dep changes.
+
+Both typechecks now exit 0. better-auth runtime smoke-test deferred to Day 3 BE chat (the override forces better-auth to use Zod 3 at runtime; need to verify it doesn't actually depend on Zod 4 features).
+
+---
+
+## [2026-04-28] (f) [original] P0 Day-3 morning — zod 3 ↔ zod 4 dual-install after BE PR #6 merge
 
 **Symptom:** post-merge of BE PR #6 (`7f60b8e`) which introduced `better-auth` dep, `pnpm install` resolves TWO Zod versions in `node_modules/.pnpm/`:
+
 - `zod@3.25.76` (declared by packages/shared 3.23.8, apps/api 3.23.8, apps/web 3.25.76)
 - `zod@4.3.6` (transitively pulled in by `better-auth`)
 
@@ -17,9 +64,11 @@
 **Fix candidates (pick ONE Day 3 morning, ~1h):**
 
 1. **Pin Zod to v3 at the root level via `pnpm.overrides`.** Add to root `package.json`:
+
    ```json
    "pnpm": { "overrides": { "zod": "^3.25.76" } }
    ```
+
    This forces every transitive dep (including better-auth) to resolve to Zod 3. Risk: better-auth may break at runtime if it actually uses Zod 4 features. **Investigate before applying.**
 
 2. **Upgrade everything to Zod 4 simultaneously.** Bump packages/shared + apps/api + apps/web to `zod ^4.3.6` AND `@hookform/resolvers ^4.x` (which supports Zod 4). Risk: larger blast radius; need to verify Zod 4 schema syntax is back-compat with our schemas.
@@ -35,7 +84,6 @@
 **Closes followup (c) when shipped** (the paired-major lock makes this re-occur at a clear gate, not silently).
 
 ---
-
 
 Canonical log for engineering followups (architecture decisions, hook drift, deferred installs). **Distinct from `docs/parallel-work/follow-ups.md`** — that one tracks parallel-chat-coordination items (rebases, merge conflicts); this one tracks structural / architectural decisions that need ADRs or implementation slots.
 

@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-04-28] [ZOD] [TS] tsbuildinfo cache holds stale type resolutions after dep override
+
+**Surface:** `apps/web/tsconfig.tsbuildinfo` (incremental compilation cache) + workspace-wide pnpm overrides.
+
+**What bit us (Day 2 evening):** added `pnpm.overrides.zod = "^3.25.76"` in root `package.json` to force-pin Zod 3 (resolving followup f). `pnpm install` re-resolved correctly — `pnpm-lock.yaml` showed only zod@3.25.76; `apps/web/node_modules/zod` symlinked to v3; `pnpm why zod` confirmed only one version. **But `pnpm --filter web typecheck` STILL failed** with `$ZodTypeInternals` (Zod 4 internals) errors. Confusing because no Zod 4 symlinks were resolvable.
+
+**Root cause:** TypeScript's `tsconfig.tsbuildinfo` (incremental cache file) had cached the previous run's symbol resolutions when zod@4.3.6 WAS installed. Even after the package was re-resolved to zod@3.25.76, the incremental compiler reused the cached type graph that still pointed at v4 internals.
+
+**Rule:** when changing a workspace-wide dep version (override, major bump, removed transitive), ALWAYS clear `tsconfig.tsbuildinfo` files in every workspace before re-running typecheck. Targeted command:
+
+```bash
+find apps -name "*.tsbuildinfo" -delete
+find packages -name "*.tsbuildinfo" -delete
+```
+
+Then re-run typecheck. The first run will be slow (full type-check, no incremental) but the result will be accurate.
+
+**Pair with the original [ZOD] entry below** — that one says "pin paired-major"; this one says "after pinning, clear the TS cache or you'll be debugging ghost errors."
+
+**Fixed in:** Day-2 evening stretch session, Block 1.
+
+---
+
 ## [2026-04-27] [ZOD] zod schemas + `@hookform/resolvers/zod` are version-coupled
 
 **Surface:** `packages/shared` exports Zod schemas; `apps/web` uses `@hookform/resolvers/zod` to bind those schemas to react-hook-form. **`@hookform/resolvers/zod` peer-depends on a specific Zod major.**
