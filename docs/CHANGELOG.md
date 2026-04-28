@@ -13,6 +13,13 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 2 stretch evening (2026-04-28)
+
+- **`feat(web)`** — **MS0-T030.e F08a Home** QA Engineer landing page with Iksula canon (Pattern A deferred routing) — squash-merged via PR #8 at `57c95b4`. Three roles (QA Engineer / Lead / Stakeholder) supported; Akshay as Lead, Yogesh as Admin, 6 named QA Engineers per `IKSULA_CONTEXT.md`. RWD verified at 320 + 1440 (305 KB / 255 KB PNGs).
+- **`feat(web)`** — **MS0-T030.f F08b QA Lead Home** + **MS0-T030.g F08c Empty Project Home** (Pattern A deferred) — squash-merged via PR #9 at `4c9dd0f`. F08b = QA Lead's approvals queue + outcome board; F08c = onboarding empty-project state for new workspaces. 4 PNGs: rwd-home-{empty,lead}-{320,1440}.png (170-319 KB).
+- **`docs(followups)`** — Filed (g) Stakeholder Home design ambiguity — no locked HTML frame exists for "Stakeholder Home"; F07c skip routing implies F08b sharing OR F24 fallback. Two candidate resolutions documented; engineering recommendation = option 2 (deprecate concept, route Stakeholder skip → F24 directly). Owner: PM + Yogesh + designer review at design freeze.
+- **`feat(observability)`** — Per-chat token-savings tracking infrastructure — see `feat(observability)` entry below; landed during stretch session block 4-5.
+
 ### Fixed — Day 2 evening (2026-04-28)
 
 - **`chore(deps)`** — Pinned Zod to 3.x via `pnpm.overrides` in root `package.json` (this commit). Closes followup (f) — the dual-zod (3.25.76 + 4.3.6) state that surfaced post-BE-merge when `better-auth` transitively pulled Zod 4. Both `apps/web` and `apps/api` typechecks now exit 0. Required clearing `tsconfig.tsbuildinfo` caches in both apps (TS incremental cache had stale Zod 4 type resolutions). Documented mitigation in `STACK_LEARNINGS.md` for future workspace-wide dep upgrades.
