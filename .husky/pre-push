@@ -1,1 +1,99 @@
+#!/bin/bash
+# Husky pre-push hook for QA Nexus PM1.
+#
+# Two gates run in sequence:
+# 1) pnpm typecheck (existing) — catches TS errors before the push lands.
+# 2) CHANGELOG guard (added Day 2, Block 4(e)) — blocks pushes where any
+#    commit-being-pushed touches apps/** or packages/** WITHOUT a matching
+#    docs/CHANGELOG.md edit somewhere in the push range.
+#
+# The CHANGELOG guard is permissive: it only requires CHANGELOG.md to be
+# touched ONCE in the push range — not in every commit. This lets you
+# build a feature across N commits and document it in commit N+1.
+#
+# Bypass (only for true emergencies; document the bypass in the EOD):
+#   git push --no-verify
+# But the dangerous-flags hook may also need disabling, so the friction
+# is intentional.
+
+set -e
+
+echo "→ pre-push gate 1/2: typecheck"
 pnpm typecheck
+
+echo "→ pre-push gate 2/2: CHANGELOG guard"
+
+# stdin contract for git push hooks: lines like "<local-ref> <local-sha> <remote-ref> <remote-sha>"
+# We read all lines and compute the union of commits being pushed.
+remote="$1"
+url="$2"
+zero=$(git hash-object --stdin </dev/null | tr '0-9a-f' '0')
+
+push_commits=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Skip deletes
+  if [ "$local_sha" = "$zero" ]; then continue; fi
+
+  if [ "$remote_sha" = "$zero" ]; then
+    # New branch — compare against the default base (main on origin)
+    base=$(git rev-parse origin/main 2>/dev/null || git rev-parse HEAD~20 2>/dev/null || echo "")
+    if [ -n "$base" ]; then
+      range="$base..$local_sha"
+    else
+      range="$local_sha"
+    fi
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  range_commits=$(git rev-list "$range" 2>/dev/null || true)
+  push_commits="$push_commits $range_commits"
+done
+
+# If there's nothing to push (or stdin was empty for some reason), let it through.
+if [ -z "$(echo $push_commits | xargs)" ]; then
+  echo "  (no commits to push — skipping CHANGELOG guard)"
+  exit 0
+fi
+
+# Get the union of all files changed across the push range.
+all_changed_files=""
+for sha in $push_commits; do
+  files=$(git diff-tree --no-commit-id --name-only -r "$sha" 2>/dev/null || true)
+  all_changed_files="$all_changed_files
+$files"
+done
+
+# Filter to source paths that should require a CHANGELOG bump.
+# Note: docs/, .claude/, .github/, scripts/, tests, and config files DON'T require CHANGELOG.
+src_changed=$(echo "$all_changed_files" | grep -E '^(apps/(api|web)/src/|packages/[^/]+/src/)' | grep -vE '\.(test|spec)\.(ts|tsx|js)$' || true)
+
+# If no source code touched, no CHANGELOG required.
+if [ -z "$src_changed" ]; then
+  echo "  ✓ no apps/**/src/ or packages/**/src/ files touched — CHANGELOG bump not required"
+  exit 0
+fi
+
+# Source code touched — check if CHANGELOG was bumped in the same push range.
+changelog_touched=$(echo "$all_changed_files" | grep -E '^docs/CHANGELOG\.md$' || true)
+
+if [ -n "$changelog_touched" ]; then
+  echo "  ✓ docs/CHANGELOG.md updated in push range — guard satisfied"
+  exit 0
+fi
+
+# Failed: source touched without CHANGELOG bump.
+echo ""
+echo "✗ pre-push CHANGELOG guard FAILED"
+echo ""
+echo "  Source files in this push range touch apps/**/src/ or packages/**/src/:"
+echo "$src_changed" | head -10 | sed 's/^/    · /'
+echo ""
+echo "  But docs/CHANGELOG.md was NOT updated in any commit in this push range."
+echo ""
+echo "  Fix one of:"
+echo "    (a) Run /changelog-add to capture the most recent commit, then commit + retry push."
+echo "    (b) Manually edit docs/CHANGELOG.md [Unreleased] section, commit as docs(changelog), retry push."
+echo "    (c) If this is genuinely doc-only / config-only / test-only and the filter above misclassified, bypass with: git push --no-verify (and document in EOD)."
+echo ""
+exit 1

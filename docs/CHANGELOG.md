@@ -15,10 +15,14 @@ updates land here at the end of every working day.
 
 ### Added — Day 2 (2026-04-28)
 
+- **`feat(skill-features)`** — Memory System v1.3 — 4 curated logs (`5dcdb38`): `CLAUDE_DECISIONS.md` (decisions tied to ADRs), `STACK_LEARNINGS.md` (8 gotchas: zod/resolvers, hook regex boundary, static-export redirect, Grammarly hydration, CI bootstrap, Prisma shadow-DB, gitleaks paths-vs-regexes, WCAG tap targets), `IKSULA_CONTEXT.md` (8-user roster, anchor project RET, ID patterns, sample files), `PM1_PATTERNS.md` (Pattern A deferred routing, Pattern B visual confirmation gate, Pattern C full RWD, Pattern D audit log, Pattern E shared schemas).
+- **`docs(skill-features)`** — Status Line + `/changelog-add` slash command + `docs/STATUS.md` project-at-a-glance (`945c3ef`). Status line renders Model | Branch | ctx% | Cost | Duration with color-coded ctx (yellow ≥50%, red ≥75%) per CLAUDE.md compact rule.
 - **`chore(infra)`** — Closed 3 Day-1 followups in one commit (`742982c`):
   - `.claude/hooks/session-start/sync-hooks.sh` — auto-syncs `.claude/hooks/` from `origin/main` on every chat start (closes followup b / P1.17 worktree drift).
   - `docs/architecture/adr-002-prisma-raw-split.md` — formalizes the `prisma/migrations/` vs `prisma/raw/` convention with idempotent-by-default contract (closes followup a).
   - `pnpm db:apply-raw` script in root + `prisma:apply-raw` in `apps/api` (closes followup e bonus).
+- **`feat(skill-features)`** — Husky pre-push CHANGELOG guard (this commit). Blocks pushes where any commit touches `apps/**/src/` or `packages/**/src/` without a matching `docs/CHANGELOG.md` edit somewhere in the push range. Permissive: only requires CHANGELOG to be touched ONCE in the range, not per-commit. Bypass via `--no-verify` (intentional friction).
+- **`feat(skill-features)`** — `.claude/memory/RETROS.md` seed file for per-session and per-milestone retrospectives. Format documented; first entry seeded with Day 2 reflection.
 
 ---
 
