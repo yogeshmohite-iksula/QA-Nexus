@@ -55,6 +55,10 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": ".claude/scripts/statusline.sh"
+  },
   "permissions": {
     "allow": [
       "Edit(.claude/memory/**)",
