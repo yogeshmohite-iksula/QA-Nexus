@@ -1,13 +1,6 @@
 // TB-006 requirements.
 import { z } from 'zod';
-import {
-  Uuid,
-  Timestamp,
-  Priority,
-  RequirementStatus,
-  RequirementSource,
-  NonEmpty,
-} from './enums.js';
+import { Uuid, Timestamp, Priority, RequirementStatus, RequirementSource, NonEmpty } from './enums';
 
 export const RequirementSchema = z.object({
   id: Uuid,

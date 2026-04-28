@@ -67,6 +67,24 @@ export default tseslint.config(
     },
   },
 
+  // NestJS DI requires runtime class imports for constructor parameters
+  // (the @Controller / @Injectable decorators emit metadata that needs the
+  // value at runtime, not just the type). The `consistent-type-imports`
+  // rule above auto-converts `import { X }` -> `import type { X }` when X
+  // is only used as a type, which silently breaks Nest DI at runtime.
+  // Disable for apps/api/src/**/*.ts so Nest sees runtime class refs.
+  //
+  // This rule lives at root (not just apps/api/eslint.config.mjs) because
+  // lint-staged runs eslint from the repo root and flat-config picks the
+  // CWD's config file — so per-package overrides don't apply during the
+  // pre-commit hooks. Spec: MS0-T022.
+  {
+    files: ['apps/api/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
+
   // PM1 hard rule: no `any` without // FIXME + ticket reference
   // (Enforced via the no-explicit-any rule above; humans must add // FIXME comment with ticket before suppressing.)
 );

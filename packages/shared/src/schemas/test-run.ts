@@ -1,6 +1,6 @@
 // TB-011 test_runs + TB-012 test_run_results.
 import { z } from 'zod';
-import { Uuid, Timestamp, RunTrigger, TestRunStatus, TestResultStatus, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, RunTrigger, TestRunStatus, TestResultStatus, NonEmpty } from './enums';
 
 export const TestRunSchema = z.object({
   id: Uuid,

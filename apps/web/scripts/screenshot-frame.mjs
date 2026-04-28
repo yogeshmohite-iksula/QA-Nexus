@@ -7,12 +7,12 @@
 //
 // Example:
 //   node apps/web/scripts/screenshot-frame.mjs \
-//     http://localhost:3000/home 320 568 \
-//     docs/screenshots/rwd-home-qa-320.png
+//     http://localhost:3000/onboarding/invited/qa-engineer 320 568 \
+//     docs/screenshots/rwd-invited-qa-320.png
 //
-// NOTE: this file ships in PR #7 (feature/fe-day-2-invited-onboarding). When
-// that PR merges to main, this duplicate copy on feature/fe-f08a-home-qa-engineer
-// will resolve via the rebase. Until then, both branches carry the script.
+// Exits 0 on success, 1 on bad args or capture failure. Non-zero exit
+// surfaces as a husky-style failure if the visual-gate is wired into a
+// pre-commit script later.
 
 import { chromium } from 'playwright';
 
@@ -26,8 +26,15 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: +w, height: +h } });
 const page = await context.newPage();
 
+// 'networkidle' can hang on Next dev (HMR websocket); 'load' is the right
+// signal for a first-paint visual check. Falls back gracefully on slow
+// first compile via the 60s timeout.
 await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+
+// Brief settle for client-only effects (FormProvider hydration, suspense
+// boundaries resolving, font swaps). 800 ms is enough on this machine.
 await page.waitForTimeout(800);
+
 await page.screenshot({ path: out, fullPage: true, type: 'png' });
 await browser.close();
 console.log(`Saved ${out} (${w}x${h})`);

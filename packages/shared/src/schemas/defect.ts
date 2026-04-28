@@ -1,6 +1,6 @@
 // TB-015 defects + TB-016 rca_reports.
 import { z } from 'zod';
-import { Uuid, Timestamp, Priority, DefectStatus, NonEmpty } from './enums.js';
+import { Uuid, Timestamp, Priority, DefectStatus, NonEmpty } from './enums';
 
 export const DefectSchema = z.object({
   id: Uuid,

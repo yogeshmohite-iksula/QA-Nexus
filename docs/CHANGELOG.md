@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 2 evening (2026-04-28)
+
+- **`chore(deps)`** — Pinned Zod to 3.x via `pnpm.overrides` in root `package.json` (this commit). Closes followup (f) — the dual-zod (3.25.76 + 4.3.6) state that surfaced post-BE-merge when `better-auth` transitively pulled Zod 4. Both `apps/web` and `apps/api` typechecks now exit 0. Required clearing `tsconfig.tsbuildinfo` caches in both apps (TS incremental cache had stale Zod 4 type resolutions). Documented mitigation in `STACK_LEARNINGS.md` for future workspace-wide dep upgrades.
+
 ### Added — Day 2 (2026-04-28)
 
 - **`feat(skill-features)`** — Memory System v1.3 — 4 curated logs (`5dcdb38`): `CLAUDE_DECISIONS.md` (decisions tied to ADRs), `STACK_LEARNINGS.md` (8 gotchas: zod/resolvers, hook regex boundary, static-export redirect, Grammarly hydration, CI bootstrap, Prisma shadow-DB, gitleaks paths-vs-regexes, WCAG tap targets), `IKSULA_CONTEXT.md` (8-user roster, anchor project RET, ID patterns, sample files), `PM1_PATTERNS.md` (Pattern A deferred routing, Pattern B visual confirmation gate, Pattern C full RWD, Pattern D audit log, Pattern E shared schemas).
