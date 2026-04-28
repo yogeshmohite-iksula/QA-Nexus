@@ -35,7 +35,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 **Frontend:** Next.js 15 (App Router) · React 19 · Tailwind CSS 4 (CSS-first config) · shadcn/ui · Sonner · lucide-react · react-hook-form · Zod · Framer Motion · TanStack Query v5 · TipTap
 
-**Backend:** single NestJS 10 service (REST + WebSocket via `@nestjs/websockets` + `ws`) · Prisma 5 · BetterAuth (Postgres adapter) · Zod (shared with FE) · `@xenova/transformers` (Qwen3-Embedding-0.6B in-process WASM) · Groq SDK · `@google/generative-ai`
+**Backend:** single NestJS 10 service (REST + WebSocket via `@nestjs/websockets` + `ws`) · Prisma 5 · BetterAuth (Postgres adapter) · Zod (shared with FE) · `@xenova/transformers` (BAAI/bge-large-en-v1.5 in-process WASM — see ADR-003; Qwen3-Embedding-0.6B is the future target once Xenova ships an ONNX conversion) · Groq SDK · `@google/generative-ai`
 
 **Database:** Postgres 15 + pgvector (HNSW indexes) on Neon free 0.5 GB · scale-to-zero
 
@@ -43,7 +43,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 **LLM:** Groq free API — `openai/gpt-oss-120b` primary (500 tok/s, 131K ctx, 1k RPD) · `meta-llama/llama-4-scout-17b-16e-instruct` long-context (10M tokens, preview tier) · `openai/gpt-oss-20b` fast layers (14.4k RPD) · Gemini 2.5 Flash fallback (1.5k RPD)
 
-**Embeddings:** Qwen3-Embedding-0.6B in-process via `@xenova/transformers` (1024-dim, ~50ms/embed)
+**Embeddings:** BAAI/bge-large-en-v1.5 in-process via `@xenova/transformers` (1024-dim, ~47ms/embed warm). Model selection: see `docs/architecture/adr-003-embedding-model.md`. Qwen3-Embedding-0.6B remains the future target once Xenova ships an ONNX conversion — env var `EMBEDDING_MODEL_ID` enables hot-swap without code change.
 
 **Email:** Resend free
 

@@ -7,6 +7,7 @@
 **Document Name:** PM1_PRD (formerly MVP_PRD)
 **Document Version:** v8.1 (PM1 UI 41-frame closure — F28m1 + F26m1 added for Day-0 LLM config flow, 2026-04-25 late)
 **Document Status:** Approved baseline for PM1 build (tech stack final, UI inventory closed at 41 frames)
+**2026-04-28 implementation note:** PM1 ships with `Xenova/bge-large-en-v1.5` as the embedding model (1024-dim, ONNX, Apache-2.0) rather than `Qwen3-Embedding-0.6B`. Reason: Xenova hasn't published an ONNX conversion of Qwen3-0.6B yet, and `@xenova/transformers` requires ONNX. Schema dimension (`vector(1024)`), runtime API, and HNSW indexes are unchanged — Qwen3 hot-swap is a single env var (`EMBEDDING_MODEL_ID`) once Xenova ships the ONNX. Full rationale + alternatives + future-swap path in `docs/architecture/adr-003-embedding-model.md`.
 **Companion Documents:** `PM1_ERD.md` (PM1 engineering spec), `../PM1_UI_v2/UI Files/01_SYSTEM.md` (locked design system), `../Milestone/M0`–`M6` folders (week-by-week execution), project-level `../PRD/PRD.md` and `../ERD/ERD.md` (full PM1–PM4 program context)
 **Scope:** **This document covers PM1 only.** PM2/PM3/PM4 scope lives in the project-level `../PRD/PRD.md` and is intentionally excluded here.
 
