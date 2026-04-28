@@ -13,6 +13,15 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 2 stretch (2026-04-28 evening)
+
+- **`feat(api)`** — **MS0-T024 Embedding service** via `@xenova/transformers` (in-process WASM). New `EmbeddingService.embed(text)` returns 1024-dim Float32Array, eager-loads at NestJS bootstrap, exposes `.isWarm()` + `.status()` for /health. Two dev-only Admin-gated probes: `GET /embedding/test` + `GET /embedding/cosine`. Cold load 38s (HF download), warm 1.7s, per-embed warm latency 19-31ms (well under CLAUDE.md's "~50ms" target). Cosine sanity: `('test case','test scenario')=0.80` vs `('test case','fox')=0.46`. **ADR-003** documents the model choice — PM1 ships with `Xenova/bge-large-en-v1.5` instead of Qwen3-Embedding-0.6B because Xenova hasn't ONNX-converted Qwen3 yet; same dim, same schema, hot-swap via `EMBEDDING_MODEL_ID` env var when Xenova ships it. CLAUDE.md + PM1_PRD + PM1_ERD updated with implementation notes pointing to ADR-003.
+
+### Changed — Day 2 stretch
+
+- **`chore(security)`** — Root `package.json` gained `pnpm.onlyBuiltDependencies` allowlist (sharp, prisma, @nestjs/core, unrs-resolver) — pnpm 10's default-block of install scripts was preventing sharp's libvips binary from being downloaded, which `@xenova/transformers` needs at runtime. Documented as a security trade-off in `docs/SECURITY.md` → "Dependency hygiene"; future additions require ADR + Yogesh sign-off.
+- **`fix(api)`** — Restored runtime imports for `AppService` + `AuthService` in `app.controller.ts` and `auth.controller.ts` (lint-staged had auto-converted them to `import type` in a prior session, silently breaking Nest DI at runtime; the eslint override merged in `07c97ea` now prevents future drift).
+
 ### Added — Day 2 (2026-04-28)
 
 - **`feat(skill-features)`** — Memory System v1.3 — 4 curated logs (`5dcdb38`): `CLAUDE_DECISIONS.md` (decisions tied to ADRs), `STACK_LEARNINGS.md` (8 gotchas: zod/resolvers, hook regex boundary, static-export redirect, Grammarly hydration, CI bootstrap, Prisma shadow-DB, gitleaks paths-vs-regexes, WCAG tap targets), `IKSULA_CONTEXT.md` (8-user roster, anchor project RET, ID patterns, sample files), `PM1_PATTERNS.md` (Pattern A deferred routing, Pattern B visual confirmation gate, Pattern C full RWD, Pattern D audit log, Pattern E shared schemas).
