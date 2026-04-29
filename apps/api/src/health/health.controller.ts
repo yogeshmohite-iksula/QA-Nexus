@@ -22,6 +22,7 @@ import type { Response } from 'express';
 import { Res } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingService } from '../embedding/embedding.service';
+import { R2Service, type R2Health } from '../storage/r2.service';
 
 const NEON_FREE_TIER_MB = 512;
 const QUOTA_WARNING_PCT = 90;
@@ -46,7 +47,7 @@ interface HealthResponse {
   timestamp: string;
   db: Subsystem;
   llm: SubsystemDeferred;
-  r2: SubsystemDeferred;
+  r2: R2Health;
   embedding:
     | {
         status: 'up';
@@ -71,13 +72,17 @@ export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly embedding: EmbeddingService,
+    private readonly r2Service: R2Service,
   ) {}
 
   @Get()
   async health(@Res() res: Response): Promise<void> {
-    const dbResult = await this.pingDb();
+    const [dbResult, r2Result, quota] = await Promise.all([
+      this.pingDb(),
+      this.r2Service.health(),
+      this.measureQuota(),
+    ]);
     const embeddingResult = this.checkEmbedding();
-    const quota = await this.measureQuota();
     const overall = this.computeOverall(dbResult, embeddingResult, quota);
 
     const body: HealthResponse = {
@@ -88,10 +93,7 @@ export class HealthController {
         status: 'deferred',
         note: 'MS0-T023 LLM gateway not yet landed (Day 3)',
       },
-      r2: {
-        status: 'deferred',
-        note: 'MS0-T013 Cloudflare R2 wiring not yet landed',
-      },
+      r2: r2Result,
       embedding: embeddingResult,
       quota: {
         ...quota,

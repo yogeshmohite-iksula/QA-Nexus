@@ -23,3 +23,4 @@ export * from './schemas/kb';
 export * from './schemas/llm';
 export * from './schemas/audit';
 export * from './auth/role.enum';
+export * from './storage';

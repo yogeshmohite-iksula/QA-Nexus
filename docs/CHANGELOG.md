@@ -13,6 +13,11 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 3 (2026-04-29)
+
+- **`feat(api)`** — **MS0-T013 (code-side) R2 storage service** with presigned-URL direct-from-FE upload pattern. `apps/api/src/storage/{r2.service,r2.module,storage.controller,zod-validation.pipe}.ts` + `packages/shared/src/storage.ts` Zod schemas (`PresignedUploadRequest`, `PresignedUploadResponse`, `PresignedDownloadRequest`, `PresignedDownloadResponse`, allowed-content-type whitelist). Two RBAC-gated endpoints: `POST /storage/presigned-upload` (Admin/Lead via `@Roles`) writes synchronous audit-log row before returning; `POST /storage/presigned-download` (any authenticated user, no audit). Service supports "deferred mode" — when env vars unset, all methods throw 503 + `/health` reports `r2.status="deferred"` (lets API ship + serve other endpoints before T013 dashboard provisioning lands). Real S3-API client (`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`) so swap to S3/MinIO is one URL change. 14/14 jest unit tests pass (mocked S3 client). Wired into AppModule + HealthController for `/health` r2 readout.
+- **`docs(deploy)`** — Phase 1 prep-pack (commit `c5a8b1e`): `apps/api/.env.example` + 4 dashboard runbooks (Render, R2, UptimeRobot, Resend) + 2 new ADRs (ADR-004 Render deployment, ADR-005 R2 storage) + gitleaks allowlist for `docs/deploy/*`. Yogesh follows the runbooks on his side when convenient.
+
 ### Added — Day 2 stretch evening (2026-04-28)
 
 - **`feat(api)`** — **MS0-T025 Health endpoint** — public unauthenticated `GET /health` returns subsystem readouts (db/embedding/llm/r2/quota) for UptimeRobot's 5-min ping + Render's deploy-time health-check. DB ping with 2s timeout; embedding ping reads `EmbeddingService.status()`; quota = `pg_database_size()` vs Neon's 512 MB free tier (currently 1.78%). LLM + R2 marked `deferred` with notes pointing to MS0-T023/T013. HTTP semantics: 200 if all required up + quota ≤ 90%, 503 if any required down or quota > 90%. Curl-verified.
