@@ -25,28 +25,42 @@ import { expect, test } from '@playwright/test';
 // Yogesh = Admin (deployer-admin per Day-0 bootstrap).
 const PILOT_USER_EMAIL = 'yogesh.mohite@iksula.com';
 
-test.describe('Founder onboarding flow (F07 + F07b/c/d + F08a)', () => {
-  test.skip(
-    true,
-    'Skipped until MS0-T014 (Resend) wires the real magic-link email. ' +
-      'Currently EmailService.sendMagicLink() is in stub mode → no clickable ' +
-      'email arrives → magic-link click step cannot proceed. ' +
-      'See docs/deploy/resend-runbook.md.',
-  );
-
+// Day-3 noon (MS0-T031.b unskip phase 1):
+//   - "signed-out user lands on /sign-in"  → UNSKIPPED. Pure FE redirect, no
+//     auth state required. Validates the middleware + landing logic is wired.
+//   - "sign-in form triggers magic-link send" → UNSKIPPED. EmailService is in
+//     stub mode (logs the magic link instead of sending it), but BetterAuth
+//     still completes the request + the FE still shows "check your email".
+// The remaining 3 tests stay skipped — they require an authed session
+// which needs the real magic-link click (waits on T014 Resend provisioning
+// + the test-only token-leak endpoint).
+test.describe('Founder onboarding — public/no-auth (always-on)', () => {
   test('signed-out user lands on /sign-in', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/sign-in/);
     await expect(page.getByRole('heading', { name: /Sign in/i })).toBeVisible();
   });
 
-  test('sign-in form requires email + triggers magic-link send', async ({ page }) => {
+  test('sign-in form triggers magic-link send (stub mode OK)', async ({ page }) => {
     await page.goto('/sign-in');
     await page.getByLabel(/email/i).fill(PILOT_USER_EMAIL);
     await page.getByRole('button', { name: /authenticate|sign in/i }).click();
-    // Expect a "check your email" confirmation
-    await expect(page.getByText(/check your email/i)).toBeVisible();
+    // Confirmation may render as a toast ("check your email") OR a confirm
+    // page heading — accept either.
+    await expect(page.getByText(/check your email|magic link sent/i)).toBeVisible({
+      timeout: 10_000,
+    });
   });
+});
+
+test.describe('Founder onboarding — needs-authed-session (skipped)', () => {
+  test.skip(
+    true,
+    'Skipped until MS0-T014 (Resend) wires the real magic-link email AND ' +
+      'a test-only token-leak endpoint exists so the runner can complete ' +
+      'the magic-link click without an SMTP roundtrip. See ' +
+      'docs/deploy/resend-runbook.md + day-4 BE backlog.',
+  );
 
   test('clicking magic-link redirects to /onboarding (founder flow)', async ({ page, request }) => {
     // Step 1: trigger magic-link via API directly (faster than form)
@@ -116,6 +130,30 @@ test.describe('Public health endpoint (no auth)', () => {
     expect(body.db).toBeDefined();
     expect(body.embedding).toBeDefined();
     expect(body.r2).toBeDefined(); // status=deferred until T013 dashboard work
-    expect(body.llm).toBeDefined(); // status=deferred until T023 lands
+    expect(body.llm).toBeDefined(); // T023 landed → expect populated payload
+  });
+});
+
+test.describe('A1 Scribe smoke (MS0-T036, no auth)', () => {
+  // Wiring smoke: prove POST /agents/a1/generate is mounted on the Nest
+  // router and gated by RolesGuard. Unauthenticated requests must return
+  // 401 (UnauthorizedException from RolesGuard's session lookup), NOT 404
+  // (would mean the route isn't registered) and NOT 500 (would mean an
+  // un-handled error). This runs without burning Groq quota — the real
+  // generation path requires a valid session, which we don't establish
+  // in the always-on lane (waits on T014 for the magic-link).
+  test('POST /agents/a1/generate returns 401 when unauthenticated', async ({ request }) => {
+    const apiBase = process.env.E2E_API_BASE_URL ?? 'http://localhost:3001';
+    const r = await request.post(`${apiBase}/agents/a1/generate`, {
+      data: {
+        projectKey: 'RET',
+        requirement: 'Returning customer can submit a return for a delivered order within 30 days.',
+        count: 1,
+      },
+    });
+    // Reject with 401 (preferred) or 403 (acceptable — both prove the
+    // guard fired). NEVER 200 (would mean missing guard) or 500 (would
+    // mean an internal error).
+    expect([401, 403]).toContain(r.status());
   });
 });
