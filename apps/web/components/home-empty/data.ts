@@ -1,35 +1,19 @@
-// Iksula canon stub data for F08c Empty Project First-Run.
+// View-only fixtures for F08c Empty Project First-Run.
 //
-// Pattern A: ALL data is hard-coded TS constants — no fetch / useMutation /
-// axios anywhere. Real wiring lands in MS0-T030.5+ once T021 BetterAuth +
-// the home queries are ready.
-//
-// Iksula canon: Yogesh M. (Admin per CLAUDE.md Day-0 bootstrap, NOT QA Lead
-// as the locked source incorrectly labels him in the rail-footer). Workspace
-// is the freshly-bootstrapped Iksula org with one project (Iksula Returns)
-// just created via F07 Founder Onboarding. No test cases / runs / defects
-// yet — this is the empty state.
-
-export const SIGNED_IN_USER = {
-  name: 'Yogesh M.',
-  initials: 'YM',
-  role: 'Admin',
-  // Locked-source deviation: rail footer labels Yogesh as 'QA LEAD' but
-  // CLAUDE.md roster + Day-0 bootstrap define Yogesh as Admin. Honoring
-  // the binding spec over the locked frame for this single semantic
-  // inconsistency. Akshay Panchal is the actual QA Lead.
-  roleId: 'Admin' as const,
-};
-
-export const ACTIVE_PROJECT = {
-  name: 'Iksula Returns',
-  key: 'RET' as const,
-  branch: 'main',
-  glyph: 'IR',
-  freshness: 'just created',
-  isNew: true,
-  projectId: 'ORG-IKS / PRJ-RET',
-};
+// FOLLOWUP (i) — seed-centralization (ADR-006):
+// - Entity identity (signed-in user, active project) MOVED to context
+//   hooks: `useCurrentUser()` + `useActiveProject()`.
+// - The page wraps the tree in
+//   `<CurrentUserProvider initialUserId={SEED_IDS.users.yogesh}>` so the
+//   active user is Yogesh Mohite (the canonical Day-0 bootstrap Admin
+//   per CLAUDE.md). The locked frame's rail-footer "QA LEAD" label was
+//   already a documented deviation — left-rail.tsx now resolves the role
+//   chip via `me.role === 'Admin' ? 'Admin' : me.organizationalLabel`.
+// - View-specific stubs (`glyph`, `branch`, `isNew`, displayed
+//   `projectId` composite) are inlined in the consumer components.
+// - This file now holds only VIEW-FIXTURE data (HERO copy, setup cards,
+//   checklist, empty-state zones).
+// - Pattern A still applies: NO fetch / useMutation / axios anywhere.
 
 export const HERO = {
   heading: "Iksula Returns is ready. Let's get it set up.",

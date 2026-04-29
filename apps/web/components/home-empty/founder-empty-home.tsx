@@ -12,26 +12,32 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useActiveProject } from '@/lib/contexts/ProjectContext';
 import { HomeShell } from './home-shell';
 import { LeftRail } from './left-rail';
-import {
-  ACTIVE_PROJECT,
-  HERO,
-  SETUP_CARDS,
-  SETUP_CHECKLIST,
-  SIGNED_IN_USER,
-  type SetupCard,
-} from './data';
+import { HERO, SETUP_CARDS, SETUP_CHECKLIST, type SetupCard } from './data';
+
+// View-specific stub: composite "ORG-IKS / PRJ-RET" project ID isn't on
+// the Project entity (it concatenates workspace + project keys for
+// display). Compose inline from the active project's key.
+function composeDisplayProjectId(projectKey: string): string {
+  return `ORG-IKS / PRJ-${projectKey}`;
+}
 
 export function FounderEmptyHome() {
+  const me = useCurrentUser();
+  const project = useActiveProject();
+  const projectId = composeDisplayProjectId(project.key);
+
   useEffect(() => {
     console.info('pattern-a:deferred:home-empty-load', {
       workspace: 'Iksula',
-      projectKey: ACTIVE_PROJECT.key,
-      projectId: ACTIVE_PROJECT.projectId,
-      role: SIGNED_IN_USER.roleId,
+      projectKey: project.key,
+      projectId,
+      role: me.role,
     });
-  }, []);
+  }, [project.key, projectId, me.role]);
 
   function logRoute(target: string) {
     console.info('pattern-a:deferred:home-empty-route', { target });
@@ -81,10 +87,18 @@ function WelcomeStrip() {
         </h1>
         <p className="text-[13px] leading-[20px] text-[var(--text-tertiary)]">{HERO.sub}</p>
       </div>
-      <span className="inline-flex w-fit items-center rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] px-3 py-1 font-mono text-[11px] text-[var(--text-tertiary)]">
-        Project ID: {ACTIVE_PROJECT.projectId}
-      </span>
+      <ProjectIdChip />
     </section>
+  );
+}
+
+function ProjectIdChip() {
+  const project = useActiveProject();
+  const projectId = composeDisplayProjectId(project.key);
+  return (
+    <span className="inline-flex w-fit items-center rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] px-3 py-1 font-mono text-[11px] text-[var(--text-tertiary)]">
+      Project ID: {projectId}
+    </span>
   );
 }
 

@@ -7,7 +7,31 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ACTIVE_PROJECT, SIGNED_IN_USER } from './data';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useActiveProject } from '@/lib/contexts/ProjectContext';
+
+// View-specific stubs: glyph + isNew + branch aren't on the Project entity yet.
+const ACTIVE_BRANCH = 'main';
+const ACTIVE_GLYPH = 'IR';
+const ACTIVE_IS_NEW = true;
+
+function shortName(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function initialsOf(displayName: string): string {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 export function HomeShell({ children }: { children: ReactNode }) {
   return (
@@ -19,6 +43,11 @@ export function HomeShell({ children }: { children: ReactNode }) {
 }
 
 function TopBar() {
+  const me = useCurrentUser();
+  const project = useActiveProject();
+  const meName = shortName(me.displayName);
+  const meInitials = initialsOf(me.displayName);
+  const meRole = me.organizationalLabel;
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--canvas)] px-3 sm:gap-4 sm:px-6">
       <Link
@@ -49,16 +78,14 @@ function TopBar() {
           className="inline-flex h-5 w-5 items-center justify-center rounded-md font-mono text-[10px] font-bold text-[var(--primary-ink)]"
           style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
         >
-          {ACTIVE_PROJECT.glyph}
+          {ACTIVE_GLYPH}
         </span>
-        <span className="font-medium">{ACTIVE_PROJECT.name}</span>
+        <span className="font-medium">{project.name}</span>
         <span aria-hidden="true" className="text-[var(--text-tertiary)]">
           ·
         </span>
-        <span className="font-mono text-[12px] text-[var(--text-tertiary)]">
-          {ACTIVE_PROJECT.branch}
-        </span>
-        {ACTIVE_PROJECT.isNew && (
+        <span className="font-mono text-[12px] text-[var(--text-tertiary)]">{ACTIVE_BRANCH}</span>
+        {ACTIVE_IS_NEW && (
           <span className="bg-[var(--primary)]/20 rounded-full px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--primary)]">
             New
           </span>
@@ -90,7 +117,7 @@ function TopBar() {
 
       <button
         type="button"
-        aria-label={`Signed in as ${SIGNED_IN_USER.name}, ${SIGNED_IN_USER.role}`}
+        aria-label={`Signed in as ${meName}, ${meRole}`}
         className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] py-1.5 pl-1.5 pr-3 transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
       >
         <span
@@ -98,10 +125,10 @@ function TopBar() {
           className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[10px] font-bold text-[var(--primary-ink)]"
           style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
         >
-          {SIGNED_IN_USER.initials}
+          {meInitials}
         </span>
         <span className="hidden text-[13px] font-medium text-[var(--text-primary)] sm:inline">
-          {SIGNED_IN_USER.name}
+          {meName}
         </span>
         <ChevronDownIcon />
       </button>
