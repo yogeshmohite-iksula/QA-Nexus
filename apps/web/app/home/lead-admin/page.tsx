@@ -20,6 +20,8 @@
 // future /home/stakeholder (F08-stakeholder, no locked frame yet — P2).
 
 import type { Metadata } from 'next';
+import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
+import { SEED_IDS } from '@/lib/demo-seed';
 import { QaLeadHome } from '@/components/home-lead/qa-lead-home';
 
 export const metadata: Metadata = {
@@ -29,5 +31,14 @@ export const metadata: Metadata = {
 };
 
 export default function HomeLeadAdminPage() {
-  return <QaLeadHome />;
+  // Page-level current-user override per `docs/refactor/seed-centralization-migration.md`.
+  // F08b is the QA Lead view; the demo seed's canonical Lead is Akshay Panchal
+  // (per CLAUDE.md "Iksula data canon"). The locked HTML used Yogesh M. but
+  // the runbook explicitly aligns identity with the seed roster — so this
+  // page renders as Akshay (organizationalLabel = "QA Lead", initials AP).
+  return (
+    <CurrentUserProvider initialUserId={SEED_IDS.users.akshay}>
+      <QaLeadHome />
+    </CurrentUserProvider>
+  );
 }

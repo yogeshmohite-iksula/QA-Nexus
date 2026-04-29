@@ -1,29 +1,18 @@
-// Iksula canon stub data for F08b Home Dashboard (QA Lead).
+// View-only fixtures for F08b Home Dashboard (QA Lead).
 //
-// Pattern A: ALL data is hard-coded TS constants — no fetch / useMutation /
-// axios anywhere. Real wiring (BetterAuth session + Prisma queries) lands in
-// MS0-T030.5+ once T021 + T027 + the home queries are ready.
-//
-// Locked-frame note: the locked HTML uses Yogesh M. as the signed-in QA Lead
-// even though CLAUDE.md's pilot roster has Akshay Panchal in that role.
-// Honoring the locked source per CLAUDE.md hard rule #3.
-
-export const SIGNED_IN_USER = {
-  name: 'Yogesh M.',
-  initials: 'YM',
-  role: 'QA Lead',
-  roleId: 'QALead' as const,
-};
-
-export const ACTIVE_PROJECT = {
-  name: 'Iksula Returns',
-  key: 'RET' as const,
-  branch: 'main',
-  sprint: 42,
-  sprintDay: 9,
-  sprintLength: 14,
-  release: 'R-2026-04-PaymentV2',
-};
+// FOLLOWUP (i) — seed-centralization (ADR-006):
+// - Entity identity (signed-in user, active project) MOVED to context
+//   hooks: `useCurrentUser()` + `useActiveProject()`.
+// - The page wraps the tree in `<CurrentUserProvider initialUserId=
+//   {SEED_IDS.users.akshay}>` so the active user is Akshay Panchal
+//   (the canonical QA Lead per CLAUDE.md). The locked HTML used Yogesh M.
+//   — but the runbook explicitly aligns identity with the seed roster,
+//   so name/initials change YM→AP. Role pill ("QA Lead") preserved
+//   (Akshay's organizationalLabel matches).
+// - This file now holds only VIEW-FIXTURE data (HERO copy, KPIs, approval
+//   queue rows, etc.) — stub data that does NOT represent identifiable
+//   workspace users / projects.
+// - Pattern A still applies: NO fetch / useMutation / axios anywhere.
 
 export const HERO = {
   heading: 'How is the team doing, and what needs approval?',
