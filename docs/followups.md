@@ -2,6 +2,40 @@
 
 ---
 
+## [2026-04-29] (h) Zod 3 / Zod 4 ecosystem migration — strategic, schedule Day 7-8
+
+**Identified during:** Day-3 BE session (T023 LLM gateway). Second tactical pin in 24 hours.
+
+**Symptom:** Two of our direct deps have auto-resolved past the Zod-3 cutoff and required tactical pins to keep the project's Zod 3.x `pnpm.overrides` consistent:
+
+- **Day 2 stretch:** `@hookform/resolvers` resolved to a version requiring Zod 4 (closed as followup (f), pinned via overrides).
+- **Day 3 morning:** `better-auth ^1.2.0` auto-resolved to **1.6.9** which uses `z.coerce.boolean().meta(...)` — a Zod 4 method. Pinned to `~1.2.0` (allow patch only) + dropped the `metadata` arg from `magicLink.sendMagicLink` callback (added in better-auth 1.4+). Two-line change in `apps/api/src/auth/auth.config.ts`.
+
+**Trend:** Zod 3 → Zod 4 migration is sweeping the JS ecosystem (Q2 2026). Within 2-4 weeks more packages we depend on will require Zod 4. Each one we encounter forces another tactical pin OR a hot upgrade under deadline.
+
+**Strategic options:**
+
+1. **Stay on Zod 3 indefinitely** — keep pinning each new dep to its last-Zod-3-compatible version. Tactical, but accumulates pin debt that compounds (every transitive update can break us). We'd hit a hard wall once a dep we MUST upgrade for security drops Zod-3 support entirely.
+2. **Coordinated migration to Zod 4** — bump `apps/api` + `apps/web` + `packages/shared` atomically in one PR. Risks: API surface changes (some Zod 3 schemas don't map cleanly to v4 — e.g., `z.string().datetime({offset:true})` semantics, default-application order, error-format shape). 1-day focused effort.
+3. **Hybrid via pnpm catalog** — define both `zod-3` and `zod-4` catalogs, packages opt in per-workspace. Cleanest long-term (workspace can migrate one at a time) but most plumbing upfront. Probably overkill for our 3-package monorepo.
+
+**Recommendation:** **Option 2** — schedule the atomic Zod 4 migration as a Day 7-8 task (after M0 hosting deploys land). 1-day focused effort beats 2-3 weeks of accumulated tactical pins, and going through it once means our schema layer is on the modern surface for the remainder of M1+ buildout.
+
+**Pre-work for Day 7-8:**
+
+- Inventory every `import { z } from 'zod'` site (~30+ files in `packages/shared`, ~10+ in `apps/api`, ~20+ in `apps/web`). The Zod migration guide ([zod.dev/v4/migration](https://zod.dev/v4/migration)) is the source of truth for breaking changes.
+- Audit `@hookform/resolvers/zod` v3-vs-v4 API differences (FE only).
+- Audit `better-auth`'s 1.x → next major for whether their `metadata` arg is restored or further changed.
+- Spike: try Zod 4 in a throwaway branch on just `packages/shared`; identify any schemas that need rewrite (most should "just work" because we use the basic primitives, not advanced refinements).
+
+**Owner:** BE chat (lead — owns `packages/shared` + `apps/api`) + FE chat (apps/web schemas + form resolvers). Coordinate via `docs/parallel-work/follow-ups.md` once scheduled.
+
+**When:** Day 7-8 (after T011/T013/T014/T015 + T026 + T031 close). Specifically: AFTER all M0 hosting deploys land but BEFORE the M1 RBAC + Workspace endpoints PR — that PR will introduce another ~10-20 Zod schemas and we don't want to write them in 3 then rewrite to 4 a week later.
+
+**ETA:** 1 day (~6 focused hours): 2h migrate `packages/shared` + run all dependent typechecks, 2h migrate `apps/api`, 1.5h migrate `apps/web`, 0.5h ADR-005 documenting the cutoff.
+
+---
+
 ## [2026-04-28] (g) Stakeholder Home — no locked frame, design ambiguity
 
 **Identified during:** Day-2 stretch session, FE F08b port.
