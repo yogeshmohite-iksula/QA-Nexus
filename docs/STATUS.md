@@ -1,6 +1,6 @@
 # QA Nexus PM1 — Project Status
 
-**Snapshot as of:** 2026-04-29 EOD (Day 3 close — 5 MAIN commits, 0 PRs, deploy prep-pack + R2 service + T031 scaffold + T018 backup all landed; dashboard provisioning queued for Yogesh). Re-generated at the end of every working day; intermediate updates allowed when major events land. The `/whats-next` slash command (planned) will eventually auto-rebuild this file.
+**Snapshot as of:** 2026-04-29 EOD-evening (Day 3 close + evening seed-centralization session). 9 MAIN commits today. Earlier-day: deploy prep-pack + R2 service + T031 scaffold + T018 backup. Evening: aggregator dedup fix (974K→103K), 2 followups filed (h zod migration, i seed centralization), seed-types + demo-seed + 3 context providers + ADR-006 + migration runbook. Day-4 morning protocol: Yogesh runs 4 dashboard runbooks; FE chat refactors 5 components per migration runbook.
 
 > One-page "where are we right now?" for anyone joining the project mid-stream — Yogesh, Akshay, future contributors, or a fresh Claude Code session that hasn't read the EOD reports yet.
 
