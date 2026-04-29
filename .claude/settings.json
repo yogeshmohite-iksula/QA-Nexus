@@ -3,31 +3,61 @@
     "PreToolUse": [
       {
         "matcher": "*",
-        "hooks": [{ "type": "command", "command": ".claude/hooks/pre-tool-use/inject-memory.sh" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/inject-memory.sh"
+          }
+        ]
       },
       {
         "matcher": "Bash",
-        "hooks": [{ "type": "command", "command": ".claude/hooks/pre-tool-use/block-dangerous.sh" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/block-dangerous.sh"
+          }
+        ]
       },
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/pre-tool-use/check-secrets.sh" },
-          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-design-tokens.sh" },
-          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-pm1-stack.sh" },
-          { "type": "command", "command": ".claude/hooks/pre-tool-use/enforce-rwd.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/check-secrets.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/enforce-design-tokens.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/enforce-pm1-stack.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/enforce-rwd.sh"
+          }
         ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "*",
-        "hooks": [{ "type": "command", "command": ".claude/hooks/post-tool-use/audit-log.sh" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-tool-use/audit-log.sh"
+          }
+        ]
       },
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/post-tool-use/report-token-savings.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-tool-use/report-token-savings.sh"
+          }
         ]
       }
     ],
@@ -35,7 +65,10 @@
       {
         "matcher": "*",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/prompt-submit/load-binding-context.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/prompt-submit/load-binding-context.sh"
+          }
         ]
       }
     ],
@@ -43,16 +76,30 @@
       {
         "matcher": "*",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/stop/update-docs-check.sh" },
-          { "type": "command", "command": ".claude/hooks/stop/cumulative-savings-report.sh" },
-          { "type": "command", "command": ".claude/hooks/stop/log-token-savings.sh" }
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop/update-docs-check.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop/cumulative-savings-report.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop/log-token-savings.sh"
+          }
         ]
       }
     ],
     "SessionStart": [
       {
         "matcher": "*",
-        "hooks": [{ "type": "command", "command": ".claude/hooks/session-start/sync-hooks.sh" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start/sync-hooks.sh"
+          }
+        ]
       }
     ]
   },
@@ -82,7 +129,6 @@
       "Write(apps/**)",
       "Bash(mkdir -p .claude/**)",
       "Bash(chmod +x .claude/hooks/**)",
-
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(head:*)",
@@ -93,7 +139,6 @@
       "Bash(echo:*)",
       "Bash(jq:*)",
       "Bash(diff:*)",
-
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",
@@ -112,7 +157,6 @@
       "Bash(git checkout:*)",
       "Bash(git restore:*)",
       "Bash(git merge:*)",
-
       "Bash(gh pr:*)",
       "Bash(gh issue:*)",
       "Bash(gh repo view:*)",
@@ -120,7 +164,6 @@
       "Bash(gh workflow list:*)",
       "Bash(gh run:*)",
       "Bash(gh auth:*)",
-
       "Bash(pnpm install:*)",
       "Bash(pnpm exec:*)",
       "Bash(pnpm dev:*)",
@@ -132,11 +175,9 @@
       "Bash(pnpm --filter:*)",
       "Bash(pnpm dlx:*)",
       "Bash(pnpm --version)",
-
       "Bash(node --version)",
       "Bash(npx --yes @nestjs/cli@10:*)",
       "Bash(ruby -ryaml:*)",
-
       "Ctx search:*",
       "Ctx_search:*",
       "Ctx index:*",
@@ -145,7 +186,6 @@
       "mcp__plugin_context-mode_context-mode__ctx_search",
       "mcp__plugin_context-mode_context-mode__ctx_index",
       "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
-
       "Bash(cd /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus-frontend && pnpm --filter web typecheck:*)",
       "Bash(cd /Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus-backend && pnpm --filter api typecheck:*)",
       "Bash(curl -s -o /dev/null -w * --max-time * http://localhost:3000*:*)",
@@ -160,7 +200,6 @@
       "Bash(git -C * branch:*)",
       "Bash(git -C * fetch:*)",
       "Bash(git -C * ls-files:*)",
-
       "Write(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/.claude/commands/**)",
       "Write(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/docs/screenshots/**)",
       "Write(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/docs/parallel-work/**)",
@@ -168,7 +207,6 @@
       "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/web/app/(onboarding)/**)",
       "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/apps/api/prisma/**)",
       "Edit(/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus*/packages/shared/**)",
-
       "Bash(mkdir -p */.claude/hooks/session-start*:*)",
       "Bash(mkdir -p */.claude/hooks/stop*:*)",
       "Bash(mkdir -p */docs/architecture*:*)",
@@ -182,12 +220,41 @@
       "Bash(find */.claude -name \"SKILL.md\"*:*)",
       "Bash(ls -la */apps/api/dist/*:*)",
       "Bash(prisma migrate diff:*)",
-
       "Write(*/.claude/memory/**)",
       "Write(*/.claude/hooks/session-start/**)",
       "Write(*/.claude/hooks/stop/**)",
       "Write(*/docs/architecture/**)",
-      "Write(*/docs/observability/**)"
+      "Write(*/docs/observability/**)",
+      "Bash(cd */Project10-QA_Nexus-frontend && git status:*)",
+      "Bash(cd */Project10-QA_Nexus-backend && git status:*)",
+      "Bash(cd */Project10-QA_Nexus* && git status:*)",
+      "Bash(cd */Project10-QA_Nexus* && git log:*)",
+      "Bash(cd */Project10-QA_Nexus* && git diff:*)",
+      "Bash(cd */Project10-QA_Nexus* && git diff --cached:*)",
+      "Bash(cd */Project10-QA_Nexus* && git show origin/main*:*)",
+      "Bash(cd */Project10-QA_Nexus* && git fetch origin:*)",
+      "Bash(cd */Project10-QA_Nexus* && git pull origin main --ff-only:*)",
+      "Bash(cd */Project10-QA_Nexus* && git branch:*)",
+      "Bash(cd */Project10-QA_Nexus* && git rev-parse:*)",
+      "Bash(cd */Project10-QA_Nexus* && git switch:*)",
+      "Bash(cd */Project10-QA_Nexus* && git checkout:*)",
+      "Bash(cd */Project10-QA_Nexus* && git switch -c *:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm install:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm typecheck:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm --filter * typecheck:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm --filter * lint:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm --filter * build:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm --filter * test:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm --filter * dev > /tmp/* 2>&1 &:*)",
+      "Bash(cd */Project10-QA_Nexus* && pnpm dev > /tmp/* 2>&1 &:*)",
+      "Bash(cd */Project10-QA_Nexus* && nohup node * > /tmp/* 2>&1 &:*)",
+      "Bash(cd */Project10-QA_Nexus* && jest:*)",
+      "Bash(cd */Project10-QA_Nexus* && curl *http://localhost*:*)",
+      "Bash(mkdir -p */apps/api/src/**/__tests__:*)",
+      "Bash(mkdir -p */apps/web/components/**:*)",
+      "Bash(mkdir -p */apps/web/app/**:*)",
+      "Bash(mkdir -p */packages/shared/src/**:*)",
+      "Bash(mkdir -p */apps/e2e/**:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",

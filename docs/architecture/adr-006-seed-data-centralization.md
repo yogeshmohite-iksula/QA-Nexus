@@ -169,3 +169,7 @@ Acceptance criteria (per migration runbook):
 - `apps/api/prisma/seed.ts` — BE-side seed (kept in sync via human review against IKSULA_CONTEXT.md)
 - ADR-002 — analogous "shared infrastructure has implicit version coupling" pattern (Prisma raw SQL split)
 - `PM1_PATTERNS.md` Pattern A — deferred-routing ancestor; this ADR adds the parallel demo-data lane
+
+## Refinement (2026-04-29 evening, post FE PR #16)
+
+The original migration runbook said "delete data.ts". FE chat refined this during PR #16: data.ts files stay as VIEW-ONLY fixture stores; only ENTITY IDENTITY exports (SIGNED_IN_USER, ACTIVE_PROJECT) move to context providers. Rationale: view fixtures (queue rows, evidence chips, sparkline data, sample issues, integration health cards) get replaced by NEW api endpoints (run results, defect lists, agent activity feeds) when M2/M3/M4 backends land — NOT by the user/project APIs that context providers will swap to. Forcing inlining of 200+ lines of view fixtures into 6+ consumer files would have created code duplication for no architectural gain. Future ports follow this refinement: contexts for entity identity, data.ts for view fixtures.
