@@ -11,7 +11,26 @@
 
 'use client';
 
-import { SIGNED_IN_USER } from './data';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+
+// Helper: short name "Kishor K." from full displayName.
+function shortName(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function initialsOf(displayName: string): string {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 interface NavItem {
   id: string;
@@ -72,6 +91,9 @@ const SECTIONS: NavSection[] = [
 ];
 
 export function LeftRail() {
+  const me = useCurrentUser();
+  const meName = shortName(me.displayName);
+  const meInitials = initialsOf(me.displayName);
   return (
     <aside
       aria-label="Workspace navigation"
@@ -111,14 +133,14 @@ export function LeftRail() {
             className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-bold text-[var(--primary-ink)]"
             style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
           >
-            {SIGNED_IN_USER.initials}
+            {meInitials}
           </span>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-[12px] font-medium text-[var(--text-primary)]">
-              {SIGNED_IN_USER.name}
+              {meName}
             </span>
             <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-              {SIGNED_IN_USER.roleId}
+              {me.role}
             </span>
           </div>
         </div>
