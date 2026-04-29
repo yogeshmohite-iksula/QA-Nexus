@@ -2,6 +2,34 @@
 
 ---
 
+## [2026-04-29] (j) CI must run on push to main, not just on PRs — OBSERVABILITY HOLE
+
+**Symptom:** Day-3 evening seed-centralization scaffold (commit `6385e25`) and the T031 e2e workspace scaffold were pushed directly to `main` and broke 3 of 7 CI jobs (typecheck, test, build). The breakage went undetected until PR #11 opened the next morning, blocking the entire Day-3 stretch merge cascade (PRs #11/#12/#13). Hotfix landed in this PR.
+
+**Root cause:** `.github/workflows/ci.yml` triggers only on `pull_request: branches: [main]`. Direct-to-main commits — which happen for trivial doc/fix changes that don't warrant a PR — are never validated by CI. Any regression in such a commit lurks until the next PR is opened, then surfaces as "PR #N is failing CI for reasons unrelated to its diff" and blocks merges until the regression is found.
+
+**Risk:** every direct-to-main commit is a silent landmine. Worse: the engineer who pushed direct-to-main isn't the one who hits the failure — the next PR author is. Trust in CI suffers ("CI is flaky / not my code's fault").
+
+**Decision (Day-4 morning P1, ~10 min):**
+
+1. **`.github/workflows/ci.yml`** — add `push: branches: [main]` alongside the existing `pull_request` trigger:
+   ```yaml
+   on:
+     pull_request:
+       branches: [main]
+     push:
+       branches: [main]
+   ```
+2. **`.github/workflows/e2e.yml`** — same change (e2e workflow currently only triggers on PR paths).
+3. **Branch protection** — already requires CI green to merge to main, so this change has no merge-blocking impact for direct pushes (they're already on main); the value is detection latency: regressions surface within ~5 min of `git push origin main` instead of hours later when the next PR opens.
+4. **Concurrency** — keep `concurrency.cancel-in-progress: true` so a rapid sequence of direct pushes doesn't queue stale runs.
+
+**Followup-of-followup:** consider a `direct-to-main-policy.md` rule in `.claude/rules/` documenting which kinds of changes are OK to push direct (docs typo, comment-only, EOD reports) vs which require a PR (anything touching `apps/**/src` or `packages/**/src`, any CI/workflow file, any `.claude/hooks/`). The pre-push CHANGELOG guard already partially enforces this for source code; extending it to workflows + hooks would close the loop.
+
+**Owner:** MAIN (Day-4 morning, batched with seed-centralization Phase-5 review).
+
+---
+
 ## [2026-04-29] (i) Centralize demo seed data + decouple UI from hardcoded names — DAY-4 MORNING P1
 
 **Symptom:** F08a (`apps/web/components/home/data.ts`), F08b (`apps/web/components/home-lead/data.ts`), F08c (`apps/web/components/home-empty/data.ts`), F09 (Projects List), F10 (Sprint Board) all have inline `data.ts` files with hardcoded references to the 8 named Iksula pilot users (Akshay, Yogesh, Kishor, Nitin, Nadim, Govind, Mohanraj, Sagar) and the 5 Iksula projects (RET, CART, PAY, AUTH, OPS). The data is correct per IKSULA_CONTEXT.md but **architecturally wrong**: stub data lives in component files instead of a single source.
