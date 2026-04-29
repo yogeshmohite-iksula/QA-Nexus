@@ -2,37 +2,74 @@
 
 ---
 
-## [2026-04-29] (h) Zod 3 / Zod 4 ecosystem migration — strategic, schedule Day 7-8
+## [2026-04-29] (i) Centralize demo seed data + decouple UI from hardcoded names — DAY-4 MORNING P1
 
-**Identified during:** Day-3 BE session (T023 LLM gateway). Second tactical pin in 24 hours.
+**Symptom:** F08a (`apps/web/components/home/data.ts`), F08b (`apps/web/components/home-lead/data.ts`), F08c (`apps/web/components/home-empty/data.ts`), F09 (Projects List), F10 (Sprint Board) all have inline `data.ts` files with hardcoded references to the 8 named Iksula pilot users (Akshay, Yogesh, Kishor, Nitin, Nadim, Govind, Mohanraj, Sagar) and the 5 Iksula projects (RET, CART, PAY, AUTH, OPS). The data is correct per IKSULA_CONTEXT.md but **architecturally wrong**: stub data lives in component files instead of a single source.
 
-**Symptom:** Two of our direct deps have auto-resolved past the Zod-3 cutoff and required tactical pins to keep the project's Zod 3.x `pnpm.overrides` consistent:
+**Risk:** when **F27 Admin user-management** lands (M1) or **F28 Project CRUD** lands (M2), Admin can create new users + projects via the UI. Every component with an inline `data.ts` will need a source-code change to display the new entries — breaks the "Admin creates users → UI shows them" contract. This is the primary "demo-seed-rot" anti-pattern that bites every product when the seed survives past the M0 demo gate.
 
-- **Day 2 stretch:** `@hookform/resolvers` resolved to a version requiring Zod 4 (closed as followup (f), pinned via overrides).
-- **Day 3 morning:** `better-auth ^1.2.0` auto-resolved to **1.6.9** which uses `z.coerce.boolean().meta(...)` — a Zod 4 method. Pinned to `~1.2.0` (allow patch only) + dropped the `metadata` arg from `magicLink.sendMagicLink` callback (added in better-auth 1.4+). Two-line change in `apps/api/src/auth/auth.config.ts`.
+**Decision (made Day-3 evening):** centralize NOW, before more components copy the same anti-pattern. Clean separation of concerns:
 
-**Trend:** Zod 3 → Zod 4 migration is sweeping the JS ecosystem (Q2 2026). Within 2-4 weeks more packages we depend on will require Zod 4. Each one we encounter forces another tactical pin OR a hot upgrade under deadline.
+- **MAIN owns:** `packages/shared/src/seed-types.ts` (typed contracts) + `apps/web/lib/demo-seed.ts` (single source) + `apps/web/lib/contexts/*` (React context providers `useCurrentUser`, `useProject`, `useTeamRoster`) + the migration runbook.
+- **FE owns:** the per-component refactor — replace `import { ... } from './data'` with `useTeamRoster()` etc, delete the per-component `data.ts` files.
 
-**Strategic options:**
+**Phases (this Day-3 evening session):**
 
-1. **Stay on Zod 3 indefinitely** — keep pinning each new dep to its last-Zod-3-compatible version. Tactical, but accumulates pin debt that compounds (every transitive update can break us). We'd hit a hard wall once a dep we MUST upgrade for security drops Zod-3 support entirely.
-2. **Coordinated migration to Zod 4** — bump `apps/api` + `apps/web` + `packages/shared` atomically in one PR. Risks: API surface changes (some Zod 3 schemas don't map cleanly to v4 — e.g., `z.string().datetime({offset:true})` semantics, default-application order, error-format shape). 1-day focused effort.
-3. **Hybrid via pnpm catalog** — define both `zod-3` and `zod-4` catalogs, packages opt in per-workspace. Cleanest long-term (workspace can migrate one at a time) but most plumbing upfront. Probably overkill for our 3-package monorepo.
+1. **Phase 3(a):** `packages/shared/src/seed-types.ts` — typed interfaces for User, Project, TestCase, Defect, RunResult, AgentActivity, Approval. Each interface matches what the BE API will return when T021 + endpoints land. Barrel-exported.
+2. **Phase 3(b):** `apps/web/lib/demo-seed.ts` — SINGLE source of all stub data. Header explicitly marks as DEMO + lists what BE endpoint replaces each array.
+3. **Phase 4 (TBD per spec — Yogesh's message truncated):** likely React context providers + ADR-006 + migration runbook for FE.
 
-**Recommendation:** **Option 2** — schedule the atomic Zod 4 migration as a Day 7-8 task (after M0 hosting deploys land). 1-day focused effort beats 2-3 weeks of accumulated tactical pins, and going through it once means our schema layer is on the modern surface for the remainder of M1+ buildout.
+**Day-4 morning protocol:** FE chat reads `docs/refactor/seed-centralization-migration.md`, refactors components one by one. Each FE PR closes one component (F08a → F08b → F08c → F09 → F10). MAIN reviews each PR for "no new inline data.ts" + "all usage via context hooks".
 
-**Pre-work for Day 7-8:**
+**ADR target:** `docs/architecture/adr-006-seed-data-centralization.md` — accepted, alternatives considered (per-component data.ts → status quo, BE-mock-server → over-engineered for PM1, Storybook fixtures → wrong tool, MSW → relies on HTTP we don't have yet). Filed as part of Phase 3 below.
 
-- Inventory every `import { z } from 'zod'` site (~30+ files in `packages/shared`, ~10+ in `apps/api`, ~20+ in `apps/web`). The Zod migration guide ([zod.dev/v4/migration](https://zod.dev/v4/migration)) is the source of truth for breaking changes.
-- Audit `@hookform/resolvers/zod` v3-vs-v4 API differences (FE only).
-- Audit `better-auth`'s 1.x → next major for whether their `metadata` arg is restored or further changed.
-- Spike: try Zod 4 in a throwaway branch on just `packages/shared`; identify any schemas that need rewrite (most should "just work" because we use the basic primitives, not advanced refinements).
+**Owner:** MAIN (scaffolding tonight, Phases 3-4) + FE chat (refactor Day-4 morning).
 
-**Owner:** BE chat (lead — owns `packages/shared` + `apps/api`) + FE chat (apps/web schemas + form resolvers). Coordinate via `docs/parallel-work/follow-ups.md` once scheduled.
+**ETA:** ~1.5-2 hr scaffolding (this session) + ~1.5 hr FE refactor (Day-4 morning).
 
-**When:** Day 7-8 (after T011/T013/T014/T015 + T026 + T031 close). Specifically: AFTER all M0 hosting deploys land but BEFORE the M1 RBAC + Workspace endpoints PR — that PR will introduce another ~10-20 Zod schemas and we don't want to write them in 3 then rewrite to 4 a week later.
+**Cross-references:**
 
-**ETA:** 1 day (~6 focused hours): 2h migrate `packages/shared` + run all dependent typechecks, 2h migrate `apps/api`, 1.5h migrate `apps/web`, 0.5h ADR-005 documenting the cutoff.
+- `apps/web/components/home/data.ts`, `apps/web/components/home-lead/data.ts`, `apps/web/components/home-empty/data.ts` — the per-component anti-pattern instances to migrate
+- `IKSULA_CONTEXT.md` — the 8-user / 5-project canon that the seed must remain consistent with
+- `PM1_PATTERNS.md` Pattern A — the deferred-routing ancestor pattern this builds on
+- ADR-002 (Prisma raw split) — analogous "shared infrastructure has implicit version coupling" pattern
+
+---
+
+## [2026-04-29] (h) Zod 3 / Zod 4 ecosystem migration — DAY 7-8 STRATEGIC
+
+**Symptom:** within 24 hours, **two** packages auto-resolved to versions requiring Zod 4:
+
+1. **Day 2 evening:** `@hookform/resolvers/zod` started pulling in Zod 4 internals via the `$ZodTypeInternals` shape (followup f, fixed via root `pnpm.overrides.zod = "^3.25.76"`).
+2. **Day 3:** `better-auth ^1.2.0` resolved up to `1.6.9` which uses `z.coerce.boolean().meta(...)` — a Zod 4 method — and crashed boot. BE chat patch-pinned to `~1.2.0` (Day-3 BE worktree CHANGELOG entry).
+   - **BE-specific detail:** also dropped the `metadata` arg from `magicLink.sendMagicLink` callback in `apps/api/src/auth/auth.config.ts` (added in better-auth 1.4+; not in 1.2.x signature).
+
+**Trend:** the Zod 3 → 4 migration is sweeping the JS/TS ecosystem in Q2 2026. Every week we delay, more transitive deps will force tactical pins. Each pin is ~15 min of investigation + commit + audit; the friction compounds.
+
+**Recommendation:** schedule an **atomic Zod 4 migration as a Day 7-8 task** (after M0 hosting deploys land but before M1 endpoint expansion). One focused day:
+
+- Bump root `pnpm.overrides.zod` to `^4.x` + remove the override entirely (let upstreams resolve naturally).
+- Update `packages/shared/src/schemas/*` to Zod 4 syntax (largely back-compat; main breaks are `.strip()` removal + new `.meta()` method shape).
+- Update `apps/api`'s `ZodValidationPipe` to use `result.error.issues` shape changes (Zod 4 renamed some fields).
+- Update `apps/web`'s `zodResolver` import to `@hookform/resolvers/zod@^4.x`.
+- Update `.claude/locked-deps.json` paired-major lock from `{ zod: "3", "@hookform/resolvers": "3" }` to `{ zod: "4", "@hookform/resolvers": "4" }`.
+- Smoke-test BE auth + FE form validation + R2 upload Zod schemas + LLM gateway request schemas (from BE T023).
+- 1 focused day beats accumulating 2-3 weeks of tactical pins.
+
+**Owner:** BE chat (lead — touches the most surface) + FE chat (apps/web schemas).
+
+**ETA:** ~1 day (Day 7 or Day 8 — slot when no other major M0 work is in flight).
+
+**Closes:** alongside this migration, `STACK_LEARNINGS.md` `[ZOD]` + `[ZOD][TS]` entries get a "MIGRATION COMPLETE" addendum and the followup (c) zod-resolvers coupling note becomes historical context.
+
+**Cross-references:**
+
+- followup (c) — original zod-resolvers coupling prediction (Day 1 evening)
+- followup (f) — first materialization (Day 2 evening, fixed via override)
+- BE worktree CHANGELOG (Day 3) — second materialization with better-auth
+- `STACK_LEARNINGS.md` `[ZOD]` and `[ZOD][TS]` entries
+- `.claude/locked-deps.json` — paired-major lock (currently zod=3)
+- root `package.json` `pnpm.overrides.zod` — the existing pin
 
 ---
 

@@ -6,8 +6,10 @@
 // AppModule); no need to re-import here.
 import { Module } from '@nestjs/common';
 import { HealthController } from './health.controller';
+import { StorageModule } from '../storage/r2.module';
 
 @Module({
+  imports: [StorageModule], // exposes R2Service for the /health r2 readout
   controllers: [HealthController],
 })
 export class HealthModule {}

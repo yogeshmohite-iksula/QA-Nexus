@@ -24,6 +24,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { LLMGatewayService } from '../llm/llm-gateway.service';
 import { getProvider } from '../llm/provider-registry';
+import { R2Service, type R2Health } from '../storage/r2.service';
 
 const NEON_FREE_TIER_MB = 512;
 const QUOTA_WARNING_PCT = 90;
@@ -64,7 +65,7 @@ interface HealthResponse {
         long_context: LLMRouteHealth | null;
       }
     | SubsystemDeferred;
-  r2: SubsystemDeferred;
+  r2: R2Health;
   embedding:
     | {
         status: 'up';
@@ -90,14 +91,18 @@ export class HealthController {
     private readonly prisma: PrismaService,
     private readonly embedding: EmbeddingService,
     private readonly llm: LLMGatewayService,
+    private readonly r2Service: R2Service,
   ) {}
 
   @Get()
   async health(@Res() res: Response): Promise<void> {
-    const dbResult = await this.pingDb();
+    const [dbResult, r2Result, quota] = await Promise.all([
+      this.pingDb(),
+      this.r2Service.health(),
+      this.measureQuota(),
+    ]);
     const embeddingResult = this.checkEmbedding();
     const llmResult = this.snapshotLLM();
-    const quota = await this.measureQuota();
     const overall = this.computeOverall(dbResult, embeddingResult, quota);
 
     const body: HealthResponse = {
@@ -105,10 +110,7 @@ export class HealthController {
       timestamp: new Date().toISOString(),
       db: dbResult,
       llm: llmResult,
-      r2: {
-        status: 'deferred',
-        note: 'MS0-T013 Cloudflare R2 wiring not yet landed',
-      },
+      r2: r2Result,
       embedding: embeddingResult,
       quota: {
         ...quota,

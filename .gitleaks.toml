@@ -62,6 +62,13 @@ paths = [
   '''(.*?)\.env\.example''',
   '''docs/audits/.*''',
   '''docs/SECURITY\.md''',
+  # docs/deploy/* runbooks contain provisioning instructions for a single
+  # human (Yogesh) to follow on third-party SaaS dashboards. They include
+  # one-off bootstrap secrets like BETTER_AUTH_SECRET that are pasted into
+  # provider env-var panels, NOT into any committed .env. Allowlisting the
+  # whole directory; security relies on the secret being session-scoped
+  # (BetterAuth re-signing) + Render's env-var panel being the source of truth.
+  '''docs/deploy/.*''',
   '''\.claude/memory/.*''',
   '''\.claude/hooks/pre-tool-use/check-secrets\.sh''',
   '''\.gitleaks\.toml''',
