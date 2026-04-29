@@ -6,6 +6,8 @@ import { EmailModule } from './email/email.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { EmbeddingModule } from './embedding/embedding.module';
+import { LLMGatewayModule } from './llm/llm-gateway.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { HealthModule } from './health/health.module';
 import { StorageModule } from './storage/r2.module';
 
@@ -16,8 +18,10 @@ import { StorageModule } from './storage/r2.module';
     AuditModule,
     AuthModule,
     EmbeddingModule,
+    LLMGatewayModule,
+    RealtimeModule,
     StorageModule,
-    HealthModule, // last so it can depend on R2Service for /health r2 readout
+    HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts
   ],
   controllers: [AppController],
   providers: [AppService],

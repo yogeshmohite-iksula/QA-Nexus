@@ -70,6 +70,7 @@
 
 1. **Day 2 evening:** `@hookform/resolvers/zod` started pulling in Zod 4 internals via the `$ZodTypeInternals` shape (followup f, fixed via root `pnpm.overrides.zod = "^3.25.76"`).
 2. **Day 3:** `better-auth ^1.2.0` resolved up to `1.6.9` which uses `z.coerce.boolean().meta(...)` — a Zod 4 method — and crashed boot. BE chat patch-pinned to `~1.2.0` (Day-3 BE worktree CHANGELOG entry).
+   - **BE-specific detail:** also dropped the `metadata` arg from `magicLink.sendMagicLink` callback in `apps/api/src/auth/auth.config.ts` (added in better-auth 1.4+; not in 1.2.x signature).
 
 **Trend:** the Zod 3 → 4 migration is sweeping the JS/TS ecosystem in Q2 2026. Every week we delay, more transitive deps will force tactical pins. Each pin is ~15 min of investigation + commit + audit; the friction compounds.
 
