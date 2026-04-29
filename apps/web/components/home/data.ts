@@ -1,31 +1,25 @@
-// Iksula canon stub data for F08a Home (QA Engineer).
+// View-only fixtures for F08a Home (QA Engineer).
 //
-// All data is hard-coded TS constants per Pattern A enforcement — NO
-// fetch / useMutation / axios in this file or its consumers. Real wiring
-// (BetterAuth session + Prisma queries) lands in MS0-T030.5+ once T021
-// + T022 + the home queries are ready.
+// FOLLOWUP (i) — seed-centralization (ADR-006):
+// - Entity identity (signed-in user, active project) MOVED to context
+//   hooks: `useCurrentUser()` + `useActiveProject()` from
+//   `@/lib/contexts/{CurrentUser,Project}Context`.
+// - This file now holds only VIEW-FIXTURE data (HERO copy, queue rows,
+//   evidence chips, etc.) — copy-stub data that does NOT represent
+//   identifiable users / projects in the workspace seed.
+// - Pattern A still applies: NO fetch / useMutation / axios anywhere.
+// - Names referenced inside QUEUE_ROWS / EVIDENCE_THREAD (e.g., "Priya S",
+//   "Neha D") are FICTIONAL collaborator placeholders from the locked
+//   frame, not pilot-roster users. They stay until the locked source is
+//   re-cut against the canonical roster.
 //
-// User identities follow the CLAUDE.md pilot roster (Kishor K. as the
-// signed-in QA Engineer; Yogesh M. as QA Lead inviter; Priya S. and
-// Neha D. as collaborator names from the locked frame). Project: anchor
-// project Iksula Returns (RET), Sprint 42 Day 9 of 14.
+// Real backend wiring lands in MS0-T030.5+ once T021 BetterAuth + the
+// home queries are ready.
 
-export const SIGNED_IN_USER = {
-  name: 'Kishor K.',
-  initials: 'KK',
-  role: 'QA Engineer',
-  roleId: 'QAEngineer' as const,
-} as const;
-
-export const ACTIVE_PROJECT = {
-  name: 'Iksula Returns',
-  key: 'RET' as const,
-  branch: 'main',
-  sprint: 42,
-  sprintDay: 9,
-  sprintLength: 14,
-  release: 'R-2026-04-PaymentV2',
-};
+// Sprint metadata kept inline by consumers (per runbook step 4); HERO
+// copy below references the sprint number directly so the view stays
+// authoritative for greeting copy without re-importing.
+const SPRINT_NUMBER = 42;
 
 export const HERO = {
   heading: 'What needs your attention right now?',
@@ -33,7 +27,7 @@ export const HERO = {
     { text: '3 AI drafts to review', tone: 'neutral' as const },
     { text: '1 run in flight', tone: 'neutral' as const },
     { text: '2 defects triaging', tone: 'neutral' as const },
-    { text: `Sprint ${ACTIVE_PROJECT.sprint} is on track`, tone: 'pass' as const },
+    { text: `Sprint ${SPRINT_NUMBER} is on track`, tone: 'pass' as const },
   ],
   // Friday 2026-04-28 09:14 IST
   nowDate: 'Tue · 2026-04-28 · 09:14 IST',
@@ -88,7 +82,7 @@ export interface ReleaseRisk {
 
 export const RELEASE_RISK: ReleaseRisk = {
   severity: 'amber',
-  release: ACTIVE_PROJECT.release,
+  release: 'R-2026-04-PaymentV2',
   shipsInDays: 5,
   rows: [
     { id: 'TC-RET-002', label: 'Inventory reconciliation flaky', severity: 'flaky' },

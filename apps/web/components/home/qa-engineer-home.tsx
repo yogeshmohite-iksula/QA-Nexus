@@ -12,22 +12,32 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useActiveProject } from '@/lib/contexts/ProjectContext';
 import { HomeShell } from './home-shell';
 import { LeftRail } from './left-rail';
 import { OutcomeBoard } from './outcome-board';
 import { Queue } from './queue';
 import { RightRail } from './right-rail';
-import { ACTIVE_PROJECT, HERO, SIGNED_IN_USER } from './data';
+import { HERO } from './data';
+
+// View-specific stub: sprint metadata isn't on the Project entity yet
+// (lands when BE adds Sprint in M2+). Inline view constant per ADR-006 /
+// runbook step 4.
+const ACTIVE_SPRINT = { number: 42, day: 9, length: 14 } as const;
 
 export function QaEngineerHome() {
+  const me = useCurrentUser();
+  const project = useActiveProject();
+
   useEffect(() => {
     console.info('pattern-a:deferred:home-qa-engineer-load', {
-      project: ACTIVE_PROJECT.key,
-      sprint: ACTIVE_PROJECT.sprint,
-      day: ACTIVE_PROJECT.sprintDay,
-      role: SIGNED_IN_USER.roleId,
+      project: project.key,
+      sprint: ACTIVE_SPRINT.number,
+      day: ACTIVE_SPRINT.day,
+      role: me.role,
     });
-  }, []);
+  }, [project.key, me.role]);
 
   function logRoute(target: string, entity?: string) {
     console.info('pattern-a:deferred:home-route', entity ? { target, entity } : { target });
@@ -117,8 +127,7 @@ function AiThinkingChip() {
 function SprintChip() {
   return (
     <span className="border-[var(--primary)]/30 bg-[var(--primary)]/10 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--primary)]">
-      Sprint {ACTIVE_PROJECT.sprint} · Day {ACTIVE_PROJECT.sprintDay} of{' '}
-      {ACTIVE_PROJECT.sprintLength}
+      Sprint {ACTIVE_SPRINT.number} · Day {ACTIVE_SPRINT.day} of {ACTIVE_SPRINT.length}
     </span>
   );
 }

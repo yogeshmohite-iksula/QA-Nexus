@@ -21,6 +21,8 @@
 // components/home-empty/data.ts.
 
 import type { Metadata } from 'next';
+import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
+import { SEED_IDS } from '@/lib/demo-seed';
 import { FounderEmptyHome } from '@/components/home-empty/founder-empty-home';
 
 export const metadata: Metadata = {
@@ -30,5 +32,12 @@ export const metadata: Metadata = {
 };
 
 export default function HomeEmptyPage() {
-  return <FounderEmptyHome />;
+  // F08c is the Founder / Admin first-run view. Yogesh is the canonical
+  // Day-0 bootstrap Admin per CLAUDE.md; this scoped provider switches
+  // the active user to Yogesh for this route only.
+  return (
+    <CurrentUserProvider initialUserId={SEED_IDS.users.yogesh}>
+      <FounderEmptyHome />
+    </CurrentUserProvider>
+  );
 }
