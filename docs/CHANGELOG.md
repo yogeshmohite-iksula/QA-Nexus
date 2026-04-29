@@ -15,6 +15,8 @@ updates land here at the end of every working day.
 
 ### Added — Day 3 evening (2026-04-29)
 
+- **`feat(shared)`** — `packages/shared/src/seed-types.ts` — typed contracts for UI-facing seed data per followup (i) Phase 3(a). Defines: 3 denormalized "with relations" join types (TestCaseWithRelations + DefectWithRelations + TestRunResultWithRelations), 5-variant AgentActivity discriminated union (no BE schema yet — forward-looking contract), 3-variant Approval discriminated union (forward-looking), 2 convenience aggregates (TeamRoster + ProjectList). Documents naming-collision guard: existing `User` schema includes passwordHash; UI consumers must use `UserPublic` (already barreled). Both typechecks (web + api) green.
+- **`docs(followups)`** — Filed (h) Zod 3/4 ecosystem migration (Day 7-8 strategic, single-day atomic vs accumulating tactical pins) + (i) Centralize demo seed data + decouple UI from hardcoded names (Day-4 morning P1; MAIN scaffolds tonight, FE refactors tomorrow).
 - **`fix(observability)`** — Dedup token-savings aggregator by `(session_id, chat_role)`. Each Stop event re-snapshots cumulative session state (not deltas), so SUM-aggregating multiple Stop fires per session was over-counting by 5-7×. Day-2 figure drops from 974,700 → 103,050; Day-3 grows 1,300 → 29,300 (latest snapshot wins). 3-day cumulative now ~138,800 tokens (was bogusly ~982k). Excel + Daily Rollup sheet auto-refreshed.
 
 ### Added — Day 3 (2026-04-29)
