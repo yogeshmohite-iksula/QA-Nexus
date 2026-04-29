@@ -55,14 +55,14 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
       magicLink({
         // 7d for invites, 1h for resets per ERD §3 TB-005 expires_at.
         expiresIn: 60 * 60, // 1h default for sign-in
-        sendMagicLink: async ({ email: to, url, token, metadata }) => {
+        sendMagicLink: async ({ email: to, url, token }) => {
+          // Note: better-auth ~1.2.0's magicLink plugin signature does NOT
+          // include `metadata` (added in 1.4+). When we upgrade past Zod
+          // v3 compatibility, the metadata arg can come back here.
           const subject = 'Your QA Nexus sign-in link';
           const text =
             `Click to sign in to QA Nexus:\n\n${url}\n\n` +
             `This link expires in 1 hour. Token: ${token.slice(0, 8)}…\n\n` +
-            (metadata && Object.keys(metadata).length > 0
-              ? `Context: ${JSON.stringify(metadata)}\n\n`
-              : '') +
             `If you didn't request this, ignore this email.`;
           const html =
             `<p>Click to sign in to QA Nexus:</p>` +

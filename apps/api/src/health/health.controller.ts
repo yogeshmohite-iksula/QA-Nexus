@@ -22,6 +22,8 @@ import type { Response } from 'express';
 import { Res } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingService } from '../embedding/embedding.service';
+import { LLMGatewayService } from '../llm/llm-gateway.service';
+import { getProvider } from '../llm/provider-registry';
 
 const NEON_FREE_TIER_MB = 512;
 const QUOTA_WARNING_PCT = 90;
@@ -41,11 +43,27 @@ interface SubsystemDeferred {
 }
 type Subsystem = SubsystemUp | SubsystemDown | SubsystemDeferred;
 
+interface LLMRouteHealth {
+  provider: string;
+  model: string | undefined;
+  status: 'up' | 'down' | 'unknown';
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  last_failure_message: string | null;
+}
+
 interface HealthResponse {
   status: 'ok' | 'degraded' | 'down';
   timestamp: string;
   db: Subsystem;
-  llm: SubsystemDeferred;
+  llm:
+    | {
+        status: 'up' | 'degraded' | 'down';
+        primary: LLMRouteHealth;
+        secondary: LLMRouteHealth | null;
+        long_context: LLMRouteHealth | null;
+      }
+    | SubsystemDeferred;
   r2: SubsystemDeferred;
   embedding:
     | {
@@ -71,12 +89,14 @@ export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly embedding: EmbeddingService,
+    private readonly llm: LLMGatewayService,
   ) {}
 
   @Get()
   async health(@Res() res: Response): Promise<void> {
     const dbResult = await this.pingDb();
     const embeddingResult = this.checkEmbedding();
+    const llmResult = this.snapshotLLM();
     const quota = await this.measureQuota();
     const overall = this.computeOverall(dbResult, embeddingResult, quota);
 
@@ -84,10 +104,7 @@ export class HealthController {
       status: overall,
       timestamp: new Date().toISOString(),
       db: dbResult,
-      llm: {
-        status: 'deferred',
-        note: 'MS0-T023 LLM gateway not yet landed (Day 3)',
-      },
+      llm: llmResult,
       r2: {
         status: 'deferred',
         note: 'MS0-T013 Cloudflare R2 wiring not yet landed',
@@ -97,12 +114,88 @@ export class HealthController {
         ...quota,
         neon_free_tier_mb: NEON_FREE_TIER_MB,
         groq_rpd_used: 0,
-        groq_rpd_note: 'pre-T023 — no Groq calls yet',
+        groq_rpd_note:
+          'RPD tracking deferred — surfaces when llm-gateway tracks per-window calls',
       },
     };
     const httpStatus =
       overall === 'ok' ? 200 : overall === 'degraded' ? 503 : 503;
     res.status(httpStatus).json(body);
+  }
+
+  /** Snapshot the LLM gateway's primary/secondary/long-context route
+   *  health from in-memory state set by BaseProvider on each call. Does
+   *  NOT actively ping the providers (would burn free-tier quota every
+   *  5 minutes) — instead reflects the most recent real call's outcome. */
+  private snapshotLLM(): HealthResponse['llm'] {
+    try {
+      const cfg = this.llm.getConfig();
+      const buildRoute = (
+        providerName: string | undefined,
+        modelName: string | undefined,
+      ): LLMRouteHealth | null => {
+        if (!providerName) return null;
+        try {
+          const provider = getProvider(providerName);
+          const h = provider.getHealth();
+          return {
+            provider: providerName,
+            model: modelName,
+            status: h.status,
+            last_success_at: h.lastSuccessAt,
+            last_failure_at: h.lastFailureAt,
+            last_failure_message: h.lastFailureMessage,
+          };
+        } catch (err) {
+          // Provider construction failed (likely missing API key in env).
+          return {
+            provider: providerName,
+            model: modelName,
+            status: 'down',
+            last_success_at: null,
+            last_failure_at: new Date().toISOString(),
+            last_failure_message:
+              err instanceof Error ? err.message : String(err),
+          };
+        }
+      };
+      const primary = buildRoute(cfg.primaryProvider, cfg.primaryModel)!;
+      const secondary = buildRoute(cfg.secondaryProvider, cfg.secondaryModel);
+      const longContext = buildRoute(
+        cfg.longContextProvider,
+        cfg.longContextModel,
+      );
+      // Overall LLM status:
+      //   up       = primary up
+      //   degraded = primary down BUT secondary up
+      //   down     = primary down AND (no secondary OR secondary down)
+      //   unknown statuses don't degrade — they're the bootstrap state.
+      let overallLlm: 'up' | 'degraded' | 'down';
+      if (primary.status === 'up' || primary.status === 'unknown') {
+        overallLlm = 'up';
+      } else if (
+        secondary &&
+        (secondary.status === 'up' || secondary.status === 'unknown')
+      ) {
+        overallLlm = 'degraded';
+      } else {
+        overallLlm = 'down';
+      }
+      return {
+        status: overallLlm,
+        primary,
+        secondary,
+        long_context: longContext,
+      };
+    } catch (err) {
+      // Gateway not initialised — usually means LLM_PRIMARY_PROVIDER not set.
+      return {
+        status: 'deferred',
+        note:
+          'LLMGateway not initialised — set LLM_PRIMARY_PROVIDER + LLM_PRIMARY_MODEL ' +
+          `in env. (${err instanceof Error ? err.message : String(err)})`,
+      };
+    }
   }
 
   /** Postgres ping with hard 2-second timeout. */
