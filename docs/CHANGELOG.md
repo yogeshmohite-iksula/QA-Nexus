@@ -13,6 +13,15 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 3 (2026-04-29)
+
+- **`feat(api)`** — **MS0-T023.a Provider-agnostic LLM gateway** (PM1_ERD §5, AC007). New `apps/api/src/llm/` with `types.ts` (LLMProvider interface + RetryableLLMError + AllProvidersFailedError), `providers/base.provider.ts` (abstract base — retry-with-backoff, in-memory health, error mapping), `providers/{groq,gemini}.provider.ts` (concrete adapters), `provider-registry.ts` (1-line-add registry for future providers), `llm-gateway.service.ts` (env-driven primary/secondary/long-context routing + fallback orchestration), `llm.controller.ts` (`/llm/providers` + `/llm/test`, both Admin-gated). `/health` LLM section now reflects per-route in-memory health. Adding a new provider (Mistral, Together.ai, OpenAI free credits, etc.) is one new file in `providers/` + one line in registry — zero core gateway changes.
+- **`docs(followups)`** — Filed **(h) Zod 3 / Zod 4 ecosystem migration** as a Day 7-8 strategic task. Two tactical pins in 24 hours (zod-resolvers Day 2, better-auth ^1.2.0→1.6.9 Day 3) signal coordinated migration is cheaper than accumulating pin debt.
+
+### Changed — Day 3
+
+- **`fix(api)`** — Pinned `better-auth` from `^1.2.0` to `~1.2.0`. Reason: a fresh `pnpm install` resolved to 1.6.9 which uses `z.coerce.boolean().meta(...)` — a Zod 4 method — and crashed boot. Patch-pin keeps us on the Zod-3-compatible 1.2.x line. Also dropped the `metadata` arg from `magicLink.sendMagicLink` callback (added in better-auth 1.4+; not in 1.2.x signature).
+
 ### Added — Day 2 stretch evening (2026-04-28)
 
 - **`feat(api)`** — **MS0-T025 Health endpoint** — public unauthenticated `GET /health` returns subsystem readouts (db/embedding/llm/r2/quota) for UptimeRobot's 5-min ping + Render's deploy-time health-check. DB ping with 2s timeout; embedding ping reads `EmbeddingService.status()`; quota = `pg_database_size()` vs Neon's 512 MB free tier (currently 1.78%). LLM + R2 marked `deferred` with notes pointing to MS0-T023/T013. HTTP semantics: 200 if all required up + quota ≤ 90%, 503 if any required down or quota > 90%. Curl-verified.
