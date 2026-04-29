@@ -5,6 +5,14 @@
 import type { Metadata } from 'next';
 import { Inter, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+// Seed-centralization providers (followup i Phase 3f).
+// Wire order: CurrentUser → Project → TeamRoster (TeamRoster depends on
+// CurrentUser to compute "teammates excluding self"). All three are
+// 'use client' islands; they don't break SSR for static-export Cloudflare
+// Pages because they hold pure local state (no fetch, Pattern A compatible).
+import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
+import { ProjectProvider } from '@/lib/contexts/ProjectContext';
+import { TeamRosterProvider } from '@/lib/contexts/TeamRosterContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -49,7 +57,11 @@ export default function RootLayout({
       className={`${inter.variable} ${dmSans.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
-        {children}
+        <CurrentUserProvider>
+          <ProjectProvider>
+            <TeamRosterProvider>{children}</TeamRosterProvider>
+          </ProjectProvider>
+        </CurrentUserProvider>
       </body>
     </html>
   );

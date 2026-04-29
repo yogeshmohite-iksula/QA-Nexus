@@ -1,0 +1,140 @@
+# QA Nexus PM1 — weekly Postgres backup to R2.
+#
+# Spec: MS0-T018 + MS0-AC012.
+# Runs every Sunday at 02:00 UTC (= Monday 07:30 IST). Backs up the entire
+# Neon DB via pg_dump → gzip → S3-compatible PUT to R2. Retention: 90 days
+# (R2 has no native lifecycle on free tier; manual prune via the cleanup
+# workflow once it lands in M1).
+#
+# Free-tier cost analysis (per docs/architecture/adr-005-r2-storage.md):
+#   - Pilot DB ~10 MB → gzipped ~3 MB. 4 weekly backups × 3 MB = 12 MB/year.
+#   - 1 PUT op per week = 4 ops/month — 0.0004% of R2's 1M Class A op budget.
+#   - $0/month forever.
+#
+# Fails gracefully if R2 not yet provisioned (T013 dashboard work not done):
+# the workflow logs a warning + exits 0 so it doesn't spam alerts during
+# the M0 setup window. Once R2 secrets land, backup auto-succeeds.
+
+name: Weekly Backup
+
+on:
+  schedule:
+    # Sun 02:00 UTC = Mon 07:30 IST. Off-window for the pilot (10 AM IST start)
+    # so the backup completes before users arrive.
+    - cron: "0 2 * * 0"
+  # Allow manual trigger for testing / ad-hoc backup
+  workflow_dispatch: {}
+
+# Don't run multiple backups at once if a manual + scheduled fire overlap.
+concurrency:
+  group: weekly-backup
+  cancel-in-progress: false
+
+jobs:
+  pg-dump-to-r2:
+    name: pg_dump → gzip → R2
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify required secrets are set
+        id: verify
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          missing=""
+          [ -z "$DATABASE_URL" ] && missing="$missing NEON_DATABASE_URL"
+          [ -z "$R2_ACCESS_KEY_ID" ] && missing="$missing R2_ACCESS_KEY_ID"
+          [ -z "$R2_SECRET_ACCESS_KEY" ] && missing="$missing R2_SECRET_ACCESS_KEY"
+          [ -z "$R2_ENDPOINT" ] && missing="$missing R2_ENDPOINT"
+          if [ -n "$missing" ]; then
+            echo "::warning::Backup secrets not yet provisioned (missing:$missing). Skipping backup."
+            echo "::warning::Set secrets in GitHub repo Settings → Secrets and variables → Actions:"
+            echo "::warning::  - NEON_DATABASE_URL: from Neon dashboard (DIRECT URL — pg_dump needs non-pooled)"
+            echo "::warning::  - R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY: from CF R2 token (T013, scoped to qa-nexus-backups bucket)"
+            echo "::warning::  - R2_ENDPOINT: https://<account-id>.r2.cloudflarestorage.com"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "All required secrets present. Proceeding with backup."
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install postgresql-client (pg_dump 16)
+        if: steps.verify.outputs.ready == 'true'
+        run: |
+          # Default ubuntu-latest ships pg_dump 14. Neon runs Postgres 15;
+          # pg_dump 14 → 15 may emit warnings. Install pg 16 client for safety.
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt jammy-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          pg_dump --version
+
+      - name: Install AWS CLI (S3-compat against R2)
+        if: steps.verify.outputs.ready == 'true'
+        run: |
+          # Ubuntu ships v1; v2 has better R2 support. Install via pip.
+          pip install --quiet awscli==1.36.0
+          aws --version
+
+      - name: Run pg_dump → gzip
+        if: steps.verify.outputs.ready == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          OUT="/tmp/qa-nexus-pm1-${DATE}.sql.gz"
+          echo "Dumping to ${OUT} ..."
+          # --no-owner: backup is portable across DBs (don't tie to neon role)
+          # --no-privileges: drop GRANTs (we re-apply via RLS raw migrations)
+          # --format=plain: vanilla SQL so restore is `psql < file` simple
+          # --verbose to stderr for ci log; redirect data to gzip
+          pg_dump "$DATABASE_URL" \
+            --no-owner --no-privileges \
+            --format=plain \
+            --verbose 2> /tmp/dump.log \
+            | gzip --best > "$OUT"
+          # Verify dump is non-trivial (catch pg_dump silent failures)
+          SIZE=$(stat -c '%s' "$OUT")
+          echo "Backup size: $(numfmt --to=iec $SIZE)"
+          if [ "$SIZE" -lt 1024 ]; then
+            echo "::error::Backup file too small ($SIZE bytes) — pg_dump likely failed silently"
+            tail -50 /tmp/dump.log
+            exit 1
+          fi
+          echo "BACKUP_PATH=$OUT" >> "$GITHUB_ENV"
+          echo "BACKUP_DATE=$DATE" >> "$GITHUB_ENV"
+          echo "BACKUP_SIZE=$SIZE" >> "$GITHUB_ENV"
+
+      - name: Upload to R2
+        if: steps.verify.outputs.ready == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          # Use a separate bucket from evidence — keeps backups + user uploads
+          # cleanly separated in the R2 dashboard. Bucket created manually
+          # by Yogesh per docs/deploy/restore-runbook.md.
+          R2_BACKUP_BUCKET: qa-nexus-backups-pm1
+        run: |
+          KEY="postgres/${BACKUP_DATE}.sql.gz"
+          echo "Uploading $BACKUP_PATH → s3://$R2_BACKUP_BUCKET/$KEY ..."
+          aws s3 cp "$BACKUP_PATH" "s3://$R2_BACKUP_BUCKET/$KEY" \
+            --endpoint-url "$R2_ENDPOINT" \
+            --no-progress
+          echo "Upload complete."
+          # Verify via HEAD
+          aws s3api head-object \
+            --bucket "$R2_BACKUP_BUCKET" \
+            --key "$KEY" \
+            --endpoint-url "$R2_ENDPOINT"
+          echo "::notice::✓ Weekly backup uploaded: s3://${R2_BACKUP_BUCKET}/${KEY} ($(numfmt --to=iec $BACKUP_SIZE))"
+
+      - name: Skip Slack alert (deferred — T019 observability)
+        if: steps.verify.outputs.ready == 'true'
+        run: |
+          echo "Slack alert wiring deferred to MS0-T019. For now, GitHub Action"
+          echo "failure emails Yogesh via the repo's default notifications."

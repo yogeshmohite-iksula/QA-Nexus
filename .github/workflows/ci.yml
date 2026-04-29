@@ -42,6 +42,11 @@ jobs:
           node-version: "20"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Build shared first — apps/web typecheck imports `@qa-nexus/shared`
+      # types but doesn't trigger the workspace dep build itself (and
+      # `pnpm install` doesn't run workspace build scripts). Without this
+      # step, web's tsc errors with TS2307: Cannot find module.
+      - run: pnpm --filter @qa-nexus/shared build
       - run: pnpm -r typecheck
 
   test:
@@ -57,7 +62,18 @@ jobs:
           node-version: "20"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r test --passWithNoTests
+      # Build the shared package once so dependent workspaces' jest specs can
+      # resolve `@qa-nexus/shared` types and runtime exports.
+      - run: pnpm --filter @qa-nexus/shared build
+      # Enumerate test workspaces explicitly. Don't use `pnpm -r test` or
+      # `pnpm --filter '!@qa-nexus/e2e' test`: both forms re-invoke the
+      # root `qa-nexus` package's `test` script, which itself does
+      # `pnpm -r run test` and pulls @qa-nexus/e2e back in.
+      # Each script handles its own no-test case (api: jest
+      # --passWithNoTests; shared: node -e exit-0).
+      # @qa-nexus/e2e (Playwright) runs in the dedicated `playwright`
+      # workflow (.github/workflows/e2e.yml), not here.
+      - run: pnpm --filter @qa-nexus/api --filter @qa-nexus/shared test
 
   build:
     name: build (web + api)
@@ -72,6 +88,10 @@ jobs:
           node-version: "20"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Build shared first so `next build` can resolve `@qa-nexus/shared`
+      # imports. apps/api's own build script already builds shared
+      # internally, but apps/web's `next build` does not.
+      - run: pnpm --filter @qa-nexus/shared build
       - run: pnpm --filter web build
       - run: pnpm --filter api build
 

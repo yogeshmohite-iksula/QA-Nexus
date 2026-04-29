@@ -2,6 +2,105 @@
 
 ---
 
+## [2026-04-29] (j) CI must run on push to main, not just on PRs — OBSERVABILITY HOLE
+
+**Symptom:** Day-3 evening seed-centralization scaffold (commit `6385e25`) and the T031 e2e workspace scaffold were pushed directly to `main` and broke 3 of 7 CI jobs (typecheck, test, build). The breakage went undetected until PR #11 opened the next morning, blocking the entire Day-3 stretch merge cascade (PRs #11/#12/#13). Hotfix landed in this PR.
+
+**Root cause:** `.github/workflows/ci.yml` triggers only on `pull_request: branches: [main]`. Direct-to-main commits — which happen for trivial doc/fix changes that don't warrant a PR — are never validated by CI. Any regression in such a commit lurks until the next PR is opened, then surfaces as "PR #N is failing CI for reasons unrelated to its diff" and blocks merges until the regression is found.
+
+**Risk:** every direct-to-main commit is a silent landmine. Worse: the engineer who pushed direct-to-main isn't the one who hits the failure — the next PR author is. Trust in CI suffers ("CI is flaky / not my code's fault").
+
+**Decision (Day-4 morning P1, ~10 min):**
+
+1. **`.github/workflows/ci.yml`** — add `push: branches: [main]` alongside the existing `pull_request` trigger:
+   ```yaml
+   on:
+     pull_request:
+       branches: [main]
+     push:
+       branches: [main]
+   ```
+2. **`.github/workflows/e2e.yml`** — same change (e2e workflow currently only triggers on PR paths).
+3. **Branch protection** — already requires CI green to merge to main, so this change has no merge-blocking impact for direct pushes (they're already on main); the value is detection latency: regressions surface within ~5 min of `git push origin main` instead of hours later when the next PR opens.
+4. **Concurrency** — keep `concurrency.cancel-in-progress: true` so a rapid sequence of direct pushes doesn't queue stale runs.
+
+**Followup-of-followup:** consider a `direct-to-main-policy.md` rule in `.claude/rules/` documenting which kinds of changes are OK to push direct (docs typo, comment-only, EOD reports) vs which require a PR (anything touching `apps/**/src` or `packages/**/src`, any CI/workflow file, any `.claude/hooks/`). The pre-push CHANGELOG guard already partially enforces this for source code; extending it to workflows + hooks would close the loop.
+
+**Owner:** MAIN (Day-4 morning, batched with seed-centralization Phase-5 review).
+
+---
+
+## [2026-04-29] (i) Centralize demo seed data + decouple UI from hardcoded names — DAY-4 MORNING P1
+
+**Symptom:** F08a (`apps/web/components/home/data.ts`), F08b (`apps/web/components/home-lead/data.ts`), F08c (`apps/web/components/home-empty/data.ts`), F09 (Projects List), F10 (Sprint Board) all have inline `data.ts` files with hardcoded references to the 8 named Iksula pilot users (Akshay, Yogesh, Kishor, Nitin, Nadim, Govind, Mohanraj, Sagar) and the 5 Iksula projects (RET, CART, PAY, AUTH, OPS). The data is correct per IKSULA_CONTEXT.md but **architecturally wrong**: stub data lives in component files instead of a single source.
+
+**Risk:** when **F27 Admin user-management** lands (M1) or **F28 Project CRUD** lands (M2), Admin can create new users + projects via the UI. Every component with an inline `data.ts` will need a source-code change to display the new entries — breaks the "Admin creates users → UI shows them" contract. This is the primary "demo-seed-rot" anti-pattern that bites every product when the seed survives past the M0 demo gate.
+
+**Decision (made Day-3 evening):** centralize NOW, before more components copy the same anti-pattern. Clean separation of concerns:
+
+- **MAIN owns:** `packages/shared/src/seed-types.ts` (typed contracts) + `apps/web/lib/demo-seed.ts` (single source) + `apps/web/lib/contexts/*` (React context providers `useCurrentUser`, `useProject`, `useTeamRoster`) + the migration runbook.
+- **FE owns:** the per-component refactor — replace `import { ... } from './data'` with `useTeamRoster()` etc, delete the per-component `data.ts` files.
+
+**Phases (this Day-3 evening session):**
+
+1. **Phase 3(a):** `packages/shared/src/seed-types.ts` — typed interfaces for User, Project, TestCase, Defect, RunResult, AgentActivity, Approval. Each interface matches what the BE API will return when T021 + endpoints land. Barrel-exported.
+2. **Phase 3(b):** `apps/web/lib/demo-seed.ts` — SINGLE source of all stub data. Header explicitly marks as DEMO + lists what BE endpoint replaces each array.
+3. **Phase 4 (TBD per spec — Yogesh's message truncated):** likely React context providers + ADR-006 + migration runbook for FE.
+
+**Day-4 morning protocol:** FE chat reads `docs/refactor/seed-centralization-migration.md`, refactors components one by one. Each FE PR closes one component (F08a → F08b → F08c → F09 → F10). MAIN reviews each PR for "no new inline data.ts" + "all usage via context hooks".
+
+**ADR target:** `docs/architecture/adr-006-seed-data-centralization.md` — accepted, alternatives considered (per-component data.ts → status quo, BE-mock-server → over-engineered for PM1, Storybook fixtures → wrong tool, MSW → relies on HTTP we don't have yet). Filed as part of Phase 3 below.
+
+**Owner:** MAIN (scaffolding tonight, Phases 3-4) + FE chat (refactor Day-4 morning).
+
+**ETA:** ~1.5-2 hr scaffolding (this session) + ~1.5 hr FE refactor (Day-4 morning).
+
+**Cross-references:**
+
+- `apps/web/components/home/data.ts`, `apps/web/components/home-lead/data.ts`, `apps/web/components/home-empty/data.ts` — the per-component anti-pattern instances to migrate
+- `IKSULA_CONTEXT.md` — the 8-user / 5-project canon that the seed must remain consistent with
+- `PM1_PATTERNS.md` Pattern A — the deferred-routing ancestor pattern this builds on
+- ADR-002 (Prisma raw split) — analogous "shared infrastructure has implicit version coupling" pattern
+
+---
+
+## [2026-04-29] (h) Zod 3 / Zod 4 ecosystem migration — DAY 7-8 STRATEGIC
+
+**Symptom:** within 24 hours, **two** packages auto-resolved to versions requiring Zod 4:
+
+1. **Day 2 evening:** `@hookform/resolvers/zod` started pulling in Zod 4 internals via the `$ZodTypeInternals` shape (followup f, fixed via root `pnpm.overrides.zod = "^3.25.76"`).
+2. **Day 3:** `better-auth ^1.2.0` resolved up to `1.6.9` which uses `z.coerce.boolean().meta(...)` — a Zod 4 method — and crashed boot. BE chat patch-pinned to `~1.2.0` (Day-3 BE worktree CHANGELOG entry).
+   - **BE-specific detail:** also dropped the `metadata` arg from `magicLink.sendMagicLink` callback in `apps/api/src/auth/auth.config.ts` (added in better-auth 1.4+; not in 1.2.x signature).
+
+**Trend:** the Zod 3 → 4 migration is sweeping the JS/TS ecosystem in Q2 2026. Every week we delay, more transitive deps will force tactical pins. Each pin is ~15 min of investigation + commit + audit; the friction compounds.
+
+**Recommendation:** schedule an **atomic Zod 4 migration as a Day 7-8 task** (after M0 hosting deploys land but before M1 endpoint expansion). One focused day:
+
+- Bump root `pnpm.overrides.zod` to `^4.x` + remove the override entirely (let upstreams resolve naturally).
+- Update `packages/shared/src/schemas/*` to Zod 4 syntax (largely back-compat; main breaks are `.strip()` removal + new `.meta()` method shape).
+- Update `apps/api`'s `ZodValidationPipe` to use `result.error.issues` shape changes (Zod 4 renamed some fields).
+- Update `apps/web`'s `zodResolver` import to `@hookform/resolvers/zod@^4.x`.
+- Update `.claude/locked-deps.json` paired-major lock from `{ zod: "3", "@hookform/resolvers": "3" }` to `{ zod: "4", "@hookform/resolvers": "4" }`.
+- Smoke-test BE auth + FE form validation + R2 upload Zod schemas + LLM gateway request schemas (from BE T023).
+- 1 focused day beats accumulating 2-3 weeks of tactical pins.
+
+**Owner:** BE chat (lead — touches the most surface) + FE chat (apps/web schemas).
+
+**ETA:** ~1 day (Day 7 or Day 8 — slot when no other major M0 work is in flight).
+
+**Closes:** alongside this migration, `STACK_LEARNINGS.md` `[ZOD]` + `[ZOD][TS]` entries get a "MIGRATION COMPLETE" addendum and the followup (c) zod-resolvers coupling note becomes historical context.
+
+**Cross-references:**
+
+- followup (c) — original zod-resolvers coupling prediction (Day 1 evening)
+- followup (f) — first materialization (Day 2 evening, fixed via override)
+- BE worktree CHANGELOG (Day 3) — second materialization with better-auth
+- `STACK_LEARNINGS.md` `[ZOD]` and `[ZOD][TS]` entries
+- `.claude/locked-deps.json` — paired-major lock (currently zod=3)
+- root `package.json` `pnpm.overrides.zod` — the existing pin
+
+---
+
 ## [2026-04-28] (g) Stakeholder Home — no locked frame, design ambiguity
 
 **Identified during:** Day-2 stretch session, FE F08b port.
