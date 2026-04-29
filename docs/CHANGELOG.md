@@ -13,6 +13,12 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 3 STRETCH evening merge cascade (2026-04-29)
+
+- **`feat(api)`** — **MS0-T023 provider-agnostic LLM gateway + MS0-T026 WebSocket scaffold** merged via PR #11 at `17c9885`. Registry-based provider lookup with Groq primary (`openai/gpt-oss-120b`, 500 tok/s, 131K ctx) + Gemini 2.5 Flash fallback + Groq long-context route (`meta-llama/llama-4-scout-17b-16e-instruct`, 10M tokens). 7/7 jest unit tests for retry + fallback orchestration. Provider-agnostic discipline: only `apps/api/src/llm/providers/{groq,gemini}.provider.ts` import the SDKs — gateway core + all call-sites consume `LLMGatewayService.complete(prompt, opts) → LLMResult` with zero coupling to a specific provider. T026 WebSocket gateway uses `@nestjs/platform-ws` + `ws` (NOT socket.io — locked stack), authenticates handshake via BetterAuth cookie OR `?token=` query for non-browser clients, closes 4401 on unauthed; smoke-verified 3/3 cases (cookie / query / rejected) per server log in PR body.
+- **`feat(web)`** — **MS0-T030.h F09 Projects List + MS0-T030.i F10 Create Project Modal + MS0-T030.j F11a Jira Connect Step 1** merged via PR #12 at `8a10721`. All Pattern A deferred routing — zero fetch / useMutation / axios in onboarding components (verified by grep: only "ZERO …" comments match). RWD verified at 320 + 1440 with 6 PNGs in `docs/screenshots/`.
+- **`feat(web)`** — **MS0-T030.k F11b Jira Step 2 + MS0-T030.l F11c Jira Step 3** merged via PR #14 at `f1656b9`. Continued Pattern A discipline. RWD verified at 320 + 1440 with 4 PNGs.
+
 ### Fixed — Day 3 evening hotfix (2026-04-29)
 
 - **`fix(ci)`** — Hotfix for three regressions exposed when PR #11 opened against the new main (`6385e25`):
