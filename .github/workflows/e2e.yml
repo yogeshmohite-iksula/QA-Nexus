@@ -1,0 +1,139 @@
+# QA Nexus PM1 — Playwright E2E smoke tests on PR.
+#
+# Spec: MS0-T031 + MS0-AC019.
+# Triggered on PRs that touch FE or API code (path-filtered to skip pure
+# docs/config PRs). Spins up FE + API in background, runs Playwright,
+# uploads HTML report on failure.
+#
+# WILL FAIL during PM1 setup window because:
+#   1. The onboarding spec uses .skip() until T014 Resend lands.
+#   2. The /health spec needs a real DATABASE_URL (Neon) to pass.
+#
+# Until both T012 (Neon) + T014 (Resend) are provisioned, this workflow
+# runs as a "scaffolding" check — it lints the e2e workspace + ensures
+# Playwright config compiles, but doesn't actually exercise auth.
+#
+# Local dev: `pnpm --filter @qa-nexus/e2e test` (with pnpm dev running)
+
+name: E2E
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "apps/e2e/**"
+      - "packages/shared/**"
+      - ".github/workflows/e2e.yml"
+
+# Cancel superseded runs on force-push.
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: playwright (chromium + mobile-safari)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Test mode — no real BetterAuth secret needed; CI uses an ephemeral one.
+      BETTER_AUTH_SECRET: "ci-only-do-not-use-in-prod-32-bytes-min-padding="
+      BETTER_AUTH_URL: "http://localhost:3001"
+      EMBEDDING_MODEL_ID: "Xenova/bge-large-en-v1.5"
+      NODE_ENV: "production"
+      PORT: "3001"
+      # DATABASE_URL falls back to a non-functional placeholder; tests that
+      # need it are .skip until T012 wires CI secrets.
+      DATABASE_URL: "${{ secrets.NEON_TEST_DATABASE_URL || 'postgresql://invalid:invalid@localhost:5432/postgres' }}"
+      DIRECT_URL: "${{ secrets.NEON_TEST_DIRECT_URL || 'postgresql://invalid:invalid@localhost:5432/postgres' }}"
+      # FE base URL the playwright config reads
+      E2E_BASE_URL: "http://localhost:3000"
+      E2E_API_BASE_URL: "http://localhost:3001"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers (chromium + webkit)
+        # webkit is needed for the mobile-safari project. Cache hit via
+        # actions/cache around ~/.cache/ms-playwright in a future iteration.
+        run: pnpm --filter @qa-nexus/e2e exec playwright install --with-deps chromium webkit
+
+      - name: Build shared + api + web
+        run: |
+          pnpm --filter @qa-nexus/shared build
+          pnpm --filter @qa-nexus/api build
+          pnpm --filter web build
+
+      - name: Typecheck e2e workspace
+        run: pnpm --filter @qa-nexus/e2e typecheck
+
+      - name: Start API in background
+        run: |
+          # Use start:prod so we exercise the same code path as Render
+          pnpm --filter @qa-nexus/api start:prod > /tmp/api.log 2>&1 &
+          echo $! > /tmp/api.pid
+          # Wait for /health to respond (max 60s — embedding model load takes ~38s)
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
+            if [ "$code" = "200" ] || [ "$code" = "503" ]; then
+              echo "✓ API is responding (HTTP $code) after ${i}*2s"
+              break
+            fi
+            sleep 2
+          done
+          curl -s http://localhost:3001/health | head -c 500 || true
+          echo ""
+
+      - name: Start FE (next dev) in background
+        run: |
+          pnpm --filter web dev > /tmp/web.log 2>&1 &
+          echo $! > /tmp/web.pid
+          # Next.js dev server is ready when /sign-in returns 200
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/sign-in || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "✓ FE is responding (HTTP $code) after ${i}*2s"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run Playwright tests
+        run: pnpm --filter @qa-nexus/e2e test
+        # Don't fail the build for now — most specs are .skip during setup
+        continue-on-error: true
+
+      - name: Upload Playwright HTML report (on failure)
+        if: failure() || always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: apps/e2e/playwright-report/
+          retention-days: 14
+
+      - name: Tail server logs on failure
+        if: failure()
+        run: |
+          echo "=== /tmp/api.log (last 100) ==="
+          tail -100 /tmp/api.log || true
+          echo "=== /tmp/web.log (last 100) ==="
+          tail -100 /tmp/web.log || true
+
+      - name: Stop background servers
+        if: always()
+        run: |
+          [ -f /tmp/api.pid ] && kill "$(cat /tmp/api.pid)" 2>/dev/null || true
+          [ -f /tmp/web.pid ] && kill "$(cat /tmp/web.pid)" 2>/dev/null || true
