@@ -11,6 +11,7 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { WsAdapter } from '@nestjs/platform-ws';
 import express from 'express';
 import { toNodeHandler } from 'better-auth/node';
 import { AppModule } from './app.module';
@@ -36,6 +37,11 @@ async function bootstrap() {
   // Body parsers for all other Nest controllers (incl. our wrapper auth endpoints).
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+  // T026: bind the @nestjs/websockets gateway to the `ws` library (NOT
+  // socket.io — locked PM1 stack per CLAUDE.md). RealtimeGateway uses
+  // path: /realtime, so connect via ws://localhost:3001/realtime.
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
