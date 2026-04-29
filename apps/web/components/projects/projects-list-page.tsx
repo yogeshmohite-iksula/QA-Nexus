@@ -12,13 +12,16 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ProjectsShell } from './projects-shell';
 import { LeftRail } from './left-rail';
+import { CreateProjectModal } from './create-project-modal';
 import { ARCHIVED_COUNT, PROJECTS, type Project } from './data';
 
 export function ProjectsListPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showCreateModal = searchParams?.get('new') === '1';
   const pinnedProjects = PROJECTS.filter((p) => p.isPinned);
   const allProjects = PROJECTS.filter((p) => !p.isPinned);
 
@@ -39,8 +42,12 @@ export function ProjectsListPage() {
 
   function openCreateModal() {
     console.info('pattern-a:deferred:open-modal', { modal: 'F10' });
-    // Open modal via query param (handled by the modal itself when present)
+    // Open modal via query param — F10 mounts when `?new=1` is present.
     router.push('/projects?new=1');
+  }
+
+  function closeCreateModal() {
+    router.push('/projects');
   }
 
   return (
@@ -57,6 +64,7 @@ export function ProjectsListPage() {
           <ArchivedSection count={ARCHIVED_COUNT} />
         </main>
       </div>
+      {showCreateModal && <CreateProjectModal onClose={closeCreateModal} />}
     </ProjectsShell>
   );
 }
