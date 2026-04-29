@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 3 evening (2026-04-29)
+
+- **`fix(observability)`** — Dedup token-savings aggregator by `(session_id, chat_role)`. Each Stop event re-snapshots cumulative session state (not deltas), so SUM-aggregating multiple Stop fires per session was over-counting by 5-7×. Day-2 figure drops from 974,700 → 103,050; Day-3 grows 1,300 → 29,300 (latest snapshot wins). 3-day cumulative now ~138,800 tokens (was bogusly ~982k). Excel + Daily Rollup sheet auto-refreshed.
+
 ### Added — Day 3 (2026-04-29)
 
 - **`docs(eod)`** — Day 3 EOD report (this commit). 5 phases shipped: prep-pack (4 runbooks + 2 ADRs + .env.example), R2 service (deferred-mode + 14 tests), T031 Playwright scaffold (skipped specs + .github/workflows/e2e.yml), T018 weekly backup + restore runbook, EOD docs. Solo MAIN session, 0 PRs, 0 deferrals/blockers. STATUS.md bumped: 24/35 confirmed code-side + 4 runbook-ready awaiting Yogesh's Day-4 dashboard pass. Token-savings: 3-day cumulative ~982k estimated (per `docs/observability/Token_Savings_Log.xlsx`).

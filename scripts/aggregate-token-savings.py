@@ -93,18 +93,64 @@ def load_jsonl(path: Path, default_role: str | None = None) -> list[dict]:
 
 
 def load_all_sessions() -> list[dict]:
-    """Walk all 3 worktree JSONL files and merge into one list."""
+    """Walk all 3 worktree JSONL files, dedup by session, return merged list.
+
+    DEDUP CONTRACT: each Stop event re-snapshots the FULL running session state
+    (cumulative tool_calls, memory_injects, etc — not deltas). So a single
+    Claude session with 5 Stop fires writes 5 rows to the JSONL where row N+1
+    is row N's superset. SUM-aggregating those rows over-counts by 5×.
+
+    The fix: dedup by (session_id, chat_role) and KEEP THE LAST ROW per
+    session (the highest-watermark snapshot). After dedup, daily SUM is
+    correct because each session contributes exactly once with its full
+    final-state numbers.
+
+    "Last" is determined by ended_at descending; falls back to started_at
+    then to file-order if both missing. session_id "" is treated as a
+    separate bucket per chat_role so legacy malformed rows don't collapse.
+
+    See `docs/observability/token-tracking.md` § "Estimation rules" for
+    the rationale + Day-3 EOD report § "Token-savings dashboard" for the
+    incident that motivated this dedup (Day-2 number ballooned 187K → 974K
+    when overnight sessions accumulated multiple Stop fires).
+    """
     all_sessions: list[dict] = []
     for role, path in WORKTREE_PATHS.items():
         rows = load_jsonl(path, default_role=role)
         if rows:
-            print(f"  ✓ {role}: {len(rows)} sessions from {path}")
+            print(f"  ✓ {role}: {len(rows)} raw rows from {path}")
         else:
             print(f"  · {role}: no data (skipped)")
         all_sessions.extend(rows)
-    # Sort chronologically by ended_at (or date+started_at as fallback)
-    all_sessions.sort(key=lambda r: (r.get("date", ""), r.get("ended_at", r.get("started_at", ""))))
-    return all_sessions
+
+    # ─── dedup by (session_id, chat_role) — keep latest snapshot ─────
+    # Sort ascending by ended_at so the LAST entry wins when we walk dict.
+    def _sort_key(r: dict) -> tuple[str, str, str]:
+        return (
+            r.get("ended_at", "") or "",
+            r.get("started_at", "") or "",
+            r.get("date", "") or "",
+        )
+
+    all_sessions.sort(key=_sort_key)
+    deduped_by_key: dict[tuple[str, str], dict] = {}
+    for r in all_sessions:
+        key = (r.get("session_id", "") or "", r.get("chat_role", "") or "")
+        deduped_by_key[key] = r  # later key replaces earlier (keep latest snapshot)
+
+    deduped = list(deduped_by_key.values())
+    duplicates_dropped = len(all_sessions) - len(deduped)
+    if duplicates_dropped > 0:
+        print(
+            f"  ↓ deduped {duplicates_dropped} stale Stop-snapshot rows "
+            f"({len(all_sessions)} → {len(deduped)} sessions)"
+        )
+
+    # Sort chronologically for downstream consumers (chronological sheet, etc).
+    deduped.sort(
+        key=lambda r: (r.get("date", ""), r.get("ended_at", r.get("started_at", "")))
+    )
+    return deduped
 
 
 def style_header(cell) -> None:
