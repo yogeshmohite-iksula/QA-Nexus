@@ -2,6 +2,23 @@
 
 ---
 
+## [2026-04-30] (k) Live LLM gateway + A1 Scribe validation — DEFERRED to Render-deploy day
+
+**Symptom:** Day-4 noon brief Block 1 (live `/llm/test` happy + fallback + long-context + benchmark) and Block 2 (A1 Scribe real-LLM smoke) require a reachable API origin with `GROQ_API_KEY` + `GEMINI_API_KEY` set. At Day-4 morning start, `https://qa-nexus-api.onrender.com/health` returned 404 — Render slot exists but no app bound. Yogesh hasn't completed provisioning yet.
+
+**Decision:** package the entire validation as a single re-runnable script (`scripts/llm-gateway-validation.sh`) so the moment Yogesh signals "Render is up + keys set" the BE chat fires it in one command and commits the report.
+
+**Owner:** BE chat — fires on Yogesh's signal. Estimated wall time: ~30s. Cost: ~12 Groq RPD (0.8% of daily quota).
+
+**Pre-work landed today** (Day-4 PR):
+
+- `scripts/llm-gateway-validation.sh` — covers blocks (a)-(e) with `set -euo pipefail` + idempotent markdown-append output to `docs/observability/llm-gateway-validation-YYYY-MM-DD.md`.
+- `docs/observability/llm-gateway-validation-2026-04-30.md` — placeholder explaining deferral + how to run when keys land.
+
+**Closes:** Day-4 noon brief Blocks 1 + 2.
+
+---
+
 ## [2026-04-29] (j) CI must run on push to main, not just on PRs — OBSERVABILITY HOLE — **CLOSED 2026-04-30**
 
 **Resolution:** Day-4 morning, ~10 min. Added `push: branches: [main]` trigger to `.github/workflows/ci.yml` and `.github/workflows/e2e.yml`. The e2e workflow keeps the same path filter on the push trigger so pure docs/config pushes still skip. Verified by pushing this very commit and watching CI fire on the push event.
