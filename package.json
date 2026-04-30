@@ -54,17 +54,7 @@
       "prettier --write"
     ]
   },
-  "_pnpm_security_note": "pnpm 10 blocks all install scripts by default (defence against supply-chain attacks). The list below is the EXPLICIT allowlist of transitive deps whose post-install scripts we permit — required because @xenova/transformers' transitive sharp@0.32.6 dep needs to download + compile its native libvips binary, and Prisma needs to download its query engine. Reviewed 2026-04-28 (BE chat 3 / MS0-T024). Do NOT add more entries without a security review + ADR. Spec: docs/SECURITY.md → 'Dependency hygiene'.",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@nestjs/core",
-      "@prisma/client",
-      "@prisma/engines",
-      "prisma",
-      "sharp",
-      "unrs-resolver"
-    ]
-  },
+  "_pnpm_security_note": "pnpm 10 blocks all install scripts by default (defence against supply-chain attacks). The list below is the EXPLICIT allowlist of transitive deps whose post-install scripts we permit — required because @xenova/transformers' transitive sharp@0.32.6 dep needs to download + compile its native libvips binary, and Prisma needs to download its query engine. Reviewed 2026-04-28 (BE chat 3 / MS0-T024). 2026-04-30 (Day-4 afternoon hotfix-3): merged with `overrides` block (was duplicate `pnpm` key — last-key-wins silently dropped onlyBuiltDependencies, sharp never built on Render → embedding deferred). Do NOT split into separate `pnpm` keys again. Spec: docs/SECURITY.md → 'Dependency hygiene'.",
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
@@ -91,6 +81,16 @@
     }
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "unrs-resolver",
+      "@xenova/transformers",
+      "onnxruntime-node"
+    ],
     "overrides": {
       "zod": "^3.25.76"
     }

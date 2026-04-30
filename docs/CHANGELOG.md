@@ -13,6 +13,11 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 4 afternoon hotfix-3 (2026-04-30)
+
+- **`fix(deps)`** — Root `package.json` had **TWO `pnpm` keys** (one with `onlyBuiltDependencies`, one with `overrides`). JSON last-key-wins → `onlyBuiltDependencies` was silently dropped, sharp's install script never ran, native binary never materialized on Render Linux x64, embedding stayed `deferred` forever. Merged into a single `pnpm` key containing BOTH `onlyBuiltDependencies` (now also includes `@xenova/transformers` + `onnxruntime-node` for completeness) AND `overrides`. The `_pnpm_security_note` updated to flag "do NOT split into separate `pnpm` keys again".
+- **`test(api)`** — New production smoke test (`apps/api/test/smoke/health.e2e-spec.ts`) catches future regressions of this exact bug. Reads `PROD_SMOKE_URL` from env; if set, hits `/health` and asserts `embedding.status === "up"` with `warm: true`. If unset, only the sentinel test runs (1 passed + 5 skipped) so local + CI stay green. Convenience script: `pnpm --filter @qa-nexus/api test:smoke`. Intended invocation: `PROD_SMOKE_URL=https://qa-nexus-api.onrender.com pnpm --filter @qa-nexus/api test:smoke` post-deploy.
+
 ### Fixed — Day 4 afternoon hotfix (2026-04-30)
 
 - **`fix(api)`** — Graceful boot when LLM/embedding deps unavailable + sharp rebuild fix. Three Render boot crashes back-to-back; this entry covers the second + third (NestOtelLogger entry below covers the first):
