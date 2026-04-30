@@ -13,6 +13,11 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 4 afternoon hotfix-4 (2026-04-30)
+
+- **`fix(deps)`** — Pin `sharp` to `^0.33.5` via root `pnpm.overrides`. Hotfix-3 merged the duplicate `pnpm` keys (so `onlyBuiltDependencies` is now actually applied) but sharp 0.32.6 STILL didn't materialize its native binary on Render Linux x64 — root cause: sharp 0.32's `postinstall` script tarball download has multiple failure modes on Render's locked-down build env (`--frozen-lockfile`, no script internet access, broken-cache persistence). Sharp 0.33 (Nov 2023) **decoupled prebuilt binaries from postinstall** — they're now sibling packages (`@img/sharp-linux-x64` etc) that pnpm installs via the regular dep graph, no script execution needed. Local `pnpm install` confirmed `install: Done` for sharp 0.33.5 (the dep graph approach materializes the binary cleanly). 81/81 unit tests still green.
+- **`docs(architecture)`** — **ADR-009** Pin sharp ≥0.33.5 to ship native binary on Render. Documents the four-part Day-4 boot regression chain (NestOtelLogger → LLMGateway → dup-pnpm-key → sharp-postinstall) + why each prior hotfix was real-but-insufficient + why bumping sharp is the right structural fix vs more buildscript hackery. Future contributors who consider downgrading sharp will hit this ADR.
+
 ### Fixed — Day 4 afternoon hotfix-3 (2026-04-30)
 
 - **`fix(deps)`** — Root `package.json` had **TWO `pnpm` keys** (one with `onlyBuiltDependencies`, one with `overrides`). JSON last-key-wins → `onlyBuiltDependencies` was silently dropped, sharp's install script never ran, native binary never materialized on Render Linux x64, embedding stayed `deferred` forever. Merged into a single `pnpm` key containing BOTH `onlyBuiltDependencies` (now also includes `@xenova/transformers` + `onnxruntime-node` for completeness) AND `overrides`. The `_pnpm_security_note` updated to flag "do NOT split into separate `pnpm` keys again".
