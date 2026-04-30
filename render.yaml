@@ -1,0 +1,40 @@
+# QA Nexus PM1 — Render Blueprint (T011).
+#
+# Source: docs/deploy/render-runbook.md.
+#
+# This file is read by Render on Blueprint-based deploys. Yogesh's
+# initial deploy was UI-configured (not Blueprint), so the UI Build
+# Command field MUST be kept in sync with `services[].buildCommand`
+# below until we migrate to a pure-Blueprint deploy.
+#
+# Day-4 afternoon hotfix (this file's birth): added `pnpm rebuild sharp`
+# to the build command so sharp's native binary is materialized for
+# Render Linux x64. Without it, EmbeddingService boots with
+# `Cannot find module '../build/Release/sharp-linux-x64.node'`.
+# pnpm 10's `onlyBuiltDependencies` whitelist works locally but Render's
+# `pnpm install --frozen-lockfile` somehow doesn't run sharp's
+# install script — `pnpm rebuild sharp` forces it explicitly.
+
+services:
+  - type: web
+    name: qa-nexus-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    rootDir: .
+    buildCommand: pnpm install --frozen-lockfile && pnpm rebuild sharp && pnpm --filter @qa-nexus/shared build && pnpm --filter @qa-nexus/api build
+    startCommand: pnpm --filter @qa-nexus/api start:prod
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Most env vars set in the Render dashboard (secrets) — see
+      # docs/deploy/render-runbook.md for the canonical matrix. Vars
+      # listed here are non-secret + safe to commit.
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      # LLM_PRIMARY_PROVIDER intentionally NOT set here — per Day-4 noon
+      # arch decision LLM keys come from F26 UI in M1, not env. The
+      # gateway runs in deferred mode + /llm/* returns 501 until F26.

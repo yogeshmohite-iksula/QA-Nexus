@@ -10,7 +10,12 @@
 //
 // The gateway never imports a specific provider class — only the registry.
 // That's the architectural seam that makes new providers a 1-file add.
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import {
   AllProvidersFailedError,
   LLMOptions,
@@ -35,27 +40,47 @@ const DEFAULT_LONG_CONTEXT_THRESHOLD = 30000;
 export class LLMGatewayService implements OnModuleInit {
   private readonly logger = new Logger(LLMGatewayService.name);
   private config!: GatewayConfig;
+  /**
+   * True when LLM env vars are missing — service runs in deferred mode.
+   * Matches R2Service / EmailService pattern. Per Yogesh + arch decision
+   * (Day-4 noon): LLM keys come from F26 UI in M1, not env vars. Until
+   * F26 lands, the service should NOT crash on boot if vars missing.
+   */
+  public deferred = true;
+  public deferredReason: string | null = null;
 
   onModuleInit(): void {
-    this.config = this.readConfig();
-    this.logger.log(
-      `LLMGateway initialised: primary=${this.config.primaryProvider}` +
-        (this.config.primaryModel ? `:${this.config.primaryModel}` : '') +
-        (this.config.secondaryProvider
-          ? ` · secondary=${this.config.secondaryProvider}`
-          : ' · NO secondary configured (no fallback available)') +
-        (this.config.longContextProvider
-          ? ` · long-context=${this.config.longContextProvider} (threshold=${this.config.longContextThresholdTokens} tok)`
-          : ''),
-    );
-    this.logger.log(
-      `available providers in registry: ${listProviders().join(', ')}`,
-    );
+    try {
+      this.config = this.readConfig();
+      this.deferred = false;
+      this.deferredReason = null;
+      this.logger.log(
+        `LLMGateway initialised: primary=${this.config.primaryProvider}` +
+          (this.config.primaryModel ? `:${this.config.primaryModel}` : '') +
+          (this.config.secondaryProvider
+            ? ` · secondary=${this.config.secondaryProvider}`
+            : ' · NO secondary configured (no fallback available)') +
+          (this.config.longContextProvider
+            ? ` · long-context=${this.config.longContextProvider} (threshold=${this.config.longContextThresholdTokens} tok)`
+            : ''),
+      );
+      this.logger.log(
+        `available providers in registry: ${listProviders().join(', ')}`,
+      );
+    } catch (e) {
+      this.deferred = true;
+      this.deferredReason = e instanceof Error ? e.message : String(e);
+      this.logger.warn(
+        `LLMGateway running in DEFERRED mode (no provider configured): ${this.deferredReason}. ` +
+          `Admin must configure via F26 UI in M1 — until then any /llm/* call returns 501.`,
+      );
+    }
   }
 
-  /** Return the active config snapshot — used by /health and /llm/providers. */
-  getConfig(): Readonly<GatewayConfig> {
-    return { ...this.config };
+  /** Return the active config snapshot — used by /health and /llm/providers.
+   *  Returns null in deferred mode (no config to snapshot). */
+  getConfig(): Readonly<GatewayConfig> | null {
+    return this.deferred ? null : { ...this.config };
   }
 
   /** Cheap, env-agnostic token estimate: roughly 4 chars per token. */
@@ -68,6 +93,13 @@ export class LLMGatewayService implements OnModuleInit {
    * secondary based on options + config + estimated input length.
    */
   async complete(prompt: string, opts: LLMOptions = {}): Promise<LLMResult> {
+    if (this.deferred) {
+      throw new HttpException(
+        `LLM gateway not configured: ${this.deferredReason ?? 'no provider env vars set'}. ` +
+          `Admin must set LLM provider via F26 UI in M1.`,
+        501,
+      );
+    }
     const t0 = Date.now();
     const inputTokens = this.estimateTokens(prompt + (opts.systemPrompt ?? ''));
 

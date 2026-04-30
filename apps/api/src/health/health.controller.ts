@@ -75,6 +75,7 @@ interface HealthResponse {
         load_duration_ms: number | null;
         model_id: string;
       }
+    | { status: 'deferred'; reason: string; model_id: string }
     | { status: 'down'; error: string };
   quota: {
     neon_mb_used: number | null;
@@ -164,8 +165,19 @@ export class HealthController {
    *  NOT actively ping the providers (would burn free-tier quota every
    *  5 minutes) — instead reflects the most recent real call's outcome. */
   private snapshotLLM(): HealthResponse['llm'] {
+    // Deferred mode (Day-4 afternoon hotfix): if LLMGateway didn't init
+    // due to missing env vars, surface that explicitly so /health can
+    // still return 200 + UptimeRobot doesn't false-alert.
+    if (this.llm.deferred) {
+      return {
+        status: 'deferred',
+        note:
+          this.llm.deferredReason ??
+          'LLM provider not configured. Admin must set via F26 UI in M1.',
+      };
+    }
     try {
-      const cfg = this.llm.getConfig();
+      const cfg = this.llm.getConfig()!;
       const buildRoute = (
         providerName: string | undefined,
         modelName: string | undefined,
@@ -262,6 +274,17 @@ export class HealthController {
   private checkEmbedding(): HealthResponse['embedding'] {
     try {
       const status = this.embedding.status();
+      // Deferred mode: model load failed (sharp missing on Linux x64,
+      // OOM on free dyno, etc.). Service stays alive; /health surfaces
+      // the reason so Yogesh can react. computeOverall treats deferred
+      // as acceptable (200 OK) rather than firing UptimeRobot alerts.
+      if (status.deferred) {
+        return {
+          status: 'deferred',
+          reason: status.deferredReason ?? 'unknown',
+          model_id: status.modelId,
+        };
+      }
       if (!status.warm) {
         return {
           status: 'down',
@@ -311,13 +334,20 @@ export class HealthController {
     embedding: HealthResponse['embedding'],
     quota: { neon_pct: number | null },
   ): 'ok' | 'degraded' | 'down' {
-    // Required subsystems for "ok": db + embedding.
+    // Required subsystems for "ok": db. Embedding "deferred" state
+    // (sharp missing on Linux x64, OOM on free dyno) is ACCEPTABLE — the
+    // service is alive + serving non-embedding routes. Day-4 afternoon
+    // hotfix: don't 503 when embedding is gracefully deferred. The
+    // deferred state is still surfaced in the response body so ops can
+    // see it; UptimeRobot just doesn't alert on it.
     if (db.status !== 'up') return 'down';
-    if (embedding.status !== 'up') return 'down';
+    if (embedding.status === 'down') return 'down';
     // Quota >90% degrades to alert state (UptimeRobot triggers on 503).
     if (quota.neon_pct !== null && quota.neon_pct > QUOTA_WARNING_PCT) {
       return 'degraded';
     }
+    // Embedding deferred → still 'ok' overall (returns 200). Visible in
+    // the body's `embedding.status` field for ops + future F26 UI.
     return 'ok';
   }
 }

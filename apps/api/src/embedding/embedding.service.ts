@@ -44,6 +44,16 @@ export class EmbeddingService implements OnModuleInit {
   private loadedModelId = '';
   private loadStartedAt = 0;
   private loadCompletedAt = 0;
+  /**
+   * True when model load failed (e.g., sharp native binary missing on
+   * Render Linux x64, OOM on 512 MB free dyno, network issue fetching
+   * ONNX from Hugging Face). Service stays in deferred mode; /health
+   * reports it; embed() throws ServiceUnavailableException with the
+   * deferredReason.
+   */
+  public deferred = true;
+  public deferredReason: string | null =
+    'model not yet loaded (loading on bootstrap, lazy on first embed call)';
 
   /** Triggered by NestJS at startup; we kick off the load without awaiting
    *  it (so server bind isn't blocked) and the .embed() method awaits the
@@ -56,14 +66,21 @@ export class EmbeddingService implements OnModuleInit {
       .then((extractor) => {
         this.extractor = extractor;
         this.loadCompletedAt = Date.now();
+        this.deferred = false;
+        this.deferredReason = null;
         this.logger.log(
           `EmbeddingService ready: model=${this.loadedModelId} ` +
             `loaded in ${this.loadCompletedAt - this.loadStartedAt}ms`,
         );
       })
       .catch((err) => {
-        this.logger.error(
-          `EmbeddingService failed to load model: ${err instanceof Error ? err.message : String(err)}`,
+        const msg = err instanceof Error ? err.message : String(err);
+        this.deferred = true;
+        this.deferredReason = msg;
+        this.logger.warn(
+          `EmbeddingService running in DEFERRED mode (model load failed): ${msg}. ` +
+            `Likely sharp native binary missing on Render Linux x64 OR OOM on 512 MB free dyno. ` +
+            `Add \`pnpm rebuild sharp\` to build command, or upgrade dyno tier for embeddings.`,
         );
       });
   }
@@ -80,6 +97,8 @@ export class EmbeddingService implements OnModuleInit {
     loadStartedAt: number;
     loadCompletedAt: number;
     loadDurationMs: number | null;
+    deferred: boolean;
+    deferredReason: string | null;
   } {
     return {
       warm: this.isWarm(),
@@ -90,6 +109,8 @@ export class EmbeddingService implements OnModuleInit {
         this.loadCompletedAt > 0
           ? this.loadCompletedAt - this.loadStartedAt
           : null,
+      deferred: this.deferred,
+      deferredReason: this.deferredReason,
     };
   }
 
