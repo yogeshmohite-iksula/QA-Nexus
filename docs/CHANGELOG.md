@@ -13,6 +13,17 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 4 EOD closure (2026-04-30 evening)
+
+- **`docs(eod)`** — Day 4 EOD master report at `docs/eod-reports/2026-04-30-day-4.md`. Aggregates the cross-chat picture: 5-hotfix BE boot regression chain (NestOtelLogger → graceful boot → pnpm dup-key → sharp 0.33 → embedding memory guard), 2 PRs merged (#17 F09+F10 seed-cent + closes followup (i); #19 F12+F13 uploads), 6 dashboard services provisioned (Render + R2 + Resend + UptimeRobot + Grafana Cloud + Better Stack), ADR-009 + ADR-003 amendment, followup (i)+(j) closed, (k) NVIDIA Build dropped per Yogesh, (l)+(m) filed. Total infra cost still **$0/month** (Hard Rule 1 held).
+- **`docs(followups)`** — Filed `(m)` R2 free-tier quota alert system. M1 user-facing: admin-only top-strip banner at 50/60/70/80/90/100% thresholds + per-project breakdown of bytes used (RET/CART/PAY/AUTH/OPS). BE cron service + FE banner + new `r2_quota_log` table schema + acceptance gate + cross-references. Honors Yogesh's explicit ask: "alert before money cut" (during R2 card-on-file step).
+- **`docs(observability)`** — Consolidated Excel master at `docs/observability/QA_Nexus_Work_Log.xlsx`. Merges the prior `Token_Savings_Log.xlsx` (3 sheets) into the work-hours log (13 sheets), token sheets prefixed `Tokens — *`. Days 2/3/4 placeholder rows added to Development + All Sessions sheets (per-session granularity to be back-filled by Yogesh per his actual operating windows). Cover sheet annotated with consolidation note + new aggregator script reference.
+- **`scripts`** — New `scripts/update-work-log.py` aggregator (8 KB Python, argparse, dry-run mode). Appends a session row to BOTH the per-phase sheet and the chronological sheet, preserves styling, validates inputs (date format, phase whitelist, hours range, files ≥0). Single canonical source-of-truth path: `docs/observability/QA_Nexus_Work_Log.xlsx`.
+
+### Removed — Day 4 EOD closure (2026-04-30 evening)
+
+- **`docs(observability)`** — Deleted `docs/observability/Token_Savings_Log.xlsx` (data merged into the consolidated `QA_Nexus_Work_Log.xlsx` master per the closure entry above).
+
 ### Fixed — Day 4 afternoon hotfix-5 (2026-04-30)
 
 - **`fix(api)`** — Pre-flight memory guard added to `EmbeddingService.checkMemoryHeadroom()`. Trigger: hotfix-4 successfully loaded sharp's native binary, but bge-large-en-v1.5 (~470 MB resident WASM) + NestJS baseline + Prisma + R2 + LLM gateway = ~520 MB on Render Free's 512 MB dyno → OOM crash loop every ~2 min. Tactical fix: Yogesh swapped `EMBEDDING_MODEL_ID` env to `Xenova/bge-small-en-v1.5` (33 MB resident, MTEB avg 62.17 vs 64.23 = −2.06 pt). Structural fix: pre-flight guard refuses to load when `MODEL_MEMORY_MB[modelId] > heapLimit × 0.7`, logs a clear warning + stays in deferred mode instead of crashing the pod. New table `MODEL_MEMORY_MB` in `embedding.service.ts` lists known model footprints (extend after measuring new models). Unknown models allowed-with-warning so we don't block forward progress on unmeasured ones. 3 new regression tests (`embedding-graceful.spec.ts`): refuses bge-large on 512 MB, allows bge-small on 512 MB, allows unknown models with warning. **84/84 jest green** (was 81, +3).

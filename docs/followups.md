@@ -2,6 +2,94 @@
 
 ---
 
+## [2026-04-30] (m) R2 free-tier quota alert system — Yogesh login banner — M1 USER-FACING
+
+**Symptom (Day-4 afternoon):** During R2 provisioning (T013), Yogesh added a Cloudflare credit card to enable R2 (free-tier still $0/mo, but requires card on file). He flagged a real risk: **a runaway upload — bug, infinite loop, or compromised credential — could silently exceed the 10 GB-month free tier and start billing his personal card**. He explicitly asked: "I want alert before my money cut. When 50% reached, then after every 10% — 60, 70, 80, 90, and 100% limit reach. Can you make one pop up alert come on the website when me Yogesh login?"
+
+**Belt-and-suspenders status:**
+
+- **Belt 1 (Cloudflare-side):** $1 spending alert configured at Members & Billing → Spending Alerts → $1 USD threshold. This is Cloudflare's native — fires email if spend > $1 in a billing cycle. Useful but external (email, not in-app) and only fires AFTER overage starts.
+- **Belt 2 (THIS FOLLOWUP):** in-app banner system on Yogesh's QA Nexus login that surfaces R2 usage at 50/60/70/80/90/100% thresholds — fires BEFORE overage, not after.
+
+**Why an in-app banner is required (not just Cloudflare's email):**
+
+1. Email alerts are easy to miss / route to spam / mark as unread. An in-app banner that's IMPOSSIBLE to dismiss until ack'd forces the conversation.
+2. Cloudflare's free-tier monitoring is byte-counted at the bucket; QA Nexus knows WHICH project / WHICH user is the heavy uploader. The banner can name names ("RET project up 4.2 GB this week — Akshay's Sprint 42 evidence pack ingestion is the driver").
+3. Yogesh is the deployer-admin (per Day-0 bootstrap, RBAC role = Admin). Surfacing this only to him keeps it out of QA Engineers' faces — they're not the ones who pay if it overflows.
+
+**Design (M1 owner: BE chat + FE chat collaboration):**
+
+### BE side (apps/api/src/observability/r2-quota.service.ts)
+
+1. **Cron job** running every 30 min (NestJS `@Cron('*/30 * * * *')` — Node-cron, no Redis dependency, lives in same process):
+   - Calls Cloudflare R2 API `HEAD https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/r2/buckets/qa-nexus-evidence-pm1/usage` (or equivalent — confirm exact endpoint at impl time)
+   - Reads `total_bytes` field, computes `pct = total_bytes / (10 * 1024^3)`
+   - Persists snapshot to `r2_quota_log` table: `{ snapshot_at, total_bytes, total_objects, pct, threshold_crossed }`
+2. **Threshold detection:** compare current `pct` against last snapshot's `pct`. If a 10-pp threshold (50, 60, 70, 80, 90, 100) was crossed UPWARD since last snapshot, set `threshold_crossed` to that value AND insert a row into `notifications` table targeted at user_id=Yogesh's UUID (RBAC role = Admin only).
+3. **Per-project breakdown:** for the alert payload, also query R2 list-objects with prefix per project (`projects/RET/`, `projects/CART/`, etc.) and rank top-3 contributors. This lets the banner say "RET 4.2 GB / CART 1.8 GB / PAY 0.6 GB — RET ingest is the driver".
+4. **Rate limit:** never fire the same threshold twice in 24h (de-bounce on `r2_quota_log.threshold_crossed`).
+5. **Test:** unit test the cron logic with Cloudflare API stubs at 49% / 51% / 99% / 100% transitions; verify exactly one notification per threshold crossing.
+
+### FE side (apps/web/components/admin/r2-quota-banner.tsx)
+
+1. **Top-strip banner** rendered ONLY when `useCurrentUser().role === 'Admin'` AND there's an unacknowledged `r2_quota` notification in the user's notifications feed.
+2. **Severity-colored:**
+   - 50-69% → blue info banner ("Heads up — R2 usage at 56%. RET 3.8 GB is the driver.")
+   - 70-89% → amber warn banner ("R2 usage at 78%. Consider archiving old runs from RET. Top 3: …")
+   - 90-99% → red danger banner ("R2 usage at 94%. NEW UPLOADS WILL FAIL AT 100%. Archive or upgrade.")
+   - 100%+ → red blocking banner WITH the upload-blocked state surfaced + immediate ack required to dismiss
+3. **Always shows top 3 project contributors + bytes-per-project** (data from BE breakdown).
+4. **Ack mechanism:** dismissable per threshold (50% banner dismissable independently of 60%) but re-fires next time it crosses upward. Once dismissed, FE writes `notifications.acknowledged_at`.
+5. **F25 Executive Dashboard** also gets a small R2 usage tile (read-only — banner is the action surface, dashboard is the trend surface). Tile shows the last 14 snapshots as a sparkline.
+
+### Schema migration (BE — adds 1 table)
+
+```sql
+CREATE TABLE r2_quota_log (
+  id BIGSERIAL PRIMARY KEY,
+  snapshot_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  total_bytes BIGINT NOT NULL,
+  total_objects INT NOT NULL,
+  pct NUMERIC(5,2) NOT NULL,
+  threshold_crossed SMALLINT NULL,  -- 50/60/70/80/90/100 if a threshold was crossed UPWARD; NULL otherwise
+  per_project_bytes JSONB NOT NULL,  -- {"RET": 4200000000, "CART": 1800000000, ...}
+  CONSTRAINT pct_range CHECK (pct >= 0 AND pct <= 200)  -- allow 100-200% to capture overage in case alert lag
+);
+CREATE INDEX r2_quota_log_snapshot_at ON r2_quota_log (snapshot_at DESC);
+CREATE INDEX r2_quota_log_threshold ON r2_quota_log (threshold_crossed) WHERE threshold_crossed IS NOT NULL;
+```
+
+(Notifications table already exists per PM1_ERD §3.x — this followup just inserts new rows of `kind = 'r2_quota'`.)
+
+### Acceptance gate
+
+1. Manual smoke: at M1 acceptance, simulate by inserting 3 large dummy files into R2 totalling ~5.5 GB → verify cron fires within 30 min → verify Yogesh sees blue 50% banner on next login → verify ack persists → verify dashboard tile shows the spike.
+2. Unit-test coverage: 6 threshold transitions (49→50, 59→60, …) + de-bounce + RBAC scoping (QA Engineer login does NOT see the banner even if user_id matches).
+3. Manual test "what if Cloudflare API is down": cron should log + skip + retry next interval; never crash the API.
+
+### Cross-references
+
+- **Hard Rule 1** (CLAUDE.md) — $0/mo gate. This system is the safety net keeping it true.
+- **PM1_PRD §10 NFR-001** (responsiveness) — banner must render at 320 / 1440 per CLAUDE.md Rule 12.
+- **PM1_ERD §3.x** (notifications table) — new row kind `r2_quota`.
+- **F25 Executive Dashboard** — gets read-only tile.
+- **Cloudflare R2 API docs** — confirm exact bucket-usage endpoint at impl time; if not available, fall back to S3-compatible `HEAD bucket` with `--summarize` per S3 API spec.
+
+### Owner
+
+BE chat (cron service + schema migration + Cloudflare API client) + FE chat (banner component + dashboard tile + RBAC scoping).
+
+### ETA
+
+**M1** — Users & Roles milestone (Day-12 → Day-18 per MILESTONE_REGISTRY). Same milestone where F27 Admin user-management lands, since the banner is admin-only.
+
+### Cost vs benefit
+
+- Build cost: ~6 BE hours (cron + Cloudflare API client + schema + tests) + ~4 FE hours (banner + dashboard tile + tests). Total ~10 hours over 2 days at M1.
+- Risk avoided: silent R2 overage → unbounded billing on Yogesh's personal card. Even one overage event over the 12-month pilot would cost more in $ + trust than the build cost.
+
+---
+
 ## [2026-04-30] (l) Embedding model quality eval — bge-small vs bge-large at A1 Scribe retrieval time — M3 STRATEGIC
 
 **Symptom (Day-4 afternoon):** Render Free 512 MB dyno OOM-crash-looped when EmbeddingService loaded `Xenova/bge-large-en-v1.5` (~470 MB resident in WASM). NestJS baseline + Prisma + R2 client + LLM gateway = ~520 MB total — over the 512 MB cap. Pod kicked every ~2 min; /health unreachable.
