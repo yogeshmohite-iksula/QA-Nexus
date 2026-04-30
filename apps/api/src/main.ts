@@ -1,6 +1,10 @@
 // QA Nexus PM1 — NestJS API entry.
 //
 // Critical sequence (per better-auth/node docs):
+//   0. Initialize OpenTelemetry SDK (traces + logs) BEFORE
+//      NestFactory.create. Auto-instrumentations need to monkey-patch
+//      http/express/pg before those modules are required by Nest's
+//      bootstrap. Logs SDK must be ready so NestOtelLogger can emit.
 //   1. Create Nest app with bodyParser DISABLED.
 //   2. Mount BetterAuth's catch-all on `/auth/*` BEFORE any body parser
 //      (BetterAuth needs raw req body to sign the magic-link cookies).
@@ -8,6 +12,21 @@
 //      controllers under /auth/sign-up etc — they live at narrower paths
 //      that match BEFORE the catch-all because Express routing is order-
 //      dependent and Nest's controllers register first).
+import {
+  initOtelTraces,
+  shutdownOtelTraces,
+} from './observability/otel.config';
+import {
+  initOtelLogs,
+  shutdownOtelLogs,
+  NestOtelLogger,
+} from './observability/otel-logs.config';
+
+// MUST run before any other Nest/Express imports — auto-instrumentations
+// patch require() results.
+initOtelTraces();
+initOtelLogs();
+
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -21,6 +40,7 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false, // we manage parsing ourselves so BetterAuth gets raw bodies
+    logger: new NestOtelLogger(),
   });
 
   // Mount BetterAuth's catch-all for routes the wrapper controllers don't own.
@@ -46,6 +66,17 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   logger.log(`QA Nexus API listening on http://localhost:${port}`);
+
+  // Graceful shutdown for Render redeploys / SIGTERM. Flushes any
+  // pending OTel batches so we don't drop the last few spans/logs.
+  const shutdown = async (signal: string) => {
+    logger.log(`Received ${signal} — flushing OTel exporters`);
+    await Promise.allSettled([shutdownOtelTraces(), shutdownOtelLogs()]);
+    await app.close();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 bootstrap().catch((e) => {
   console.error('Bootstrap failed:', e);
