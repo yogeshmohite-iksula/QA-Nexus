@@ -49,7 +49,18 @@
 
 ---
 
-## [2026-04-29] (i) Centralize demo seed data + decouple UI from hardcoded names — DAY-4 MORNING P1
+## [2026-04-29] (i) Centralize demo seed data + decouple UI from hardcoded names — **CLOSED 2026-04-30**
+
+**Resolution:** seed-centralization landed in two PRs, then refined post-merge:
+
+- **PR #16** (Day-3 stretch FINAL evening, `089a999`) — F08a + F08b + F08c migrated. Surfaced the "view-fixtures-vs-identity" insight: data.ts files stay as VIEW-ONLY fixture stores; only ENTITY IDENTITY exports (SIGNED_IN_USER, ACTIVE_PROJECT) move to context providers. View fixtures get replaced by future M2/M3/M4 endpoints (run results, defect lists, agent activity feeds), NOT by user/project APIs the contexts swap to. Captured as ADR-006 Refinement section.
+- **PR #17** (Day-4 morning, `22927a5`) — F09 + F10 (Projects List + Create Project Modal) migrated following the refined pattern. 8 RWD pre/post screenshots committed (320 + 1440 × projects-list + projects-create); pre/post deltas ~1% confirming pixel-near-identical output. All 5 originally-spec'd components now using `useCurrentUser` / `useActiveProject` / `useTeamRoster` for entity identity.
+
+**Owner:** MAIN scaffolding (Day-3 evening, ADR-006 + 3-layer architecture) + FE chat per-component refactors (PR #16 + PR #17).
+
+---
+
+## [2026-04-29] (i) [historical] Centralize demo seed data + decouple UI from hardcoded names — DAY-4 MORNING P1
 
 **Symptom:** F08a (`apps/web/components/home/data.ts`), F08b (`apps/web/components/home-lead/data.ts`), F08c (`apps/web/components/home-empty/data.ts`), F09 (Projects List), F10 (Sprint Board) all have inline `data.ts` files with hardcoded references to the 8 named Iksula pilot users (Akshay, Yogesh, Kishor, Nitin, Nadim, Govind, Mohanraj, Sagar) and the 5 Iksula projects (RET, CART, PAY, AUTH, OPS). The data is correct per IKSULA_CONTEXT.md but **architecturally wrong**: stub data lives in component files instead of a single source.
 
