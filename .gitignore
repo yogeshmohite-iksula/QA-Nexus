@@ -96,3 +96,4 @@ Thumbs.db
 .turbo/
 node-compile-cache/
 *.log
+.claude/worktrees/

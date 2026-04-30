@@ -25,6 +25,8 @@ import { EmbeddingService } from '../embedding/embedding.service';
 import { LLMGatewayService } from '../llm/llm-gateway.service';
 import { getProvider } from '../llm/provider-registry';
 import { R2Service, type R2Health } from '../storage/r2.service';
+import { getOtelTraceStatus } from '../observability/otel.config';
+import { getOtelLogsStatus } from '../observability/otel-logs.config';
 
 const NEON_FREE_TIER_MB = 512;
 const QUOTA_WARNING_PCT = 90;
@@ -81,6 +83,21 @@ interface HealthResponse {
     groq_rpd_used: number;
     groq_rpd_note: string;
   };
+  otel: {
+    traces: {
+      exporter: 'configured' | 'deferred' | 'error';
+      endpoint?: string;
+      last_export_at?: string;
+      error?: string;
+    };
+    logs: {
+      exporter: 'configured' | 'deferred' | 'error';
+      sink: 'better_stack' | 'stdout';
+      endpoint?: string;
+      last_export_at?: string;
+      error?: string;
+    };
+  };
 }
 
 @Controller('health')
@@ -105,6 +122,8 @@ export class HealthController {
     const llmResult = this.snapshotLLM();
     const overall = this.computeOverall(dbResult, embeddingResult, quota);
 
+    const traceStatus = getOtelTraceStatus();
+    const logStatus = getOtelLogsStatus();
     const body: HealthResponse = {
       status: overall,
       timestamp: new Date().toISOString(),
@@ -118,6 +137,21 @@ export class HealthController {
         groq_rpd_used: 0,
         groq_rpd_note:
           'RPD tracking deferred — surfaces when llm-gateway tracks per-window calls',
+      },
+      otel: {
+        traces: {
+          exporter: traceStatus.status,
+          endpoint: traceStatus.exporter_endpoint,
+          last_export_at: traceStatus.last_export_at,
+          error: traceStatus.error,
+        },
+        logs: {
+          exporter: logStatus.status,
+          sink: logStatus.sink,
+          endpoint: logStatus.exporter_endpoint,
+          last_export_at: logStatus.last_export_at,
+          error: logStatus.error,
+        },
       },
     };
     const httpStatus =

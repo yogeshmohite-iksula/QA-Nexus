@@ -56,3 +56,4 @@ paths:
 - ❌ Sequelize, TypeORM, MikroORM, Drizzle — Prisma is the only ORM.
 - ❌ `redis`, `ioredis`, `bullmq` — no Redis in PM1 (cost gate).
 - ❌ `winston`, `pino` for app logs — use NestJS's built-in logger + OTel.
+  - **Verified by T019 (2026-04-30):** NestJS Logger + OTel logs SDK (`@opentelemetry/sdk-logs` + `@opentelemetry/exporter-logs-otlp-http`) provides full telemetry pipeline including Better Stack ingestion via OTLP. No third-party logger transports required. See `apps/api/src/observability/otel-logs.config.ts` (`NestOtelLogger` class) + `docs/deploy/better-stack-runbook.md`.
