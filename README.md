@@ -80,6 +80,71 @@ Then open the auth surface:
 
 ---
 
+## Project Structure
+
+```
+QA-Nexus/
+├── apps/
+│   ├── web/                    # Next.js 15 (FE) — static export to Cloudflare Pages
+│   │   ├── app/                # App Router — pages + route handlers (per-feature)
+│   │   ├── components/         # FE components: home, home-lead, home-empty, projects,
+│   │   │                       # sources-jira, sign-in, set-password, ...
+│   │   ├── lib/
+│   │   │   ├── contexts/       # React context providers — useCurrentUser,
+│   │   │   │                   # useActiveProject, useTeamRoster (ADR-006)
+│   │   │   └── demo-seed.ts    # Demo seed (entity identity only — view fixtures
+│   │   │                       # stay in per-component data.ts; ADR-006 refinement)
+│   │   └── package.json
+│   ├── api/                    # NestJS 10 (BE) — REST + WebSocket
+│   │   ├── src/
+│   │   │   ├── agents/a1-scribe/      # T036 A1 Scribe (test-case generator)
+│   │   │   ├── audit/                 # HMAC-SHA256-chained audit log (PM1_ERD §3.13)
+│   │   │   ├── auth/                  # BetterAuth Postgres adapter
+│   │   │   ├── embedding/             # @xenova/transformers (BAAI/bge-large-en-v1.5)
+│   │   │   ├── health/                # GET /health (UptimeRobot 5-min ping)
+│   │   │   ├── llm/                   # T023 provider-agnostic LLM gateway
+│   │   │   │   └── providers/         # Groq + Gemini adapters (ONLY place SDKs are imported)
+│   │   │   ├── observability/         # T019 OTel pipeline (traces + logs + redaction)
+│   │   │   ├── projects/              # T038 project CRUD + Jira OAuth stubs
+│   │   │   ├── realtime/              # T026 WebSocket gateway (path: /realtime)
+│   │   │   ├── storage/               # T013 R2 service (presigned-URL pattern)
+│   │   │   └── main.ts                # Bootstrap (OTel init → BetterAuth → Nest)
+│   │   ├── prisma/             # Prisma 5 schema + migrations + raw SQL (ADR-002)
+│   │   └── package.json
+│   └── e2e/                    # Playwright E2E (T031) — chromium-desktop + mobile-safari
+├── packages/
+│   └── shared/                 # @qa-nexus/shared — Zod schemas + seed types
+│       └── src/
+│           ├── schemas/        # Request/response Zod schemas — single source of truth
+│           ├── seed-types.ts   # UI type contracts (TestCaseWithRelations, etc.)
+│           └── index.ts        # Barrel
+├── docs/
+│   ├── architecture/           # ADR-002 → ADR-006 (decisions with alternatives)
+│   ├── audits/                 # Living + archived audits (skill alignment, conformance)
+│   ├── deploy/                 # 7 dashboard runbooks (Render, R2, Resend, etc.)
+│   ├── eod-reports/            # Daily 5-section EOD reports
+│   ├── observability/          # Token-tracking methodology + Excel rollup
+│   ├── refactor/               # In-flight refactor runbooks (e.g. seed centralization)
+│   ├── screenshots/            # Visual-confirmation gate PNGs (320 + 1440)
+│   ├── ARCHITECTURE.md         # System diagram + data flow
+│   ├── CHANGELOG.md            # Keep-a-Changelog build journal
+│   ├── MILESTONES.md           # M0 → M6 plan with success criteria
+│   ├── PROJECT_SPEC.md         # Product + engineering spec (Part A + Part B)
+│   ├── SECURITY.md             # Secrets policy + incident response
+│   ├── STATUS.md               # One-page "where are we right now"
+│   └── followups.md            # Top-level engineering backlog (a-j)
+├── .claude/
+│   ├── hooks/                  # PreToolUse / PostToolUse / Stop / SessionStart enforcement
+│   ├── memory/                 # Repo memory (general / architecture / bugs / api / db)
+│   ├── rules/                  # Per-area binding rules (frontend / api / security)
+│   ├── settings.json           # Permissions + hook wiring (committed, ~150 entries)
+│   └── locked-deps.json        # Major-version lock (next=15, react=19, prisma=5, ...)
+├── QA Nexus/                   # PRD / ERD / milestone files / 41 locked HTML frames
+└── CLAUDE.md                   # 13 hard rules + locked stack + binding spec refs
+```
+
+---
+
 ## Environment Variables
 
 See [`.env.example`](.env.example) for the canonical list with source URLs and provisioning task references. Categories:
@@ -153,17 +218,61 @@ Pilot operating window: **7 days/week, 10 AM – 10 PM local time.**
 
 ## Documentation
 
-- [`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md) — full product + engineering spec (Part A + Part B)
+**At-a-glance**
+
+- [`docs/STATUS.md`](docs/STATUS.md) — one-page snapshot (M0 progress, active PRs, free-tier quotas, health) — updated each EOD
+- [`docs/CHANGELOG.md`](docs/CHANGELOG.md) — build journal (Keep-a-Changelog format, every commit logged)
+- [`docs/followups.md`](docs/followups.md) — top-level engineering backlog (open + closed; lettered a → j)
+- [`docs/eod-reports/`](docs/eod-reports/) — daily 5-section EOD reports
+
+**Specs (binding)**
+
+- [`QA Nexus/PM1/PM1_PRD/PM1_PRD.md`](QA Nexus/PM1/PM1_PRD/PM1_PRD.md) — product spec (v8.1)
+- [`QA Nexus/PM1/PM1_ERD/PM1_ERD.md`](QA Nexus/PM1/PM1_ERD/PM1_ERD.md) — engineering spec (v2.1)
+- [`QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md`](QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md) — M0 task backlog (35 tasks, 19 acceptance gates)
+- [`QA Nexus/PM1/PM1_UI_v2/UI Files/01_SYSTEM.md`](QA Nexus/PM1/PM1_UI_v2/UI Files/01_SYSTEM.md) — locked design system
+- [`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md) — generated product + engineering spec (Tech-project-forge skill)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system diagram, FE / API / DB / LLM / R2 layers
 - [`docs/MILESTONES.md`](docs/MILESTONES.md) — M0 → M6 plan with success criteria
-- [`docs/CHANGELOG.md`](docs/CHANGELOG.md) — build journal (every commit logged)
-- [`docs/deploy/cloudflare-pages.md`](docs/deploy/cloudflare-pages.md) — CF Pages runbook
-- [`docs/audits/`](docs/audits/) — periodic audits (skill alignment, security, performance)
-- [`CLAUDE.md`](CLAUDE.md) — 13 hard rules + locked stack + binding context (auto-loaded by Claude Code)
+
+**Architecture decisions**
+
+- [`docs/architecture/adr-002-prisma-raw-split.md`](docs/architecture/adr-002-prisma-raw-split.md) — Prisma migrations vs raw/ split (RLS + HNSW + pgvector)
+- [`docs/architecture/adr-003-embedding-model.md`](docs/architecture/adr-003-embedding-model.md) — BAAI/bge-large-en-v1.5 (Qwen3 future-target)
+- [`docs/architecture/adr-004-render-deployment.md`](docs/architecture/adr-004-render-deployment.md) — Render Free Hobby Singapore (6 alternatives rejected)
+- [`docs/architecture/adr-005-r2-storage.md`](docs/architecture/adr-005-r2-storage.md) — R2 with presigned-URL pattern (7 alternatives rejected)
+- [`docs/architecture/adr-006-seed-data-centralization.md`](docs/architecture/adr-006-seed-data-centralization.md) — 3-layer seed architecture + view-fixtures-vs-identity refinement
+
+**Deploy + ops runbooks**
+
+- [`docs/deploy/render-runbook.md`](docs/deploy/render-runbook.md) — API hosting (T011)
+- [`docs/deploy/r2-runbook.md`](docs/deploy/r2-runbook.md) — Cloudflare R2 storage (T013)
+- [`docs/deploy/resend-runbook.md`](docs/deploy/resend-runbook.md) — magic-link email (T014)
+- [`docs/deploy/uptimerobot-runbook.md`](docs/deploy/uptimerobot-runbook.md) — 5-min /health monitor (T015)
+- [`docs/deploy/cloudflare-pages.md`](docs/deploy/cloudflare-pages.md) — FE hosting
+- [`docs/deploy/better-stack-runbook.md`](docs/deploy/better-stack-runbook.md) — OTel logs (T019)
+- [`docs/deploy/restore-runbook.md`](docs/deploy/restore-runbook.md) — disaster recovery from weekly Postgres backup (T018)
+
+**Audits + observability**
+
+- [`docs/audits/skill-alignment-audit.md`](docs/audits/skill-alignment-audit.md) — living document; periodic Tech-project-forge skill conformance check (89% → 96% → ?)
+- [`docs/observability/`](docs/observability/) — token-tracking methodology, Excel rollup, methodology notes
+
+**Repo conventions**
+
+- [`CLAUDE.md`](CLAUDE.md) — 13 hard rules + locked stack + binding context (auto-loaded by Claude Code on every session)
+- [`docs/SECURITY.md`](docs/SECURITY.md) — secrets policy + incident response
 - [`.claude/memory/`](.claude/memory/) — repo memory (general / architecture / bugs / api / database / stack)
-- [`QA Nexus/PM1/PM1_PRD/PM1_PRD.md`](QA Nexus/PM1/PM1_PRD/PM1_PRD.md) — binding product spec (v8.1)
-- [`QA Nexus/PM1/PM1_ERD/PM1_ERD.md`](QA Nexus/PM1/PM1_ERD/PM1_ERD.md) — binding engineering spec (v2.1)
-- [`QA Nexus/PM1/PM1_UI_v2/UI Files/01_SYSTEM.md`](QA Nexus/PM1/PM1_UI_v2/UI Files/01_SYSTEM.md) — locked design system
+- [`.claude/rules/`](.claude/rules/) — per-area binding rules (frontend / api / security)
+
+---
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution workflow + repo conventions. The two most important conventions for newcomers:
+
+1. **The 13 hard rules in [`CLAUDE.md`](CLAUDE.md) are binding** — locked design tokens, ban-list deps, RWD requirements, visual-confirmation gate before every commit, etc. PreToolUse hooks block violations at author-time; CI catches anything that slips through.
+2. **Seed data architecture: [ADR-006](docs/architecture/adr-006-seed-data-centralization.md)** — context providers for entity identity (`useCurrentUser`, `useActiveProject`), per-component `data.ts` for view fixtures only. Don't put hardcoded user/project names in components.
 
 ---
 
