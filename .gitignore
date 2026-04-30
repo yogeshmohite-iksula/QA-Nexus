@@ -97,3 +97,4 @@ Thumbs.db
 node-compile-cache/
 *.log
 .claude/worktrees/
+.claude/scheduled_tasks.lock

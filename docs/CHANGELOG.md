@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 4 afternoon hotfix (2026-04-30)
+
+- **`fix(observability)`** — `NestOtelLogger` must `extend ConsoleLogger`, not `Logger`. Render redeploy crashed at boot with `Using the "extends Logger" instruction is not allowed in Nest v9. Please, use "extends ConsoleLogger" instead.` Root cause: Nest 10's `app.useLogger()` calls `overrideLogger()` which checks `instance instanceof ConsoleLogger`. Extending `Logger` (the static API facade) triggers the error at the FIRST `app.useLogger()` call — never fired in unit tests that just instantiated the class directly. Fix: import `ConsoleLogger` from `@nestjs/common` (instead of `Logger`) and have `NestOtelLogger extends ConsoleLogger`. No constructor changes needed (ConsoleLogger has the same constructor shape). Added regression test in `apps/api/src/observability/__tests__/otel.spec.ts` that builds a minimal stub Nest module + calls `Test.createTestingModule(...).createNestApplication({ logger: new NestOtelLogger() }).init()` — exercises the exact crash path. 74/74 jest green (was 73, +1 for the regression test).
+
 ### Added — Day 4 noon merge cascade (2026-04-30)
 
 - **`refactor(web)`** — **followup `(i)` fully closed** via PR #17 at `22927a5`. F09 Projects List + F10 Create Project Modal migrated to context-provider entity identity (`useCurrentUser`, `useActiveProject`, `useTeamRoster`). View fixtures stay in per-component `data.ts` (per ADR-006 Refinement post-PR #16). 8 RWD pre/post screenshots committed; pre/post deltas ~1% confirming pixel-near-identical output. All 5 originally-spec'd components (F08a + F08b + F08c + F09 + F10) now using the centralized pattern.

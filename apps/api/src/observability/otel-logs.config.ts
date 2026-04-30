@@ -24,11 +24,12 @@
 // `logs.sink = "stdout"`. Lets the API ship before T019 dashboard
 // provisioning lands.
 
-import {
-  Logger as NestBaseLogger,
-  LoggerService,
-  LogLevel,
-} from '@nestjs/common';
+// IMPORTANT: extend ConsoleLogger (instance class) — NOT Logger (static API
+// facade). Nest 10's `app.useLogger()` calls overrideLogger() which checks
+// `instance instanceof ConsoleLogger`. Extending Logger triggers
+// "Using the extends Logger instruction is not allowed in Nest v9"
+// at boot. Verified by Render redeploy crash 2026-04-30.
+import { ConsoleLogger, LoggerService, LogLevel } from '@nestjs/common';
 import {
   LoggerProvider,
   BatchLogRecordProcessor,
@@ -147,7 +148,7 @@ export async function shutdownOtelLogs(): Promise<void> {
  * `.claude/rules/api.md` "use NestJS Logger + OTel" rule is satisfied.
  * No third-party logger lib (no pino, no winston).
  */
-export class NestOtelLogger extends NestBaseLogger implements LoggerService {
+export class NestOtelLogger extends ConsoleLogger implements LoggerService {
   private readonly otelLogger = otelLogs.getLogger('qa-nexus-api', '0.0.1');
 
   override log(message: unknown, context?: string): void {

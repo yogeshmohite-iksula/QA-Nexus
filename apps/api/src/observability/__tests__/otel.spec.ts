@@ -16,7 +16,13 @@
 
 import { redactAttributes, isSensitiveKey, SENSITIVE_KEYS } from '../redact';
 import { initOtelTraces, getOtelTraceStatus } from '../otel.config';
-import { initOtelLogs, getOtelLogsStatus } from '../otel-logs.config';
+import {
+  initOtelLogs,
+  getOtelLogsStatus,
+  NestOtelLogger,
+} from '../otel-logs.config';
+import { Test } from '@nestjs/testing';
+import { Module, Controller, Get } from '@nestjs/common';
 
 describe('observability: redaction (single source of truth)', () => {
   it('isSensitiveKey matches well-known keys case-insensitively', () => {
@@ -112,5 +118,54 @@ describe('observability: deferred mode (env vars missing)', () => {
     const s = getOtelLogsStatus();
     expect(s.status).toBe('deferred');
     expect(s.sink).toBe('stdout');
+  });
+});
+
+describe('observability: NestOtelLogger boot regression (Nest 10 ConsoleLogger requirement)', () => {
+  // Regression test added 2026-04-30 after Render redeploy crashed with:
+  //   "Using the extends Logger instruction is not allowed in Nest v9.
+  //    Please, use extends ConsoleLogger instead."
+  //
+  // Root cause: NestOtelLogger originally extended Logger (the static API
+  // facade). Nest 10's `app.useLogger()` calls overrideLogger() which
+  // requires the instance to extend ConsoleLogger. Boot would crash on
+  // any deployed environment that hits that code path.
+  //
+  // This test exercises the EXACT path that caused the crash:
+  // NestFactory.create(...) with `{ logger: new NestOtelLogger() }` set.
+  // We use a minimal stub module (not AppModule) so the test stays fast
+  // and doesn't require Prisma/BetterAuth/R2 wiring — the override path
+  // fires regardless of module size.
+
+  @Controller('ping')
+  class PingController {
+    @Get()
+    ping(): { ok: true } {
+      return { ok: true };
+    }
+  }
+
+  @Module({ controllers: [PingController] })
+  class StubModule {}
+
+  it('NestFactory.create accepts NestOtelLogger without "extends Logger" error', async () => {
+    // The crash signature was: throw at overrideLogger time during create.
+    // If the class doesn't extend ConsoleLogger, NestFactory.create
+    // synchronously rejects with the "instruction is not allowed" message.
+    let bootError: unknown = null;
+    const moduleRef = await Test.createTestingModule({
+      imports: [StubModule],
+    }).compile();
+    const app = moduleRef.createNestApplication({
+      logger: new NestOtelLogger(),
+    });
+    try {
+      await app.init();
+    } catch (err) {
+      bootError = err;
+    } finally {
+      await app.close();
+    }
+    expect(bootError).toBeNull();
   });
 });
