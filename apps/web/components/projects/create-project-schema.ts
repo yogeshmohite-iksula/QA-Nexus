@@ -118,8 +118,17 @@ export function buildCreateProjectPayload(form: CreateProjectForm): CreateProjec
   };
 }
 
-// Iksula roster suggestions for the invites chip rail (excludes signed-in
-// user — that filter happens at the component level via SIGNED_IN_USER).
+// Roster-suggestion display row for the invites chip rail.
+//
+// FOLLOWUP (i) — seed-centralization (ADR-006):
+// - The 7-element ROSTER_SUGGESTIONS array previously hardcoded here was
+//   removed. Suggestions now come from `useTeamRoster()` at render time
+//   (the demo-seed has the same 8 Iksula teammates; signed-in user is
+//   filtered out via `useTeammates()` in the consumer).
+// - This file keeps only the DISPLAY shape + the helper that computes
+//   per-user view fields (initials, shortName, glyph, role) from the
+//   seed `UserPublic` type. When BE adds /api/users in T021, the helper
+//   stays — only the data source upstream changes.
 export interface RosterSuggestion {
   initials: string;
   fullName: string;
@@ -129,64 +138,60 @@ export interface RosterSuggestion {
   glyph: GlyphId;
 }
 
-export const ROSTER_SUGGESTIONS: RosterSuggestion[] = [
-  {
-    initials: 'AP',
-    fullName: 'Akshay Panchal',
-    shortName: 'Akshay P.',
-    email: 'akshay.panchal@iksula.com',
-    role: 'lead',
-    glyph: 'teal-violet',
-  },
-  {
-    initials: 'KK',
-    fullName: 'Kishor Kadam',
-    shortName: 'Kishor K.',
-    email: 'kishor.kadam@iksula.com',
-    role: 'qa-engineer',
-    glyph: 'teal-soft',
-  },
-  {
-    initials: 'NG',
-    fullName: 'Nitin Gomle',
-    shortName: 'Nitin G.',
-    email: 'nitin.gomle@iksula.com',
-    role: 'qa-engineer',
-    glyph: 'violet-only',
-  },
-  {
-    initials: 'NS',
-    fullName: 'Nadim Siddiqui',
-    shortName: 'Nadim S.',
-    email: 'nadim.siddiqui@iksula.com',
-    role: 'qa-engineer',
-    glyph: 'teal-violet',
-  },
-  {
-    initials: 'GD',
-    fullName: 'Govind Daware',
-    shortName: 'Govind D.',
-    email: 'govind.daware@iksula.com',
-    role: 'qa-engineer',
-    glyph: 'teal-soft',
-  },
-  {
-    initials: 'MK',
-    fullName: 'Mohanraj K.',
-    shortName: 'Mohanraj K.',
-    email: 'mohanraj.k@iksula.com',
-    role: 'qa-engineer',
-    glyph: 'violet-only',
-  },
-  {
-    initials: 'ST',
-    fullName: 'Sagar Todankar',
-    shortName: 'Sagar T.',
-    email: 'sagar.todankar@iksula.com',
-    role: 'qa-engineer',
-    glyph: 'neutral',
-  },
-];
+/** Stable round-robin glyph palette — cycles whitelisted gradients across
+ *  roster slots so consecutive avatars don't all share the same gradient. */
+const GLYPH_CYCLE: GlyphId[] = ['teal-violet', 'teal-soft', 'violet-only', 'neutral'];
+
+/** Compact "Akshay P." short form derived from the seed `displayName`. */
+function shortNameOf(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  // Trailing letter already a period (e.g. "Mohanraj K.") → keep as-is.
+  if (parts[1].endsWith('.')) return `${parts[0]} ${parts[1]}`;
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function initialsOf(displayName: string): string {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+/** Map a seed `UserPublic.role` enum to the F10 invite-role enum. */
+function inviteRoleOf(seedRole: string): InviteRole {
+  const r = seedRole.toLowerCase();
+  if (r === 'lead') return 'lead';
+  if (r === 'admin') return 'admin';
+  if (r === 'stakeholder') return 'stakeholder';
+  return 'qa-engineer';
+}
+
+/**
+ * Build the F10 chip-rail suggestions from a seed roster. Filters out the
+ * signed-in user by id. Order is preserved from the input (the seed
+ * roster is alphabetical by displayName).
+ */
+export function buildRosterSuggestions(
+  members: Array<{ id: string; displayName: string; email: string; role: string }>,
+  signedInUserId: string,
+): RosterSuggestion[] {
+  return members
+    .filter((m) => m.id !== signedInUserId)
+    .map((m, idx) => ({
+      initials: initialsOf(m.displayName),
+      fullName: m.displayName,
+      shortName: shortNameOf(m.displayName),
+      email: m.email,
+      role: inviteRoleOf(m.role),
+      glyph: GLYPH_CYCLE[idx % GLYPH_CYCLE.length],
+    }));
+}
 
 export const inviteRoleLabel: Record<InviteRole, string> = {
   lead: 'Lead',

@@ -22,10 +22,11 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { SIGNED_IN_USER } from './data';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useTeamRoster } from '@/lib/contexts/TeamRosterContext';
 import {
-  ROSTER_SUGGESTIONS,
   buildCreateProjectPayload,
+  buildRosterSuggestions,
   createProjectDefaults,
   createProjectSchema,
   glyphIds,
@@ -82,6 +83,9 @@ interface CreateProjectModalProps {
 export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
   const router = useRouter();
   const titleId = useId();
+  const me = useCurrentUser();
+  const { members } = useTeamRoster();
+  const rosterSuggestions = useMemo(() => buildRosterSuggestions(members, me.id), [members, me.id]);
 
   const {
     register,
@@ -490,7 +494,7 @@ export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
                   Add existing team members:
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  {ROSTER_SUGGESTIONS.filter((r) => r.fullName !== SIGNED_IN_USER.name).map((r) => {
+                  {rosterSuggestions.map((r) => {
                     const already = invitedEmails.has(r.email.toLowerCase());
                     return (
                       <button

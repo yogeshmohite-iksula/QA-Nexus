@@ -15,6 +15,8 @@
 
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
+import { SEED_IDS } from '@/lib/demo-seed';
 import { ProjectsListPage } from '@/components/projects/projects-list-page';
 
 export const metadata: Metadata = {
@@ -24,9 +26,15 @@ export const metadata: Metadata = {
 };
 
 export default function ProjectsPage() {
+  // F09 is the Admin's project picker. Yogesh is the canonical Day-0
+  // bootstrap Admin per CLAUDE.md; this scoped provider switches the
+  // active user to Yogesh for this route only (matches the legacy
+  // SIGNED_IN_USER intent — original data.ts hardcoded Yogesh M.).
   return (
-    <Suspense fallback={null}>
-      <ProjectsListPage />
-    </Suspense>
+    <CurrentUserProvider initialUserId={SEED_IDS.users.yogesh}>
+      <Suspense fallback={null}>
+        <ProjectsListPage />
+      </Suspense>
+    </CurrentUserProvider>
   );
 }

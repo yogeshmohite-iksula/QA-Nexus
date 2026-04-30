@@ -11,27 +11,46 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useProjectList } from '@/lib/contexts/ProjectContext';
 import { ProjectsShell } from './projects-shell';
 import { LeftRail } from './left-rail';
 import { CreateProjectModal } from './create-project-modal';
-import { ARCHIVED_COUNT, PROJECTS, type Project } from './data';
+import { ARCHIVED_COUNT, joinProjectsWithFixtures, type ProjectListRow } from './data';
 
 export function ProjectsListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const showCreateModal = searchParams?.get('new') === '1';
-  const pinnedProjects = PROJECTS.filter((p) => p.isPinned);
-  const allProjects = PROJECTS.filter((p) => !p.isPinned);
+  const me = useCurrentUser();
+  const seedProjects = useProjectList();
+
+  // Stable order: anchor (RET) first, then alphabetical by key. Demo
+  // seed alphabetises by key (AUTH, CART, OPS, PAY, RET) — pull RET to
+  // the front so the pinned anchor matches the locked frame's intent.
+  const orderedProjects = useMemo(() => {
+    const ret = seedProjects.find((p) => p.key === 'RET');
+    const others = seedProjects.filter((p) => p.key !== 'RET');
+    return ret ? [ret, ...others] : seedProjects;
+  }, [seedProjects]);
+
+  const allRows: ProjectListRow[] = useMemo(
+    () => joinProjectsWithFixtures(orderedProjects),
+    [orderedProjects],
+  );
+
+  const pinnedProjects = allRows.filter((p) => p.isPinned);
+  const allProjects = allRows.filter((p) => !p.isPinned);
 
   useEffect(() => {
     console.info('pattern-a:deferred:projects-list-load', {
-      projectCount: PROJECTS.length,
+      projectCount: allRows.length,
       pinnedCount: pinnedProjects.length,
-      role: 'QALead',
+      role: me.role,
     });
-  }, [pinnedProjects.length]);
+  }, [allRows.length, pinnedProjects.length, me.role]);
 
   function logRoute(target: string, projectKey?: string) {
     console.info(
@@ -55,7 +74,7 @@ export function ProjectsListPage() {
       <div className="flex flex-1">
         <LeftRail />
         <main className="flex min-w-0 flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:gap-10 lg:px-8">
-          <Hero onCreateProject={openCreateModal} />
+          <Hero projects={allRows} onCreateProject={openCreateModal} />
           <FilterBar />
           {pinnedProjects.length > 0 && (
             <PinnedSection projects={pinnedProjects} onOpen={logRoute} />
@@ -73,8 +92,14 @@ export function ProjectsListPage() {
 // Hero — heading + sub + new project CTA
 // ---------------------------------------------------------------------------
 
-function Hero({ onCreateProject }: { onCreateProject: () => void }) {
-  const leadOnAll = PROJECTS.every((p) => p.yourRole === 'Lead' || p.yourRole === 'Admin');
+function Hero({
+  projects,
+  onCreateProject,
+}: {
+  projects: ProjectListRow[];
+  onCreateProject: () => void;
+}) {
+  const leadOnAll = projects.every((p) => p.yourRole === 'Lead' || p.yourRole === 'Admin');
   return (
     <section
       aria-labelledby="hero-head"
@@ -89,9 +114,9 @@ function Hero({ onCreateProject }: { onCreateProject: () => void }) {
         </h1>
         <p className="text-[14px] leading-[20px] text-[var(--text-secondary)] sm:text-[15px]">
           <span className="font-semibold text-[var(--text-primary)]">
-            {PROJECTS.length} projects
+            {projects.length} projects
           </span>
-          {leadOnAll && <span> · you&apos;re a Lead/Admin on all {PROJECTS.length}</span>}
+          {leadOnAll && <span> · you&apos;re a Lead/Admin on all {projects.length}</span>}
           <span> · </span>
           <span className="text-[var(--primary)]">Iksula Returns is the active anchor</span>
         </p>
@@ -171,7 +196,7 @@ function PinnedSection({
   projects,
   onOpen,
 }: {
-  projects: Project[];
+  projects: ProjectListRow[];
   onOpen: (target: string, key: string) => void;
 }) {
   return (
@@ -210,7 +235,7 @@ function AllProjectsSection({
   projects,
   onOpen,
 }: {
-  projects: Project[];
+  projects: ProjectListRow[];
   onOpen: (target: string, key: string) => void;
 }) {
   return (
@@ -274,7 +299,7 @@ function ProjectCard({
   variant,
   onOpen,
 }: {
-  project: Project;
+  project: ProjectListRow;
   variant: 'pinned' | 'grid';
   onOpen: (target: string, key: string) => void;
 }) {
@@ -397,14 +422,14 @@ function ProjectCard({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function ragDotColor(rag: Project['rag']): string {
+function ragDotColor(rag: ProjectListRow['rag']): string {
   if (rag === 'green') return 'bg-[var(--pass)]';
   if (rag === 'amber') return 'bg-[var(--warn)]';
   if (rag === 'red') return 'bg-[var(--fail)]';
   return 'bg-[var(--text-disabled)]';
 }
 
-function branchToneClass(tone: Project['branchTone']): string {
+function branchToneClass(tone: ProjectListRow['branchTone']): string {
   if (tone === 'staging') return 'text-[var(--warn)] bg-[var(--warn)]/10';
   if (tone === 'available') return 'text-[var(--text-disabled)] bg-[var(--overlay)]';
   return 'text-[var(--text-tertiary)] bg-[var(--overlay)]';

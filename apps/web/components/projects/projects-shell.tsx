@@ -6,7 +6,26 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { PROJECTS, SIGNED_IN_USER } from './data';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useProjectList } from '@/lib/contexts/ProjectContext';
+
+function shortName(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function initialsOf(displayName: string): string {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 interface ProjectsShellProps {
   children: ReactNode;
@@ -22,6 +41,14 @@ export function ProjectsShell({ children }: ProjectsShellProps) {
 }
 
 function TopBar() {
+  const me = useCurrentUser();
+  const projects = useProjectList();
+  const meName = shortName(me.displayName);
+  const meInitials = initialsOf(me.displayName);
+  // Same pattern as F08c: Admin → "Admin" (concise chip), otherwise show
+  // the seed's organizationalLabel verbatim. Original data.ts had Yogesh
+  // tagged "QA Lead" which was inconsistent with CLAUDE.md Day-0 bootstrap.
+  const meRole = me.role === 'Admin' ? 'Admin' : me.organizationalLabel;
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--canvas)] px-3 sm:gap-4 sm:px-6">
       <Link
@@ -56,7 +83,7 @@ function TopBar() {
         <span aria-hidden="true" className="text-[var(--text-tertiary)]">
           ·
         </span>
-        <span className="font-mono text-[12px] text-[var(--primary)]">{PROJECTS.length}</span>
+        <span className="font-mono text-[12px] text-[var(--primary)]">{projects.length}</span>
         <ChevronDownIcon />
       </button>
 
@@ -84,7 +111,7 @@ function TopBar() {
 
       <button
         type="button"
-        aria-label={`Signed in as ${SIGNED_IN_USER.name}, ${SIGNED_IN_USER.role}`}
+        aria-label={`Signed in as ${meName}, ${meRole}`}
         className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] py-1.5 pl-1.5 pr-3 transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
       >
         <span
@@ -92,13 +119,13 @@ function TopBar() {
           className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[10px] font-bold text-[var(--primary-ink)]"
           style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
         >
-          {SIGNED_IN_USER.initials}
+          {meInitials}
         </span>
         <span className="hidden text-[13px] font-medium text-[var(--text-primary)] sm:inline">
-          {SIGNED_IN_USER.name}
+          {meName}
         </span>
         <span className="border-[var(--secondary)]/30 bg-[var(--secondary)]/15 hidden rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--secondary)] sm:inline">
-          {SIGNED_IN_USER.role}
+          {meRole}
         </span>
         <ChevronDownIcon />
       </button>
