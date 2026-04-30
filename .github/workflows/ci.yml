@@ -1,11 +1,17 @@
 name: CI
 
 # Spec: MS0-T005 (GitHub Actions CI) + P1.7 of
-# docs/audits/2026-04-27-skill-alignment-audit.md.
-# Runs on every PR to main. All six jobs must pass before merge.
+# docs/audits/2026-04-27-skill-alignment-audit.md + followup (j) Day-4
+# (closes the direct-to-main observability hole exposed in Day-3
+# stretch when commit 6385e25 broke 3 CI jobs but was only surfaced
+# when PR #11 opened the next morning).
+# Runs on every PR to main + every push to main. All six jobs must
+# pass before merge.
 
 on:
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 # Cancel superseded runs when a PR is force-pushed.

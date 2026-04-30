@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 4 morning (2026-04-30)
+
+- **`ci(workflow)`** — closes followup `(j)`. Added `push: branches: [main]` trigger to both `.github/workflows/ci.yml` (full 6-job suite) and `.github/workflows/e2e.yml` (path-filtered, same allow-list). Direct-to-main commits now run CI within ~5 min instead of lurking silently until the next PR exposes them. Same `concurrency.cancel-in-progress: true` keeps rapid sequential pushes from queuing stale runs.
+
 ### Added — Day 3 STRETCH FINAL close (2026-04-29 evening)
 
 - **`feat(api)`** — **MS0-T036 A1 Scribe + MS0-T038 Project CRUD + MS0-T031.b Playwright unskip** merged via PR #13 at `bae40aa` (MAIN-reconciled after BE chat went silent — cherry-picked 3 unique commits onto fresh `origin/main` + applied prisma-generate fix to apps/api `test` script for CI). T036: provider-agnostic A1 Scribe agent that calls `LLMGatewayService.complete()` only — zero direct `groq-sdk`/`@google/generative-ai` imports outside `apps/api/src/llm/providers/`; 9/9 jest unit tests (happy path + fence-strip + prose-extract + JSON parse failure → 502 + Zod-fail → 502 + audit provenance + systemPrompt/temperature/maxTokens/forceLongContext forwarding); writes synchronous audit-log row. T038: REST CRUD for projects + Jira OAuth state-token stubs. T031.b: Playwright unskip phase 1 + A1 Scribe smoke spec. Final 39/39 jest tests pass on the reconciled branch.

@@ -26,6 +26,17 @@ on:
       - "apps/e2e/**"
       - "packages/shared/**"
       - ".github/workflows/e2e.yml"
+  # followup (j) Day-4: also run on direct push to main so direct-to-main
+  # commits surface regressions immediately rather than blocking the next
+  # PR. Same path filter applies — pure docs/config pushes still skip.
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "apps/api/**"
+      - "apps/e2e/**"
+      - "packages/shared/**"
+      - ".github/workflows/e2e.yml"
 
 # Cancel superseded runs on force-push.
 concurrency:

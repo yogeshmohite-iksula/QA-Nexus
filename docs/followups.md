@@ -2,7 +2,9 @@
 
 ---
 
-## [2026-04-29] (j) CI must run on push to main, not just on PRs — OBSERVABILITY HOLE
+## [2026-04-29] (j) CI must run on push to main, not just on PRs — OBSERVABILITY HOLE — **CLOSED 2026-04-30**
+
+**Resolution:** Day-4 morning, ~10 min. Added `push: branches: [main]` trigger to `.github/workflows/ci.yml` and `.github/workflows/e2e.yml`. The e2e workflow keeps the same path filter on the push trigger so pure docs/config pushes still skip. Verified by pushing this very commit and watching CI fire on the push event.
 
 **Symptom:** Day-3 evening seed-centralization scaffold (commit `6385e25`) and the T031 e2e workspace scaffold were pushed directly to `main` and broke 3 of 7 CI jobs (typecheck, test, build). The breakage went undetected until PR #11 opened the next morning, blocking the entire Day-3 stretch merge cascade (PRs #11/#12/#13). Hotfix landed in this PR.
 
