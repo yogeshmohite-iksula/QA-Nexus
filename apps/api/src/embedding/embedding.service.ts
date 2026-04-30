@@ -25,6 +25,7 @@ import {
   OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { getHeapStatistics } from 'node:v8';
 
 // Lazy import inside the class to avoid pulling in the WASM at process start
 // for tools that import this module (eg. typecheck) without using it.
@@ -35,6 +36,28 @@ type FeatureExtractionPipeline = (
 
 const DEFAULT_MODEL_ID = 'Xenova/bge-large-en-v1.5';
 const EXPECTED_DIM = 1024;
+
+/**
+ * Approximate resident-memory footprint per known model, in MB. Used by
+ * the pre-flight memory guard to refuse loading a model that would OOM
+ * the dyno. Source: empirical measurement on Render Free 512 MB
+ * (Day-4 afternoon — bge-large OOM'd at ~470 MB resident).
+ *
+ * Anything not in this map gets a conservative 512 MB estimate that
+ * forces an explicit allowlist for new models — better safe than sorry.
+ */
+const MODEL_MEMORY_MB: Record<string, number> = {
+  'Xenova/bge-large-en-v1.5': 470,
+  'Xenova/bge-small-en-v1.5': 33,
+  'Xenova/bge-base-en-v1.5': 110,
+  'Xenova/multilingual-e5-large': 470,
+  'Xenova/all-MiniLM-L6-v2': 25,
+};
+
+/** Pre-flight memory guard threshold. If model size > available × this,
+ *  refuse to load and stay in deferred mode. 0.7 leaves 30% headroom for
+ *  Nest baseline + Prisma + R2 + LLM gateway. */
+const MEMORY_HEADROOM_FACTOR = 0.7;
 
 @Injectable()
 export class EmbeddingService implements OnModuleInit {
@@ -60,6 +83,22 @@ export class EmbeddingService implements OnModuleInit {
    *  same promise — so the FIRST embed call serializes on model availability,
    *  but the bootstrap proceeds. */
   onModuleInit(): void {
+    // Pre-flight memory guard: if the configured model is known to exceed
+    // available_memory × 0.7, refuse to load and stay deferred. Logs a
+    // clear warning instead of crashing the pod with OOM (Day-4 afternoon
+    // bge-large vs Render Free 512 MB lesson — see ADR-003 amendment).
+    const guard = this.checkMemoryHeadroom();
+    if (!guard.ok) {
+      this.deferred = true;
+      this.deferredReason = guard.reason;
+      this.logger.warn(
+        `EmbeddingService refusing to load (pre-flight memory guard): ${guard.reason}. ` +
+          `Service will stay in deferred mode. Set EMBEDDING_MODEL_ID to a ` +
+          `smaller model (e.g. Xenova/bge-small-en-v1.5 ≈ 33 MB) or upgrade ` +
+          `the dyno tier. See ADR-003.`,
+      );
+      return;
+    }
     this.loadingPromise = this.loadModel();
     // Don't await — fire-and-forget. embed() awaits it.
     this.loadingPromise
@@ -88,6 +127,59 @@ export class EmbeddingService implements OnModuleInit {
   /** Returns true once the model is in memory. Used by /health. */
   isWarm(): boolean {
     return this.extractor !== null;
+  }
+
+  /**
+   * Pre-flight memory guard. Checks whether the configured model's
+   * known resident footprint fits within the available memory minus
+   * a headroom factor (default 70% so Nest + Prisma + R2 + LLM gateway
+   * have ~30% to breathe).
+   *
+   * Returns `{ok: true}` if the model is safe to load OR if we don't
+   * know the model's footprint (unknown → log + allow, since blocking
+   * unknown models would prevent us from trying new ones).
+   *
+   * Returns `{ok: false, reason}` if the model is known + exceeds the
+   * threshold. The reason is admin-friendly for /health surfacing.
+   *
+   * Trigger: Day-4 afternoon Render Free OOM crash loop with bge-large
+   * (470 MB) on a 512 MB dyno. See ADR-003 amendment.
+   */
+  private checkMemoryHeadroom(): { ok: true } | { ok: false; reason: string } {
+    const modelId = process.env.EMBEDDING_MODEL_ID ?? DEFAULT_MODEL_ID;
+    const modelMb = MODEL_MEMORY_MB[modelId];
+    if (modelMb === undefined) {
+      // Unknown model — allow with a warning. New models get added to
+      // MODEL_MEMORY_MB after we measure them on the target environment.
+      this.logger.log(
+        `EmbeddingService memory guard: unknown model "${modelId}", ` +
+          `allowing load. Add to MODEL_MEMORY_MB after measuring resident size.`,
+      );
+      return { ok: true };
+    }
+    // process.memoryUsage() reports current heap; for the dyno cap we
+    // use V8's heap statistics (heap_size_limit ≈ dyno's available
+    // memory minus other resident overhead). Falls back to 512 MB if
+    // V8 doesn't expose the limit (test environments).
+    const heapLimitMb =
+      getHeapStatistics().heap_size_limit / (1024 * 1024) || 512;
+    const safeBudgetMb = heapLimitMb * MEMORY_HEADROOM_FACTOR;
+    if (modelMb > safeBudgetMb) {
+      return {
+        ok: false,
+        reason:
+          `model "${modelId}" footprint ~${modelMb} MB exceeds safe ` +
+          `budget ${Math.round(safeBudgetMb)} MB ` +
+          `(${MEMORY_HEADROOM_FACTOR * 100}% of heap limit ${Math.round(heapLimitMb)} MB). ` +
+          `OOM risk. Use a smaller model OR upgrade dyno.`,
+      };
+    }
+    this.logger.log(
+      `EmbeddingService memory guard: model "${modelId}" ~${modelMb} MB ` +
+        `fits in safe budget ${Math.round(safeBudgetMb)} MB ` +
+        `(heap limit ${Math.round(heapLimitMb)} MB). Loading.`,
+    );
+    return { ok: true };
   }
 
   /** Diagnostic info for /health. */

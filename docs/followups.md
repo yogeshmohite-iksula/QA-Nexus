@@ -2,6 +2,41 @@
 
 ---
 
+## [2026-04-30] (l) Embedding model quality eval — bge-small vs bge-large at A1 Scribe retrieval time — M3 STRATEGIC
+
+**Symptom (Day-4 afternoon):** Render Free 512 MB dyno OOM-crash-looped when EmbeddingService loaded `Xenova/bge-large-en-v1.5` (~470 MB resident in WASM). NestJS baseline + Prisma + R2 client + LLM gateway = ~520 MB total — over the 512 MB cap. Pod kicked every ~2 min; /health unreachable.
+
+**Tactical fix landed Day-4 afternoon:** swap `EMBEDDING_MODEL_ID` env var → `Xenova/bge-small-en-v1.5` (33 MB resident, MTEB avg 62.17 vs 64.23 = −2.06 pt quality cost). ADR-003 amended. Pre-flight memory guard added to `EmbeddingService.checkMemoryHeadroom()` to prevent future config drift back to bge-large without intent.
+
+**Strategic question deferred to M3:** is the −2 MTEB quality cost acceptable for A1 Scribe's actual retrieval workload? MTEB is a synthetic benchmark; real test-case retrieval may show smaller (if the corpus is structured) or larger (if free-text-heavy) deltas.
+
+**Decision required at M3 boundary** (when A1 Scribe wires real retrieval — currently scaffold-only):
+
+1. **Keep bge-small** if side-by-side eval shows acceptable retrieval quality. Lowest cost, fits Render Free comfortably.
+2. **Move to bge-base-en-v1.5** (110 MB resident, MTEB ~63.5 — middle option) if bge-small misses obvious retrievals but the pilot can spare ~150 MB headroom on Render Free.
+3. **Move back to bge-large + offload** via Cloudflare Workers AI free-tier embeddings endpoint (1024-dim BGE available there) OR Render One-Off Job for batch embeddings (free; runs nightly, results materialized into the `embedding` column).
+4. **Upgrade Render plan** ($7/mo Standard) — **violates Hard Rule 1 + needs explicit ADR + Yogesh approval**. Last resort.
+
+**Eval methodology (M3, when A1 Scribe lands real retrieval):**
+
+- Build a corpus of ~50 representative test cases per project (RET, CART, PAY, AUTH, OPS) — ~250 total.
+- Generate ground-truth retrieval pairs: for 30 sample queries, have Akshay or Yogesh manually mark the top-5 expected matches.
+- Run side-by-side: bge-small vs bge-large embeds → cosine top-5 → compute recall@5, MRR, and "obviously-wrong" rate.
+- Decision: if bge-small's recall@5 is within 5 pp of bge-large AND obviously-wrong rate < 10%, keep bge-small. Else escalate per options 2-4.
+
+**Owner:** BE chat (eval implementation) + Yogesh + Akshay (ground-truth marking).
+
+**ETA:** M3 (after T036 A1 Scribe ships real retrieval — currently scaffold; estimate Day-12 to Day-15).
+
+**Cross-references:**
+
+- ADR-003 (embedding model selection) — Day-4 amendment captures the bge-small swap
+- `apps/api/src/embedding/embedding.service.ts` — pre-flight memory guard (`checkMemoryHeadroom()`)
+- `apps/api/src/embedding/__tests__/embedding-graceful.spec.ts` — guard regression tests
+- `MODEL_MEMORY_MB` table in `embedding.service.ts` — add new models here after measurement
+
+---
+
 ## [2026-04-30] (k) Live LLM gateway + A1 Scribe validation — DEFERRED to Render-deploy day
 
 **Symptom:** Day-4 noon brief Block 1 (live `/llm/test` happy + fallback + long-context + benchmark) and Block 2 (A1 Scribe real-LLM smoke) require a reachable API origin with `GROQ_API_KEY` + `GEMINI_API_KEY` set. At Day-4 morning start, `https://qa-nexus-api.onrender.com/health` returned 404 — Render slot exists but no app bound. Yogesh hasn't completed provisioning yet.

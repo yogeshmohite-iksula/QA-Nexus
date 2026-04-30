@@ -68,3 +68,33 @@ When `Xenova/Qwen3-Embedding-0.6B` (or equivalent ONNX) is published:
 
 - BE Chat 3 (2026-04-28, Day-2 stretch session) — implementation + verification.
 - Awaiting Yogesh confirmation in PR review.
+
+---
+
+## Amendment (2026-04-30, Day-4 afternoon) — Render Free RAM forces bge-small for M0
+
+**Trigger:** Render's first deploy of the API service crash-looped on out-of-memory (OOM). bge-large-en-v1.5 (~470 MB resident in WASM) plus NestJS baseline + Prisma client + R2 SDK + LLM gateway = ~520 MB on a 512 MB Render Free dyno. The OOM kicked the pod every ~2 min; /health became unreachable.
+
+**Decision (Day-4 afternoon, Yogesh + MAIN):** swap `EMBEDDING_MODEL_ID` env var from `Xenova/bge-large-en-v1.5` → **`Xenova/bge-small-en-v1.5`** for the duration of the Render Free pilot.
+
+| Aspect          | bge-large-en-v1.5 (orig) | **bge-small-en-v1.5 (M0)** |
+| --------------- | ------------------------ | -------------------------- |
+| Dimensions      | 1024                     | **384**                    |
+| MTEB avg score  | 64.23                    | **62.17** (−2.06 pts)      |
+| Resident memory | ~470 MB                  | **~33 MB**                 |
+| Cold load       | ~38 s                    | **~6 s**                   |
+| Warm embed      | ~47 ms                   | **~12 ms**                 |
+| Render Free fit | ❌ OOM                   | ✅ Comfortable             |
+
+**⚠️ Schema impact:** bge-small is **384-dim**, not 1024-dim. Prisma's `vector(1024)` columns + HNSW indexes (per ADR-002) need migration. Recommended: do the dim change in a dedicated migration commit before any A1 Scribe code starts writing real embeddings — the column is currently empty, so the change is non-destructive.
+
+**Hot-swap path back to bge-large** (or any future model) when off Render Free:
+
+1. Upgrade Render plan (Standard $7/mo **violates Hard Rule 1** — needs ADR + Yogesh approval) OR offload embeddings to Cloudflare Workers AI free tier OR Render One-Off Job for batch embeddings (free).
+2. Set `EMBEDDING_MODEL_ID` to the chosen model.
+3. Migrate `vector(N)` column dim to match.
+4. Re-embed existing rows via the script in the original Hot-swap section above.
+
+**M3 follow-up filed** (`docs/followups.md` (l)): when A1 Scribe's retrieval quality testing happens, run side-by-side eval bge-small vs bge-large on a representative test-case corpus. Escalate per the hot-swap path if the −2 MTEB point drop materially affects retrieval.
+
+**Pre-flight memory guard added** to `EmbeddingService` (Day-4 afternoon): refuses to load when configured model size > available_memory × 0.7 with a clear warning, instead of crashing the pod. Protects against future config drift (someone re-setting `EMBEDDING_MODEL_ID` back to bge-large without realizing the RAM impact). See `apps/api/src/embedding/embedding.service.ts` `checkMemoryHeadroom()`.
