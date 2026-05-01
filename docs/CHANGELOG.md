@@ -13,6 +13,13 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 5 morning OTel SDK wire (2026-05-01)
+
+- **`feat(observability)`** — `llm.complete` span instrumentation in `LLMGatewayService.complete()` per `.claude/rules/api.md` binding rule. Wraps the entire routing + retry + fallback flow in a single span via `tracer.startActiveSpan('llm.complete', ...)`. Span attributes: `llm.input_tokens_estimate`, `llm.long_context_forced`, `llm.long_context_threshold`, `llm.has_secondary`, `llm.has_long_context` set at start; `llm.provider`, `llm.model`, `llm.prompt_tokens`, `llm.completion_tokens`, `llm.latency_ms`, `llm.fallback_triggered`, `llm.route_reason` set on completion. Span status `OK` on success, `ERROR` with recorded exception on failure. Body refactored into private `completeInternal()` to keep the span wrapper ergonomic. Tracer is no-op until OTel SDK init flips it (auto-routes to Grafana Cloud OTLP once env vars set on Render — no further code change needed). 84/84 jest tests still green.
+- **`feat(observability)`** — `/admin/otel/test-trace` endpoint (Admin-gated, refuses in NODE_ENV=production unless `ALLOW_ADMIN_OTEL_TEST=true`). Emits a parent + child span (with simulated 50ms work) + a log record correlated by trace_id, returns the IDs + a Grafana Tempo search URL + a Better Stack search URL so ops can verify the OTel pipeline end-to-end after env-var changes without needing real traffic. New `ObservabilityModule` registered in `AppModule`.
+- **`feat(observability)`** — `/health` enhanced with OTel diagnostics: `otel.traces.env_present` + `otel.logs.env_present` (boolean-only, never the actual value) so ops can verify env vars made it to the Render dyno without server-log access. Plus a `deferred_reason` field with admin-friendly text pointing at the runbook (e.g. `"GRAFANA_CLOUD_OTLP_ENDPOINT env var missing on this dyno. Set in Render env editor; redeploy. See docs/deploy/render-runbook.md."`).
+- **`docs(followup)`** — Filed Day-6 todo: custom metrics SDK setup (MeterProvider + OTLPMetricExporter + embedding latency histogram + audit-log writes counter + LLM tokens counter labeled by provider/model). Skipped Day-5 because the no-op tracer already provides observability once env vars land; metrics adds value but isn't blocking.
+
 ### Changed — Day 5 morning M0 spec amendments (2026-05-01)
 
 - **`docs(spec)`** — Two amendments to `QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md` to bring the binding spec in line with two architectural decisions made Day-4:

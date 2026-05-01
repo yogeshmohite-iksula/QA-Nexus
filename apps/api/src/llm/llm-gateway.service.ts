@@ -16,6 +16,7 @@ import {
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
+import { trace, SpanStatusCode, type Span } from '@opentelemetry/api';
 import {
   AllProvidersFailedError,
   LLMOptions,
@@ -23,6 +24,19 @@ import {
   RetryableLLMError,
 } from './types';
 import { getProvider, listProviders } from './provider-registry';
+
+/**
+ * Tracer for LLM gateway spans. Per `.claude/rules/api.md`:
+ * "Every gateway call must emit an OpenTelemetry span (`llm.complete`)
+ *  with attributes: provider, model, prompt_tokens, completion_tokens,
+ *  latency_ms, fallback_triggered."
+ *
+ * The tracer is a no-op until OTel SDK initializes (see
+ * `apps/api/src/observability/otel.config.ts`). After init it routes
+ * spans to Grafana Cloud OTLP. No code change needed when env vars
+ * are set on Render — the tracer auto-flips from no-op to live.
+ */
+const tracer = trace.getTracer('qa-nexus-api/llm-gateway', '0.0.1');
 
 interface GatewayConfig {
   primaryProvider: string;
@@ -100,6 +114,56 @@ export class LLMGatewayService implements OnModuleInit {
         501,
       );
     }
+    // Wrap the entire routing + retry + fallback flow in a single span
+    // per .claude/rules/api.md binding rule. The span is always emitted
+    // (even if it fails) — attributes capture which route fired + which
+    // provider/model actually answered + tokens + fallback flag.
+    return tracer.startActiveSpan(
+      'llm.complete',
+      {
+        attributes: {
+          'llm.input_tokens_estimate': this.estimateTokens(
+            prompt + (opts.systemPrompt ?? ''),
+          ),
+          'llm.long_context_forced': opts.forceLongContext === true,
+          'llm.long_context_threshold': this.config.longContextThresholdTokens,
+          'llm.has_secondary': !!this.config.secondaryProvider,
+          'llm.has_long_context': !!this.config.longContextProvider,
+        },
+      },
+      async (span: Span) => {
+        try {
+          const result = await this.completeInternal(prompt, opts);
+          span.setAttributes({
+            'llm.provider': result.providerName,
+            'llm.model': result.modelUsed,
+            'llm.prompt_tokens': result.tokensIn,
+            'llm.completion_tokens': result.tokensOut,
+            'llm.latency_ms': result.latencyMs,
+            'llm.fallback_triggered': result.fallbackUsed,
+            'llm.route_reason': result.routeReason,
+          });
+          span.setStatus({ code: SpanStatusCode.OK });
+          return result;
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          span.recordException(err as Error);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: errMsg });
+          throw err;
+        } finally {
+          span.end();
+        }
+      },
+    );
+  }
+
+  /** Internal routing + retry + fallback. Wrapped by `complete()` in a
+   *  span. Kept as a separate method so the span attribute setting +
+   *  error path stays ergonomic. */
+  private async completeInternal(
+    prompt: string,
+    opts: LLMOptions = {},
+  ): Promise<LLMResult> {
     const t0 = Date.now();
     const inputTokens = this.estimateTokens(prompt + (opts.systemPrompt ?? ''));
 

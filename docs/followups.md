@@ -2,6 +2,32 @@
 
 ---
 
+## [2026-05-01] (n) OTel metrics SDK wire — MeterProvider + 3 named meters — DAY 6 / M0 close window
+
+**Status:** Day-5 OTel wire shipped traces (LLM gateway `llm.complete` span) + `/admin/otel/test-trace` endpoint + `/health` env_present diagnostics. **Metrics SDK setup deferred** to Day-6 because the no-op tracer already provides full trace observability once env vars land; metrics adds value but isn't blocking M0 close.
+
+**Day-6 scope (~1-1.5 hr):**
+
+1. Add `MeterProvider` + `PeriodicExportingMetricReader` + `OTLPMetricExporter` to NodeSDK config in `apps/api/src/observability/otel.config.ts`. Pointed at `GRAFANA_CLOUD_OTLP_ENDPOINT/v1/metrics`.
+2. Create `apps/api/src/observability/metrics.ts` exposing 3 named meters via `metrics.getMeter('qa-nexus-api')`:
+   - `embedding.latency_ms` — histogram, observed in `EmbeddingService.embed()`
+   - `audit_log.writes_total` — counter, incremented in `AuditService.write()`
+   - `llm.tokens_total` — counter labeled `{provider, model, kind: input|output}`, incremented in `LLMGatewayService.completeInternal()` (alongside the existing span attributes)
+3. Tests verify the meters emit on call (mocked `metrics.getMeter` returns a fake meter that records calls).
+4. Update `/health` to surface `otel.metrics.exporter` status + `last_export_at` (similar to traces/logs).
+
+**Owner:** MAIN.
+
+**ETA:** Day-6 morning, ~1-1.5 hr.
+
+**Cross-refs:**
+
+- `apps/api/src/observability/otel.config.ts` — where MeterProvider goes
+- `.claude/rules/api.md` — binding rule on LLM gateway spans (already covered by Day-5 work; metrics is bonus)
+- ADR-009 + ADR-003 amendment — for context on why deferred-mode-by-default is the pattern
+
+---
+
 ## [2026-04-30] (m) R2 free-tier quota alert system — Yogesh login banner — M1 USER-FACING
 
 **Symptom (Day-4 afternoon):** During R2 provisioning (T013), Yogesh added a Cloudflare credit card to enable R2 (free-tier still $0/mo, but requires card on file). He flagged a real risk: **a runaway upload — bug, infinite loop, or compromised credential — could silently exceed the 10 GB-month free tier and start billing his personal card**. He explicitly asked: "I want alert before my money cut. When 50% reached, then after every 10% — 60, 70, 80, 90, and 100% limit reach. Can you make one pop up alert come on the website when me Yogesh login?"

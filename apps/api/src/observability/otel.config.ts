@@ -40,6 +40,15 @@ interface OtelStatus {
    *  span exports. */
   last_export_at?: string;
   error?: string;
+  /** Diagnostic: which env vars were present at init time. Lets ops
+   *  triage "why is this deferred" without server-side log access.
+   *  Boolean only — never the actual value. */
+  env_present?: {
+    GRAFANA_CLOUD_OTLP_ENDPOINT: boolean;
+    GRAFANA_CLOUD_OTLP_AUTH: boolean;
+  };
+  /** Reason for deferred state (more specific than the bare status). */
+  deferred_reason?: string;
 }
 
 let _status: OtelStatus = { status: 'deferred' };
@@ -64,8 +73,35 @@ export function initOtelTraces(): void {
   const endpoint = process.env.GRAFANA_CLOUD_OTLP_ENDPOINT;
   const auth = process.env.GRAFANA_CLOUD_OTLP_AUTH;
 
+  // Boolean-only env-presence snapshot for /health diagnostics.
+  const env_present = {
+    GRAFANA_CLOUD_OTLP_ENDPOINT: !!endpoint,
+    GRAFANA_CLOUD_OTLP_AUTH: !!auth,
+  };
+
   if (!endpoint) {
-    _status = { status: 'deferred' };
+    _status = {
+      status: 'deferred',
+      env_present,
+      deferred_reason:
+        'GRAFANA_CLOUD_OTLP_ENDPOINT env var missing on this dyno. ' +
+        'Set in Render env editor; redeploy. See docs/deploy/render-runbook.md.',
+    };
+    return;
+  }
+  if (!auth) {
+    // Endpoint set but auth missing — usually a half-configured deploy.
+    // We could still try without auth (some OTLP collectors accept it),
+    // but Grafana Cloud requires Basic auth so we'd just 401 silently.
+    _status = {
+      status: 'deferred',
+      env_present,
+      deferred_reason:
+        'GRAFANA_CLOUD_OTLP_ENDPOINT is set but GRAFANA_CLOUD_OTLP_AUTH ' +
+        'is missing. Grafana Cloud OTLP requires Basic auth (base64 of ' +
+        '"<instance_id>:<api_token>"). Set GRAFANA_CLOUD_OTLP_AUTH in ' +
+        'Render env editor + redeploy.',
+    };
     return;
   }
 
@@ -122,11 +158,13 @@ export function initOtelTraces(): void {
     _status = {
       status: 'configured',
       exporter_endpoint: endpoint,
+      env_present,
     };
   } catch (err) {
     _status = {
       status: 'error',
       error: err instanceof Error ? err.message : String(err),
+      env_present,
     };
   }
 }
