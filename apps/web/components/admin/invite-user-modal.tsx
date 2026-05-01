@@ -91,9 +91,14 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
       rowCount: fields.length,
       projectsAvailable: projects.length,
     });
-    // Esc + body-scroll-lock
+    // Esc + body-scroll-lock. Inline the cancel call (don't close over the
+    // unstable `handleCancel` ref) so the effect's deps array stays empty
+    // for setup/cleanup but we still log the deferred-cancel marker.
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') handleCancel();
+      if (e.key === 'Escape') {
+        console.info('pattern-a:deferred:invite-cancel', { trigger: 'esc' });
+        onClose();
+      }
     }
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -102,7 +107,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [me.workspaceId, fields.length, projects.length]);
+  }, [me.workspaceId, fields.length, projects.length, onClose]);
 
   function handleCancel() {
     console.info('pattern-a:deferred:invite-cancel', { rowCount: fields.length });
