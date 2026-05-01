@@ -27,7 +27,7 @@ import { getOtelLogsStatus } from './otel-logs.config';
 const tracer = trace.getTracer('qa-nexus-api/otel-test', '0.0.1');
 const otelTestLogger = otelLogs.getLogger('qa-nexus-api/otel-test', '0.0.1');
 
-@Controller('admin/otel')
+@Controller('admin')
 @UseGuards(RolesGuard)
 export class OtelTestController {
   /**
@@ -38,7 +38,7 @@ export class OtelTestController {
    * set — guards against accidental hits leaving sample spans in prod
    * telemetry.
    */
-  @Post('test-trace')
+  @Post('otel/test-trace')
   @Roles(Role.Admin)
   async testTrace(): Promise<{
     note: string;
@@ -143,5 +143,93 @@ export class OtelTestController {
         }
       },
     );
+  }
+
+  /**
+   * Emit a high-severity log record marked as a test alert. Better Stack
+   * alert rules pointed at Slack should fire on this event (rule
+   * matchers documented in `docs/deploy/better-stack-runbook.md`).
+   *
+   * Path (a) per Day-5 #4 decision: Better Stack OWNS the alerting
+   * (rule → webhook → Slack). This endpoint just emits the trigger
+   * event; verification happens in the Slack channel.
+   *
+   * Returns:
+   *   - test_marker: unique id Yogesh can search for in Slack to
+   *     confirm the rule fired
+   *   - logs_status: pipeline state at emit time
+   *   - runbook URL: where the alert rule setup lives
+   *
+   * Refuses in NODE_ENV=production unless ALLOW_ADMIN_OTEL_TEST=true
+   * (same gate as test-trace — these are diagnostic endpoints, not
+   * production-traffic events).
+   */
+  @Post('alerts/test-slack')
+  @Roles(Role.Admin)
+  async testSlackAlert(): Promise<{
+    note: string;
+    test_marker: string;
+    logs_status: string;
+    next_step: string;
+    runbook: string;
+  }> {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.ALLOW_ADMIN_OTEL_TEST !== 'true'
+    ) {
+      throw new ForbiddenException(
+        'Admin alerts test-slack is disabled in production. Set ' +
+          'ALLOW_ADMIN_OTEL_TEST=true in Render env vars temporarily ' +
+          'if you need to verify the Slack alert path against prod.',
+      );
+    }
+
+    const logStatus = getOtelLogsStatus();
+    // Test marker — unique per call so Yogesh can match the Slack
+    // message to this exact endpoint hit (rather than a real prod
+    // alert that happened to fire concurrently).
+    const test_marker = `qa-nexus-test-slack-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 10)}`;
+
+    // Emit at ERROR severity to match Better Stack's primary alert
+    // rule ("severity >= ERROR → Slack"). The body string also matches
+    // the secondary rule ("DEFERRED mode" substring) so this single
+    // event exercises both rules at once.
+    otelTestLogger.emit({
+      severityNumber: SeverityNumber.ERROR,
+      severityText: 'ERROR',
+      body:
+        `qa-nexus alerts test-slack — TEST EVENT (DEFERRED mode simulation). ` +
+        `marker=${test_marker}. If you see this in Slack, the Better Stack ` +
+        `alert rule is wired correctly. Search the marker in #qa-nexus-alerts ` +
+        `to confirm.`,
+      attributes: {
+        'qa-nexus.alert.kind': 'test-slack',
+        'qa-nexus.alert.test_marker': test_marker,
+        'qa-nexus.alert.severity': 'error',
+      },
+    });
+
+    const note =
+      logStatus.status === 'configured'
+        ? 'Test event emitted to Better Stack. Expect Slack message in ' +
+          '#qa-nexus-alerts within ~30 seconds (Better Stack batches log ' +
+          'export every 5-10s, then alert rules evaluate every ~10s).'
+        : `Test event emitted to local SDK, but logs exporter is "${logStatus.status}". ` +
+          `Event went to ${logStatus.sink}. ` +
+          (logStatus.deferred_reason ?? '') +
+          ' No Slack notification will fire — fix env vars first.';
+
+    return {
+      note,
+      test_marker,
+      logs_status: logStatus.status,
+      next_step:
+        'Open Slack #qa-nexus-alerts. Search for the test_marker above. ' +
+        'If found within ~30s: rule is live. If not: check Better Stack ' +
+        'Alerts dashboard for rule status + Slack integration health.',
+      runbook: 'docs/deploy/better-stack-runbook.md → "Slack alerting" section',
+    };
   }
 }
