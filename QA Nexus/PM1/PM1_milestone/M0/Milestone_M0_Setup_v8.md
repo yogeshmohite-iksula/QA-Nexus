@@ -154,7 +154,7 @@
 | **MS0-T014** | Resend email config | Sign up, add domain or use default sender. Generate API key. Test send via curl. Store in Render env vars. | P0 | 4 | DevOps |
 | **MS0-T015** | UptimeRobot keep-alive | Add HTTP monitor on `https://[render-url]/health`, 5-min interval. Slack alert on downtime. | P0 | 2 | DevOps |
 | **MS0-T016** | Custom domain — **DEFERRED to PM2** | Decision 2026-04-26 (Yogesh): use free `*.cloudflare-pages.dev` for the entire PM1 pilot. Custom domain purchase + DNS configuration deferred to PM2. | P3 | 0 | DevOps |
-| **MS0-T017** | Groq + Gemini API keys | Sign up Groq + Google AI Studio (both free, no credit card). Generate keys, test via curl. Store in Render env vars (NOT in repo). | P0 | 4 | Backend 1 |
+| **MS0-T017** | Groq + Gemini API keys | Sign up Groq + Google AI Studio (both free, no credit card). Generate keys, test via curl. ~~Store in Render env vars~~ **AMENDED 2026-05-01: keys are F26-UI-driven (Admin enters via Settings UI in M1), NOT env vars. LLMGateway boots in deferred mode on Day-1; admin enables it via F26 once UI lands.** Keys never live in repo. | P0 | 4 | Backend 1 |
 | **MS0-T018** | Backup automation | GitHub Actions cron weekly: `pg_dump` from Neon → upload to R2 with timestamp. Verify restore once. | P1 | 8 | DevOps |
 | **MS0-T019** | Grafana Cloud + Better Stack | Sign up Grafana Cloud free tier. Install OTel collector in NestJS. Sign up Better Stack free; configure log/trace forwarding + Slack alerts. | P1 | 14 | DevOps |
 
@@ -191,7 +191,7 @@ M0 cannot close unless ALL of these pass:
 - [ ] **MS0-AC005** BetterAuth magic-link flow works end-to-end (Resend → email → click → session)
 - [ ] **MS0-AC006** RBAC guard rejects unauthorized requests (positive + negative tests pass)
 - [ ] **MS0-AC007** LLM gateway successfully calls Groq `gpt-oss-120b` and falls back to Gemini on simulated 429
-- [ ] **MS0-AC008** Embedding service produces 1024-dim vector for sample test case in <200 ms
+- [ ] **MS0-AC008** Embedding service produces ~~1024-dim~~ **384-dim** vector for sample test case in <200 ms _(AMENDED 2026-05-01 per ADR-003 Day-4 amendment: bge-small-en-v1.5 chosen for Render Free 512 MB compatibility; bge-large-en-v1.5 OOM'd. 384-dim vector + matching `vector(384)` Prisma column; HNSW index dimension migrated. Hot-swap path back to 1024-dim via Cloudflare Workers AI / dyno upgrade documented in ADR-003.)_
 - [ ] **MS0-AC009** UptimeRobot ping every 5 min keeps Render dyno warm during business hours
 - [ ] **MS0-AC010** GitHub Actions CI passes (lint + typecheck + test + build) on PR
 - [ ] **MS0-AC011** GitHub Actions deploy pipeline auto-deploys to Cloudflare Pages + Render on push to main

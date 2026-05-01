@@ -13,6 +13,12 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Changed — Day 5 morning M0 spec amendments (2026-05-01)
+
+- **`docs(spec)`** — Two amendments to `QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md` to bring the binding spec in line with two architectural decisions made Day-4:
+  - **MS0-T017 amended:** "Store in Render env vars" → "F26-UI-driven config (Admin enters via Settings UI in M1)." LLMGateway boots in deferred mode until F26 lands; tactical hotfix-2 already implemented graceful deferred boot. Keys never live in repo (unchanged from original).
+  - **MS0-AC008 amended:** "1024-dim vector" → "384-dim vector" per ADR-003 Day-4 amendment. bge-small-en-v1.5 chosen for Render Free 512 MB compatibility (bge-large OOM'd at ~470 MB resident WASM on a 512 MB dyno). Hot-swap path back to 1024-dim via Cloudflare Workers AI free-tier endpoint OR Render dyno upgrade documented in ADR-003. Schema migration `vector(1024)` → `vector(384)` lands separately (BE-owned Day-5 work).
+
 ### Added — Day 4 EOD closure (2026-04-30 evening)
 
 - **`docs(eod)`** — Day 4 EOD master report at `docs/eod-reports/2026-04-30-day-4.md`. Aggregates the cross-chat picture: 5-hotfix BE boot regression chain (NestOtelLogger → graceful boot → pnpm dup-key → sharp 0.33 → embedding memory guard), 2 PRs merged (#17 F09+F10 seed-cent + closes followup (i); #19 F12+F13 uploads), 6 dashboard services provisioned (Render + R2 + Resend + UptimeRobot + Grafana Cloud + Better Stack), ADR-009 + ADR-003 amendment, followup (i)+(j) closed, (k) NVIDIA Build dropped per Yogesh, (l)+(m) filed. Total infra cost still **$0/month** (Hard Rule 1 held).
