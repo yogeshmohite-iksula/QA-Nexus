@@ -50,7 +50,11 @@ export type UserInvitation = z.infer<typeof UserInvitationSchema>;
 export const CreateInvitationInput = z.object({
   invitedEmail: z.string().email(),
   role: UserRole,
-  projectScopeJson: z.array(z.unknown()).optional(),
+  /** Optional list of project UUIDs the invitee should join on accept.
+   *  Empty = workspace-wide (visible across all projects per workspace role).
+   *  Each entry MUST match an existing project in the inviter's workspace —
+   *  enforced at service layer. */
+  projectScopeJson: z.array(Uuid).optional(),
   expiresInHours: z
     .number()
     .int()
@@ -59,3 +63,44 @@ export const CreateInvitationInput = z.object({
     .default(24 * 7),
 });
 export type CreateInvitationInput = z.infer<typeof CreateInvitationInput>;
+
+/// M1 — public projection of an invitation. Used by GET /invitations
+/// listings + the F27 Admin user-management UI. Strips tokenHash so the
+/// secret never reaches the FE.
+export const InvitationListItem = UserInvitationSchema.omit({
+  tokenHash: true,
+}).extend({
+  /** Hint to the FE about the underlying invite link without exposing the
+   *  hash. Always 32 chars (UUID prefix), purely for human ID/UI display. */
+  shortRef: z.string().length(8),
+});
+export type InvitationListItem = z.infer<typeof InvitationListItem>;
+
+/// M1 — accept payload. Token is the plaintext value from the magic-link URL;
+/// service hashes it server-side and matches against UserInvitation.tokenHash.
+/// No password field: BetterAuth's magic-link flow owns auth (per MS0-T021)
+/// — this endpoint just provisions the TB-002 user row + binds it to the
+/// workspace + project_scope; subsequent sign-in goes through /auth/sign-in.
+export const AcceptInvitationInput = z.object({
+  token: z.string().min(32).max(256),
+  displayName: NonEmpty,
+});
+export type AcceptInvitationInput = z.infer<typeof AcceptInvitationInput>;
+
+/// M1 — accept response. Returns the newly-created TB-002 user (sanitized,
+/// no passwordHash) + a hint about the workspace context for redirect.
+export const AcceptInvitationResponse = z.object({
+  ok: z.literal(true),
+  user: UserPublicSchema,
+  workspaceId: Uuid,
+});
+export type AcceptInvitationResponse = z.infer<typeof AcceptInvitationResponse>;
+
+/// M1 — revoke payload (Admin / Lead). Idempotent: revoking an already-
+/// revoked or accepted invite is a 409, not a 500.
+export const RevokeInvitationInput = z.object({
+  invitationId: Uuid,
+  /** Optional human-readable reason captured in audit_log payload. */
+  reason: z.string().max(500).optional(),
+});
+export type RevokeInvitationInput = z.infer<typeof RevokeInvitationInput>;
