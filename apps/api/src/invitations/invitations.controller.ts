@@ -7,10 +7,12 @@
 // today. FE chat reads this file + the shared Zod schemas as the contract
 // preview. Wiring lands in the M1 final PR (Monday Day-8) once M0 closes.
 //
-// Endpoints (when wired):
+// Endpoints (registered in AppModule as of Day-6):
 //   POST   /api/invitations              create   Admin / Lead
 //   GET    /api/invitations              list     Admin / Lead / QAEngineer / Stakeholder
+//   GET    /api/invitations/:id          detail   Admin / Lead
 //   POST   /api/invitations/accept       accept   PUBLIC (token = auth)
+//   PATCH  /api/invitations/:id/resend   resend   Admin / Lead
 //   DELETE /api/invitations/:id          revoke   Admin / Lead
 //
 // RBAC notes:
@@ -29,6 +31,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UnauthorizedException,
@@ -40,6 +43,7 @@ import {
   CreateInvitationInput,
   AcceptInvitationInput,
   RevokeInvitationInput,
+  ResendInvitationInput,
 } from '@qa-nexus/shared';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
@@ -104,6 +108,52 @@ export class InvitationsController {
   async accept(@Body() body: unknown) {
     const input = AcceptInvitationInput.parse(body);
     return this.invitations.accept(input);
+  }
+
+  /**
+   * Single-record fetch. Order matters: Nest matches Express-style — :id
+   * routes go AFTER literal segments like /accept (which is matched
+   * above). Any new literal-segment route MUST also live above this.
+   */
+  @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin, Role.Lead)
+  async getById(@Param('id') id: string, @Req() req: Request) {
+    const ctx = await this.actorOf(req);
+    const invitation = await this.invitations.getById(id, ctx);
+    return { ok: true as const, invitation };
+  }
+
+  /**
+   * Regenerate the magic-link token + extend expiry. Returns the new
+   * plaintext token ONCE for the caller to re-email. Stale links from
+   * any prior send become invalid the moment this row updates.
+   */
+  @Patch(':id/resend')
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin, Role.Lead)
+  async resend(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    const parsed = ResendInvitationInput.parse({
+      ...((body as object | null) ?? {}),
+      invitationId: id,
+    });
+    const ctx = await this.actorOf(req);
+    const result = await this.invitations.resend(
+      parsed.invitationId,
+      { expiresInHours: parsed.expiresInHours, reason: parsed.reason },
+      ctx,
+    );
+    return {
+      ok: true as const,
+      invitationId: result.id,
+      token: result.token,
+      shortRef: result.shortRef,
+      expiresAt: result.expiresAt,
+    };
   }
 
   @Delete(':id')

@@ -96,6 +96,51 @@ export const AcceptInvitationResponse = z.object({
 });
 export type AcceptInvitationResponse = z.infer<typeof AcceptInvitationResponse>;
 
+/// M1 — detail response for GET /api/invitations/:id. Same shape as the
+/// list item (no tokenHash, with shortRef) but returned as a single record.
+/// Separate type alias keeps the controller signature self-documenting and
+/// gives the FE a stable contract to evolve (e.g., add expanded inviter
+/// metadata in a later milestone without touching the list payload).
+export const InvitationDetailResponse = z.object({
+  ok: z.literal(true),
+  invitation: InvitationListItem,
+});
+export type InvitationDetailResponse = z.infer<typeof InvitationDetailResponse>;
+
+/// M1 — resend payload for PATCH /api/invitations/:id/resend.
+/// Regenerates the secret token (rotates the SHA-256 hash on the row),
+/// extends expiry, and triggers a new magic-link email via Resend.
+/// Idempotent in the sense that re-resending an already-revoked or
+/// already-accepted invite is a 409, not a 500.
+export const ResendInvitationInput = z.object({
+  invitationId: Uuid,
+  /** Optional override for the new expiry window. Default reuses the
+   *  same lifetime the invitation was originally created with (server-
+   *  side default = 7 days max). */
+  expiresInHours: z
+    .number()
+    .int()
+    .positive()
+    .max(24 * 7)
+    .optional(),
+  /** Optional reason captured in the audit_log payload. */
+  reason: z.string().max(500).optional(),
+});
+export type ResendInvitationInput = z.infer<typeof ResendInvitationInput>;
+
+/// M1 — resend response. Returns the new plaintext token ONCE so the caller
+/// (eventually EmailService.sendInvitationMagicLink) can rebuild the URL.
+/// After this turn, only the new SHA-256 hash is persisted.
+export const ResendInvitationResponse = z.object({
+  ok: z.literal(true),
+  invitationId: Uuid,
+  /** Plaintext token — must NEVER be logged. */
+  token: z.string().length(64),
+  shortRef: z.string().length(8),
+  expiresAt: Timestamp,
+});
+export type ResendInvitationResponse = z.infer<typeof ResendInvitationResponse>;
+
 /// M1 — revoke payload (Admin / Lead). Idempotent: revoking an already-
 /// revoked or accepted invite is a 409, not a 500.
 export const RevokeInvitationInput = z.object({

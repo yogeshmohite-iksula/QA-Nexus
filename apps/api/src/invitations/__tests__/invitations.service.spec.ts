@@ -378,4 +378,268 @@ describe('InvitationsService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
   });
+
+  describe('getById()', () => {
+    const baseRow = {
+      id: '12345678-aaaa-bbbb-cccc-dddddddddddd',
+      workspaceId: 'ws-1',
+      invitedEmail: 'd@iksula.com',
+      role: 'QAEngineer',
+      projectScopeJson: ['proj-1'],
+      invitedBy: 'user-1',
+      tokenHash: 'should-not-leak',
+      expiresAt: FUTURE,
+      status: 'pending',
+      acceptedAt: null,
+      createdAt: new Date('2026-05-02T09:00:00Z'),
+    };
+
+    it('happy path — returns InvitationListItem shape, strips tokenHash', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce(baseRow);
+      const out = await service.getById(baseRow.id, ctx);
+      expect(out.id).toBe(baseRow.id);
+      expect(out.invitedEmail).toBe('d@iksula.com');
+      expect(out.shortRef).toBe('12345678');
+      expect(out).not.toHaveProperty('tokenHash');
+      expect(JSON.stringify(out)).not.toContain('should-not-leak');
+    });
+
+    it('cross-workspace → 404 (no leak that the row exists)', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        ...baseRow,
+        workspaceId: 'ws-OTHER',
+      });
+      await expect(service.getById(baseRow.id, ctx)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('missing → 404', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce(null);
+      await expect(service.getById('gone', ctx)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('resend()', () => {
+    const pendingRow = {
+      id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+      workspaceId: 'ws-1',
+      invitedEmail: 'pending@iksula.com',
+      role: 'QAEngineer',
+      projectScopeJson: [],
+      invitedBy: 'user-1',
+      tokenHash: 'OLD_HASH_64_CHARS',
+      expiresAt: FUTURE,
+      status: 'pending',
+      acceptedAt: null,
+      createdAt: new Date(),
+    };
+
+    it('happy path — rotates tokenHash + bumps expiry + audits', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce(pendingRow);
+      prisma.userInvitation.update.mockResolvedValueOnce({
+        id: pendingRow.id,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+      const out = await service.resend(
+        pendingRow.id,
+        { expiresInHours: 24, reason: 'inbox missed it' },
+        ctx,
+      );
+      expect(out.token).toMatch(/^[0-9a-f]{64}$/);
+      expect(out.shortRef).toBe('abcdef01');
+      // Old hash must be replaced (the update payload's tokenHash is the
+      // SHA-256 of the new plaintext, NOT the old hash).
+      const updateData = (prisma.userInvitation.update.mock.calls[0][0] as any)
+        .data;
+      const expectedHash = createHash('sha256').update(out.token).digest('hex');
+      expect(updateData.tokenHash).toBe(expectedHash);
+      expect(updateData.tokenHash).not.toBe(pendingRow.tokenHash);
+      // Audit: action is 'invitation_resent'; chain integrity binding.
+      const a = audit.write.mock.calls[0][0];
+      expect(a.action).toBe('invitation_resent');
+      expect(a.payload.previous_status).toBe('pending');
+      expect(a.payload.reason).toBe('inbox missed it');
+    });
+
+    it('expired → revives status to pending (resend = renew)', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        ...pendingRow,
+        status: 'expired',
+        expiresAt: PAST,
+      });
+      prisma.userInvitation.update.mockResolvedValueOnce({
+        id: pendingRow.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      await service.resend(pendingRow.id, {}, ctx);
+      const updateData = (prisma.userInvitation.update.mock.calls[0][0] as any)
+        .data;
+      expect(updateData.status).toBe('pending');
+    });
+
+    it('revoked → 409 (caller must create a fresh invite)', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        ...pendingRow,
+        status: 'revoked',
+      });
+      await expect(
+        service.resend(pendingRow.id, {}, ctx),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.userInvitation.update).not.toHaveBeenCalled();
+      expect(audit.write).not.toHaveBeenCalled();
+    });
+
+    it('accepted → 409 (manage user via F27 instead)', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        ...pendingRow,
+        status: 'accepted',
+      });
+      await expect(
+        service.resend(pendingRow.id, {}, ctx),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('cross-workspace → 404 (no leak)', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        ...pendingRow,
+        workspaceId: 'ws-OTHER',
+      });
+      await expect(
+        service.resend(pendingRow.id, {}, ctx),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('missing → 404', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce(null);
+      await expect(service.resend('gone', {}, ctx)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Audit redaction guarantees (Task 3 — Day-6 polish).
+  //
+  // Every state-changing op writes a row to the HMAC-chained audit_log.
+  // The chain itself stays inside the workspace boundary (RLS) but the
+  // payloads are JSON-readable by future audit-export pipelines + Better
+  // Stack log forwarding. So the discipline is:
+  //   - tokenHash NEVER appears (would help an attacker replay the link)
+  //   - plaintext token NEVER appears (created/resent return it OUT-OF-BAND
+  //     to caller; audit only knows the row id + email DOMAIN)
+  //   - invited_email LOCAL-PART omitted on resend (logged as @domain only
+  //     — see service.resend())
+  // ─────────────────────────────────────────────────────────────────────
+  describe('audit-payload redaction guarantees', () => {
+    it('create() audit: no tokenHash + no plaintext token + role + counts only', async () => {
+      prisma.userInvitation.findFirst.mockResolvedValueOnce(null);
+      prisma.userInvitation.create.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        invitedEmail: 'sample@iksula.com',
+        expiresAt: FUTURE,
+      });
+      const result = await service.create(
+        inv({ invitedEmail: 'sample@iksula.com', role: 'QAEngineer' }),
+        ctx,
+      );
+      const a = audit.write.mock.calls[0][0];
+      const payloadStr = JSON.stringify(a.payload);
+      // Plaintext token absent
+      expect(payloadStr).not.toContain(result.token);
+      // SHA-256 hash also absent — the persisted hash is on the row, not the audit
+      const hash = createHash('sha256').update(result.token).digest('hex');
+      expect(payloadStr).not.toContain(hash);
+      // tokenHash key absent in any form
+      expect(payloadStr).not.toContain('tokenHash');
+      expect(payloadStr).not.toContain('token_hash');
+    });
+
+    it('resend() audit: only email DOMAIN, never local-part', async () => {
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        workspaceId: 'ws-1',
+        invitedEmail: 'sensitive.local.part+plus@iksula.com',
+        role: 'QAEngineer',
+        projectScopeJson: [],
+        invitedBy: 'user-1',
+        tokenHash: 'OLD',
+        expiresAt: FUTURE,
+        status: 'pending',
+        acceptedAt: null,
+        createdAt: new Date(),
+      });
+      prisma.userInvitation.update.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        expiresAt: FUTURE,
+      });
+      await service.resend('abcdef01-2345-6789-aaaa-bbbbccccdddd', {}, ctx);
+      const a = audit.write.mock.calls[0][0];
+      const payloadStr = JSON.stringify(a.payload);
+      // Local part ABSENT
+      expect(payloadStr).not.toContain('sensitive.local.part');
+      expect(payloadStr).not.toContain('+plus');
+      // Domain present
+      expect(a.payload.invited_email_domain).toBe('@iksula.com');
+    });
+
+    it('resend() audit: rotated tokenHash + plaintext token never appear', async () => {
+      // The resend path generates a NEW token. The new tokenHash lands on
+      // the row via prisma.update. The audit row MUST NOT contain either
+      // the new plaintext or the new SHA-256 hash, even though both
+      // exist in service-local memory at audit-write time.
+      prisma.userInvitation.findUnique.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        workspaceId: 'ws-1',
+        invitedEmail: 'r@iksula.com',
+        role: 'QAEngineer',
+        projectScopeJson: [],
+        invitedBy: 'user-1',
+        tokenHash: 'OLD_HASH',
+        expiresAt: FUTURE,
+        status: 'pending',
+        acceptedAt: null,
+        createdAt: new Date(),
+      });
+      prisma.userInvitation.update.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        expiresAt: FUTURE,
+      });
+      const out = await service.resend(
+        'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        {},
+        ctx,
+      );
+      const newHash = createHash('sha256').update(out.token).digest('hex');
+      const a = audit.write.mock.calls[0][0];
+      const payloadStr = JSON.stringify(a.payload);
+      expect(payloadStr).not.toContain(out.token);
+      expect(payloadStr).not.toContain(newHash);
+      expect(payloadStr).not.toContain('OLD_HASH'); // also no leak of the prior hash
+      expect(payloadStr).not.toContain('tokenHash');
+    });
+
+    it('audit payload never contains the literal "passwordHash" key (defence-in-depth)', async () => {
+      // PasswordHash is a TB-002 column. M1 uses placeholder "PENDING_BETTERAUTH_M1"
+      // until BetterAuth wiring lands. This test pins the rule so future code
+      // additions can't accidentally splash the column into audit payloads.
+      prisma.userInvitation.findFirst.mockResolvedValueOnce(null);
+      prisma.userInvitation.create.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        invitedEmail: 'x@iksula.com',
+        expiresAt: FUTURE,
+      });
+      await service.create(
+        inv({ invitedEmail: 'x@iksula.com', role: 'QAEngineer' }),
+        ctx,
+      );
+      const a = audit.write.mock.calls[0][0];
+      const payloadStr = JSON.stringify(a.payload);
+      expect(payloadStr).not.toContain('passwordHash');
+      expect(payloadStr).not.toContain('password_hash');
+      expect(payloadStr).not.toContain('PENDING_BETTERAUTH');
+    });
+  });
 });

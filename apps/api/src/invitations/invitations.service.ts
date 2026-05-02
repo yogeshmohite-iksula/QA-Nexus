@@ -183,6 +183,127 @@ export class InvitationsService {
     };
   }
 
+  /** Single-record fetch for GET /api/invitations/:id.
+   *  Cross-workspace 404 (no leak that the row exists in another tenant). */
+  async getById(
+    invitationId: string,
+    ctx: ActorContext,
+  ): Promise<InvitationListItem> {
+    const r = await this.prisma.userInvitation.findUnique({
+      where: { id: invitationId },
+    });
+    if (!r || r.workspaceId !== ctx.workspaceId) {
+      throw new NotFoundException(`invitation ${invitationId} not found`);
+    }
+    return {
+      id: r.id,
+      workspaceId: r.workspaceId,
+      invitedEmail: r.invitedEmail,
+      role: r.role as Role,
+      projectScopeJson: Array.isArray(r.projectScopeJson)
+        ? (r.projectScopeJson as unknown[])
+        : [],
+      invitedBy: r.invitedBy,
+      expiresAt: r.expiresAt.toISOString(),
+      status: r.status,
+      acceptedAt: r.acceptedAt?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+      shortRef: r.id.replace(/-/g, '').slice(0, 8),
+    };
+  }
+
+  /**
+   * Resend a pending invitation: regenerate the secret token (rotate the
+   * SHA-256 hash on the row), bump the expiry, and return the new
+   * plaintext token to the caller for re-emailing. Idempotent in the
+   * sense that re-resending an already-revoked or already-accepted invite
+   * is a 409, not a 500.
+   *
+   * Error semantics:
+   *   - Unknown / cross-workspace → NotFoundException(404) (no leak)
+   *   - Already revoked           → ConflictException(409)
+   *   - Already accepted          → ConflictException(409) (use F27 instead)
+   *   - Expired                   → 200 OK (resend is the "renew" gesture —
+   *                                 we explicitly want to revive expired
+   *                                 invitations rather than force the
+   *                                 admin to delete-and-recreate).
+   */
+  async resend(
+    invitationId: string,
+    opts: { expiresInHours?: number; reason?: string },
+    ctx: ActorContext,
+  ): Promise<{
+    id: string;
+    token: string;
+    shortRef: string;
+    expiresAt: string;
+  }> {
+    const inv = await this.prisma.userInvitation.findUnique({
+      where: { id: invitationId },
+    });
+    if (!inv || inv.workspaceId !== ctx.workspaceId) {
+      throw new NotFoundException(`invitation ${invitationId} not found`);
+    }
+    if (inv.status === 'revoked') {
+      throw new ConflictException(
+        'invitation is revoked; create a new invite instead of resending',
+      );
+    }
+    if (inv.status === 'accepted') {
+      throw new ConflictException(
+        'invitation has been accepted; use F27 to manage the user directly',
+      );
+    }
+
+    // New token + hash. Old hash is overwritten — the prior magic-link URL
+    // becomes invalid the moment this row updates (intentional: stale links
+    // out in inboxes/Slack should not still work after a resend).
+    const tokenPlain = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(tokenPlain).digest('hex');
+    const expiresAt = new Date(
+      Date.now() + (opts.expiresInHours ?? 24 * 7) * 60 * 60 * 1000,
+    );
+
+    const updated = await this.prisma.userInvitation.update({
+      where: { id: inv.id },
+      data: {
+        tokenHash,
+        expiresAt,
+        // If the row had auto-marked expired (Day-N cron sweep), revive it.
+        status: inv.status === 'expired' ? 'pending' : inv.status,
+      },
+      select: { id: true, expiresAt: true },
+    });
+
+    await this.audit.write({
+      workspaceId: ctx.workspaceId,
+      actorId: ctx.actorId,
+      entityType: 'invitation',
+      entityId: inv.id,
+      action: 'invitation_resent',
+      payload: {
+        invitation_id: inv.id,
+        // PII discipline: log the invitee EMAIL DOMAIN only ("@iksula.com")
+        // not the local-part. Matches /audit-log forensic needs without
+        // splashing real emails into the chain. Same rule applied below.
+        invited_email_domain: '@' + inv.invitedEmail.split('@')[1],
+        previous_status: inv.status,
+        new_expires_at: updated.expiresAt.toISOString(),
+        reason: opts.reason ?? null,
+        actor_email: ctx.actorEmail, // actor IS the workspace operator —
+        // not PII-sensitive in the same way as invitee email; keep for
+        // forensics. Audit chain itself is per-workspace, not exfiltrated.
+      },
+    });
+
+    return {
+      id: updated.id,
+      token: tokenPlain,
+      shortRef: updated.id.replace(/-/g, '').slice(0, 8),
+      expiresAt: updated.expiresAt.toISOString(),
+    };
+  }
+
   /** List invitations in actor's workspace. Strips tokenHash. */
   async list(ctx: ActorContext): Promise<InvitationListItem[]> {
     const rows = await this.prisma.userInvitation.findMany({
