@@ -34,6 +34,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
 import { useProjectList } from '@/lib/contexts/ProjectContext';
 import {
@@ -181,7 +182,22 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
     );
   }
 
-  function onValid(values: InviteForm) {
+  // ---------------------------------------------------------------------
+  // Submit + validation handlers (Pattern A — toast wired, BE deferred).
+  // `onValid` is async + awaits a 600 ms simulated-persistence delay so
+  // RHF's `isSubmitting` flag flips on, the Send button shows a spinner,
+  // and a double-click on the button is a no-op (button is `disabled`
+  // while isSubmitting is true). When BE wiring lands MS0-T030.5+ the
+  // setTimeout swap-out becomes a real `fetch('/api/team-members/invite')`
+  // — every other piece (toast, loading state, redirect) stays as-is.
+  // ---------------------------------------------------------------------
+  async function onValid(values: InviteForm) {
+    // Defence-in-depth — guard against parallel submits even if the
+    // disabled prop is somehow bypassed (e.g. keyboard double-Enter
+    // before re-render). RHF handles this natively but the explicit
+    // check is cheap insurance + reads as intent.
+    if (isSubmitting) return;
+
     const payload = buildInvitePayload(values);
     // PATTERN-A: submit invitations deferred until M1 (T030.5) - real /api/team-members/invite POST
     console.info('pattern-a:deferred:invite-submit', {
@@ -189,6 +205,19 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
       validatedCount: payload.rows.length,
       hasMessage: Boolean(payload.personalMessage),
     });
+
+    // Simulate persistence latency so loading state is observable.
+    // Replaced by real BE call at MS0-T030.5+.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const n = payload.rows.length;
+    toast.success(`${n} ${n === 1 ? 'invitation' : 'invitations'} queued`, {
+      description:
+        n === 1
+          ? 'Invite email arrives within ~60 s. Recipient has 7 days to accept.'
+          : `Invite emails arrive within ~60 s. Recipients have 7 days to accept.`,
+    });
+
     onClose();
     router.push('/admin/users');
   }
@@ -197,6 +226,19 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
     // PATTERN-A: invite form validation deferred until M1 (T030.5) - client-only Zod validation, no BE call
     console.info('pattern-a:deferred:invite-validation-error', {
       fields: Object.keys(formErrors),
+    });
+
+    // User-visible toast — surfaces the validation failure regardless
+    // of whether per-field error text is in view. Pattern A: client-only
+    // Zod surface; no BE call.
+    const rowsCount = Array.isArray(formErrors.rows)
+      ? (formErrors.rows as unknown[]).filter(Boolean).length
+      : 0;
+    toast.error('Some invites need attention before sending', {
+      description:
+        rowsCount > 0
+          ? `${rowsCount} row${rowsCount === 1 ? '' : 's'} ${rowsCount === 1 ? 'has' : 'have'} a missing or invalid field.`
+          : 'Check email format + project assignments.',
     });
   }
 
@@ -621,23 +663,52 @@ function Footer({
         <button
           type="submit"
           disabled={!isValid || isSubmitting}
+          aria-busy={isSubmitting || undefined}
           className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[var(--primary)] px-5 text-[13px] font-semibold text-[var(--primary-ink)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Send invites
-          {validRowCount > 0 && (
+          {isSubmitting ? 'Sending…' : 'Send invites'}
+          {!isSubmitting && validRowCount > 0 && (
             <span className="bg-[var(--primary-ink)]/15 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold">
               {validRowCount}
             </span>
           )}
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M3 8h10M9 4l4 4-4 4"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          {isSubmitting ? (
+            // Loading spinner — inline SVG with Tailwind's animate-spin
+            // instead of pulling lucide-react just for one icon.
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              className="animate-spin"
+            >
+              <circle
+                cx="8"
+                cy="8"
+                r="6"
+                stroke="currentColor"
+                strokeOpacity="0.3"
+                strokeWidth="1.8"
+              />
+              <path
+                d="M14 8a6 6 0 0 0-6-6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M3 8h10M9 4l4 4-4 4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
         </button>
       </div>
     </div>

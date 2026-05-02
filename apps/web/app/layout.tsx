@@ -13,6 +13,7 @@ import './globals.css';
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
 import { ProjectProvider } from '@/lib/contexts/ProjectContext';
 import { TeamRosterProvider } from '@/lib/contexts/TeamRosterContext';
+import { Toaster } from 'sonner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -62,6 +63,26 @@ export default function RootLayout({
             <TeamRosterProvider>{children}</TeamRosterProvider>
           </ProjectProvider>
         </CurrentUserProvider>
+        {/*
+          Sonner toaster — F27m1 fires success on submit, error on
+          submit-failure, AdminGuard fires the `?error=admin-required`
+          intercept toast on /home. theme="dark" matches the locked
+          PM1 dark canvas; toastOptions style hooks into the design
+          token vars so toast bg/border match the rest of the surface.
+        */}
+        <Toaster
+          theme="dark"
+          position="bottom-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              background: 'var(--raised)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-primary)',
+            },
+          }}
+        />
       </body>
     </html>
   );
