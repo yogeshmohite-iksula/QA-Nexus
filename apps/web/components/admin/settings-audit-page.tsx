@@ -285,6 +285,7 @@ export function SettingsAuditPage() {
     const matched = TABS.find((t) => t.id === hash);
     const initial = matched && matched.available ? matched.id : 'general';
     setActiveTab(initial);
+    // PATTERN-A: load settings deferred until M1 (T030.5) - real /api/settings GET on mount
     console.info('pattern-a:deferred:settings-load', {
       workspaceId: me.workspaceId,
       activeTab: initial,
@@ -296,6 +297,7 @@ export function SettingsAuditPage() {
 
   function handleTabChange(next: SettingsTab) {
     if (next === activeTab) return;
+    // PATTERN-A: change settings tab deferred until M1 (T030.5) - client-only state + history.replaceState
     console.info('pattern-a:deferred:settings-tab-change', { tab: next });
     setActiveTab(next);
     if (typeof window !== 'undefined') {
@@ -306,12 +308,14 @@ export function SettingsAuditPage() {
   function handleSearchChange(q: string) {
     setSearchQuery(q);
     setPage(1);
+    // PATTERN-A: search audit log deferred until M1 (T030.5) - real /api/audit-log GET (search param)
     console.info('pattern-a:deferred:audit-search-change', { query: q });
   }
 
   function handleFilterKindChange(value: 'all' | AuditEventKind) {
     setFilterKind(value);
     setPage(1);
+    // PATTERN-A: filter audit log deferred until M1 (T030.5) - real /api/audit-log GET (kind param)
     console.info('pattern-a:deferred:audit-filter-change', {
       kind: 'event-kind',
       value,
@@ -319,23 +323,28 @@ export function SettingsAuditPage() {
   }
 
   function handleExport(format: 'csv' | 'pdf') {
+    // PATTERN-A: export audit log deferred until M1 (T030.5) - real /api/audit-log/export POST
     console.info('pattern-a:deferred:audit-export', { format, total: TOTAL_EVENTS });
   }
 
   function handleScheduleDigest() {
+    // PATTERN-A: schedule weekly digest deferred until M1 (T030.5) - real /api/notifications/digest POST
     console.info('pattern-a:deferred:audit-schedule-digest', {});
   }
 
   function handleVerifyHash(eventId: string) {
+    // PATTERN-A: verify HMAC chain deferred until M1 (T030.5) - real /api/audit-log/:id/verify POST
     console.info('pattern-a:deferred:audit-verify-hash', { eventId });
   }
 
   function handlePaginate(next: number) {
     setPage(next);
+    // PATTERN-A: paginate audit log deferred until M1 (T030.5) - real /api/audit-log GET (page param)
     console.info('pattern-a:deferred:audit-paginate', { page: next });
   }
 
   function handleRetentionAdjust() {
+    // PATTERN-A: adjust retention policy deferred until M1 (T030.5) - real /api/settings/retention PATCH
     console.info('pattern-a:deferred:audit-retention-adjust', {});
   }
 

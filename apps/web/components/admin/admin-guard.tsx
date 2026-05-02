@@ -33,6 +33,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
 
   useEffect(() => {
     if (!allowed) {
+      // PATTERN-A: redirect non-Admin user deferred until M1 (T030.5) - client fence; server guard lands MS0-T021
       console.info('pattern-a:deferred:rbac-redirect', {
         from: '/admin',
         userId: me.id,

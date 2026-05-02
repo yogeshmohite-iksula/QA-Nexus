@@ -275,6 +275,7 @@ export function UsersRolesPage() {
       acc[status] = (acc[status] ?? 0) + 1;
       return acc;
     }, {});
+    // PATTERN-A: load users list deferred until M1 (T030.5) - real /api/users GET on mount
     console.info('pattern-a:deferred:users-list-load', {
       workspaceId: me.workspaceId,
       totalUsers,
@@ -284,28 +285,36 @@ export function UsersRolesPage() {
   }, [me.workspaceId, totalUsers, pendingCount, members]);
 
   function onInviteOpen() {
+    // PATTERN-A: open invite modal deferred until M1 (T030.5) - navigate to /admin/users/invite
     console.info('pattern-a:deferred:users-invite-open', { from: 'F27' });
     router.push('/admin/users/invite');
   }
   function onRoleChange(userId: string, oldRole: string, newRole: string) {
+    // PATTERN-A: change user role deferred until M1 (T030.5) - real /api/users/:id PATCH role
     console.info('pattern-a:deferred:users-role-change', { userId, oldRole, newRole });
   }
   function onStatusToggle(userId: string, action: 'deactivate' | 'reactivate') {
+    // PATTERN-A: toggle user status deferred until M1 (T030.5) - real /api/users/:id PATCH status
     console.info('pattern-a:deferred:users-status-toggle', { userId, action });
   }
   function onProjectAssign(userId: string, projectKey: string, action: 'add' | 'remove') {
+    // PATTERN-A: assign user project deferred until M1 (T030.5) - real /api/users/:id/projects PUT
     console.info('pattern-a:deferred:users-project-assign', { userId, projectKey, action });
   }
   function onInviteResend(invitationId: string, email: string) {
+    // PATTERN-A: resend invitation deferred until M1 (T030.5) - real /api/invitations/:id/resend POST
     console.info('pattern-a:deferred:users-invite-resend', { invitationId, email });
   }
   function onInviteRevoke(invitationId: string, email: string) {
+    // PATTERN-A: revoke invitation deferred until M1 (T030.5) - real /api/invitations/:id DELETE
     console.info('pattern-a:deferred:users-invite-revoke', { invitationId, email });
   }
   function onFilterChange(kind: string, value: string) {
+    // PATTERN-A: change users filter deferred until M1 (T030.5) - client-only filter state, no BE call
     console.info('pattern-a:deferred:users-filter-change', { kind, value });
   }
   function onAuditOpen(eventId: string) {
+    // PATTERN-A: open audit detail deferred until M1 (T030.5) - deeplink to /admin/settings#audit-log
     console.info('pattern-a:deferred:users-audit-open', { eventId });
     router.push('/admin/settings#audit-log');
   }

@@ -86,6 +86,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
   const [bulkProjects, setBulkProjects] = useState<string[]>([]);
 
   useEffect(() => {
+    // PATTERN-A: open invite modal deferred until M1 (T030.5) - fire-and-forget telemetry on mount
     console.info('pattern-a:deferred:invite-modal-open', {
       workspaceId: me.workspaceId,
       rowCount: fields.length,
@@ -96,6 +97,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
     // for setup/cleanup but we still log the deferred-cancel marker.
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        // PATTERN-A: cancel invite modal deferred until M1 (T030.5) - navigate back to /admin/users
         console.info('pattern-a:deferred:invite-cancel', { trigger: 'esc' });
         onClose();
       }
@@ -110,11 +112,13 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
   }, [me.workspaceId, fields.length, projects.length, onClose]);
 
   function handleCancel() {
+    // PATTERN-A: cancel invite modal deferred until M1 (T030.5) - navigate back to /admin/users
     console.info('pattern-a:deferred:invite-cancel', { rowCount: fields.length });
     onClose();
   }
 
   function handleBulkApply() {
+    // PATTERN-A: bulk-apply role + projects deferred until M1 (T030.5) - client-only form mutation
     console.info('pattern-a:deferred:invite-bulk-apply', {
       role: bulkRole,
       projectKeys: bulkProjects,
@@ -132,12 +136,14 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
 
   function handleAddRow() {
     append({ email: '', role: bulkRole, projectKeys: [...bulkProjects] });
+    // PATTERN-A: add invite row deferred until M1 (T030.5) - client-only form mutation
     console.info('pattern-a:deferred:invite-add-row', { newCount: fields.length + 1 });
   }
 
   function handleRemoveRow(idx: number) {
     if (fields.length <= 1) return;
     remove(idx);
+    // PATTERN-A: remove invite row deferred until M1 (T030.5) - client-only form mutation
     console.info('pattern-a:deferred:invite-remove-row', {
       rowIndex: idx,
       newCount: fields.length - 1,
@@ -161,6 +167,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
     const has = current.includes(projectKey);
     const next = has ? current.filter((k) => k !== projectKey) : [...current, projectKey];
     setValue(`rows.${rowIdx}.projectKeys`, next, { shouldDirty: true, shouldValidate: true });
+    // PATTERN-A: toggle row project deferred until M1 (T030.5) - client-only form mutation
     console.info('pattern-a:deferred:invite-row-project-toggle', {
       rowIndex: rowIdx,
       projectKey,
@@ -176,6 +183,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
 
   function onValid(values: InviteForm) {
     const payload = buildInvitePayload(values);
+    // PATTERN-A: submit invitations deferred until M1 (T030.5) - real /api/team-members/invite POST
     console.info('pattern-a:deferred:invite-submit', {
       rowCount: payload.rows.length,
       validatedCount: payload.rows.length,
@@ -186,6 +194,7 @@ export function InviteUserModal({ onClose }: InviteUserModalProps) {
   }
 
   function onInvalid(formErrors: Record<string, unknown>) {
+    // PATTERN-A: invite form validation deferred until M1 (T030.5) - client-only Zod validation, no BE call
     console.info('pattern-a:deferred:invite-validation-error', {
       fields: Object.keys(formErrors),
     });
@@ -483,6 +492,7 @@ function InviteRowCard({
             onPaste={(e) => onPaste(idx, e)}
             {...register(`rows.${idx}.email`, {
               onChange: () => {
+                // PATTERN-A: change row email deferred until M1 (T030.5) - client-only form mutation
                 console.info('pattern-a:deferred:invite-row-email-change', { rowIndex: idx });
               },
             })}
@@ -498,6 +508,7 @@ function InviteRowCard({
                 value={field.value}
                 onChange={(e) => {
                   field.onChange(e);
+                  // PATTERN-A: change row role deferred until M1 (T030.5) - client-only form mutation
                   console.info('pattern-a:deferred:invite-row-role-change', {
                     rowIndex: idx,
                     role: e.target.value,
