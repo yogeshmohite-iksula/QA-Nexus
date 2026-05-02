@@ -13,6 +13,15 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 6 T032 golden-set seeds (2026-05-02)
+
+- **`feat(test)`** — T032 golden-set seeds committed to `final/`. Three sets covering the M0 R3 mitigation:
+  - **A1 Scribe** (test-case generator) — 30 real CPI requirements with priority spread (Highest 6 / High (migrated) 8 / High 4 / Medium 8 / Low 2 / Minor 2). `apps/api/test/golden-sets/a1/final/cpi_requirements.json`. Real Iksula data, no synthesis.
+  - **A2 Sentinel** (duplicate-bug detector) — 102 duplicate pairs in 2 difficulty tiers: 54 easy (recognizable pattern overlap) + 48 hard (reduced keyword overlap, indirect module names, multi-perspective descriptions). `apps/api/test/golden-sets/a2/final/easy.json` + `hard.json`. Codex-augmented from real CPI bugs (data augmentation, not pure fabrication).
+  - **A4 Sherlock** (root-cause classifier) — 75 defects (50 real + 25 augmented), 62 valid L1-L5 tags + 13 SKIP. Two-tier composition: keys `CPI-###` (50 real) + `CPI-NEW-###` (25 augmented in same CPI domain — PIM workflows, NPI processes, ERP, DAM, RBAC, mail routing, SKU enrichment, PMG/SAG selection). Codex tagged on 2026-05-02 reading `rca` / `root_cause_corrective_actions` / `recent_comments`. Distribution: L1 6.5% / L2 3.2% / L3 46.8% / L4 30.6% / L5 12.9% — within expected sanity bands. Confidence: 52 high / 15 medium / 8 low. `apps/api/test/golden-sets/a4/final/cpi_postmortem_defects.json`.
+- **`docs(test)`** — `apps/api/test/golden-sets/REVIEW_GUIDE.md` updated to reflect 75-item A4 set + new acceptance closure section. Methodology + provenance + eval-time filtering instructions documented.
+- **Acceptance gate (T032 R3 mitigation):** A4 has 40+ valid L1-L5 tags. **PASS at 62/75.** M0 acceptance criterion AC for T032 satisfied.
+
 ### Added — Day 5 morning vector(384) schema migration (2026-05-01) ← (a) PR #20
 
 - **`feat(api)`** — **MS0 last task: vector(1024) → vector(384) schema migration.** Per ADR-003 amendment + ADR-009 (Day-4 Render Free 512 MB OOM forced bge-large → bge-small swap; output dim drops from 1024 → 384). New `apps/api/prisma/raw/migrations/0002_vector_384_dim.sql` does the canonical DROP-HNSW → ALTER-COLUMN-USING-NULL → RECREATE-HNSW dance inside a single transaction. Tables empty at M0 (no real embeddings written yet — only stub seed) so `USING NULL` is safe. Runbook: `pnpm --filter @qa-nexus/api prisma:apply-raw:0002` (new npm script). Schema: `apps/api/prisma/schema.prisma` — `TestCase.embedding` and `KbChunk.embedding` flipped from `Unsupported("vector(1024)")?` to `Unsupported("vector(384)")?`, doc comments updated to point at the new model + ADR + migration file. Closes BE's last M0 deliverable.

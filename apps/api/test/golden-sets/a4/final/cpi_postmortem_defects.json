@@ -1,0 +1,1191 @@
+[
+  {
+    "key": "CPI-345",
+    "title": "SAG should come on the selection of PMG",
+    "description": "SAG should come on the selection of PMG",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "26/Jun/25 2:55 AM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat Server.",
+      "26/Jun/25 4:37 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;SAG Dropdown Values are showing as per the PMG Selected. It working as expected. Only some of the PMG have some extra added or some PMG don't have some SAG’s. # {color:#ff5630}*Industrial > Boned Industrial > Vitrified > All SAG are Present . [ Please remove test SAG - Brick &Block123 , TestSAGNew From list. ]* {color} # Industrial > Boned Industrial > Resinoid & Rubber > All SAG are Present. # {color:#ff5630}*Industrial > Boned Industrial > THIN WHEEL > All SAG are Present. [ SAG - 7” Dc - Agni is not present in list. Please Add.]*{color} # Industrial > Boned Industrial > Thin Wheel G2 > All SAG are Present. # Retail > Bonded Retail > Thin Wheel G2 Retail > All SAG are Present. # Retail > Bonded Retail > Super Abrasive Retail > All SAG are Present. # Industrial > Coated Industrial > Rolls > All SAG are Present. # Retail > Coated Retail > Rolls Retail > All SAG are Present. # Industrial > Coated Industrial > Sheets > All SAG are Present. # Retail > Coated Retail > sheets Retail > All SAG are Present. # {color:#ff5630}*Industrial > Coated Industrial > Disc > All SAG are Present. [ Please remove test SAG - CUMIDISCNEW From list. ]* {color} # Retail > Coated Retail > Disc Retail > All SAG are Present. # Industrial > Coated Industrial > Flap Wheel > All SAG are Present. # {color:#ff5630}*Industrial > Coated Industrial > Belt & Others > All SAG are Present. [ SAG - Alo RMC Belt Jawan, Ajax Supreme Wide Belts YS562, Alo RIC Wide Belts, Premium Aloxide Belt YS563, YS592-Ceramic BELTS are not present in list. Please Add.]*{color} # {color:#ff5630}*Industrial > Coated Industrial > Non Woven Ind > All SAG are Present. [ SAG - NW Disc, Other Non Woven Rolls, Polishing Wheel, Samurai Unitised Disc, Samurai Unitised Wheel, Unitised Disc, Unitised Wheels are not present in list. Please Add.]*{color}",
+      "26/Jun/25 7:20 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;All the SAG values are showing correctly as per the PMG selected. SAG is working As expected !Screenshot 2025-06-26 at 7.18.37 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 7.18.37 PM.png\"! !Screenshot 2025-06-26 at 7.18.21 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 7.18.21 PM.png\"! !Screenshot 2025-06-26 at 7.17.57 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 7.17.57 PM.png\"! !Screenshot 2025-06-26 at 7.18.08 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 7.18.08 PM.png\"!"
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments list extra/missing SAG values to add/remove under PMG selections"
+  },
+  {
+    "key": "CPI-387",
+    "title": "Email Notification Not Triggered for Certain Update Workflow Transitions in Product Workflow (PIM)",
+    "description": "*Description:* In the PIM Product Workflow, email notifications are not triggered for specific transitions performed by *Product Head* and *Marketing Head*. These transitions are expected to send emails but currently result in *no email being triggered*. |Role|Current Status|Action Taken|New Status|Mail Expected To|Mail Triggered| |Product Head|InReview|Update to Marketing Manager|Update Required|To: Marketing Manager CC: Product Manager|❌ No| |Marketing Head|InReview|Update to Marketing Manager|Update Required|To: Marketing Manager CC: Product Manager|❌ No| |Marketing Head|InReview|Update to Product Head|Update Required|To: Product Head CC: Product Manager, Marketing Manager|❌ No| *Expected Result:* For each of the above workflow actions, an email should be triggered as per the configured recipients mentioned in the table. *Actual Result:* No email is triggered for these actions, leading to miscommunication and lack of workflow visibility.",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "29/Jul/25 10:50 AM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Mail is trigger correctly for marketing manager and Product manager in Reopen workflow but when the Marketing Head make an action “Update to Product Head”. them mail is trigger To: Product Head and in CC: Product Manager is there but *in CC: Marketing Manager mail is not present* !Screenshot 2025-07-29 at 10.14.43 AM.png|width=957,height=565,alt=\"Screenshot 2025-07-29 at 10.14.43 AM.png\"!",
+      "30/Jul/25 4:54 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done to sending Mail to Marketing Manager.",
+      "31/Jul/25 10:59 AM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;All the Update mail trigger correctly {adf:display=block} {\"type\":\"table\",\"attrs\":{\"isNumberColumnEnabled\":false,\"layout\":\"center\",\"localId\":\"c992ee45-f962-4bf1-a4ec-8b5b5959a9ba\"},\"content\":[{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Role\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Workflow status – Initial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Transition/ Workflow Actions\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Workflow Label\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Email Notification\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Workflow State - Final\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Recipient\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"InReview\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"update\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update Required\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Yes\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ff00ff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Updated while review (Product)\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To: Product Manager\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"InReview\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update to product manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update Required\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Yes\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ff00ff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Updated while review (Product)\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To: Product Manager\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"InReview\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update to Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update Required\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Yes\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"In-Review with Marketing Manager (Product)\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To: MarketingManager\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"CC: Product Manager\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Head\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"InReview\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update to product manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update Required\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Yes\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ff00ff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Updated while review (Product)\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To: Product Manager\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"InReview\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update to Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update Required\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Yes\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"In-Review with Marketing Head (Product)\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To: MarketingManager\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"CC: Product Manager\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"InReview\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update to Product Head\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Update Required\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Yes\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"In-Review with Product Head (Product)\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#00ffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To: Product Head\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"CC: Product Manager, MarketingManager\"}]}]}]}]} {adf} !Screenshot 2025-07-31 at 10.38.45 AM.png|width=1078,height=705,alt=\"Screenshot 2025-07-31 at 10.38.45 AM.png\"! !Screenshot 2025-07-31 at 10.45.23 AM.png|width=1108,height=727,alt=\"Screenshot 2025-07-31 at 10.45.23 AM.png\"! !Screenshot 2025-07-31 at 10.47.04 AM.png|width=1075,height=746,alt=\"Screenshot 2025-07-31 at 10.47.04 AM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say mail recipients/CC were adjusted for workflow transitions"
+  },
+  {
+    "key": "CPI-372",
+    "title": "Mail are not trigger as per the PMG selected in NPI.",
+    "description": "e.g. Created a New NPI and it is under the coated Industrial > belt But Mail are go to Different Product Developers Pandu_B -- Bonded Industrial. >Thinwheel, Thinwheel G2 Gopalakrishnan_C - Coated Industrial > Sheets Mathews_Reji -- Coated Retail > Sheets Retail",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "18/Jul/25 7:44 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Pls check with Product Manager with their PMG and check with their respected Product Developer with their PMG’s.",
+      "22/Jul/25 5:31 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Check for 2 scenario: A) coated retail > sheet retail B) Bonded Industrial > Thin wheel Both the scenario, in the Product workflow, Mail trigger to correct user. A) coated retail > sheet retail {adf:display=block} {\"type\":\"table\",\"attrs\":{\"isNumberColumnEnabled\":false,\"layout\":\"center\",\"localId\":\"3501b41a-871d-433d-97c9-f7b9f4a54926\"},\"content\":[{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":5},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"New NPI \"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"coated retail > sheet retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":4},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Prod Devloper\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"gopalakrishnanc@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:gopalakrishnanc@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Prod Devloper\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"mathewsreji@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:mathewsreji@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"SCM\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cumi.SCM@mailinator.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:cumi.SCM@mailinator.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"vivekaravinth@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:vivekaravinth@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing manager approved\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Mail not updated in Admin\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"NA\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"vivekaravinth@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:vivekaravinth@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head approved\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Head\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"viswasanjiv@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:viswasanjiv@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"vivekaravinth@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:vivekaravinth@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":5},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Head Approved\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"Product Approved.\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Mail not updated in Admin\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"NA\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"vivekaravinth@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:vivekaravinth@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Retail\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"vivekaravinth@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:vivekaravinth@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]}]} {adf} B) Bonded Industrial > Thin wheel {adf:display=block} {\"type\":\"table\",\"attrs\":{\"isNumberColumnEnabled\":false,\"layout\":\"center\",\"localId\":\"e3d14f17-11d4-4b0f-8e01-d7aebe821e00\"},\"content\":[{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":4},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"New NPI \"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"Bonded Industrial > Thin wheel\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Prod Devloper\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ffffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"pandub@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:pandub@cumi.murugappa.com\"}}]},{\"type\":\"text\",\"text\":\",\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"SCM\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cumi.SCM@mailinator.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:cumi.SCM@mailinator.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ffffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"kprabakaran@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:kprabakaran@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing manager approved\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"viswasanjiv@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:viswasanjiv@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ffffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"kprabakaran@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:kprabakaran@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head approved\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Head\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"viswasanjiv@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:viswasanjiv@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ffffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"kprabakaran@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:kprabakaran@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":5},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Head Approved\"},{\"type\":\"hardBreak\"},{\"type\":\"text\",\"text\":\"Product Approved.\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":3},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"To\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Head Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"viswasanjiv@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:viswasanjiv@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ffffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"kprabakaran@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:kprabakaran@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{\"rowspan\":2},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"cc\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Product Manager Industrial\"}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#ffffff\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"kprabakaran@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:kprabakaran@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]},{\"type\":\"tableRow\",\"content\":[{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Marketing Manager\"}]}]},{\"type\":\"tableCell\",\"attrs\":{},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"madhus@cumi.murugappa.com\",\"marks\":[{\"type\":\"link\",\"attrs\":{\"href\":\"mailto:madhus@cumi.murugappa.com\"}}]}]}]},{\"type\":\"tableCell\",\"attrs\":{\"background\":\"#b6d7a8\"},\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Pass\"}]}]}]}]} {adf} !Screenshot 2025-07-22 at 5.14.14 PM.png|width=983,height=584,alt=\"Screenshot 2025-07-22 at 5.14.14 PM.png\"! !Screenshot 2025-07-22 at 5.18.52 PM.png|width=984,height=520,alt=\"Screenshot 2025-07-22 at 5.18.52 PM.png\"! !Screenshot 2025-07-22 at 5.21.16 PM.png|width=968,height=506,alt=\"Screenshot 2025-07-22 at 5.21.16 PM.png\"! !Screenshot 2025-07-22 at 5.23.22 PM.png|width=969,height=519,alt=\"Screenshot 2025-07-22 at 5.23.22 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "description/recent_comments focus on PMG-to-Product-Developer notification mapping"
+  },
+  {
+    "key": "CPI-392",
+    "title": "Incorrect Action Buttons Displayed in SKU Update Workflow",
+    "description": "*Description:* The action button dropdown menus are not displaying the correct options for each user role, deviating from the prescribed workflow: * *Product Developer* should see only the *\"Approve\"* button, but currently sees *\"SKU Enrichment Done\"*. * *Product Manager* should see *\"SKU Enrichment Done\"* in the action dropdown (_after initial approval and enrichment step_), but currently sees *\"Approve\"*. * *\"Update\"* button must be removed from the Product Manager's action button in all scenarios except when specifically required by role/workflow. * *Product Head* should see only an *\"Update to Product Manager\"* button (rename from \"Update\"), but currently this is inconsistent. * *Product Manager*, in the update flow after Product Head requests an update, should see an action button labeled *\"SKU Enrichment Done After Update\"* (this label is missing/distinct from initial enrichment), but instead sees the default. *Impact:* Improper action buttons are available to users, which can lead to incorrect processing, workflow confusion, and improper status transitions. *Steps to Reproduce:* # Login as Product Developer and edit SKU details. # Observe dropdown actions (should only have \"Approve\"). # Login as Product Manager and advance to SKU through workflow; check buttons at each stage (\"SKU Enrichment Done\" should appear). # Advance to Product Head; observe available actions (\"Update to Product Manager\" only, not generic \"Update\"). # After Product Head triggers an update, check Product Manager's action dropdown (\"SKU Enrichment Done After Update\" should appear). # At all stages, verify that only context-appropriate buttons are present. *Expected:* Dropdown options are strictly limited by role and workflow state, matching process diagram. !Changes in Existing Product Workflow.drawio.png|width=780,height=781,alt=\"Changes in Existing Product Workflow.drawio.png\"! !Screenshot 2025-07-29 at 4.02.11 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-29 at 4.02.11 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "01/Aug/25 5:18 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83] The solution and code have been provided to [~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] . Proceeding to assign the ticket to him",
+      "01/Aug/25 5:21 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83] Please confirm on this statement , as discussed in intital developement, Product developer see *SKU Enrichment Done* and Product manager see both action *SKU Enrichment Done* and *Approve* * *Product Developer* should see only the *\"Approve\"* button, but currently sees *\"SKU Enrichment Done\"*. * *Product Manager* should see *\"SKU Enrichment Done\"* in the action dropdown (_after initial approval and enrichment step_), but currently sees *\"Approve\"*.",
+      "01/Aug/25 5:52 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and UAT.",
+      "05/Aug/25 4:36 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;As per discuss and given instruction from PM [~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83] * In *Product Developer* user, under the Action dropdown *\"SKU Enrichment Done\"* button Showing. * *In Product Head* user, under the Action dropdown *\"Update to Product Manager\"* button showing. * *Product Manager*, in the update flow after Product Head requests an update, Now in product Manager see an action button as *\"SKU Enrichment Done After Update\".* !Screenshot 2025-08-05 at 3.56.24 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-05 at 3.56.24 PM.png\"! !Screenshot 2025-08-05 at 4.03.28 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-05 at 4.03.28 PM.png\"! !Screenshot 2025-08-05 at 4.06.18 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-05 at 4.06.18 PM.png\"!",
+      "05/Aug/25 4:45 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;One issue remaining, In the Product Manager user, under the Action button “Approve” and “SKU Enrichment Done”. * As product manager click on “Approve”, SKU is go to Product Head. * *IMP Point -* As Product Manager click on “SKU Enrichment DONE” Then that SKU is Still in Between Product Developer and Product manager. Product developer can do the update on that SKU and then do action as “SKU Enrichment DONE”. !Screenshot 2025-08-05 at 3.57.23 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-05 at 3.57.23 PM.png\"!",
+      "06/Aug/25 4:54 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;updated workflow !image-20250806-112432.png|width=512,height=519,alt=\"image-20250806-112432.png\"!",
+      "07/Aug/25 1:12 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done to allow both status for Product Manager on Dev and UAT.",
+      "08/Aug/25 12:45 PM;712020:edb6975e-6657-4571-a61c-9d16c7ba2a83;[~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] [~accountid:712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285] As discussed, we need to add only ‘Approve’ action for Product Manager in Change management workflow. Similarly for Update flow (Rejection), action ‘SKU Enrichment done after Update’ only should be displayed for Product Manager. This is already implemented.",
+      "08/Aug/25 3:53 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and UAT.",
+      "08/Aug/25 6:17 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;It working as expected At this condition Product Developer shows \"SKU Enrichment Done\" and In Product Manager shows \"Approve\" & in the update flow showing \"SKU Enrichment Done After Update\". !Screenshot 2025-08-08 at 6.15.06 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-08 at 6.15.06 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "description/recent_comments cite role-wise workflow action button matrix"
+  },
+  {
+    "key": "CPI-373",
+    "title": "After Reopen the Product, New SKU is created. Under the SKU, ERP and DAM tab are showing.",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "10/Jul/25 1:21 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat.",
+      "11/Jul/25 4:02 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;After Reopen the Product, New SKU is created. Under the SKU, information material, technical, SCM, DAM, SEO, Quality summery tab are showing. ERP and DAM tab are not showing. SO, it working as expected. !Screenshot 2025-07-11 at 2.58.27 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-11 at 2.58.27 PM.png\"!",
+      "12/Nov/25 1:16 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Works as expected !Screenshot 2025-11-12 at 12.55.11 PM.png|width=234,alt=\"Screenshot 2025-11-12 at 12.55.11 PM.png\"!"
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say done/works as expected; no root-cause signal in any field"
+  },
+  {
+    "key": "CPI-352",
+    "title": "In newly created SKU, in ERP form for ERP support team all details should get fetched like SAG etc. , previous item codes should be disabled",
+    "description": "In newly created SKU, in ERP form for ERP support team all details should get fetched like SAG etc. , previous item codes should be disabled",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "11/Jul/25 4:13 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;# In ERP form, As the ERP support team select the PIM ID. Automatically all details of selected PIM ID get fetched like SAG etc. # In the item Description List section, Old item codes is disabled and ERP support team can able to add the New item code for Newly created SKU. !Screenshot 2025-07-11 at 4.07.16 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-11 at 4.07.16 PM.png\"! !Screenshot 2025-07-11 at 4.09.16 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-11 at 4.09.16 PM.png\"!",
+      "12/Nov/25 1:15 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Works as expected !Screenshot 2025-11-12 at 1.03.42 PM.png|width=512,alt=\"Screenshot 2025-11-12 at 1.03.42 PM.png\"! !Screenshot 2025-11-12 at 1.03.34 PM.png|width=512,alt=\"Screenshot 2025-11-12 at 1.03.34 PM.png\"!"
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only confirm expected ERP fetch/disabled fields; no root-cause signal"
+  },
+  {
+    "key": "CPI-405",
+    "title": "Reopen Product Workflow Fails – Email Error & Conflicting Statuses",
+    "description": "*Description:* When the Product Manager attempts to reopen a product workflow, multiple issues are occurring: # On first attempt of *Action > Reopen product workflow*, the system throws an error: {noformat}error performing action on this element Workflow processing error: Email sending failed: Email template path is empty! {noformat} # On retrying *Action > Reopen product workflow*, another error appears: {noformat}transition failed The marking does not enable the transition {noformat} # After the above errors, under the *Action* menu, the *Reopen product workflow* option is no longer visible and the *Approve* button is also missing. # If the user proceeds with approving the product again, the workflow incorrectly displays *two statuses simultaneously*: #* _InReview_ #* _Product Data Approved_ *Steps to Reproduce:* # Log in as Product Manager. # Open a product in workflow. # From *Action* menu, click *Reopen product workflow*. # Observe the error. # Retry the same action again. # Check available options under *Action*. # Approve the product again. # Observe the status inconsistency. *Expected Result:* * The \"Reopen product workflow\" action should work without errors. * Email should be triggered with the correct template. * Workflow transition should be valid. * Product status should display correctly (single accurate state). *Actual Result:* * First attempt fails due to missing email template path. * Second attempt fails with invalid transition error. * Workflow buttons disappear from *Action* menu. * Product displays multiple statuses (\"InReview\" and \"Product Data Approved\"). !Screenshot 2025-09-09 at 5.18.54 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-09 at 5.18.54 PM.png\"! !Screenshot 2025-09-09 at 6.29.16 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-09 at 6.29.16 PM.png\"! !Screenshot 2025-09-09 at 6.28.53 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-09 at 6.28.53 PM.png\"! !Screenshot 2025-09-09 at 5.19.47 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-09 at 5.19.47 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "16/Sep/25 8:05 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c; Resolved Workflow Template issue. Pls check once.",
+      "12/Nov/25 12:38 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;After Reopen the product, it work as expected no any Error are shown and Product shows the status as “New”. In the Action button, Data enrichment Done button is showing. !Screenshot 2025-11-12 at 12.35.10 PM.png|width=472,alt=\"Screenshot 2025-11-12 at 12.35.10 PM.png\"! !Screenshot 2025-11-12 at 12.35.24 PM.png|width=472,alt=\"Screenshot 2025-11-12 at 12.35.24 PM.png\"! !Screenshot 2025-11-12 at 12.35.49 PM.png|width=472,alt=\"Screenshot 2025-11-12 at 12.35.49 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments explicitly say Resolved Workflow Template issue"
+  },
+  {
+    "key": "CPI-404",
+    "title": "Incorrect email notifications and missing post approval user in Change SKU workflow",
+    "description": "*Environment: Production* * Workflow: Change SKU * Notification: Email Trigger *Steps to Reproduce:* # SKU belongs to *Bonded Retail > Super Abrasive Retail*. # Product Developer approves the SKU and sends it to *Product Manager*. # Observe the email notification and in-app notification. *Expected Result:* * Email should be sent only to the correct *Product Manager (Retail)*. * Mail body should correctly display the *post approval user (Product Head)*. * Notification should open the correct workflow item without errors. *Actual Result:* # Email is incorrectly triggered to *DISC Manager – Suthirraj S D (*[*suthirrajsd@cumi.murugappa.com*|mailto:suthirrajsd@cumi.murugappa.com]*)* instead of Product Manager. # Email body does not show the *post approval user (Product Head)*. # SKU is from *Bonded Retail > Super Abrasive Retail*, but mail is also sent to *Product Head – Industrial* along with notification. #* In *Product Head – Industrial* user, When clicking the notification, an *error is shown*. *References:* * Screenshot 1: Wrong user in email recipient. * Screenshot 1: Mail body missing post approval user. * Screenshot 3: Notification issue (error on click). !Screenshot 2025-09-08 at 4.45.04 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-08 at 4.45.04 PM.png\"! !Screenshot 2025-09-08 at 4.55.50 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-08 at 4.55.50 PM.png\"! !Screenshot 2025-09-08 at 4.59.49 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-08 at 4.59.49 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "23/Sep/25 3:37 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] Please try to debug the issue on your own first. It seems some default pimcore permission issue. We can connect tommorrow on your findings and blocker on this to resolve this ticker.",
+      "26/Sep/25 5:35 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done changes on UAT and PROD server, pls check and confirm. Also allow permission to Product Head to open notification process.",
+      "29/Sep/25 10:58 AM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] [~accountid:712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285] Please ensure allow permission only to Product Head Retail which have Retail vertical only. Product head industrial allow only for Industrial vertical product.",
+      "12/Nov/25 12:23 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Working as expected. !Screenshot 2025-11-12 at 11.47.15 AM.png|width=348,alt=\"Screenshot 2025-11-12 at 11.47.15 AM.png\"! !Screenshot 2025-11-12 at 11.40.07 AM.png|width=348,alt=\"Screenshot 2025-11-12 at 11.40.07 AM.png\"! !Screenshot 2025-11-12 at 11.48.19 AM.png|width=348,alt=\"Screenshot 2025-11-12 at 11.48.19 AM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments explicitly mention Pimcore permission issue and Product Head permissions"
+  },
+  {
+    "key": "CPI-403",
+    "title": "Email shows incorrect line after DAM Manager approval – Product Manager reference not required",
+    "description": "*Environment: Prod* * Workflow: Marketing Manager → DAM Manager → Publish to Web *Steps to Reproduce:* # Marketing Manager approves an product and sends it to *DAM Manager*. # DAM Manager receives the approval email notification. # Observe the content of the mail. *Expected Result:* * Email should only instruct the DAM Manager to review and publish the product. * No further steps or Product Manager reference should be included. *Actual Result:* * Email incorrectly contains the line: *\"Post approval please send ALO RESIN SANDER DISC test to 'Product Manager' for review.\"* * This is misleading because once DAM Manager approves, the product is directly *Published to Web*. *Impact:* * Causes workflow confusion by wrongly suggesting Product Manager involvement after DAM Manager approval. *References:* * Screenshot attached (highlighting the unnecessary line). !Screenshot 2025-09-08 at 4.47.24 PM.png|width=1440,height=900,alt=\"Screenshot 2025-09-08 at 4.47.24 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "12/Sep/25 12:47 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;What correct Template content needs to send, pls write in tickets.",
+      "12/Sep/25 11:11 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;It is “In-Review“ Product Template, once done changes it affected on every “In-Review“ Product. Pls confirm with client, if yes then change it.",
+      "12/Sep/25 11:11 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;It is “In-Review“ Product Template, once done changes it affected on every “In-Review“ Product. Pls confirm with client, if yes then change it.",
+      "08/Oct/25 7:57 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done and updated on UAT and PROD Server.",
+      "27/Oct/25 7:31 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;The Line from Mail \"Post approval please send ProductName to 'Product Manager' for review.\" *is removed.* !Screenshot 2025-10-27 at 7.28.55 PM.png|width=534,alt=\"Screenshot 2025-10-27 at 7.28.55 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments identify In-Review Product Template and removed incorrect email line"
+  },
+  {
+    "key": "CPI-376",
+    "title": "Restrict Future Date Selection in ERP Form Date Filters",
+    "description": "This functionality will be developed in Phase 2. h3. *Description:* *Issue:* In the ERP form, users are currently able to select *future dates* in the *Start Date* and *End Date* fields. This leads to incorrect behavior in the PIM ID listing, as no PIM IDs are created with future dates. As a result, the filter returns no records. *Expected Behavior:* * Users should *not be allowed* to select any *future date* in either the *Start Date* or *End Date* fields. * The date picker should be restricted to allow selection *only up to the current date (today)*. *Impact:* * Prevents confusion and improves the accuracy of the filter results. * Ensures valid data retrieval based on actual PIM ID creation dates. *Scope:* * Applicable to the ERP form's Start Date and End Date fields used for filtering PIM IDs. !Screenshot 2025-07-10 at 7.54.55 PM.png|width=1088,height=549,alt=\"Screenshot 2025-07-10 at 7.54.55 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "14/Jul/25 2:22 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;As per discussion and direction given by PM [~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83], This functionality will be consider and developed in Phase 2.",
+      "12/Sep/25 12:23 PM;712020:edb6975e-6657-4571-a61c-9d16c7ba2a83;[~accountid:712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd] Can you please check this issue and provide you suggestions on this.",
+      "15/Sep/25 12:54 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] As disccused with you , the record is being saved with today’s date in the database, but it is displayed as tomorrow’s date. Since this involves customized ExtJS code, it should be debug to check why the PIM ID is not appearing despite being saved correctly in the database. Please debug this. The record is getting saved with today’s date in the database, but it’s showing up as tomorrow’s date. cc: [~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83]",
+      "03/Oct/25 2:12 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done and Update on UAT and PROD Server.",
+      "23/Oct/25 7:06 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In the ERP user, 1) Create a new NPI [TestDate] on 23 oct 2025 and go thought Product workflow. The product is to ERP team. While select the start and End date. Product is showing at correct Date [23 oct 2025 ]. Sothe issue - the record is being saved with today’s date in the database, but it is displayed as tomorrow’s date. – *is solved* !Screenshot 2025-10-23 at 6.59.52 PM.png|width=340,alt=\"Screenshot 2025-10-23 at 6.59.52 PM.png\"! 2) I try to select the Future date in Start and End date. It accept the Future Dates. !Screenshot 2025-10-23 at 6.50.39 PM.png|width=340,alt=\"Screenshot 2025-10-23 at 6.50.39 PM.png\"!",
+      "24/Oct/25 7:58 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on UAT and PROD server. !Screenshot (343).png|width=613,alt=\"Screenshot (343).png\"!",
+      "27/Oct/25 7:17 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;A. When try to select the Future date in Start and End date. It won't accept the Future Dates. – *is solved* !Screenshot 2025-10-27 at 7.13.05 PM.png|width=534,alt=\"Screenshot 2025-10-27 at 7.13.05 PM.png\"! !Screenshot 2025-10-27 at 7.15.14 PM.png|width=519,alt=\"Screenshot 2025-10-27 at 7.15.14 PM.png\"!"
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say customized ExtJS code needed debugging for date display/filter behavior"
+  },
+  {
+    "key": "CPI-394",
+    "title": "Rename the \"Update\" button to \"Update to DAM Manager\" in the DAM workflow",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "01/Aug/25 5:18 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83] The solution and code have been provided to [~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] . Proceeding to assign the ticket to him",
+      "01/Aug/25 6:43 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and UAT.",
+      "04/Aug/25 5:21 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In the DAM workFlow, In the Action dropdown “Update to DAM Manager” are showing in the product manager, product head and Marketing manager. !Screenshot 2025-08-04 at 5.09.16 PM.png|width=1435,height=873,alt=\"Screenshot 2025-08-04 at 5.09.16 PM.png\"! !Screenshot 2025-08-04 at 5.07.19 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-04 at 5.07.19 PM.png\"! !Screenshot 2025-08-04 at 5.00.44 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-04 at 5.00.44 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments describe DAM workflow action label/button rule change"
+  },
+  {
+    "key": "CPI-382",
+    "title": "Mismatch of ERP Attributes Between New NPI Creation and Post-Publish View",
+    "description": "*Description:* As per the attribute mapping sheet provided by the client, the ERP form should display consistent attributes in both the New NPI creation phase and after the product is published. However, after publishing the product and enabling *\"New item code creation\"*, the ERP form displays additional unexpected attributes. Specifically, *five extra fields* are visible post-publish that were not required to be shown. *Steps to Reproduce:* # Go to *NPI section* in the PIMCore Admin. # Start creating a *New NPI*. # Observe the ERP attribute fields displayed during the creation phase. # Publish the product. # Click on the checkbox for *\"New item code creation\"*. # Observe that *5 extra attributes* appear in the ERP section which are not defined as per the client-provided attribute sheet. *Expected Result:* The ERP attributes displayed post-publish (with \"New item code creation\" enabled) should exactly match the attributes given in the client sheet. *Actual Result:* After publishing and enabling \"New item code creation\", 5 unexpected/extra ERP attributes are shown. !Screenshot 2025-07-14 at 4.08.28 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-14 at 4.08.28 PM.png\"! !Screenshot 2025-07-14 at 4.01.10 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-14 at 4.01.10 PM.png\"! !Screenshot 2025-07-14 at 4.07.24 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-14 at 4.07.24 PM.png\"! !Screenshot 2025-07-14 at 4.06.18 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-14 at 4.06.18 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "15/Jul/25 6:05 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285; * All the attributes should be visible after a new NPI created in the ERP tab. No need to click on the Checkbox. !Screenshot 2025-07-15 at 5.21.39 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-15 at 5.21.39 PM.png\"!",
+      "17/Jul/25 1:59 AM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat",
+      "18/Jul/25 8:24 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;All the attributes are visible after a new NPI created in the ERP tab. !Screenshot 2025-07-18 at 8.22.51 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-18 at 8.22.51 PM.png\"!",
+      "18/Jul/25 8:25 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;*No 5 extra attributes* appear in the ERP section. !Screenshot 2025-07-18 at 8.19.54 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-18 at 8.19.54 PM.png\"!",
+      "30/Sep/25 12:22 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In Production, *No 5 extra attributes* appear in the ERP section. !Screenshot 2025-09-30 at 12.21.26 PM.png|width=528,alt=\"Screenshot 2025-09-30 at 12.21.26 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "low",
+    "notes_for_eval": "description cites ERP attribute mapping sheet/form-field visibility mismatch"
+  },
+  {
+    "key": "CPI-366",
+    "title": "After ERP Approved the Product, If user click on DAM Tab then ERP tab can't be clickable in all the User.",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 11:03 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;User *can’t go back* to ERP after switching away, because disabled so not possible to clickable of ERP tab.",
+      "26/Jun/25 8:44 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Step to reproduce 1. Open any User and open the product which is Approved. # in the Product ERP and DAM tab is Showing. # Click on DAM tab. # As the DAM tab is open. Try to click on the ERP tab. it cant be clickable. If user want to see the information in the ERP tab then they need to Reload the Page. So, ERP & DAM tab should be clickable and Information in the tabs are visible.",
+      "11/Jul/25 4:26 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;other user have this issue still pending, But In the Product manager & Admin works properly.",
+      "21/Jul/25 8:02 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and UAT.",
+      "22/Jul/25 1:59 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;All the user can click on the ERP & DAM tab and Information in the tabs are visible."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "low",
+    "notes_for_eval": "recent_comments describe tab disabled after DAM click; inferred UI tab-state logic"
+  },
+  {
+    "key": "CPI-377",
+    "title": "Error Showing After Product Approval Opening, Due to Invalid SAGDescription value error showing while opening the item.",
+    "description": "h3. *Description:* *Issue:* When creating a new NPI and the ERP team adds the item code, the product is moved from the *NPI section to the Coated section*. At this point, an error occurs related to the *SAGDescription* field. *Error Message:* {{Invalid Option field [ SAGDescription ]: Please choose a valid option for select / multiselect field [ SAGDescription ]. Current value: \"YS592-Ceramic BELTS\"}} *Observation:* * The value {{\"YS592-Ceramic BELTS\"}} is *already present in the Data Model sheet* under the *BELT PMG* category. * This suggests a *mismatch between the configured dropdown values in the system and the master data*. *Expected Behavior:* * The value {{\"YS592-Ceramic BELTS\"}} should be recognized as valid and not throw an error during the product movement process. *Action Needed:* * Investigate and sync the SAGDescription dropdown values in the system with the latest Data Model entries. * Ensure all valid SAGDescriptions, especially under BELT PMG, are properly mapped and available in the select/multiselect field options. *Impact:* * This error is blocking the product transition from NPI to Coated section, affecting workflow progression and ERP integration. !Screenshot 2025-07-04 at 5.34.23 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-04 at 5.34.23 PM.png\"! !Screenshot 2025-07-04 at 5.40.02 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-04 at 5.40.02 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "11/Jul/25 11:47 AM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Step to Reproduce 1) Approve the Item and add the item code in the ERP form. 2) Go to DAM user login and open the item. Error is still showing. !Screenshot 2025-07-11 at 11.29.19 AM.png|width=1440,height=900,alt=\"Screenshot 2025-07-11 at 11.29.19 AM.png\"!",
+      "14/Jul/25 7:05 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat",
+      "18/Jul/25 8:28 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Still showing Issue. Please Verify all the SAG should correctly align with PMG. !Screenshot 2025-07-18 at 8.17.00 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-18 at 8.17.00 PM.png\"!",
+      "21/Jul/25 1:09 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done for working. !Screenshot (249).png|width=1310,height=614,alt=\"Screenshot (249).png\"!",
+      "22/Jul/25 6:12 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Still we get the error !Screenshot 2025-07-22 at 6.11.53 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-22 at 6.11.53 PM.png\"!",
+      "22/Jul/25 6:33 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;You are not providing “Objects” access to DAM Manager, I have set that. Now check again. !Screenshot (252).png|width=1366,height=768,alt=\"Screenshot (252).png\"!",
+      "22/Jul/25 7:11 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;After [~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] are provided “Objects” access to DAM Manager, Still we get the error !Screenshot 2025-07-22 at 7.07.28 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-22 at 7.07.28 PM.png\"!",
+      "22/Jul/25 7:29 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;I have open with DAM user, not getting any error. Once Client have issue then check it. !Screenshot (256).png|width=1340,height=614,alt=\"Screenshot (256).png\"!",
+      "22/Jul/25 7:42 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Please check this product Coated Industrial > Belt > TestSAGUpdated124 PIM ID - 3380 !Screenshot 2025-07-22 at 7.37.45 PM.png|width=426,height=227,alt=\"Screenshot 2025-07-22 at 7.37.45 PM.png\"!",
+      "22/Jul/25 8:01 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Pls re-check it’s open perfectly. !Screenshot (261).png|width=1284,height=614,alt=\"Screenshot (261).png\"!",
+      "23/Jul/25 5:08 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Error Still Showing Steps 1) Create a new NPI 2) Select the Coated Industrial > Belt & other > YS592-Ceramic BELTS 3) completed the Product workflow and add the ERP code and SAVE. 4) Now the Product is move to Coated industrial Folder. 5) Open the same product in the DAM user. Show the Error. !Screenshot 2025-07-23 at 5.05.51 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-23 at 5.05.51 PM.png\"!",
+      "23/Jul/25 5:25 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Have you assign Permission of Product Object for DAM Manager? !Screenshot (264).png|width=1366,height=768,alt=\"Screenshot (264).png\"! !Screenshot (263).png|width=1366,height=768,alt=\"Screenshot (263).png\"!",
+      "24/Jul/25 7:21 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Resolved on Dev and UAT.",
+      "29/Jul/25 2:37 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Check for 2 different NPI. Invalid SAGDescription value error not showing while opening the item. !Screenshot 2025-07-29 at 2.34.30 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-29 at 2.34.30 PM.png\"! !Screenshot 2025-07-29 at 2.35.47 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-29 at 2.35.47 PM.png\"!"
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "medium",
+    "notes_for_eval": "description says SAGDescription dropdown/master data mismatch and needs sync"
+  },
+  {
+    "key": "CPI-344",
+    "title": "For DAM tab please refer updated table for rolewise permissions",
+    "description": "For DAM tab please refer updated table",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "07/Jul/25 2:49 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;IN PIM UI, DAM tab is showing as per the Following Table: | |Product| | | | | | | | | | | |ERP|DAM - Before prodcut approval|DAM - After prodcut approval|Status| |Admin|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Fail| |Product Manager|Tab Visible | Fields Editable|Tab Invisible|Tab Visible | Fields Disable|Pass| |Product Dev|Tab Visible | Fields Disable|Tab Invisible|Tab Invisible|Pass| |SCM|Tab Visible | Fields Disable|Tab Invisible|Tab Invisible|Pass| |Marketing Manager|Tab Visible | Fields Disable|Tab Invisible|Tab Visible | Fields Editable|Pass| |Product Head|Tab Visible | Fields Disable|Tab Invisible|Tab Visible | Fields Disable|Pass| |Marketing Head|Tab Disable|Tab Invisible|Tab Visible | Fields Editable|Pass| | | | | | | |DAM|Tab Invisible|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Pass| | |SKU| | | | | | | |Information Material|Technical|SEO|Quality Summery|SCM|DAM| |Admin|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable| |Product Manager|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |Pord Dev|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |SCM|Tab Disable|Tab Invisible|Tab Disable|Tab Disable|Tab Visible | Fields Editable|Tab Disable| |Marketing Manager|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |Product Head|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |Marketing Head|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| | | | | | | | | |DAM|Tab Invisible|Tab Invisible|Tab Invisible|Tab Invisible|Tab Invisible|Tab Visible | Fields Disable|"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "description/recent_comments are explicitly role-wise DAM tab permissions"
+  },
+  {
+    "key": "CPI-341",
+    "title": "Remove DAM tab till the product is approved for PM, PH, MM. once the product is approved then only dam tab should be visible as per permissions",
+    "description": "Remove DAM tab till the product is approved for pm, ph, mm. once the product is approved then only dam tab should be visible as per permissions",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 6:46 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Product Manager & Product Head after approved the Product, DAM tab field are not disable.",
+      "26/Jun/25 2:20 AM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;For disabled DAM tab is different things and DAM tab attributes needs to disabled is different things.",
+      "26/Jun/25 6:30 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;In DAM tabs fields are disabled but Image and Video fields not possible to do disabled.",
+      "07/Jul/25 2:52 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In PIM UI, DAM tab is showing as per the Following Table: | |Product| | | | | | | | | |ERP|DAM - Before prodcut approval|DAM - After prodcut approval| |Admin|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable| |Product Manager|Tab Visible | Fields Editable|Tab Invisible|Tab Visible | Fields Disable| |Product Dev|Tab Visible | Fields Disable|Tab Invisible|Tab Invisible| |SCM|Tab Visible | Fields Disable|Tab Invisible|Tab Invisible| |Marketing Manager|Tab Visible | Fields Disable|Tab Invisible|Tab Visible | Fields Editable| |Product Head|Tab Visible | Fields Disable|Tab Invisible|Tab Visible | Fields Disable| |Marketing Head|Tab Disable|Tab Invisible|Tab Visible | Fields Editable| | | | | | |DAM|Tab Invisible|Tab Visible | Fields Editable|Tab Visible | Fields Editable| | |SKU| | | | | | | |Information Material|Technical|SEO|Quality Summery|SCM|DAM| |Admin|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable| |Product Manager|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |Pord Dev|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |SCM|Tab Disable|Tab Invisible|Tab Disable|Tab Disable|Tab Visible | Fields Editable|Tab Disable| |Marketing Manager|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |Product Head|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| |Marketing Head|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Visible | Fields Editable|Tab Disable|Tab Disable| | | | | | | | | |DAM|Tab Invisible|Tab Invisible|Tab Invisible|Tab Invisible|Tab Invisible|Tab Visible | Fields Disable| It working as Expected."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "description/recent_comments define DAM tab visibility by role and approval status"
+  },
+  {
+    "key": "CPI-350",
+    "title": "Item code attributes should not be visible untill the product is approved, it will be visible only for ERP form",
+    "description": "Item code attributes should not be visible untill the product is approved, it will be visible only for ERP form",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "26/Jun/25 8:50 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;item code attributes are visible until the product is approved. Working As expected"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "low",
+    "notes_for_eval": "description is attribute visibility rule for item code fields before approval"
+  },
+  {
+    "key": "CPI-346",
+    "title": "In Notification, it is showing as product manager instead of product head, but mail is going to product head only",
+    "description": "In Notification, it is showing as product manager instead of product head, but mail is going to product head only",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 12:26 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285] That was previous notification sent by product manger to marketing manger, when action has taken by marketing manager then notification will display to product head user only not marketing maneger. There was misunderstanding in meeting.",
+      "25/Jun/25 2:39 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Notification and Product WorkFlow Work as Expected"
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say misunderstanding and workflow works as expected"
+  },
+  {
+    "key": "CPI-375",
+    "title": "Update Marketing Head Product Approval Email Template",
+    "description": "This functionality will be developed in Phase 2. h3. *Description:* *Objective:* Modify the email template that is sent to the Marketing Head during Product Approval. *Requirements:* # *Remove the following line* from the current email template: _\"Post approval, please send 'Product Name' to 'Next Role' for review.\"_ # *Create a new email template* that does *not include* the above line. # The updated email template should be triggered *only when a product is in the approval workflow* and should be sent *exclusively to the Marketing Head*. *Scope:* * Applicable only for Product Approval stage. * Affects email notifications received by the Marketing Head role. !Screenshot 2025-07-04 at 5.01.58 PM.png|width=1107,height=641,alt=\"Screenshot 2025-07-04 at 5.01.58 PM.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "01/Aug/25 5:24 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;* [~accountid:712020:edb6975e-6657-4571-a61c-9d16c7ba2a83] The solution and code have been provided to [~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] . Proceeding to assign the ticket to him. Create a new template according to Marketing Head and changed the template name in line no 240 !image (15).png|width=668,height=248,alt=\"image (15).png\"!",
+      "01/Aug/25 7:32 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and UAT. Create New Template: “In-Review-MarketingHead“ and completed functionality. !Screenshot (279).png|width=571,height=423,alt=\"Screenshot (279).png\"!",
+      "04/Aug/25 5:23 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Check in email send to Marketing Head in both scenarios like in normal Product workflow and Reopen product workflow as well. !Screenshot 2025-08-04 at 4.57.23 PM.png|width=1055,height=677,alt=\"Screenshot 2025-08-04 at 4.57.23 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say create new Marketing Head email template and update template name"
+  },
+  {
+    "key": "CPI-342",
+    "title": "For admin, all tabs should be visible & editable",
+    "description": "For admin, all tabs should be visible & editable",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 6:48 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In Admin user, Product only show the ERP and DAM Tab. Now DAM tab is disable and Not required tabs are visible. !Screenshot 2025-06-25 at 6.35.55 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-25 at 6.35.55 PM.png\"!",
+      "26/Jun/25 2:52 AM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Admin have allow all access to check and verify all data added by other Users, for that reason allow all access to Admin.",
+      "26/Jun/25 3:17 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;[~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] In Admin user, Product are show the ERP and DAM Tab. Now it Showing as Expected. !Screenshot 2025-06-26 at 3.14.47 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 3.14.47 PM.png\"! !Screenshot 2025-06-26 at 3.14.56 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 3.14.56 PM.png\"! !Screenshot 2025-06-26 at 3.14.27 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 3.14.27 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments explicitly say allow all access to Admin"
+  },
+  {
+    "key": "CPI-370",
+    "title": "SCM Tab is visible in Product Head user",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "02/Jul/25 8:51 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;SCM tab is disable in the Product Head user. !Screenshot 2025-07-02 at 8.49.43 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-02 at 8.49.43 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say SCM tab disabled for Product Head user"
+  },
+  {
+    "key": "CPI-368",
+    "title": "For ERP Support user Notifications are not Showing",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "02/Jul/25 10:50 AM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;Unit testing has done on UAT !image-20250702-052029.png|width=661,height=292,alt=\"image-20250702-052029.png\"!",
+      "02/Jul/25 8:05 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;ERP Support team user are now getting the Notifications. Notification working as expected in UAT environment. !Screenshot 2025-07-02 at 8.03.01 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-02 at 8.03.01 PM.png\"!"
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say UAT tested/notifications showing; no root-cause signal"
+  },
+  {
+    "key": "CPI-364",
+    "title": "Asset image/ Thumbnail are not Shown in DAM Tab For Product Manager User.",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "10/Jul/25 1:31 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat.",
+      "11/Jul/25 12:17 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;As the Asset (Image) are added in DAM tab by DAM manager and Do the Asset enrichment Action. Product Manager open the item and go to DAM tab. Now the Assets (Images) are showing correctly. !Screenshot 2025-07-11 at 12.04.09 PM.png|width=1440,height=794,alt=\"Screenshot 2025-07-11 at 12.04.09 PM.png\"! !Screenshot 2025-07-11 at 12.07.23 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-11 at 12.07.23 PM.png\"! !Screenshot 2025-07-11 at 12.12.33 PM.png|width=1440,height=900,alt=\"Screenshot 2025-07-11 at 12.12.33 PM.png\"!"
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say done/assets showing; no root-cause signal"
+  },
+  {
+    "key": "CPI-362",
+    "title": "New NPI > ERP > Objective Others : Extra field is Showing.",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 10:51 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;As per requirements added new fields.",
+      "26/Jun/25 3:07 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In the Brand/ product objective Field Have an DropDown. DropDown contains * Portfolio Expansion, * Cost Optimization, * Product upgrade /innovation, * New segment/market entry, * Customer request, * If others (Added the Other Objective Field with text box) !Screenshot 2025-06-26 at 3.06.12 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 3.06.12 PM.png\"!",
+      "10/Jul/25 1:01 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat.",
+      "11/Jul/25 4:33 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Its Working as expected"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say field was added as per requirements"
+  },
+  {
+    "key": "CPI-356",
+    "title": "Rename Product manager instead of Project Manager",
+    "description": "Rename Product manager instead of Project Manager",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 5:29 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In the Both Product Head and Marketing Head User, Product manager are showing in the Action button Dropdown. !Screenshot 2025-06-25 at 5.13.40 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-25 at 5.13.40 PM.png\"! !Screenshot 2025-06-25 at 5.27.31 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-25 at 5.27.31 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "low",
+    "notes_for_eval": "description/recent_comments indicate workflow label rename from Project to Product Manager"
+  },
+  {
+    "key": "CPI-402",
+    "title": "DAM Tab should be invisible for Product Developer, but is showing after product publish",
+    "description": "*Environment: Prod* * Application: Pimcore (CUMI) * Role: Product Developer * Status: Published to Web *Steps to Reproduce:* # Log in as *Product Developer*. # Open any product that is *Published to Web*. # Navigate to the product details screen. # Check if *DAM Tab* is visible. *Expected Result:* * For *Product Developer* role, the *DAM Tab* should remain *Invisible or Disable* before and after product publish. * Product Developer should not be able to view or edit DAM tab fields. *Actual Result:* * After DAM Manager publishes the product, the *DAM Tab becomes visible* to Product Developer. * Product Developer is able to view and add values in the DAM tab fields. *References:* * [CPI-344] Role-wise access matrix (already solved for Dev role, but issue reappears post-publish). * Screenshots attached: ** Screenshot 1: Role-wise test case matrix (CPI-344). ** Screenshot 2: DAM Tab visible to Product Developer post-publish.",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "09/Sep/25 7:31 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on UAT and PROD Server."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "low",
+    "notes_for_eval": "description is role-based DAM tab visibility after publish"
+  },
+  {
+    "key": "CPI-357",
+    "title": "‘Verify' attribute should be visible only for product head and show this attribute in last tab of sku",
+    "description": "‘Verify' attribute should be visible only for product head and show this attribute in last tab of sku",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 6:53 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;In the Product Head, ‘Verified' tab is Showing in the SKU for product head Only and Verified Field with dropdown is also shown under the tab. !Screenshot 2025-06-25 at 6.51.35 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-25 at 6.51.35 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "low",
+    "notes_for_eval": "description/recent_comments define Verify attribute visibility for Product Head only"
+  },
+  {
+    "key": "CPI-355",
+    "title": "Remove legal team role from everywhere",
+    "description": "Note should be displayed in bold text and inverted comma, in all email including rejection emails",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "25/Jun/25 5:34 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;legal team role as well as User are remove from everywhere. !Screenshot 2025-06-25 at 5.32.13 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-25 at 5.32.13 PM.png\"! !Screenshot 2025-06-25 at 5.34.01 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-25 at 5.34.01 PM.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say legal team role and user were removed everywhere"
+  },
+  {
+    "key": "CPI-390",
+    "title": "SKU tabs are showing under the product.",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "01/Aug/25 1:10 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;We have tried with created new Products, not re-producing same from now, so close this ticket.",
+      "05/Aug/25 3:23 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Not able to reproduce this issue. So, as discuss in DSM, closing this issue. !Screenshot 2025-08-05 at 3.21.53 PM.png|width=1440,height=900,alt=\"Screenshot 2025-08-05 at 3.21.53 PM.png\"!"
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say not reproducible/closed; no root-cause signal"
+  },
+  {
+    "key": "CPI-353",
+    "title": "Item code needs to be removed from PDF",
+    "description": "Item code needs to be removed from PDF",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "26/Jun/25 8:46 PM;712020:6dbf8ce9-e3d4-4f0e-b6fa-4159f0beb285;Item code are removed from PDF successfully. !Screenshot 2025-06-26 at 8.18.21 PM.png|width=1440,height=900,alt=\"Screenshot 2025-06-26 at 8.18.21 PM.png\"! !Screenshot 2025-06-26 at 8.18.42 PM.png|width=1104,height=663,alt=\"Screenshot 2025-06-26 at 8.18.42 PM.png\"!",
+      "10/Jul/25 1:00 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "description/recent_comments indicate PDF output/template field removal"
+  },
+  {
+    "key": "CPI-294",
+    "title": "ALL Product and SKU is coming in API, only Parent will come with SKUs listing in separate variable",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "22/Apr/25 1:21 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;We need information from client on which data need to shows in API process.",
+      "10/Jul/25 1:00 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;We have set API request for Published Product on Dev and Uat. Done for updates."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "low",
+    "notes_for_eval": "recent_comments say API request was set for Published Product; inferred API response/query logic"
+  },
+  {
+    "key": "CPI-251",
+    "title": "Issue in Bulk import with 2000 records and excel file is not to be uploaded",
+    "description": "Issue in Bulk import with 2000 records and excel file is not to be uploaded 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials 4.Go to menu list and click on Bulk import 5.select excel file and click on upload button. 6.After clicking on upload button,file is continuous processing and 0 to 100 percen be shown and continuos running. 7.I was waiting approx 5 minuts but its not be uplo Expected Result->After clicking the uploaded file,file should be successfully uploaded. Actual result: For 2000 records,file is not to be uploaded.",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "07/Apr/25 4:34 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;!image-20250407-110355.png|width=1366,height=768,alt=\"image-20250407-110355.png\"!",
+      "14/Apr/25 2:39 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;If upload for 4000 records with UAT environment and found exception error. !image-20250414-090919.png|width=512,height=288,alt=\"image-20250414-090919.png\"!",
+      "15/Apr/25 11:59 AM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] It’s working on Uat, pls check with more records.",
+      "15/Apr/25 12:00 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] Tested with 4000 records working on Uat, More that this getting Memory Issue on Uat.",
+      "15/Apr/25 8:40 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] Done to update with 5000 records bulk import process on Uat, need to check with more records on Uat.",
+      "23/Apr/25 12:18 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] on 7000 bulk import process it takes, 25-30 mins approximate.",
+      "02/May/25 5:23 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] for 6500 bulk import process, it takes 12 mins approximate.",
+      "10/Jul/25 12:57 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;As we testing with given client Data working fine on Uat. Click can provided only two PMG’s data, updated on Uat, remaining PMG’s data are not provided by client end."
+    ],
+    "root_cause_layer": "L2",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments mention UAT memory issue and environment-specific bulk import limits"
+  },
+  {
+    "key": "CPI-303",
+    "title": "forgot and lost password link is not opening my profile section in UAT",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "07/May/25 7:58 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Functionality is already working on Dev and Uat, testing on Uat with below credential to added new password: Username: TestProductmanager PW: Test@12345 May be your Email Id assign to multiple users, have an issue for that. !Uat-Forgot-Password-Done.png|width=1025,height=531,alt=\"Uat-Forgot-Password-Done.png\"!"
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say email ID may be assigned to multiple users"
+  },
+  {
+    "key": "CPI-302",
+    "title": "dropdown and input value save without any notification in product class",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "21/May/25 12:42 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat."
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say done on Dev/UAT; no root-cause signal"
+  },
+  {
+    "key": "CPI-298",
+    "title": "Bulk Enrichment or One time Data migration , workflow is appearing as NEW status",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "28/Apr/25 11:23 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Assign Workflow State for Product as “Published on Web (Product) by Bulk Import\" and SKU as “Published on Web (SKU) by Bulk Import“ during One Time Migration on PMG’s product and updated on Dev and Uat itself."
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say assign workflow state during one-time migration for PMG products/SKUs"
+  },
+  {
+    "key": "CPI-296",
+    "title": "Wrong dropdown data update in table and visible in search by SKU Update import",
+    "description": "!image-20250421-074921.png|width=480,height=270,alt=\"image-20250421-074921.png\"! [^excel_report_2025-04-21-1745220635 (1).xlsx] !image-20250421-075141.png|width=1338,height=676,alt=\"image-20250421-075141.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "30/Apr/25 8:06 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat server."
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say done on Dev/UAT; no root-cause signal"
+  },
+  {
+    "key": "CPI-301",
+    "title": "Blank message in SKU ERP import in 2 attempt",
+    "description": "Step to reproduce # Import the 2 new SKU successfully in new product # open and delete the sku but not delete the parent product # Again import same 2 SKU in same parent product # I got blank message popup but 2 sku was successfully imported. Recoreded Video : [https://drive.google.com/file/d/1V-9vtBvUNVtDYZzE_Ch5G_ZwVIE0d0dK/view?usp=sharing|https://drive.google.com/file/d/1V-9vtBvUNVtDYZzE_Ch5G_ZwVIE0d0dK/view?usp=sharing|smart-link]",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "06/May/25 12:36 PM;712020:65b962b2-9690-4346-9f8e-22488e972325;Hi, can’t be reproduce the issue."
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say cannot reproduce; no root-cause signal"
+  },
+  {
+    "key": "CPI-292",
+    "title": "Rename Sub Brand to Brand Extension",
+    "description": "!image-20250415-101404.png|width=1070,height=530,alt=\"image-20250415-101404.png\"! rename folder and title of ht sub brand name and check the impact as well",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "15/Apr/25 8:30 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;We are using Sub Brand Object, we can not change it, that’s why we are not replace folder name itself. Because of both needs same name. On PMG template we have updated and accordingly on Product class replace with Brand Extension name.",
+      "18/Apr/25 8:30 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;It is not possible, because of once create new Object it consider as same name of Folder and it stored in it.",
+      "22/Apr/25 8:24 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Once create single object of Sub Brand it always stored in SubBrand folder.",
+      "23/Apr/25 2:07 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat itself. !Screenshot (181).png|width=1230,height=647,alt=\"Screenshot (181).png\"!"
+    ],
+    "root_cause_layer": "L1",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments cite Pimcore object/folder naming behavior as limitation"
+  },
+  {
+    "key": "CPI-297",
+    "title": "product is not appearing in PMG folder in tree while login with product manager in UAT",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "no root-cause signal in any field"
+  },
+  {
+    "key": "CPI-299",
+    "title": "SKU workflow status changes after Bulk Approval button, it should be SKU update or re-publised to Web",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "no root-cause signal in any field"
+  },
+  {
+    "key": "CPI-243",
+    "title": "Issue in Bulk import and excel file is not to be uploaded",
+    "description": "Issue in Bulk import and excel file is not to be uploaded 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials 4.Go to menu list and click on Bulk import 5.select excel file and click on upload button. 6.After clicking on upload button,message is showing invalid file format(only excel file uploaded) 7.Now uplaoding exdel file but its not to be uplaoded Expected Result->After clicking the uploaded file,file should be successfully uploaded. Actual result: excel file is not to be uploaded and message is showing invalid file format(only excel file uploaded) Note: File has been uploaded 100 percent then again start from 0 percent and message is showing, invalid file format and file is not to be uploaded.",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "02/Apr/25 3:46 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;!image-20250402-101534.png|width=1366,height=768,alt=\"image-20250402-101534.png\"! !image-20250402-101608.png|width=1366,height=768,alt=\"image-20250402-101608.png\"!",
+      "04/Apr/25 3:49 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;[~accountid:712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c] Now file has been successfully but after uploading the excel file.message is showing 4 times 0 to 100 pecent and agaon same message is showing 0 to 100 pertcent. Its not a blocker but according to your availability,you can check from your end.",
+      "22/Apr/25 2:47 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done to resolved on Dev and Uat."
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say resolved/done; no root-cause signal"
+  },
+  {
+    "key": "CPI-293",
+    "title": "Security Risk in Product API, without authorization data is coming",
+    "description": "!image-20250415-115254.png|width=1591,height=811,alt=\"image-20250415-115254.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "15/Apr/25 8:34 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;We are not integrated any server authentication process on client server. Let we check and confirm it.",
+      "16/Apr/25 7:46 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done to update on Dev with Authentication: !image-20250416-141549.png|width=1366,height=768,alt=\"image-20250416-141549.png\"!",
+      "18/Apr/25 1:20 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;tested on UAT , working fine !image-20250418-074930.png|width=1048,height=430,alt=\"image-20250418-074930.png\"! !image-20250418-075010.png|width=1048,height=950,alt=\"image-20250418-075010.png\"!",
+      "22/Apr/25 1:10 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done with Authorisation: Bearer Token and updated on Dev and Uat itself."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say server authentication was not integrated and Bearer Token auth was added"
+  },
+  {
+    "key": "CPI-291",
+    "title": "Wrong message after upload in SAG, Brand and Brand extension",
+    "description": "It should be “Brand data has been imported successfully. Please check logs “Assets/BrandLogs“ for more error and success details !image-20250415-100917.png|width=480,height=270,alt=\"image-20250415-100917.png\"! !image-20250415-101735.png|width=1070,height=530,alt=\"image-20250415-101735.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "15/Apr/25 8:27 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on localhost, for SAG, Brand and Brand Extension message. !Screenshot (170).png|width=1029,height=614,alt=\"Screenshot (170).png\"!",
+      "16/Apr/25 7:47 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Done on Dev and Uat with message changes.",
+      "18/Apr/25 1:28 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;tested on UAT !image-20250418-075849.png|width=1048,height=212,alt=\"image-20250418-075849.png\"!"
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say upload success message changes were made"
+  },
+  {
+    "key": "CPI-269",
+    "title": "BULK / Imported data SKU is not visible in Search& Export window",
+    "description": "!image-20250410-085217.png|width=1333,height=902,alt=\"image-20250410-085217.png\"! !image-20250410-085148.png|width=1333,height=902,alt=\"image-20250410-085148.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "15/Apr/25 11:58 AM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Tested on Dev and QA, pls check once."
+    ],
+    "root_cause_layer": "SKIP",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments only say tested on Dev/QA; no root-cause signal"
+  },
+  {
+    "key": "CPI-242",
+    "title": "validation issue after import of Template-Master data template and SAG master",
+    "description": "validation issue after import of Template-Master data template and SAG master 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials 4.Go to menu list and click on standard import 5.select master data template and sag master 6.select excel file and upload 7.After clicking the uploaded, message is showing incorrect and its not be uploaded 8.now uploading the excel file but not be uploaded Expected Result->After clicking the uploaded file, file should be uploaded. Actual result: excel file is not to be uploaded and message is showing incorrect *Note: previous this functionality was working.*",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "02/Apr/25 2:34 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;!image-20250402-090401.png|width=1366,height=768,alt=\"image-20250402-090401.png\"! !image-20250402-090332.png|width=1366,height=768,alt=\"image-20250402-090332.png\"!",
+      "03/Apr/25 4:40 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Resolved on Dev"
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "low",
+    "notes_for_eval": "description is import validation failure; no stronger RCA beyond resolved on Dev"
+  },
+  {
+    "key": "CPI-241",
+    "title": "Issue in Export functionality(Search and export)",
+    "description": "Issue in Export functionality 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials 4.Go to menu list and click on search and export icon 5.Go to vertical and select Retail 6.Click on search button 7.Here 300 records are showing 8.Click on export button 9.after clicking on export button, only 10 records are showing Expected Result->After clicking on export button, all records should be shown in the grid. Actual result: After clicking on export button, only 10 records are showing and records are showing page wise !image-20250402-084508.png|width=1366,height=768,alt=\"image-20250402-084508.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "02/Apr/25 2:18 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;!image-20250402-084755.png|width=1366,height=768,alt=\"image-20250402-084755.png\"! !image-20250402-084847.png|width=1366,height=768,alt=\"image-20250402-084847.png\"!",
+      "14/Apr/25 5:19 AM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;Code has been updated on Development server. Tested and Verified with Chrome browser. Functionality is working fine. Development URL->[http://127.0.0.1/admin/|http://127.0.0.1/admin/]"
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments explicitly say code updated for Search and Export pagination/export issue"
+  },
+  {
+    "key": "CPI-244",
+    "title": "Issue in Assets->JPG upload functionality",
+    "description": "Issue in Assets->JPG upload functionality 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials with admin 4.Go to menu list and click on Assets 5.Go to Product Image 6.Right click and upload JPG image 7.select JPG file and Upload JPG file format 8.After uploading JPG file,file is not to be uploaded. 9.Message is showing-only ,xls file is only allowed. Expected Result-> JPG file should be uploaded Actual Result->After uploading JPG file,file is not to be uploaded.",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "03/Apr/25 2:31 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;!image-20250403-090121.png|width=1366,height=768,alt=\"image-20250403-090121.png\"! !image-20250403-090049.png|width=1366,height=768,alt=\"image-20250403-090049.png\"!",
+      "03/Apr/25 4:41 PM;712020:12a0993c-2b54-48f2-9527-9d90d5db0a2c;Resolved on Dev",
+      "11/Apr/25 5:05 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;Code has been updated on Development server. Tested and Verified with Chrome browser. Functionality is working fine. Development URL->[http://127.0.0.1/admin/|http://127.0.0.1/admin/]"
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments explicitly say code updated for JPG upload validation issue"
+  },
+  {
+    "key": "CPI-177",
+    "title": "Masters->After Search functionality is not working with ID, path and date",
+    "description": "Masters->After Search functionality is not working with ID, path and date Steps to be replicate: 1.Go to URL 2.[Http://127.0.0.1:8080/Admin|Http://127.0.0.1:8080/Admin] 3.Enter valid login credentials 4.Click on data objects 5.Go to Masters 6.Click on Brands 7.Go to search 8.Search functionality is not working with ID,path and date Expected Result: Search functionality should be work with ID,date and other fields. Actual Result: Search functionality is not working with ID and path",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "28/Mar/25 12:07 PM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;!image-20250328-063708.png|width=1366,height=768,alt=\"image-20250328-063708.png\"! !image-20250328-063639.png|width=1366,height=768,alt=\"image-20250328-063639.png\"!",
+      "28/Mar/25 12:27 PM;712020:ad5448b9-8d20-437d-804b-8f9499b1d8dd;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] this is default pimcore feature. It searches based on the text not number . Please verify in pimcore default website [https://demo.pimcore.fun/admin/|https://demo.pimcore.fun/admin/]"
+    ],
+    "root_cause_layer": "L1",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments say this is default Pimcore feature searching text not number"
+  },
+  {
+    "key": "CPI-254",
+    "title": "ERP form is not uploading by ERPSupport user and check the valdation",
+    "description": "",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "11/Apr/25 7:08 AM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;Code has been updated on Development server. Tested and Verified with Chrome browser. Functionality is working fine. Development URL->[http://127.0.0.1/admin/|http://127.0.0.1/admin/]"
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "medium",
+    "notes_for_eval": "recent_comments say code updated for ERP form upload issue"
+  },
+  {
+    "key": "CPI-252",
+    "title": "Issue in ERP form and file is not be uploaded",
+    "description": "Issue in ERP form and file is not be uploaded 1.Go to URL 2.Login from ERP support 3.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 4.Enter valid login credentials 5.Go to menu list and click on ERP form 6.ERP form page should be open 5.Select PIM id and fill all the detaisl 6.uplad the excel file 7.File is not to be uplaoded then found exception error Expected Result->After uploading the file, file should be uploaded. Actual result: File is not to be uploaded then found exception error !image-20250408-091748.png|width=512,height=288,alt=\"image-20250408-091748.png\"! !image-20250408-091726.png|width=1366,height=768,alt=\"image-20250408-091726.png\"!",
+    "steps_to_reproduce": "",
+    "rca": "",
+    "root_cause_corrective_actions": "",
+    "recent_comments": [
+      "09/Apr/25 11:47 AM;712020:65b962b2-9690-4346-9f8e-22488e972325;[~accountid:712020:6ad09b37-0830-44f3-a3a0-09cf116d5532] Please click on that link u can find out detail errors in separate new tab.",
+      "11/Apr/25 7:07 AM;712020:6ad09b37-0830-44f3-a3a0-09cf116d5532;Code has been updated on Development server. Tested and Verified with Chrome browser. Functionality is working fine. Development URL->[http://127.0.0.1/admin/|http://127.0.0.1/admin/]"
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "recent_comments explicitly say code updated for ERP form file upload exception"
+  },
+  {
+    "key": "CPI-NEW-001",
+    "title": "SAG multiselect values fail to save after Pimcore runtime update",
+    "description": "After the latest Pimcore runtime update, SAG multiselect values intermittently disappear when a Product Manager saves NPI data. The same payload works after downgrading the affected Pimcore select component package.",
+    "steps_to_reproduce": "1. Login as Product Manager.\n2. Create a New NPI under Coated Industrial.\n3. Select multiple SAG values.\n4. Save and reopen the product.",
+    "rca": "Pimcore select/multiselect component regression in the installed 11.x patch caused selected option serialization to drop values.",
+    "root_cause_corrective_actions": "Pinned the Pimcore admin UI package to the stable patch version and verified SAG selections after save.",
+    "recent_comments": [
+      "Dev: Issue reproduced only after Pimcore admin package update.",
+      "Dev: Pinned package version and cleared Pimcore cache.",
+      "QA: SAG multiselect now persists for Coated and Bonded PMGs."
+    ],
+    "root_cause_layer": "L1",
+    "confidence": "high",
+    "notes_for_eval": "rca says Pimcore component regression fixed by dependency pin"
+  },
+  {
+    "key": "CPI-NEW-002",
+    "title": "DAM thumbnail preview broken due to image processing library mismatch",
+    "description": "DAM images upload successfully but thumbnails are not generated for Product Manager and DAM Manager users. Original assets are present in Pimcore assets, but the preview transformation fails.",
+    "steps_to_reproduce": "1. Login as DAM Manager.\n2. Upload JPG asset for a product.\n3. Open DAM tab as Product Manager.\n4. Check thumbnail preview.",
+    "rca": "Image thumbnail generation failed after the server picked an incompatible image processing library version.",
+    "root_cause_corrective_actions": "Pinned the image processing dependency and regenerated DAM thumbnails for affected assets.",
+    "recent_comments": [
+      "Dev: Asset upload is fine, thumbnail worker fails during transform.",
+      "DevOps: Dependency version pinned on UAT and production.",
+      "QA: Thumbnail preview visible after cache clear."
+    ],
+    "root_cause_layer": "L1",
+    "confidence": "high",
+    "notes_for_eval": "rca says incompatible image dependency was pinned"
+  },
+  {
+    "key": "CPI-NEW-003",
+    "title": "Production SKU approval emails not sent because SMTP env value missing",
+    "description": "SKU approval emails trigger in UAT but fail in production after Product Developer sends the SKU to Product Manager. In-app notification is created, but email is missing.",
+    "steps_to_reproduce": "1. Login to production as Product Developer.\n2. Open a SKU in enrichment.\n3. Click Approve.\n4. Check Product Manager inbox.",
+    "rca": "Production deployment was missing SMTP_FROM_ADDRESS environment variable used by notification service.",
+    "root_cause_corrective_actions": "Added SMTP_FROM_ADDRESS in production env config and restarted notification worker.",
+    "recent_comments": [
+      "QA: UAT mail received but production mail not received.",
+      "DevOps: SMTP_FROM_ADDRESS missing in production env.",
+      "QA: Mail received after env update."
+    ],
+    "root_cause_layer": "L2",
+    "confidence": "high",
+    "notes_for_eval": "rca says missing production SMTP env var"
+  },
+  {
+    "key": "CPI-NEW-004",
+    "title": "Product Head Retail sees Industrial SKU approval action",
+    "description": "Product Head Retail can see and click approval action for Industrial SKU records. The SKU belongs to Bonded Industrial, so it should be visible only to the mapped Industrial Product Head.",
+    "steps_to_reproduce": "1. Login as Product Head Retail.\n2. Open Bonded Industrial SKU notification.\n3. Check available action buttons.\n4. Try approving the SKU.",
+    "rca": "RBAC permission scope used broad Product Head role instead of vertical-specific Product Head Retail/Industrial role.",
+    "root_cause_corrective_actions": "Updated role-wise permission mapping to restrict SKU approval by vertical and PMG.",
+    "recent_comments": [
+      "QA: Retail Product Head can approve Industrial SKU.",
+      "Dev: Permission scope was too broad for Product Head.",
+      "QA: Industrial SKU action hidden for Retail role now."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says RBAC scope used broad Product Head role"
+  },
+  {
+    "key": "CPI-NEW-005",
+    "title": "DAM tab visible before product approval for Marketing Manager",
+    "description": "Marketing Manager can see the DAM tab while the product is still in review. DAM should remain hidden until product data is approved and the workflow reaches the DAM stage.",
+    "steps_to_reproduce": "1. Login as Marketing Manager.\n2. Open product in InReview state.\n3. Check product tabs.\n4. Observe DAM tab visibility.",
+    "rca": "DAM tab visibility rule was enabled for Marketing Manager without checking product approval status.",
+    "root_cause_corrective_actions": "Updated tab visibility configuration to include approved-status condition for Marketing Manager.",
+    "recent_comments": [
+      "QA: DAM tab is visible before approval.",
+      "Dev: Visibility config missing approved status check.",
+      "QA: DAM tab hidden until approval."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says DAM tab visibility config missed status condition"
+  },
+  {
+    "key": "CPI-NEW-006",
+    "title": "Wrong Product Developer receives NPI mail for Coated Retail Sheets",
+    "description": "When a New NPI is created for Coated Retail Sheets, the notification goes to the Coated Industrial Product Developer. The PMG and SAG on the product are correct, but the mail routing is wrong.",
+    "steps_to_reproduce": "1. Create New NPI.\n2. Select Coated Retail > Sheets Retail.\n3. Submit to workflow.\n4. Check email recipients.",
+    "rca": "PMG-to-Product-Developer notification mapping had Coated Retail Sheets mapped to the Industrial developer group.",
+    "root_cause_corrective_actions": "Corrected PMG/SAG notification mapping for Coated Retail Sheets Retail.",
+    "recent_comments": [
+      "QA: Mail sent to Industrial developer for Retail item.",
+      "Dev: Mapping table had wrong developer group.",
+      "QA: Mail now sent to Retail developer."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says PMG notification mapping was wrong"
+  },
+  {
+    "key": "CPI-NEW-007",
+    "title": "Bulk Publish button visible to Product Manager in DAM folder",
+    "description": "Product Manager can see Bulk Publish in the Products DAM folder. Only DAM Manager and Admin should have this action for published product assets.",
+    "steps_to_reproduce": "1. Login as Product Manager.\n2. Open Products > Coated folder.\n3. Select multiple products.\n4. Check toolbar actions.",
+    "rca": "Bulk Publish action permission included Product Manager role by mistake.",
+    "root_cause_corrective_actions": "Updated action permission bundle to allow Bulk Publish only for DAM Manager and Admin.",
+    "recent_comments": [
+      "QA: Product Manager can see Bulk Publish.",
+      "Dev: Permission bundle had Product Manager role included.",
+      "QA: Button hidden for Product Manager."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says permission bundle included wrong role"
+  },
+  {
+    "key": "CPI-NEW-008",
+    "title": "Marketing Head email uses Product Manager template text",
+    "description": "Marketing Head approval email contains Product Manager review wording. The workflow transition is correct, but the email content gives the wrong next-step instruction.",
+    "steps_to_reproduce": "1. Login as Product Head.\n2. Send product to Marketing Head.\n3. Open Marketing Head email.\n4. Review email body text.",
+    "rca": "Marketing Head workflow transition was configured to use the Product Manager email template.",
+    "root_cause_corrective_actions": "Created Marketing Head specific template and updated workflow notification config.",
+    "recent_comments": [
+      "QA: Mail body mentions Product Manager review.",
+      "Dev: Transition was using old Product Manager template.",
+      "QA: New template text verified."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says workflow used wrong email template config"
+  },
+  {
+    "key": "CPI-NEW-009",
+    "title": "SAG dropdown shows Bonded Retail values for Coated Industrial PMG",
+    "description": "After selecting Coated Industrial as PMG, the SAG dropdown includes Bonded Retail values. This can lead users to save invalid PMG/SAG combinations.",
+    "steps_to_reproduce": "1. Create product.\n2. Select Coated Industrial PMG.\n3. Open SAG dropdown.\n4. Check listed SAG values.",
+    "rca": "SAG dropdown filter configuration referenced the wrong PMG mapping group.",
+    "root_cause_corrective_actions": "Updated SAG dropdown filter mapping for Coated Industrial PMG.",
+    "recent_comments": [
+      "QA: Bonded Retail SAG visible under Coated Industrial.",
+      "Dev: Filter config pointed to wrong mapping group.",
+      "QA: Only Coated Industrial SAG values are visible."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says SAG dropdown filter mapping was wrong"
+  },
+  {
+    "key": "CPI-NEW-010",
+    "title": "SKU Enrichment Done button missing after Product Head update",
+    "description": "When Product Head sends SKU back to Product Manager for correction, Product Manager does not see the expected enrichment completion action. The SKU remains stuck in update required state.",
+    "steps_to_reproduce": "1. Login as Product Head.\n2. Send SKU update to Product Manager.\n3. Login as Product Manager.\n4. Open action dropdown.",
+    "rca": "Workflow action configuration did not include Product Manager action for update-required SKU state.",
+    "root_cause_corrective_actions": "Added Product Manager action mapping for update-required SKU enrichment state.",
+    "recent_comments": [
+      "QA: No action available after Product Head update.",
+      "Dev: Missing action mapping for update-required state.",
+      "QA: SKU Enrichment Done After Update now visible."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says workflow action mapping was missing"
+  },
+  {
+    "key": "CPI-NEW-011",
+    "title": "NPI auto-mail reminder triggers every day instead of every 15 days",
+    "description": "Pending NPI reminder mails are sent daily to Product Manager and Product Developer. Requirement says reminders should be sent every 15 days for pending product workflows.",
+    "steps_to_reproduce": "1. Keep NPI pending in review.\n2. Run reminder scheduler.\n3. Check mail history for next day.\n4. Verify reminder frequency.",
+    "rca": "Reminder frequency setting was configured as 1 day instead of 15 days.",
+    "root_cause_corrective_actions": "Updated scheduler configuration to 15-day reminder interval.",
+    "recent_comments": [
+      "QA: Reminder mail received daily.",
+      "Dev: Scheduler interval config was 1 day.",
+      "QA: Reminder not repeated on next day after fix."
+    ],
+    "root_cause_layer": "L3",
+    "confidence": "high",
+    "notes_for_eval": "rca says scheduler frequency setting was wrong"
+  },
+  {
+    "key": "CPI-NEW-012",
+    "title": "Search and Export downloads only first 10 SKU records",
+    "description": "Search result shows 240 SKU records, but export contains only the first 10 records from the visible page. Users need all filtered records in the exported file.",
+    "steps_to_reproduce": "1. Open Search and Export.\n2. Filter by SKU Product.\n3. Confirm more than 10 records.\n4. Click Export.",
+    "rca": "Export query reused paginated grid query and did not remove limit/offset before file generation.",
+    "root_cause_corrective_actions": "Patched export service to run an unpaginated query for export downloads.",
+    "recent_comments": [
+      "QA: Export contains only 10 records.",
+      "Dev: Export was using grid pagination limit.",
+      "QA: Full 240 records exported."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says export query reused pagination limit"
+  },
+  {
+    "key": "CPI-NEW-013",
+    "title": "Reopen product creates duplicate SKU child object",
+    "description": "Reopening an approved product creates a duplicate SKU under the product tree. The existing SKU should be reused for workflow correction instead of creating a new child object.",
+    "steps_to_reproduce": "1. Open approved product with SKU.\n2. Click Reopen Product Workflow.\n3. Refresh product tree.\n4. Check SKU child objects.",
+    "rca": "Reopen handler called createSkuChild() instead of reusing the existing SKU object when workflow state was reset.",
+    "root_cause_corrective_actions": "Patched reopen handler to reuse existing SKU and skip child creation on reopen.",
+    "recent_comments": [
+      "QA: New SKU appears after reopen.",
+      "Dev: Reopen flow called createSkuChild by mistake.",
+      "QA: Existing SKU retained after reopen."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says reopen handler called wrong create function"
+  },
+  {
+    "key": "CPI-NEW-014",
+    "title": "ERP tab shows tomorrow date for products created today",
+    "description": "Products created today appear under tomorrow date in the ERP PIM ID filter. Database stores the correct date, but UI displays one day ahead.",
+    "steps_to_reproduce": "1. Create NPI today.\n2. Move product to ERP team.\n3. Login as ERP Support.\n4. Filter PIM ID by today's date.",
+    "rca": "Custom ExtJS date formatter applied timezone offset twice before rendering ERP filter results.",
+    "root_cause_corrective_actions": "Fixed ExtJS date formatter to use normalized server date without duplicate offset.",
+    "recent_comments": [
+      "QA: Record saved today but visible under tomorrow.",
+      "Dev: ExtJS formatter applied timezone offset twice.",
+      "QA: Product appears on correct date."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says ExtJS date formatter applied offset twice"
+  },
+  {
+    "key": "CPI-NEW-015",
+    "title": "JPG asset upload rejected as only XLS allowed",
+    "description": "Uploading JPG under Assets > Product Image fails with message that only XLS files are allowed. JPG should be allowed for DAM product images.",
+    "steps_to_reproduce": "1. Login as Admin.\n2. Open Assets > Product Image.\n3. Upload JPG file.\n4. Check validation message.",
+    "rca": "Asset upload validator reused standard import allowed-extension list instead of DAM image extension list.",
+    "root_cause_corrective_actions": "Patched upload validator to use DAM image whitelist for asset folders.",
+    "recent_comments": [
+      "QA: JPG upload says XLS only.",
+      "Dev: Validator using standard import extension list.",
+      "QA: JPG and PNG upload working."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says upload validator used wrong extension list"
+  },
+  {
+    "key": "CPI-NEW-016",
+    "title": "Notification click opens error for Product Head Retail",
+    "description": "Product Head Retail receives SKU approval notification, but clicking it opens an error page. The same SKU opens from the product tree.",
+    "steps_to_reproduce": "1. Send Retail SKU to Product Head.\n2. Login as Product Head Retail.\n3. Click notification.\n4. Observe error page.",
+    "rca": "Notification link builder used parent product ID instead of SKU workflow item ID for SKU approvals.",
+    "root_cause_corrective_actions": "Patched notification URL builder to pass SKU object ID for SKU workflow notifications.",
+    "recent_comments": [
+      "QA: Notification click fails but tree opens SKU.",
+      "Dev: URL built with parent product ID.",
+      "QA: Notification opens correct SKU now."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says notification URL used wrong object ID"
+  },
+  {
+    "key": "CPI-NEW-017",
+    "title": "Blank popup after second SKU ERP import",
+    "description": "After importing SKUs, deleting them, and importing the same file again, the import succeeds but shows a blank popup. User cannot tell whether the import passed or failed.",
+    "steps_to_reproduce": "1. Import two SKUs under a product.\n2. Delete only SKU children.\n3. Import same ERP SKU file again.\n4. Check popup message.",
+    "rca": "Import response handler returned empty message when duplicate history existed but import completed successfully.",
+    "root_cause_corrective_actions": "Patched SKU ERP import response handling to return success message for re-import scenario.",
+    "recent_comments": [
+      "QA: Second import gives blank popup.",
+      "Dev: Response message empty for re-import branch.",
+      "QA: Success message shown on second import."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says import response handler returned empty message"
+  },
+  {
+    "key": "CPI-NEW-018",
+    "title": "Product API returns SKU records as top-level products",
+    "description": "Product API response includes parent products and SKU objects in the same top-level list. Expected response should include parent products with SKU details nested separately.",
+    "steps_to_reproduce": "1. Call Product API with valid token.\n2. Inspect top-level response array.\n3. Compare product and SKU object types.\n4. Check SKU nesting.",
+    "rca": "API query did not filter object class before building top-level product response.",
+    "root_cause_corrective_actions": "Patched API query to fetch parent product class and attach SKUs in separate child array.",
+    "recent_comments": [
+      "QA: API returns product and SKU in same list.",
+      "Dev: Query missing class filter.",
+      "QA: SKU now comes inside sku_list."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says API query missed object class filter"
+  },
+  {
+    "key": "CPI-NEW-019",
+    "title": "Approve button disappears after failed reopen attempt",
+    "description": "When reopen workflow fails once, both Reopen and Approve actions disappear from the product action menu. Refreshing the page does not recover available actions.",
+    "steps_to_reproduce": "1. Login as Product Manager.\n2. Open approved product.\n3. Trigger Reopen Product Workflow.\n4. Check action dropdown after failure.",
+    "rca": "Workflow exception path cleared availableTransitions array before transaction rollback completed.",
+    "root_cause_corrective_actions": "Patched exception handling to preserve workflow transitions until rollback completes.",
+    "recent_comments": [
+      "QA: Actions disappear after failed reopen.",
+      "Dev: Exception path clears transitions too early.",
+      "QA: Actions remain available after failed attempt."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says exception path cleared workflow transitions"
+  },
+  {
+    "key": "CPI-NEW-020",
+    "title": "ERP item code values not copied to newly created SKU",
+    "description": "When ERP Support selects a PIM ID for new SKU item code creation, SAG and PMG values are fetched but previous item code list remains empty. Existing item codes should be shown as disabled reference rows.",
+    "steps_to_reproduce": "1. Login as ERP Support.\n2. Open ERP form.\n3. Select PIM ID with existing item codes.\n4. Check item description list.",
+    "rca": "ERP form service skipped disabled previous item-code rows while mapping selected PIM ID details.",
+    "root_cause_corrective_actions": "Patched ERP form mapper to include previous item-code rows as disabled entries.",
+    "recent_comments": [
+      "QA: Previous item code list is blank.",
+      "Dev: Mapper skipped disabled rows.",
+      "QA: Old item codes visible and disabled."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says ERP mapper skipped disabled item-code rows"
+  },
+  {
+    "key": "CPI-NEW-021",
+    "title": "Marketing Manager reject action throws exception without remarks",
+    "description": "Marketing Manager can click Reject without entering remarks, and Pimcore shows an exception. The UI should show validation message and block submit.",
+    "steps_to_reproduce": "1. Login as Marketing Manager.\n2. Open product in review.\n3. Click Reject without remarks.\n4. Observe exception.",
+    "rca": "Reject action backend assumed remarks field was non-null and did not validate empty payload.",
+    "root_cause_corrective_actions": "Added null/empty validation for rejection remarks before workflow transition.",
+    "recent_comments": [
+      "QA: Reject without remarks gives exception.",
+      "Dev: Null remarks not handled.",
+      "QA: Validation message shown now."
+    ],
+    "root_cause_layer": "L4",
+    "confidence": "high",
+    "notes_for_eval": "rca says null remarks validation missing"
+  },
+  {
+    "key": "CPI-NEW-022",
+    "title": "Valid SAG value YS592 Ceramic BELTS rejected after NPI approval",
+    "description": "NPI product moves to Coated section after ERP item code update but throws invalid SAGDescription option error. The SAG is valid in the latest client master sheet.",
+    "steps_to_reproduce": "1. Create NPI under Coated Industrial Belt.\n2. Select YS592 Ceramic BELTS SAG.\n3. Add ERP item code.\n4. Open product as DAM Manager.",
+    "rca": "SAG master data in Pimcore was missing the latest YS592 Ceramic BELTS option from client data.",
+    "root_cause_corrective_actions": "Backfilled missing SAG master entry and republished affected PMG master objects.",
+    "recent_comments": [
+      "QA: Valid SAG rejected as invalid option.",
+      "Dev: SAG master missing latest client value.",
+      "QA: Product opens after SAG backfill."
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "high",
+    "notes_for_eval": "rca says SAG master data missing client value"
+  },
+  {
+    "key": "CPI-NEW-023",
+    "title": "Old migrated SKUs appear under wrong PMG in product tree",
+    "description": "Some migrated SKUs under Coated Retail appear in Bonded Retail PMG folder. Newly created SKUs are placed correctly, so issue is limited to old migrated records.",
+    "steps_to_reproduce": "1. Login as Product Manager.\n2. Open migrated Coated Retail product.\n3. Check SKU folder placement.\n4. Compare with newly created SKU.",
+    "rca": "One-time migration loaded stale PMG category IDs for a subset of old SKU records.",
+    "root_cause_corrective_actions": "Ran backfill script to correct PMG category IDs for affected migrated SKUs.",
+    "recent_comments": [
+      "QA: Only migrated SKUs are in wrong folder.",
+      "Dev: Migration file had stale PMG IDs.",
+      "QA: Backfilled SKUs now appear correctly."
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "high",
+    "notes_for_eval": "rca says migrated SKU rows had stale PMG IDs"
+  },
+  {
+    "key": "CPI-NEW-024",
+    "title": "DAM images missing for products migrated from legacy PIM",
+    "description": "DAM tab opens but image references are blank for legacy migrated products. New products with freshly uploaded assets show thumbnails correctly.",
+    "steps_to_reproduce": "1. Open migrated product.\n2. Go to DAM tab.\n3. Check image thumbnail.\n4. Compare with new product DAM asset.",
+    "rca": "Legacy migration left orphan asset reference IDs that no longer matched Pimcore asset IDs.",
+    "root_cause_corrective_actions": "Executed asset reference backfill to remap legacy DAM IDs to Pimcore asset IDs.",
+    "recent_comments": [
+      "QA: Missing images only for migrated products.",
+      "Dev: Legacy asset IDs are orphaned.",
+      "QA: Images visible after reference backfill."
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "high",
+    "notes_for_eval": "rca says legacy asset references were orphaned"
+  },
+  {
+    "key": "CPI-NEW-025",
+    "title": "Bulk migrated products remain in New workflow status",
+    "description": "Products loaded through one-time PMG migration remain in New state even though data is already enriched and published. Manual products show correct Published on Web status.",
+    "steps_to_reproduce": "1. Open PMG migrated product.\n2. Check workflow status.\n3. Compare with manually approved product.\n4. Review SKU status.",
+    "rca": "Migration did not populate workflow status fields for product and SKU objects.",
+    "root_cause_corrective_actions": "Ran data backfill to set Published on Web workflow state for migrated products and SKUs.",
+    "recent_comments": [
+      "QA: Bulk migrated products show New status.",
+      "Dev: Workflow state missing from migration load.",
+      "QA: Products show Published on Web after backfill."
+    ],
+    "root_cause_layer": "L5",
+    "confidence": "high",
+    "notes_for_eval": "rca says migration missed workflow status fields"
+  }
+]
