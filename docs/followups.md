@@ -2,6 +2,56 @@
 
 ---
 
+## [2026-05-01] (o) FE/MAIN long-session image-dimension API errors — DEV-EXPERIENCE — IMMEDIATE
+
+**Symptom (recurring twice during M1 prep):** FE chat session crashes with `An image in the conversation exceeds the dimension limit for many-image requests (2000px). Start a new session with fewer images.` after ~5+ visual-gate cycles. Forces context loss + brief recovery into a new session. Hit twice during F28 commit phase on Day 5.
+
+**Root cause:** macOS retina captures screenshots at 2x — a `1440px` viewport screenshot is actually saved as 2880px. Anthropic's API rejects accumulated >2000px-dimension images in many-image requests. M0 (12 frames × 2 viewports) + M1 (3 frames × 2 viewports) = 30+ screenshots in FE's session by M1 commit time.
+
+**Recurrence cost:** ~10-15 min per crash (recovery brief + context loss). Will recur every 5-7 visual gates (every 1-2 days at current pace) without a fix. Across PM1 (38 more frame ports M2-M5) = ~6-10 more crashes if unaddressed.
+
+**3-layer permanent fix:**
+
+### Layer 1 — Auto-resize pre-commit hook (~15 min build, 0 ongoing cost)
+
+Append to `.husky/pre-commit`:
+
+```bash
+# Resize docs/screenshots/*.png to max 1500px wide before commit
+for f in $(git diff --cached --name-only --diff-filter=ACMR | grep -E "^docs/screenshots/.*\.png$"); do
+  if [ -f "$f" ]; then
+    actual_width=$(sips -g pixelWidth "$f" | tail -1 | awk '{print $2}')
+    if [ "$actual_width" -gt 1500 ]; then
+      echo "  📐 Resizing $f from ${actual_width}px → 1500px wide"
+      sips -Z 1500 "$f" --out "$f" > /dev/null
+      git add "$f"
+    fi
+  fi
+done
+```
+
+Uses macOS native `sips` (no install needed). Lossless quality drop is imperceptible at viewport sizes. Existing >2000px screenshots get caught + resized when they next pass through commit.
+
+### Layer 2 — Session discipline (CLAUDE.md Hard Rule 14)
+
+Add to CLAUDE.md Hard Rules:
+
+> **14. FE/MAIN chat sessions MUST restart at every PR boundary OR every 5 visual gates, whichever comes first.** Image accumulation in long Cowork sessions causes recurring `image dimension exceeds 2000px` API errors. Per-PR sessions keep context bounded. Each new session loads a 1-paragraph "where I left off" brief from the previous session's last message — total restart overhead ~2 min vs ~30 min spent debugging mid-PR API failures. Established 2026-05-01 after F28 commit hit the API limit twice in a row.
+
+### Layer 3 — Locked HTML never inline-loaded into chat context
+
+Add to FE/MAIN compact instructions (CLAUDE.md):
+
+> Locked HTML files in `PM1_UI_v2/` are REFERENCE ONLY. Never load full file into chat context (50-200KB each). Use Read with `offset` + `limit` to scan sections; otherwise read the structure summary in the corresponding frame `.md` description file. Same caution applies to chunky `CHANGELOG.md` and `docs/` files >50KB.
+
+**Owner:** MAIN (Layer 1 + Layer 2 + Layer 3 wiring) + PM/Cowork (CLAUDE.md edit + verification).
+
+**ETA:** Day 5 evening or Day 6 morning. ~30 min total.
+
+**Acceptance:** zero `image dimension exceeds 2000px` errors observed across the next 10 visual-gate cycles AFTER hook lands. Confirmed by FE + MAIN reporting clean session lifecycles in EOD.
+
+---
+
 ## [2026-05-01] (n) OTel metrics SDK wire — MeterProvider + 3 named meters — DAY 6 / M0 close window
 
 **Status:** Day-5 OTel wire shipped traces (LLM gateway `llm.complete` span) + `/admin/otel/test-trace` endpoint + `/health` env_present diagnostics. **Metrics SDK setup deferred** to Day-6 because the no-op tracer already provides full trace observability once env vars land; metrics adds value but isn't blocking M0 close.
