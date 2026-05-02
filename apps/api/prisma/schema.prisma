@@ -5,9 +5,13 @@
 // Task: MS0-T020 (Day 2). Migration deferred until Yogesh provisions Neon DB.
 //
 // Authoring decisions (documented in PR + docs/parallel-work/chat3-status-day2.md):
-//   1. Vector dim = 1024 (Qwen3-Embedding-0.6B), overriding ERD §5's stale
-//      vector(384) BGE-small. Per database.md (binding) + ERD §7 A2 (v2.0
-//      upgrade note). ERD §5 column tables are doc-bug to fix.
+//   1. Vector dim = 384 (Xenova/bge-small-en-v1.5). Original choice was
+//      1024 (Qwen3-Embedding-0.6B) overriding ERD §5's vector(384), but the
+//      Day-4 afternoon Render Free 512 MB OOM forced a swap back to bge-small
+//      per ADR-003 amendment + ADR-009. Schema migration:
+//      apps/api/prisma/raw/migrations/0002_vector_384_dim.sql (Day-5).
+//      bge-large will return as a hot-swap when off Free tier — see
+//      followup (l) for the M3 quality eval methodology that gates that swap.
 //   2. Table names: plural snake_case (workspaces, users, ...) per
 //      database.md hard rule, mapped from PascalCase singular Prisma models
 //      via @@map.
@@ -371,7 +375,7 @@ model Requirement {
 }
 
 /// TB-007 — test case records (AI-generated or manual).
-/// RLS via project. Has 1024-dim vector embedding (HNSW index in raw SQL).
+/// RLS via project. Has 384-dim vector embedding (HNSW index in raw SQL).
 model TestCase {
   id               String                       @id @default(uuid()) @db.Uuid
   projectId        String                       @map("project_id") @db.Uuid
@@ -384,9 +388,11 @@ model TestCase {
   status           TestCaseStatus               @default(ai_draft)
   confidenceScore  Float?                       @map("confidence_score")
   aiProvenanceJson Json?                        @map("ai_provenance_json") @db.JsonB
-  /// 1024-dim Qwen3-Embedding-0.6B vector. HNSW (vector_cosine_ops, m=16,
-  /// ef_construction=64) index added in raw SQL migration.
-  embedding        Unsupported("vector(1024)")?
+  /// 384-dim Xenova/bge-small-en-v1.5 vector. HNSW (vector_cosine_ops, m=16,
+  /// ef_construction=64) index added in raw SQL migration. Per ADR-003
+  /// amendment + ADR-009 (Render Free 512 MB constraint). Migration:
+  /// apps/api/prisma/raw/migrations/0002_vector_384_dim.sql (Day-5).
+  embedding        Unsupported("vector(384)")?
   createdBy        String                       @map("created_by") @db.Uuid
   createdAt        DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -616,13 +622,14 @@ model KbDocument {
 }
 
 /// TB-018 — chunked KB content for semantic search.
-/// RLS transitive via parent document. 1024-dim vector embedding.
+/// RLS transitive via parent document. 384-dim vector embedding.
 model KbChunk {
   id           String                       @id @default(uuid()) @db.Uuid
   documentId   String                       @map("document_id") @db.Uuid
   chunkText    String                       @map("chunk_text")
-  /// 1024-dim Qwen3-Embedding-0.6B vector. HNSW index in raw SQL migration.
-  embedding    Unsupported("vector(1024)")?
+  /// 384-dim Xenova/bge-small-en-v1.5 vector. HNSW index in raw SQL
+  /// migration. Per ADR-003 amendment + ADR-009 (Day-5).
+  embedding    Unsupported("vector(384)")?
   chunkIndex   Int                          @map("chunk_index")
   metadataJson Json                         @default("{}") @map("metadata_json") @db.JsonB
 

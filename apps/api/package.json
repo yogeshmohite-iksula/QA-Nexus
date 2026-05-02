@@ -27,7 +27,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
-    "prisma:apply-raw": "prisma db execute --file prisma/raw/init_rls_hnsw.sql --schema prisma/schema.prisma"
+    "prisma:apply-raw": "prisma db execute --file prisma/raw/init_rls_hnsw.sql --schema prisma/schema.prisma",
+    "prisma:apply-raw:0002": "prisma db execute --file prisma/raw/migrations/0002_vector_384_dim.sql --schema prisma/schema.prisma"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
