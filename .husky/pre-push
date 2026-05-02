@@ -1,9 +1,15 @@
 #!/bin/bash
 # Husky pre-push hook for QA Nexus PM1.
 #
-# Two gates run in sequence:
+# Three gates run in sequence:
 # 1) pnpm typecheck (existing) — catches TS errors before the push lands.
-# 2) CHANGELOG guard (added Day 2, Block 4(e)) — blocks pushes where any
+# 2) frozen-lockfile check (added Day 5 #4 post-mortem) — catches
+#    package.json edits where pnpm-lock.yaml wasn't regenerated, which
+#    breaks Render's `pnpm install --frozen-lockfile` build step. Day-5
+#    #4 (e23d0d2) shipped @opentelemetry/api^1.9.1 in apps/api/
+#    package.json without the lockfile bump → Render boot failed with
+#    ERR_PNPM_OUTDATED_LOCKFILE for ~10 minutes until the followup fix.
+# 3) CHANGELOG guard (added Day 2, Block 4(e)) — blocks pushes where any
 #    commit-being-pushed touches apps/** or packages/** WITHOUT a matching
 #    docs/CHANGELOG.md edit somewhere in the push range.
 #
@@ -18,10 +24,33 @@
 
 set -e
 
-echo "→ pre-push gate 1/2: typecheck"
+echo "→ pre-push gate 1/3: typecheck"
 pnpm typecheck
 
-echo "→ pre-push gate 2/2: CHANGELOG guard"
+echo "→ pre-push gate 2/3: frozen-lockfile (lockfile vs package.json drift)"
+# `pnpm install --frozen-lockfile --lockfile-only` reads ALL workspace
+# package.json files + verifies the lockfile satisfies them, but does
+# NOT actually install anything. Returns non-zero with
+# ERR_PNPM_OUTDATED_LOCKFILE if drift detected. Fast — typically <2s on
+# warm cache because no node_modules I/O happens.
+if ! pnpm install --frozen-lockfile --lockfile-only >/dev/null 2>&1; then
+  echo ""
+  echo "✗ pre-push frozen-lockfile gate FAILED"
+  echo ""
+  echo "  pnpm-lock.yaml is out of sync with package.json. Render's"
+  echo "  build step uses --frozen-lockfile and will refuse to install."
+  echo ""
+  echo "  Fix: run \`pnpm install\` (no flags), commit pnpm-lock.yaml,"
+  echo "  retry the push."
+  echo ""
+  echo "  Bypass (DO NOT do this — Render WILL fail to deploy):"
+  echo "    git push --no-verify"
+  echo ""
+  exit 1
+fi
+echo "  ✓ pnpm-lock.yaml matches package.json"
+
+echo "→ pre-push gate 3/3: CHANGELOG guard"
 
 # stdin contract for git push hooks: lines like "<local-ref> <local-sha> <remote-ref> <remote-sha>"
 # We read all lines and compute the union of commits being pushed.

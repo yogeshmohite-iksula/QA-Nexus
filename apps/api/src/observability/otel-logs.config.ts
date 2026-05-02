@@ -52,6 +52,14 @@ interface OtelLogsStatus {
   sink: 'better_stack' | 'stdout';
   last_export_at?: string;
   error?: string;
+  /** Diagnostic: which env vars were present at init time. Lets ops
+   *  triage "why is this deferred" without server-side log access.
+   *  Boolean only — never the actual value. */
+  env_present?: {
+    BETTER_STACK_OTLP_ENDPOINT: boolean;
+    BETTER_STACK_OTLP_AUTH: boolean;
+  };
+  deferred_reason?: string;
 }
 
 let _status: OtelLogsStatus = { status: 'deferred', sink: 'stdout' };
@@ -71,8 +79,32 @@ export function initOtelLogs(): void {
   const endpoint = process.env.BETTER_STACK_OTLP_ENDPOINT;
   const auth = process.env.BETTER_STACK_OTLP_AUTH;
 
+  const env_present = {
+    BETTER_STACK_OTLP_ENDPOINT: !!endpoint,
+    BETTER_STACK_OTLP_AUTH: !!auth,
+  };
+
   if (!endpoint) {
-    _status = { status: 'deferred', sink: 'stdout' };
+    _status = {
+      status: 'deferred',
+      sink: 'stdout',
+      env_present,
+      deferred_reason:
+        'BETTER_STACK_OTLP_ENDPOINT env var missing on this dyno. Set in ' +
+        'Render env editor; redeploy. See docs/deploy/better-stack-runbook.md.',
+    };
+    return;
+  }
+  if (!auth) {
+    _status = {
+      status: 'deferred',
+      sink: 'stdout',
+      env_present,
+      deferred_reason:
+        'BETTER_STACK_OTLP_ENDPOINT is set but BETTER_STACK_OTLP_AUTH is ' +
+        'missing. Better Stack OTLP requires Bearer token from the source ' +
+        'Connect panel. Set BETTER_STACK_OTLP_AUTH + redeploy.',
+    };
     return;
   }
 
@@ -122,12 +154,14 @@ export function initOtelLogs(): void {
       status: 'configured',
       sink: 'better_stack',
       exporter_endpoint: endpoint,
+      env_present,
     };
   } catch (err) {
     _status = {
       status: 'error',
       sink: 'stdout',
       error: err instanceof Error ? err.message : String(err),
+      env_present,
     };
   }
 }

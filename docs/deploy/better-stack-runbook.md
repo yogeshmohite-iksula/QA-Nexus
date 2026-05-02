@@ -96,7 +96,131 @@ days, or immediately on any incident):
 3. Save → Render redeploys → `/health` confirms `last_export_at`
    updates.
 
-## 7. Cost gate
+## 7. Slack alerting — alert-rule setup (Day-5 #4)
+
+Path (a) per Day-5 architectural decision: **Better Stack OWNS the
+alerting**. The QA Nexus API just emits OTel logs at the appropriate
+severity; Better Stack matches them against rules and posts to Slack.
+This keeps the alert plane out of our app's hot path + lets ops tune
+rules without redeploying.
+
+### 7.1 Slack workspace prep
+
+Yogesh-side, ~5 min. (Skip if `#qa-nexus-alerts` already exists.)
+
+1. Slack workspace → **Apps → Incoming Webhooks → Add to Slack**.
+2. Pick channel `#qa-nexus-alerts` (create if missing — recommended:
+   private channel, members = Yogesh + Akshay only initially; expand
+   to QA-Lead RBAC role if signal is good).
+3. Copy the webhook URL (shape: `https://hooks.slack.com/services/T.../B.../xyz`).
+
+### 7.2 Better Stack → Slack integration
+
+1. Better Stack → **Integrations → Slack → Connect**.
+2. Paste the webhook URL from §7.1.
+3. Test connection (Better Stack sends a "hello" message; verify it
+   lands in `#qa-nexus-alerts`).
+
+### 7.3 Three alert rules (deploy in this order)
+
+Better Stack → **Alerts → Create Rule**. All three pointed at the
+same Slack integration from §7.2.
+
+| #   | Rule name                | Match                                                              | Action               | Rate limit         |
+| --- | ------------------------ | ------------------------------------------------------------------ | -------------------- | ------------------ |
+| 1   | `qa-nexus-error`         | `severity_number >= 17` (ERROR per OTel spec)                      | Slack to alerts chan | 1/min              |
+| 2   | `qa-nexus-deferred-mode` | `body contains "DEFERRED mode"` OR `body contains "deferred=true"` | Slack to alerts chan | 1/5min (de-bounce) |
+| 3   | `qa-nexus-oom-or-crash`  | `body contains "OOM"` OR `body contains "Bootstrap failed"`        | Slack to alerts chan | 1/min              |
+
+**Why these three:**
+
+- **Rule 1** catches anything we explicitly logged as ERROR — Nest's
+  exception filter already routes uncaught exceptions through
+  `Logger.error()` which emits at severity 17.
+- **Rule 2** catches the deferred-mode subsystem warnings from
+  hotfix-2 (`LLMGateway running in DEFERRED mode...`,
+  `EmbeddingService running in DEFERRED mode...`,
+  `EmbeddingService refusing to load (pre-flight memory guard)...`).
+  These don't always come through as ERROR severity (some are WARN)
+  but matter for ops awareness.
+- **Rule 3** catches process-level catastrophes — sharp native binary
+  missing, Render OOM-kicks, NestFactory.create rejection at boot.
+
+**Rate limit rationale:** Rule 2 uses 1/5min because deferred-mode is
+a steady-state condition until Yogesh sets the env var — we don't want
+30 Slack pings in the first hour of a misconfiguration. Rules 1 and 3
+use 1/min because these are typically transient + actionable.
+
+### 7.4 Verify alert path end-to-end
+
+Once rules + Slack integration are live:
+
+```bash
+curl -X POST https://qa-nexus-api.onrender.com/admin/alerts/test-slack \
+  -H "Cookie: better-auth.session_token=<your-admin-cookie>"
+```
+
+Endpoint emits a single log record at severity ERROR with a unique
+`test_marker` in the body. Within ~30 seconds you should see a Slack
+message in `#qa-nexus-alerts` containing that marker. The endpoint's
+JSON response includes the marker for grep-search confirmation.
+
+If no Slack message arrives:
+
+1. Check Better Stack → **Live tail** — did the log record arrive at
+   Better Stack? If not, the OTel logs exporter isn't wired (env vars
+   missing or wrong). See §1 + `/health` `otel.logs.deferred_reason`.
+2. Check Better Stack → **Alerts → Rule firings** — did any rule
+   match the event? If yes but no Slack message, the Slack
+   integration is broken (re-test §7.2).
+3. Check Slack → channel permissions — make sure the webhook is
+   active + the channel allows the webhook bot to post.
+
+### 7.5 Sample alert payload — what Slack receives
+
+For an OOM crash on Render, the typical Slack message looks like:
+
+```
+🔴 [Better Stack] qa-nexus-oom-or-crash
+qa-nexus-api-prod · 2026-04-30 14:22:11 UTC
+
+Bootstrap failed: Error: Cannot find module '../build/Release/sharp-linux-x64.node'
+trace_id: 9b1c... — view in Grafana Tempo
+```
+
+For a deferred-mode log:
+
+```
+🟡 [Better Stack] qa-nexus-deferred-mode
+qa-nexus-api-prod · 2026-05-01 09:15:33 UTC
+
+LLMGateway running in DEFERRED mode (no provider configured): LLM_PRIMARY_PROVIDER env var is required (e.g. "groq"). Available providers: groq, gemini.
+trace_id: f3a7... — view in Grafana Tempo
+```
+
+The `trace_id` link is auto-injected by Better Stack's Grafana Cloud
+integration when both sources share a tenant; if you don't see it,
+check Better Stack → **Source → Settings → Linked sources**.
+
+### 7.6 Tuning + de-bounce (post-pilot)
+
+Day-5 rules are intentionally noisy on the cautious side. After 1 week
+of pilot operation:
+
+- If Rule 2 (deferred-mode) fires every 5 min during steady-state
+  because LLM stays deferred until F26 (M1) — that's expected
+  behavior. Either silence the rule until F26 lands OR add an
+  exclusion for `body contains "F26 UI in M1"` (the runbook-specific
+  marker we already include in the deferred reason).
+- If Rule 1 fires too often during normal traffic spikes — narrow to
+  `severity_number >= 21` (FATAL only) or add a body exclusion for
+  known-noisy errors.
+- Track false-positive rate in `docs/observability/alert-tuning.md`
+  (new file at first tuning).
+
+---
+
+## 8. Cost gate
 
 Free tier: 1 GB/month + 3-day retention. The 8-user pilot at 12 hr/day
 generates ~50-100 MB/month based on Day-2 stretch baseline (Nest
