@@ -45,7 +45,7 @@ export type RequirementForm = z.infer<typeof requirementFormSchema>;
 export const requirementFormDefaults: RequirementForm = {
   title: '',
   description: '',
-  priority: 'P2',
+  priority: 'Medium',
   status: 'draft',
   sprint: '',
   tags: [],

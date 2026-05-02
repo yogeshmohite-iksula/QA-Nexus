@@ -12,10 +12,12 @@
 // (M2 BE schema lands ~2026-05-25 per Milestone_M2_Docs_KB.md).
 //
 // Locked frame ref: PM1_UI_v2/frame  html view/F14 Requirements.html
-// Enum tokens (status='draft|active|done|archived', priority='P0|P1|P2|P3')
-// match ERD verbatim. The locked HTML's "Active" / "Draft" chip copy
-// renders via `statusLabel()` / `priorityLabel()` helpers below — the
-// underlying schema string stays canonical.
+// Status enum (draft|active|done|archived) matches ERD verbatim;
+// priority is the Jira-style 9-value union (refactored Day-6 evening
+// 2026-05-02 — see comment above `requirementPriorityValues`).
+// The locked HTML's "Active" / "Draft" chip copy renders via
+// `statusLabel()` / `priorityLabel()` helpers below — the underlying
+// schema string stays canonical.
 
 import { useMemo } from 'react';
 import { z } from 'zod';
@@ -26,7 +28,24 @@ import { SEED_IDS } from '@/lib/demo-seed';
 // ---------------------------------------------------------------------------
 
 export const requirementStatusValues = ['draft', 'active', 'done', 'archived'] as const;
-export const requirementPriorityValues = ['P0', 'P1', 'P2', 'P3'] as const;
+// Jira-style 9-value priority enum (Day-6 evening refactor 2026-05-02).
+// Confirmed against real Jira projects (siteonelandscapesupply PIM +
+// iksula ML board) — priority schemes vary by project. The 9-value
+// union below covers the common Jira / SiteOne / Atlassian Cloud
+// schemes for PM1 M2. Per-project picklists land in PM3 when Jira
+// 2-way sync ships (priority becomes string with project-scoped
+// picklist; ERD §3.7 TB-006 will be amended Sunday to reflect this).
+export const requirementPriorityValues = [
+  'Blocker',
+  'Highest',
+  'High',
+  'Medium',
+  'Low',
+  'Lowest',
+  'Normal',
+  'Major',
+  'Minor',
+] as const;
 export const requirementSourceValues = ['manual', 'jira', 'upload'] as const;
 
 export type RequirementStatus = (typeof requirementStatusValues)[number];
@@ -67,10 +86,49 @@ export const requirementStatusLabel: Record<RequirementStatus, string> = {
 };
 
 export const requirementPriorityLabel: Record<RequirementPriority, string> = {
-  P0: 'P0',
-  P1: 'P1',
-  P2: 'P2',
-  P3: 'P3',
+  Blocker: 'Blocker',
+  Highest: 'Highest',
+  High: 'High',
+  Medium: 'Medium',
+  Low: 'Low',
+  Lowest: 'Lowest',
+  Normal: 'Normal',
+  Major: 'Major',
+  Minor: 'Minor',
+};
+
+// Tone-token mapping for priority chips. Per CLAUDE.md hex whitelist
+// + enforce-design-tokens.sh, only `var(--*)` tokens are legal — so
+// the 9 priorities collapse to 4 colour buckets (fail/warn/secondary/
+// tertiary). Per-priority *icon shape* (set in
+// `requirementPriorityIconKey` below) provides the additional visual
+// differentiation across the 9 values.
+export const requirementPriorityToneVar: Record<RequirementPriority, string> = {
+  Blocker: 'var(--fail)',
+  Highest: 'var(--fail)',
+  High: 'var(--fail)',
+  Medium: 'var(--warn)',
+  Major: 'var(--warn)',
+  Low: 'var(--secondary)',
+  Lowest: 'var(--secondary)',
+  Minor: 'var(--secondary)',
+  Normal: 'var(--text-tertiary)',
+};
+
+// Icon shape per priority — names are lucide-react icon export names.
+// Consumers do `const Icon = priorityIconMap[p];` (see F14 list page +
+// F14m1 modal). Differentiation across same-tone priorities relies on
+// the ↑/↑↑/=/↓/↓↓/→ shape contrast.
+export const requirementPriorityIconKey: Record<RequirementPriority, string> = {
+  Blocker: 'AlertOctagon',
+  Highest: 'ChevronsUp',
+  High: 'ChevronUp',
+  Medium: 'Equal',
+  Major: 'ChevronUp',
+  Low: 'ChevronDown',
+  Lowest: 'ChevronsDown',
+  Minor: 'ChevronRight',
+  Normal: 'ChevronRight',
 };
 
 export const requirementSourceLabel: Record<RequirementSource, string> = {
@@ -84,7 +142,8 @@ export const requirementSourceLabel: Record<RequirementSource, string> = {
 //
 // Distribution:
 //   status   — draft 4 / active 12 / done 6 / archived 2
-//   priority — P0 3 / P1 8 / P2 8 / P3 5
+//   priority — Blocker 1 / Highest 2 / High 5 / Medium 7 / Low 4 /
+//                Lowest 1 / Normal 2 / Major 1 / Minor 1
 //   sprint   — Sprint 41 6 / Sprint 42 12 / Sprint 43 4 / null 2
 //   source   — manual 8 / jira 14 / upload 2
 //
@@ -122,7 +181,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Build the /refunds POST endpoint so the support team can issue refunds without DB access. Idempotent on Stripe charge id.',
     epicKey: 'RET-100',
-    priority: 'P0',
+    priority: 'Blocker',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -141,7 +200,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Run the new /returns landing copy past Legal before the May 15 launch. 4 paragraphs + 2 CTAs.',
     epicKey: null,
-    priority: 'P1',
+    priority: 'High',
     status: 'draft',
     sprint: 'Sprint 42',
     source: 'manual',
@@ -159,7 +218,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Refund webhook retry telemetry',
     description: 'Add OpenTelemetry spans around the Stripe webhook retry loop.',
     epicKey: 'RET-100',
-    priority: 'P2',
+    priority: 'Medium',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -177,7 +236,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Multi-currency refund support (EUR, GBP, INR)',
     description: 'Extend the refund flow to handle non-USD storefronts. Round-trip via Stripe FX.',
     epicKey: 'RET-100',
-    priority: 'P1',
+    priority: 'Medium',
     status: 'active',
     sprint: 'Sprint 43',
     source: 'jira',
@@ -196,7 +255,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Lock the refund eligibility window to 30 days from order delivery, per policy v2.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Medium',
     status: 'active',
     sprint: 'Sprint 41',
     source: 'manual',
@@ -214,7 +273,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Return shipping label auto-generation',
     description: 'Auto-generate a USPS pre-paid return label when a refund is approved.',
     epicKey: 'RET-200',
-    priority: 'P1',
+    priority: 'Low',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -233,7 +292,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Customer must pick one of: damaged, wrong item, late, changed mind, sizing, other.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Medium',
     status: 'done',
     sprint: 'Sprint 41',
     source: 'jira',
@@ -251,7 +310,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Bulk refund CSV export for finance ops',
     description: 'Finance needs daily CSV of refund.id, charge_id, amount, currency, reason.',
     epicKey: null,
-    priority: 'P3',
+    priority: 'Low',
     status: 'draft',
     sprint: null,
     source: 'manual',
@@ -269,7 +328,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Customer-facing refund status page',
     description: 'Public /refund/:id page that surfaces "Issued / Pending / Failed" without auth.',
     epicKey: 'RET-200',
-    priority: 'P1',
+    priority: 'High',
     status: 'active',
     sprint: 'Sprint 43',
     source: 'jira',
@@ -288,7 +347,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Move refund-form input direct-to-Stripe Elements; never let card PAN touch our box.',
     epicKey: 'RET-300',
-    priority: 'P0',
+    priority: 'Highest',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -307,7 +366,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Trigger a Resend email "Your refund of $X has been processed" — template id rfd_v2.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Medium',
     status: 'done',
     sprint: 'Sprint 41',
     source: 'manual',
@@ -326,7 +385,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Support refunding 2 of 3 items in an order. Stripe partial refund API + line-item math.',
     epicKey: 'RET-100',
-    priority: 'P1',
+    priority: 'High',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -344,7 +403,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Refund SLA: process within 5 business days',
     description: 'Add a `due_at` column on refund table and cron-alert on overdue.',
     epicKey: null,
-    priority: 'P3',
+    priority: 'Low',
     status: 'draft',
     sprint: 'Sprint 43',
     source: 'manual',
@@ -363,7 +422,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Hook into the audit_log HMAC chain (PM1_ERD §3.13) — actor, target, before/after diff.',
     epicKey: 'RET-300',
-    priority: 'P1',
+    priority: 'High',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -381,7 +440,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Disallow refunds older than 90 days from charge date',
     description: 'Hard cap matches Stripe`s own dispute window; fail with a clear error message.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Medium',
     status: 'done',
     sprint: 'Sprint 41',
     source: 'jira',
@@ -400,7 +459,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       '12k pre-2026 records need backfill: reason_code from free-text, currency=USD by default.',
     epicKey: 'RET-400',
-    priority: 'P3',
+    priority: 'Lowest',
     status: 'archived',
     sprint: null,
     source: 'upload',
@@ -418,7 +477,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Refund analytics dashboard for finance',
     description: 'Daily / weekly / monthly volume + reason-code breakdown. Read-only.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Medium',
     status: 'active',
     sprint: 'Sprint 43',
     source: 'manual',
@@ -436,7 +495,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Refund webhook signature verification',
     description: 'Verify Stripe webhook secret on every callback; reject + alert on mismatch.',
     epicKey: 'RET-300',
-    priority: 'P0',
+    priority: 'Highest',
     status: 'active',
     sprint: 'Sprint 41',
     source: 'jira',
@@ -454,7 +513,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Restocking-fee deduction (2% on changed-mind returns)',
     description: 'Pull deduction config from feature_flags; render breakdown in customer email.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Major',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',
@@ -472,7 +531,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Revoke duplicate-key uploaded requirements',
     description: 'When a Jira-sync overwrites an upload entry, archive the upload row.',
     epicKey: 'RET-400',
-    priority: 'P3',
+    priority: 'Minor',
     status: 'archived',
     sprint: null,
     source: 'upload',
@@ -490,7 +549,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'A/B test: 1-click refund vs. confirm-flow',
     description: 'Run 50/50 split for 14 days; instrument refund-completion rate + CSAT.',
     epicKey: null,
-    priority: 'P3',
+    priority: 'Low',
     status: 'draft',
     sprint: 'Sprint 43',
     source: 'manual',
@@ -509,7 +568,7 @@ export const REQUIREMENTS: Requirement[] = [
     description:
       'Build a /refund?charge_id=xyz redirect so support links work from Zendesk macros.',
     epicKey: null,
-    priority: 'P2',
+    priority: 'Normal',
     status: 'done',
     sprint: 'Sprint 41',
     source: 'jira',
@@ -527,7 +586,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Backfill epic_key on legacy refund records',
     description: 'Pull epic_key from Jira via the sync loop; update audit_log with diff.',
     epicKey: 'RET-100',
-    priority: 'P3',
+    priority: 'Normal',
     status: 'done',
     sprint: 'Sprint 41',
     source: 'jira',
@@ -545,7 +604,7 @@ export const REQUIREMENTS: Requirement[] = [
     title: 'Rate-limit refund webhook to 50 RPS',
     description: 'Stripe sends bursts; cap intake + queue overflow to prevent dyno pressure.',
     epicKey: 'RET-300',
-    priority: 'P1',
+    priority: 'High',
     status: 'active',
     sprint: 'Sprint 42',
     source: 'jira',

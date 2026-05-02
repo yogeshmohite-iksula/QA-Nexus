@@ -47,6 +47,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  AlertOctagon,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  ChevronsDown,
+  ChevronsUp,
+  Equal,
+} from 'lucide-react';
 import { HomeShell } from '@/components/home/home-shell';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
 import { useActiveProject } from '@/lib/contexts/ProjectContext';
@@ -56,6 +65,8 @@ import {
   filterRequirements,
   listSprints,
   requirementPriorityLabel,
+  requirementPriorityToneVar,
+  requirementPriorityValues,
   requirementSourceLabel,
   requirementStatusLabel,
   useRequirements,
@@ -64,6 +75,22 @@ import {
   type RequirementSource,
   type RequirementStatus,
 } from '@/lib/data/requirements';
+
+// Priority icon registry — maps the enum value to a lucide-react
+// component. The 4-tone collapse on `requirementPriorityToneVar`
+// (fail / warn / secondary / tertiary) is offset by per-priority
+// icon shape so each of the 9 values has a unique visual signature.
+const PRIORITY_ICON: Record<RequirementPriority, typeof AlertOctagon> = {
+  Blocker: AlertOctagon,
+  Highest: ChevronsUp,
+  High: ChevronUp,
+  Medium: Equal,
+  Major: ChevronUp,
+  Low: ChevronDown,
+  Lowest: ChevronsDown,
+  Minor: ChevronRight,
+  Normal: ChevronRight,
+};
 
 // ---------------------------------------------------------------------------
 // View state
@@ -490,10 +517,10 @@ function FilterChipBar({
           value={priority}
           options={[
             { value: 'all', label: 'All' },
-            { value: 'P0', label: 'P0' },
-            { value: 'P1', label: 'P1' },
-            { value: 'P2', label: 'P2' },
-            { value: 'P3', label: 'P3' },
+            ...requirementPriorityValues.map((p) => ({
+              value: p,
+              label: requirementPriorityLabel[p],
+            })),
           ]}
           onChange={(v) => setPriority(v as RequirementPriority | 'all')}
         />
@@ -799,18 +826,15 @@ function RequirementTableRow({
 // ---------------------------------------------------------------------------
 
 function PriorityBadge({ priority }: { priority: RequirementPriority }) {
-  const tone =
-    priority === 'P0'
-      ? 'bg-[var(--fail)]/15 text-[var(--fail)]'
-      : priority === 'P1'
-        ? 'bg-[var(--warn)]/15 text-[var(--warn)]'
-        : priority === 'P2'
-          ? 'bg-[var(--secondary)]/15 text-[var(--secondary)]'
-          : 'bg-[var(--overlay)] text-[var(--text-tertiary)]';
+  const Icon = PRIORITY_ICON[priority];
+  const toneVar = requirementPriorityToneVar[priority];
   return (
     <span
-      className={`inline-flex h-5 items-center rounded px-1.5 font-mono text-[10.5px] font-bold ${tone}`}
+      className="inline-flex h-5 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--raised)] pl-1 pr-1.5 font-mono text-[10.5px] font-semibold"
+      style={{ color: toneVar }}
+      aria-label={`Priority ${requirementPriorityLabel[priority]}`}
     >
+      <Icon size={11} aria-hidden="true" />
       {requirementPriorityLabel[priority]}
     </span>
   );

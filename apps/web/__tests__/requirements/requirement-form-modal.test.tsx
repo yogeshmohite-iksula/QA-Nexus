@@ -35,8 +35,8 @@ describe('RequirementFormModal (F14m1)', () => {
     // Header copy
     expect(screen.getByRole('heading', { name: /create requirement/i })).toBeInTheDocument();
 
-    // Default values: title empty, priority P2, status draft
-    expect((screen.getByLabelText(/^priority\b/i) as HTMLSelectElement).value).toBe('P2');
+    // Default values: title empty, priority Medium (9-value Jira-style enum), status draft
+    expect((screen.getByLabelText(/^priority\b/i) as HTMLSelectElement).value).toBe('Medium');
     expect((screen.getByLabelText(/^status\b/i) as HTMLSelectElement).value).toBe('draft');
 
     // Open marker
@@ -62,8 +62,8 @@ describe('RequirementFormModal (F14m1)', () => {
     const titleInput = screen.getByLabelText(/^title\b/i) as HTMLInputElement;
     expect(titleInput.value).toBe('Implement refund API for failed orders');
 
-    // Priority + status reflect seed values (RET-001 = P0 / active)
-    expect((screen.getByLabelText(/^priority\b/i) as HTMLSelectElement).value).toBe('P0');
+    // Priority + status reflect seed values (RET-001 = Blocker / active)
+    expect((screen.getByLabelText(/^priority\b/i) as HTMLSelectElement).value).toBe('Blocker');
     expect((screen.getByLabelText(/^status\b/i) as HTMLSelectElement).value).toBe('active');
 
     expect(infoSpy).toHaveBeenCalledWith(
@@ -167,6 +167,24 @@ describe('RequirementFormModal (F14m1)', () => {
     );
   });
 
+  it('priority dropdown surfaces all 9 Jira-style values (Blocker..Minor)', () => {
+    const onClose = vi.fn();
+    renderWithProviders(<RequirementFormModal onClose={onClose} />);
+    const prioritySelect = screen.getByLabelText(/^priority\b/i) as HTMLSelectElement;
+    const optionValues = Array.from(prioritySelect.options).map((o) => o.value);
+    expect(optionValues).toEqual([
+      'Blocker',
+      'Highest',
+      'High',
+      'Medium',
+      'Low',
+      'Lowest',
+      'Normal',
+      'Major',
+      'Minor',
+    ]);
+  });
+
   it('priority change fires field-change marker for "priority"', async () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const user = userEvent.setup();
@@ -175,7 +193,7 @@ describe('RequirementFormModal (F14m1)', () => {
     renderWithProviders(<RequirementFormModal onClose={onClose} />);
 
     const prioritySelect = screen.getByLabelText(/^priority\b/i);
-    await user.selectOptions(prioritySelect, 'P0');
+    await user.selectOptions(prioritySelect, 'Blocker');
 
     expect(infoSpy).toHaveBeenCalledWith(
       'pattern-a:deferred:requirement-form-field-change',
