@@ -2,6 +2,62 @@
 
 ---
 
+## [2026-05-02] (r) Audit log span correlation — wire trace_id/span_id into audit_log + back-pointer attribute — M1 MORNING
+
+**Symptom (Day-5 code audit FIND-5):** `auditService.write()` writes a Postgres row. `tracer.startActiveSpan('llm.complete', ...)` (Day-5 #3) emits a Grafana span. The two events have no correlation field. Incident postmortems that need to bridge "this audit row" ↔ "this trace" rely on timestamp + actor_id heuristics — brittle.
+
+**Decision (M1 morning, ~1.5 hr):**
+
+1. Migration: add `trace_id VARCHAR(32) NULL` + `span_id VARCHAR(16) NULL` columns to `audit_log` table. Raw SQL per ADR-002 split.
+2. `AuditService.write()` reads `trace.getActiveSpan()?.spanContext()` and populates the new columns.
+3. Conversely, when an audit row is written inside an active span, set span attributes `audit_log.row_id` + `audit_log.kind` so Grafana can link forward to F28 Settings & Audit URL.
+4. F28 UI (M1) renders the trace_id as a link to Grafana Tempo when present.
+
+**Owner:** BE chat (M1 morning, before F28 ships).
+
+**Cross-refs:** PM1_ERD §3.13 (audit log) · `.claude/rules/api.md` (OTel binding rule) · `docs/audits/code-audit.md` FIND-5.
+
+---
+
+## [2026-05-02] (q) Test coverage for packages/shared schemas — M1 FIRST HALF
+
+**Symptom (Day-5 code audit FIND-2):** `apps/api/src/` has 84 jest tests across 5 spec files (good). `packages/shared/src/` has **zero** tests despite owning the canonical Zod schemas that BE↔FE depend on. A subtle regression — say relaxing `.min(1)` to `.min(0)` — wouldn't be caught by typecheck.
+
+**Decision (M1 first half, ~3 hr):**
+
+1. Add `packages/shared/src/__tests__/schemas.spec.ts` with one happy-path + 2-3 edge-case tests per schema in `packages/shared/src/schemas/*`.
+2. Aim for 40-60 tests covering the canonical request/response shapes used by BE controllers + FE forms.
+3. Use jest with the same `passWithNoTests` pattern as the existing test:smoke setup.
+4. **Defer apps/web unit tests** — Pattern A means components are mostly intent-routing + render. Visual gates + Playwright e2e cover the meaningful regressions. RTL would be high-cost / low-marginal-value.
+
+**Owner:** BE chat owns shared schemas; tests land alongside the M1 endpoint expansion. FE chat skips per recommendation above (revisit M2 if a concrete miss surfaces).
+
+**Cross-refs:** `docs/audits/code-audit.md` FIND-2 · `packages/shared/src/schemas/*`.
+
+---
+
+## [2026-05-02] (p) Audit-log discipline static-analysis gate — DAY 6 MORNING P1
+
+**Symptom (Day-5 code audit FIND-1):** PM1_ERD §3.13 + CLAUDE.md Hard Rule 7 + `.claude/rules/api.md` all bind: every state-changing endpoint (POST/PUT/PATCH/DELETE) must write an audit row synchronously. Day-5 audit identified at least **10 such endpoints** across 6 controllers — but did NOT verify each one actually writes via `auditService.write(...)`. Could be 100% compliant. Could be 50%. **Unknown coverage = compliance gap.**
+
+**Decision (Day-6 morning, ~40 min):**
+
+1. **(~30 min)** Write `scripts/audit-discipline-check.sh`:
+   - Greps every `@Post`/`@Put`/`@Patch`/`@Delete` decorator in `apps/api/src/**/*.controller.ts`
+   - For each match, scans the surrounding method body (next ~50 lines until next class member) for `auditService.write(` or `audit.write(`
+   - Allows `// audit-exempt: <reason>` markers (e.g. otel-test endpoints don't need rows)
+   - Lists violations + returns non-zero
+2. **(~10 min)** Wire as `.husky/pre-push` gate 4/4 (alongside typecheck, frozen-lockfile, CHANGELOG).
+3. For each violation surfaced: either add `auditService.write(...)` OR add the explicit exempt marker.
+
+**Acceptance:** zero violations after Day-6 morning fix-up; gate self-validates on the next push.
+
+**Owner:** MAIN (Day-6 morning).
+
+**Cross-refs:** PM1_ERD §3.13 · CLAUDE.md Hard Rule 7 · `.claude/rules/api.md` "Audit log" section · `docs/audits/code-audit.md` FIND-1.
+
+---
+
 ## [2026-05-01] (o) FE/MAIN long-session image-dimension API errors — DEV-EXPERIENCE — IMMEDIATE
 
 **Symptom (recurring twice during M1 prep):** FE chat session crashes with `An image in the conversation exceeds the dimension limit for many-image requests (2000px). Start a new session with fewer images.` after ~5+ visual-gate cycles. Forces context loss + brief recovery into a new session. Hit twice during F28 commit phase on Day 5.
