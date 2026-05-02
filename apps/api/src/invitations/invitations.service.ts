@@ -44,6 +44,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
+import { EmailService } from '../email/email.service';
 import {
   CreateInvitationInput,
   AcceptInvitationInput,
@@ -82,7 +83,45 @@ export class InvitationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly emailSvc: EmailService,
   ) {}
+
+  /** Build the magic-link URL the invitee clicks. Honors
+   *  INVITATION_ACCEPT_URL_BASE env (set per Render-vs-Pages domain).
+   *  Default is dev-friendly localhost so untouched local runs work. */
+  private magicLinkUrlFor(token: string): string {
+    const base =
+      process.env.INVITATION_ACCEPT_URL_BASE ?? 'http://localhost:3000/accept';
+    // The base is responsible for any trailing slash; we always use ?token=.
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}token=${token}`;
+  }
+
+  /** Fetch workspace name + inviter display-name needed by the
+   *  invitation template. Single query (Prisma can't join across two
+   *  separate tables in one findUnique call without explicit `include`,
+   *  but workspace + user are both small + indexed lookups). */
+  private async fetchEmailContext(
+    workspaceId: string,
+    inviterUserId: string,
+  ): Promise<{ workspaceName: string; inviterName: string }> {
+    const [ws, u] = await Promise.all([
+      this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { name: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: inviterUserId },
+        select: { displayName: true, email: true },
+      }),
+    ]);
+    return {
+      workspaceName: ws?.name ?? 'QA Nexus',
+      // Fall back to email local-part if displayName is empty.
+      inviterName:
+        u?.displayName ?? u?.email?.split('@')[0] ?? 'A workspace admin',
+    };
+  }
 
   /**
    * Create a pending invitation + audit. The plaintext token is returned
@@ -174,6 +213,20 @@ export class InvitationsService {
       },
     });
 
+    // Email send. NOT in the same DB transaction — invite is committed +
+    // audit-trailed; if email fails, invite still exists and Admin can
+    // resend. Send result is captured in a dedicated audit row so the
+    // forensic trail records messageId / error without violating the
+    // append-only chain (no UPDATE of the prior row).
+    await this.sendInvitationEmail({
+      invitationId: inv.id,
+      invitedEmail: inv.invitedEmail,
+      role: input.role,
+      tokenPlain,
+      expiresAt: inv.expiresAt.toISOString(),
+      ctx,
+    });
+
     return {
       id: inv.id,
       invitedEmail: inv.invitedEmail,
@@ -181,6 +234,55 @@ export class InvitationsService {
       shortRef: inv.id.replace(/-/g, '').slice(0, 8),
       expiresAt: inv.expiresAt.toISOString(),
     };
+  }
+
+  /**
+   * Send the invitation email + write a dedicated `invitation_email_sent`
+   * audit row. Failures from EmailService are graceful (returned, not
+   * thrown) so the row captures the error message for forensics. The
+   * caller (create / resend) does NOT roll back on email failure — the
+   * invite is persisted + can be resent manually.
+   */
+  private async sendInvitationEmail(args: {
+    invitationId: string;
+    invitedEmail: string;
+    role: string;
+    tokenPlain: string;
+    expiresAt: string;
+    ctx: ActorContext;
+  }): Promise<{ messageId: string; stubbed: boolean; error?: string }> {
+    const ec = await this.fetchEmailContext(
+      args.ctx.workspaceId,
+      args.ctx.actorId,
+    );
+    const magicLinkUrl = this.magicLinkUrlFor(args.tokenPlain);
+    const result = await this.emailSvc.sendInvitation({
+      to: args.invitedEmail,
+      workspaceName: ec.workspaceName,
+      inviterName: ec.inviterName,
+      role: args.role,
+      magicLinkUrl,
+      expiresAt: args.expiresAt,
+    });
+
+    await this.audit.write({
+      workspaceId: args.ctx.workspaceId,
+      actorId: args.ctx.actorId,
+      entityType: 'invitation',
+      entityId: args.invitationId,
+      action: 'invitation_email_sent',
+      payload: {
+        invitation_id: args.invitationId,
+        // Audit redaction discipline (matches Day-6 PM Block 1 invitation
+        // service): email DOMAIN only, never the local-part of the invitee.
+        invited_email_domain: '@' + args.invitedEmail.split('@')[1],
+        message_id: result.messageId,
+        stubbed: result.stubbed,
+        error: result.error ?? null,
+        actor_email: args.ctx.actorEmail,
+      },
+    });
+    return result;
   }
 
   /** Single-record fetch for GET /api/invitations/:id.
@@ -294,6 +396,16 @@ export class InvitationsService {
         // not PII-sensitive in the same way as invitee email; keep for
         // forensics. Audit chain itself is per-workspace, not exfiltrated.
       },
+    });
+
+    // Email send. Mirrors create() — graceful + audit_email_sent row.
+    await this.sendInvitationEmail({
+      invitationId: updated.id,
+      invitedEmail: inv.invitedEmail,
+      role: inv.role,
+      tokenPlain,
+      expiresAt: updated.expiresAt.toISOString(),
+      ctx,
     });
 
     return {

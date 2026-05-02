@@ -18,6 +18,7 @@ import { CreateInvitationInput } from '@qa-nexus/shared';
 import { InvitationsService } from '../invitations.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
+import { EmailService } from '../../email/email.service';
 
 /** Helper: parse partial input through the Zod schema so optional/default
  *  fields are filled, matching the type the service expects. */
@@ -42,6 +43,9 @@ function makePrisma() {
     user: {
       findUnique: jest.fn(),
     },
+    workspace: {
+      findUnique: jest.fn(),
+    },
     userInvitation: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -60,15 +64,31 @@ describe('InvitationsService', () => {
   let service: InvitationsService;
   let prisma: ReturnType<typeof makePrisma>;
   let audit: { write: jest.Mock };
+  let emailSvc: { sendInvitation: jest.Mock };
 
   beforeEach(async () => {
     prisma = makePrisma();
     audit = { write: jest.fn().mockResolvedValue({ id: 'a', thisHash: 'h' }) };
+    emailSvc = {
+      sendInvitation: jest.fn().mockResolvedValue({
+        messageId: 'captured-test-msg-id',
+        stubbed: true,
+      }),
+    };
+    // Default email-context lookups (workspace + inviter user) so wire-tests
+    // don't have to set them up. Individual tests can override via
+    // mockResolvedValueOnce IF they assert on email context fields.
+    prisma.workspace.findUnique.mockResolvedValue({ name: 'Iksula QA Nexus' });
+    prisma.user.findUnique.mockResolvedValue({
+      displayName: 'Akshay Panchal',
+      email: 'akshay.panchal@iksula.com',
+    });
     const moduleRef = await Test.createTestingModule({
       providers: [
         InvitationsService,
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: audit },
+        { provide: EmailService, useValue: emailSvc },
       ],
     }).compile();
     service = moduleRef.get(InvitationsService);
@@ -101,14 +121,19 @@ describe('InvitationsService', () => {
       expect(persistedHash).toBe(expectedHash);
       // tokenHash is NOT the plaintext
       expect(persistedHash).not.toBe(result.token);
-      // Audit fired with action + entityType
-      expect(audit.write).toHaveBeenCalledTimes(1);
+      // Audit fired — 2 rows now (invitation_created + invitation_email_sent
+      // since Day-6 PM Block 2 email wiring). Check the first row here;
+      // the email-sent row gets its own assertions in the "email wiring"
+      // describe block below.
+      expect(audit.write).toHaveBeenCalledTimes(2);
       const auditArg = audit.write.mock.calls[0][0];
       expect(auditArg.action).toBe('invitation_created');
       expect(auditArg.entityType).toBe('invitation');
       expect(auditArg.payload.invited_email).toBe('new@iksula.com');
-      // Critical: plaintext token NEVER in audit payload
-      expect(JSON.stringify(auditArg.payload)).not.toContain(result.token);
+      // Critical: plaintext token NEVER in audit payload (either row)
+      expect(JSON.stringify(audit.write.mock.calls)).not.toContain(
+        result.token,
+      );
     });
 
     it('refuses double-invite for active (pending) invitation', async () => {
@@ -640,6 +665,121 @@ describe('InvitationsService', () => {
       expect(payloadStr).not.toContain('passwordHash');
       expect(payloadStr).not.toContain('password_hash');
       expect(payloadStr).not.toContain('PENDING_BETTERAUTH');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // M1 Day-6 PM Block 2 — EmailService wiring.
+  //
+  // Pin that create() + resend() actually CALL EmailService.sendInvitation()
+  // with the right payload AND that the dedicated `invitation_email_sent`
+  // audit row captures messageId / stubbed / error without leaking PII.
+  // ─────────────────────────────────────────────────────────────────────
+  describe('email wiring', () => {
+    it('create() — calls sendInvitation + writes invitation_email_sent audit', async () => {
+      prisma.userInvitation.findFirst.mockResolvedValueOnce(null); // no dup
+      prisma.userInvitation.create.mockResolvedValueOnce({
+        id: 'abcdef01-2345-6789-aaaa-bbbbccccdddd',
+        invitedEmail: 'wired@iksula.com',
+        expiresAt: FUTURE,
+      });
+
+      const result = await service.create(
+        inv({ invitedEmail: 'wired@iksula.com', role: 'QAEngineer' }),
+        ctx,
+      );
+
+      // EmailService got called with the right shape.
+      expect(emailSvc.sendInvitation).toHaveBeenCalledTimes(1);
+      const sendArg = emailSvc.sendInvitation.mock.calls[0][0];
+      expect(sendArg.to).toBe('wired@iksula.com');
+      expect(sendArg.workspaceName).toBe('Iksula QA Nexus');
+      expect(sendArg.inviterName).toBe('Akshay Panchal');
+      expect(sendArg.role).toBe('QAEngineer');
+      expect(sendArg.magicLinkUrl).toContain('token=' + result.token);
+
+      // Two audit rows now: invitation_created + invitation_email_sent.
+      expect(audit.write).toHaveBeenCalledTimes(2);
+      const created = audit.write.mock.calls[0][0];
+      const emailSent = audit.write.mock.calls[1][0];
+      expect(created.action).toBe('invitation_created');
+      expect(emailSent.action).toBe('invitation_email_sent');
+      expect(emailSent.payload.message_id).toBe('captured-test-msg-id');
+      expect(emailSent.payload.stubbed).toBe(true);
+      expect(emailSent.payload.error).toBeNull();
+      // PII discipline on the email-sent audit row too: domain only,
+      // never local-part of the invited address; never the plaintext token.
+      const payloadStr = JSON.stringify(emailSent.payload);
+      expect(payloadStr).toContain('@iksula.com');
+      expect(payloadStr).not.toContain('wired@iksula.com');
+      expect(payloadStr).not.toContain(result.token);
+    });
+
+    it('resend() — calls sendInvitation again with the NEW token', async () => {
+      const pendingRow = {
+        id: 'fedcba98-7654-3210-bbbb-ccccddddeeee',
+        workspaceId: 'ws-1',
+        invitedEmail: 'pending@iksula.com',
+        role: 'QAEngineer',
+        projectScopeJson: [],
+        invitedBy: 'user-1',
+        tokenHash: 'OLD',
+        expiresAt: FUTURE,
+        status: 'pending',
+        acceptedAt: null,
+        createdAt: new Date(),
+      };
+      prisma.userInvitation.findUnique.mockResolvedValueOnce(pendingRow);
+      prisma.userInvitation.update.mockResolvedValueOnce({
+        id: pendingRow.id,
+        expiresAt: FUTURE,
+      });
+
+      const out = await service.resend(pendingRow.id, {}, ctx);
+
+      // EmailService called with the NEW token (not the OLD hash).
+      expect(emailSvc.sendInvitation).toHaveBeenCalledTimes(1);
+      const sendArg = emailSvc.sendInvitation.mock.calls[0][0];
+      expect(sendArg.to).toBe('pending@iksula.com');
+      expect(sendArg.magicLinkUrl).toContain('token=' + out.token);
+      expect(sendArg.magicLinkUrl).not.toContain('OLD');
+
+      // Two audit rows: invitation_resent + invitation_email_sent.
+      expect(audit.write).toHaveBeenCalledTimes(2);
+      const resent = audit.write.mock.calls[0][0];
+      const emailSent = audit.write.mock.calls[1][0];
+      expect(resent.action).toBe('invitation_resent');
+      expect(emailSent.action).toBe('invitation_email_sent');
+      expect(emailSent.payload.invitation_id).toBe(pendingRow.id);
+    });
+
+    it('create() — Resend failure surfaces as audit error, invite still committed', async () => {
+      prisma.userInvitation.findFirst.mockResolvedValueOnce(null);
+      prisma.userInvitation.create.mockResolvedValueOnce({
+        id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        invitedEmail: 'fails@iksula.com',
+        expiresAt: FUTURE,
+      });
+      // Simulate Resend graceful failure.
+      emailSvc.sendInvitation.mockResolvedValueOnce({
+        messageId: 'failed-xyz',
+        stubbed: false,
+        error: 'rate-limited',
+      });
+
+      const result = await service.create(
+        inv({ invitedEmail: 'fails@iksula.com', role: 'QAEngineer' }),
+        ctx,
+      );
+
+      // create() returned the invitation normally — caller does NOT see the email failure.
+      expect(result.id).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+      // Audit captures the failure.
+      const emailSent = audit.write.mock.calls[1][0];
+      expect(emailSent.action).toBe('invitation_email_sent');
+      expect(emailSent.payload.message_id).toBe('failed-xyz');
+      expect(emailSent.payload.error).toBe('rate-limited');
+      expect(emailSent.payload.stubbed).toBe(false);
     });
   });
 });
