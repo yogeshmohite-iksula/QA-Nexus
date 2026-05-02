@@ -31,6 +31,95 @@ export const CreateUserInput = z.object({
 });
 export type CreateUserInput = z.infer<typeof CreateUserInput>;
 
+// ─────────────────────────────────────────────────────────────────────
+// M1 Day-6 PM — Users management endpoints (F27 Admin tab).
+// PM1_ERD §3.5. Status is DERIVED from User row fields, not a column:
+//   - "disabled" if disabledAt IS NOT NULL
+//   - "invited"  if activatedAt IS NULL  AND disabledAt IS NULL
+//   - "active"   if activatedAt IS NOT NULL AND disabledAt IS NULL
+// Schema columns disabledAt + roleChangedAt added in 0003 migration.
+// ─────────────────────────────────────────────────────────────────────
+
+export const UserStatus = z.enum(['active', 'invited', 'disabled']);
+export type UserStatus = z.infer<typeof UserStatus>;
+
+/// M1 — list-row projection. NEVER carries passwordHash, BetterAuth
+/// session tokens, or any auth internals. `displayName` exposed as
+/// `name` for FE ergonomics (matches F27 column header).
+export const UserListItem = z.object({
+  id: Uuid,
+  email: z.string().email(),
+  name: NonEmpty, // = displayName
+  role: UserRole,
+  status: UserStatus,
+  createdAt: Timestamp,
+  lastSeenAt: Timestamp.nullable(),
+});
+export type UserListItem = z.infer<typeof UserListItem>;
+
+/// M1 — query params for GET /api/users.
+/// Filters are AND-ed; missing = no filter on that field.
+export const ListUsersQuery = z.object({
+  /** Optional role filter. Admin/Lead only — service rejects from QAEng. */
+  role: UserRole.optional(),
+  /** Optional status filter. Open to all authed users. */
+  status: UserStatus.optional(),
+});
+export type ListUsersQuery = z.infer<typeof ListUsersQuery>;
+
+export const ListUsersResponse = z.object({
+  ok: z.literal(true),
+  users: z.array(UserListItem),
+});
+export type ListUsersResponse = z.infer<typeof ListUsersResponse>;
+
+/// M1 — single-record fetch. Adds invitedByUserId + roleChangedAt
+/// vs the list shape (extra context for the F27 detail drawer).
+export const UserDetailItem = UserListItem.extend({
+  invitedByUserId: Uuid.nullable(),
+  roleChangedAt: Timestamp.nullable(),
+});
+export type UserDetailItem = z.infer<typeof UserDetailItem>;
+
+export const UserDetailResponse = z.object({
+  ok: z.literal(true),
+  user: UserDetailItem,
+});
+export type UserDetailResponse = z.infer<typeof UserDetailResponse>;
+
+/// M1 — PATCH /api/users/:id/role. Workspace-level role change only;
+/// per-project overrides go through ProjectMembersController in Block 2.
+/// Service-side guards: cannot change own role, cannot demote last Admin,
+/// cannot change role of an invited (un-accepted) user.
+export const ChangeUserRoleInput = z.object({
+  userId: Uuid,
+  newRole: UserRole,
+});
+export type ChangeUserRoleInput = z.infer<typeof ChangeUserRoleInput>;
+
+export const ChangeUserRoleResponse = z.object({
+  ok: z.literal(true),
+  user: UserDetailItem,
+});
+export type ChangeUserRoleResponse = z.infer<typeof ChangeUserRoleResponse>;
+
+/// M1 — PATCH /api/users/:id/status. Disable purges BetterAuth sessions.
+/// Service-side guards: cannot disable self, cannot disable last Admin.
+/// Re-enabling does NOT auto-create a session — user must magic-link in.
+export const ChangeUserStatusInput = z.object({
+  userId: Uuid,
+  newStatus: z.enum(['active', 'disabled']), // 'invited' is system-set, not Admin-set
+});
+export type ChangeUserStatusInput = z.infer<typeof ChangeUserStatusInput>;
+
+export const ChangeUserStatusResponse = z.object({
+  ok: z.literal(true),
+  user: UserDetailItem,
+  /** Number of BetterAuth sessions purged (0 if user wasn't signed in). */
+  sessionsRevoked: z.number().int().nonnegative(),
+});
+export type ChangeUserStatusResponse = z.infer<typeof ChangeUserStatusResponse>;
+
 // TB-005 user_invitations
 export const UserInvitationSchema = z.object({
   id: Uuid,
