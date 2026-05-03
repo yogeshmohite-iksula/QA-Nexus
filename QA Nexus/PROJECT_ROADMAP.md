@@ -68,7 +68,7 @@ PM1 internally contains 7 sub-milestones (M0 → M6). This structure is canonica
 
 | Sub | Name | Window | Exit Gate |
 |-----|------|--------|-----------|
-| M0 | Setup & Infrastructure | 2026-04-27 → 2026-05-10 (2w) | Auth + RBAC + Next.js shell + Oracle deploy + CI/CD hello-world |
+| M0 | Setup & Infrastructure | 2026-04-27 → **2026-05-03 (CLOSED)** | Auth + RBAC + Next.js shell + Render deploy + CI/CD hello-world. **✅ CLOSED — 17 PASS / 0 FAIL / 2 DEFERRED to M1.5. See `docs/milestones/M0_completion_report.md`.** |
 | M1 | Users & Roles | 2026-05-11 → 2026-05-24 (2w) | 4 roles (Admin/Lead/QA/Stakeholder), project CRUD, RLS enforced |
 | M2 | Test Documents & Knowledge Base — **Core Doc Catalog (12 templates)** | 2026-05-25 → 2026-06-14 (3w) | KB first-class, 12 doc templates, RAG pipeline (pgvector + BGE), PDF export |
 | M3 | Test Cases & AI Generation — **Test Case Management** | 2026-06-15 → 2026-07-05 (3w) | **A1** Test Case Generator live, **A2** Dedup live chips, Notion editor, BDD+traditional, RTM |

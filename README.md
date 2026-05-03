@@ -183,15 +183,15 @@ From the repo root:
 
 ## Project Roadmap
 
-| Milestone                           | Scope                                                                                         | Target                          |
-| ----------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------- |
-| **M0** — Infrastructure             | Auth shell + deploy pipeline + 34 setup tasks                                                 | Days 1–10 (in progress, ~Day 1) |
-| **M1** — Users & Roles              | 4-role RBAC + Postgres RLS + magic-link invites + F06/F06b/F06c/F07/F27                       | M0+1 to M0+3 weeks              |
-| **M2** — Docs + KB                  | Document Catalog (12 templates) + KB with Qwen3 embeddings + F12-F15                          | M1+1 to M1+3 weeks              |
-| **M3** — Test Cases + A1 + A2       | TipTap editor (BDD + traditional) + A1 generation via Groq + A2 dedup + F16-F18               | M2+1 to M2+3 weeks              |
-| **M4** — Runs + Defects + Jira + A4 | Test runs (live state via WS) + defects with A4 5-Layer RCA + Jira OAuth 2-way sync + F19-F22 | M3+1 to M3+3 weeks              |
-| **M5** — Reports + Pilot Launch     | Reports Studio (4 templates) + F23-F28 + 8-user pilot Day-0                                   | M4+1 to M4+2 weeks              |
-| **M6** — GA                         | All 41 frames + all 12 PM1_ERD §10 acceptance gates                                           | **Target: 2026-09-21**          |
+| Milestone                           | Scope                                                                                         | Target                                                                                                           |
+| ----------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **M0** — Infrastructure             | Auth shell + deploy pipeline + 34 setup tasks                                                 | **✅ CLOSED 2026-05-03** — 17 PASS / 0 FAIL / 2 DEFERRED to M1.5 (see `docs/milestones/M0_completion_report.md`) |
+| **M1** — Users & Roles              | 4-role RBAC + Postgres RLS + magic-link invites + F06/F06b/F06c/F07/F27                       | **🟡 IN PROGRESS** — BE backend merged at `af4bdf6` (PR #22); M1.5 wires T021 magic-link                         |
+| **M2** — Docs + KB                  | Document Catalog (12 templates) + KB with Qwen3 embeddings + F12-F15                          | M1+1 to M1+3 weeks                                                                                               |
+| **M3** — Test Cases + A1 + A2       | TipTap editor (BDD + traditional) + A1 generation via Groq + A2 dedup + F16-F18               | M2+1 to M2+3 weeks                                                                                               |
+| **M4** — Runs + Defects + Jira + A4 | Test runs (live state via WS) + defects with A4 5-Layer RCA + Jira OAuth 2-way sync + F19-F22 | M3+1 to M3+3 weeks                                                                                               |
+| **M5** — Reports + Pilot Launch     | Reports Studio (4 templates) + F23-F28 + 8-user pilot Day-0                                   | M4+1 to M4+2 weeks                                                                                               |
+| **M6** — GA                         | All 41 frames + all 12 PM1_ERD §10 acceptance gates                                           | **Target: 2026-09-21**                                                                                           |
 
 Detailed milestones in [`docs/MILESTONES.md`](docs/MILESTONES.md). Full M0 task list (34 tasks, ~294h) in [`QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md`](QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md).
 
