@@ -52,7 +52,7 @@ jobs:
       # Test mode — no real BetterAuth secret needed; CI uses an ephemeral one.
       BETTER_AUTH_SECRET: "ci-only-do-not-use-in-prod-32-bytes-min-padding="
       BETTER_AUTH_URL: "http://localhost:3001"
-      EMBEDDING_MODEL_ID: "Xenova/bge-large-en-v1.5"
+      EMBEDDING_MODEL_ID: "Xenova/bge-small-en-v1.5"
       NODE_ENV: "production"
       PORT: "3001"
       # DATABASE_URL falls back to a non-functional placeholder; tests that
