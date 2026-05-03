@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — A1 Generate from Requirement</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ─────────────── Tokens (01_SYSTEM.md §3) ─────────────── */
+  :root{
+    --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+    --border:#2A3347; --border-strong:#3B4660;
+    --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+    --primary:#2DD4BF; --primary-ink:#003732;
+    --secondary:#A78BFA; --ai-accent:#C4B5FD;
+    --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+    --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+    --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+    --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+    --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+    --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+    --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+    --rail-w:240px; --topbar-h:56px; --tap:44px;
+    --r-sm:4px; --r-md:6px; --r-lg:10px; --r-ai:12px; --r-modal:14px;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;
+    -webkit-font-smoothing:antialiased;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  button{font-family:inherit;cursor:pointer;color:inherit;background:none;border:0}
+  input,textarea,select{font-family:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  /* ─── Custom scrollbar — SYS-17 (primitives-playground.html SB-1) ─── */
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+  ::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+  ::-webkit-scrollbar-corner{background:transparent}
+  *{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+  @media (hover:none) and (pointer:coarse){
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-thumb{background:var(--border-strong)}
+  }
+
+  /* ─────────────── Shell ─────────────── */
+  .shell{display:grid;grid-template-rows:var(--topbar-h) 1fr;height:100vh}
+  .topbar{height:var(--topbar-h);display:flex;align-items:center;gap:12px;padding:0 16px;
+    background:var(--base);border-bottom:1px solid var(--border)}
+  .brand{display:inline-flex;align-items:center;gap:8px}
+  .brand-mark{width:28px;height:28px;border-radius:6px;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));
+    display:inline-flex;align-items:center;justify-content:center;color:var(--canvas);
+    font-family:'DM Sans';font-weight:700;font-size:14px}
+  .brand-word{font-family:'DM Sans';font-size:15px;font-weight:700}
+  @media (max-width:767px){.brand-word{display:none}}
+  .crumb-top{display:inline-flex;align-items:center;gap:8px;color:var(--t3);font-size:12px;font-family:'JetBrains Mono'}
+  .crumb-top .now{color:var(--t1);font-weight:600}
+  .crumb-top .sep{color:var(--t4)}
+  @media (max-width:1023px){.crumb-top{display:none}}
+  .topbar-spacer{flex:1}
+  /* Project picker pill (matches F15) */
+  .proj-pill{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:6px;
+    background:var(--raised);border:1px solid var(--border);color:var(--t1);font-size:12.5px;font-weight:500;line-height:1}
+  .proj-pill:hover{border-color:var(--border-strong)}
+  .proj-pill .dot{width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono';font-size:9px;font-weight:700;color:#0B0F17;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .proj-pill .meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px}
+  /* Global search */
+  .global-search{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:6px;
+    background:var(--raised);border:1px solid var(--border);color:var(--t3);font-size:12px;min-width:240px;max-width:380px;flex:1 1 auto}
+  .global-search:hover{border-color:var(--border-strong)}
+  .global-search .label{flex:1;color:var(--t3)}
+  .global-search .kbd{font-family:'JetBrains Mono';font-size:10px;color:var(--t4);background:var(--canvas);border:1px solid var(--border);border-radius:3px;padding:1px 5px}
+  @media (max-width:1023px){.proj-pill .meta{display:none}.global-search{min-width:160px}}
+  .icon-btn{width:36px;height:36px;border-radius:6px;color:var(--t3);
+    display:inline-flex;align-items:center;justify-content:center}
+  .icon-btn:hover{background:var(--raised);color:var(--t1)}
+  .user-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:3px 10px 3px 3px;
+    border-radius:999px;background:var(--raised);border:1px solid var(--border)}
+  .user-av{width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));
+    color:var(--canvas);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  .user-pill .name{font-size:12.5px;font-weight:500}
+  @media (max-width:767px){.user-pill .name{display:none}}
+
+  /* ── Body grid: rail width is dynamic (240 expanded · 64 collapsed) ── */
+  .body{display:grid;grid-template-columns:var(--rail-w) 1fr;min-height:0;transition:grid-template-columns 220ms cubic-bezier(.4,0,.2,1)}
+  .body[data-rail="collapsed"]{--rail-w:64px}
+  @media (max-width:1023px){.body{grid-template-columns:1fr}}
+
+  .rail{background:var(--base);border-right:1px solid var(--border);padding:8px 8px 14px;
+    display:flex;flex-direction:column;gap:2px;overflow-y:auto;overflow-x:hidden}
+  @media (max-width:1023px){.rail{display:none}}
+  .rail-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);padding:10px 10px 4px;font-weight:600;
+    white-space:nowrap;overflow:hidden}
+  [data-rail="collapsed"] .rail-section{visibility:hidden;height:8px;padding:6px 0 0;
+    border-top:1px solid var(--border);margin:6px 8px 0;font-size:0}
+
+  /* Rail collapse toggle — Linear/Notion pattern.
+     Expanded: full-width "← COLLAPSE" text button (44px hit zone).
+     Collapsed: 44×44 icon-only with panel-expand glyph + 10px padding all sides. */
+  .rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+    color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
+    margin:2px 0 8px;flex:none;border:1px solid transparent;width:100%;cursor:pointer;background:none}
+  .rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
+  .rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--t3)}
+  .rail-toggle:hover .rt-icon{color:var(--t1)}
+  .rail-toggle .rt-icon svg{width:16px;height:16px;transition:transform 220ms cubic-bezier(.4,0,.2,1)}
+  .rail-toggle .rt-label{flex:1;text-align:left;text-transform:uppercase;white-space:nowrap}
+  [data-rail="collapsed"] .rail-toggle{width:44px;height:44px;min-height:44px;padding:10px;justify-content:center;margin:2px auto 10px}
+  [data-rail="collapsed"] .rail-toggle .rt-label{display:none}
+  [data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}
+
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
+    font-size:13px;line-height:18px;min-height:36px;position:relative;white-space:nowrap;text-decoration:none}
+  .nav-item:hover{background:var(--raised);color:var(--t1)}
+  .nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+  .nav-item.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;
+    background:var(--secondary);border-radius:0 2px 2px 0}
+  .nav-count{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+
+  /* Colored icon chip — each item gets one accent for visual rhythm when collapsed */
+  .nav-icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+    flex:none;background:var(--raised);border:1px solid var(--border);color:var(--t3);transition:all 180ms ease}
+  .nav-icon svg{width:14px;height:14px}
+  .nav-item:hover .nav-icon{transform:scale(1.05)}
+  .nav-item.active .nav-icon{box-shadow:0 0 0 1px currentColor inset}
+  .nav-item[data-tone="primary"]   .nav-icon{background:var(--primary-soft);border-color:var(--primary-line);color:var(--primary)}
+  .nav-item[data-tone="secondary"] .nav-icon{background:var(--ai-soft);border-color:var(--ai-line);color:var(--ai-accent)}
+  .nav-item[data-tone="info"]      .nav-icon{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+  .nav-item[data-tone="warn"]      .nav-icon{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+  .nav-item[data-tone="pass"]      .nav-icon{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+  .nav-item[data-tone="fail"]      .nav-icon{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+
+  /* Collapsed: hide labels & counts, center icon */
+  [data-rail="collapsed"] .rail{padding:8px 6px 14px}
+  [data-rail="collapsed"] .nav-item{justify-content:center;padding:6px;gap:0}
+  [data-rail="collapsed"] .nav-item > :not(.nav-icon){display:none}
+  [data-rail="collapsed"] .nav-item.active::before{display:none}
+  [data-rail="collapsed"] .nav-item.active .nav-icon{box-shadow:0 0 0 1.5px var(--secondary),0 0 0 4px var(--ai-soft)}
+
+  /* Tooltip on hover when collapsed */
+  [data-rail="collapsed"] .nav-item::after{content:attr(data-label);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%) translateX(-4px);
+    background:var(--overlay);color:var(--t1);font-size:12px;font-weight:500;padding:6px 10px;border-radius:6px;
+    border:1px solid var(--border-strong);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 140ms,transform 140ms;
+    z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.4);font-family:'Inter'}
+  [data-rail="collapsed"] .nav-item::before{}
+  [data-rail="collapsed"] .nav-item:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+  [data-rail="collapsed"] .nav-item:hover{background:var(--raised);color:var(--t1)}
+
+  /* ─────────────── Main: 3-column generate workspace ─────────────── */
+  .main{display:grid;grid-template-rows:auto 1fr;min-height:0;overflow:hidden}
+  @media (max-width:767px){.main{overflow:auto}}
+
+  /* Stepper bar */
+  .stepper{display:flex;align-items:center;height:64px;padding:0 24px;
+    border-bottom:1px solid var(--border);background:var(--base);overflow-x:auto;flex:none}
+  .step{flex:1;min-width:120px;display:flex;align-items:center;gap:10px;padding:18px 0;
+    font-size:13px;font-weight:600;color:var(--t3);border-bottom:2px solid transparent;
+    justify-content:center;position:relative;line-height:1}
+  .step + .step::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:1px;height:18px;background:var(--border)}
+  .step .step-num{width:22px;height:22px;border-radius:999px;border:1.5px solid var(--border-strong);
+    display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';
+    font-size:10.5px;font-weight:600;flex:none}
+  .step.done{color:var(--t2)}
+  .step.done .step-num{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+  .step.done .step-num svg{width:11px;height:11px}
+  .step.current{color:var(--t1);border-bottom-color:var(--primary)}
+  .step.current .step-num{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);
+    box-shadow:0 0 0 4px var(--primary-soft)}
+  .step .nm{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+  .step .nm .lbl{font-size:13px;font-weight:600}
+  .step .nm .meta{font-size:10px;font-weight:400;color:var(--t4);font-family:'JetBrains Mono'}
+  .step.current .nm .meta{color:var(--primary)}
+  .step.done .nm .meta{color:var(--pass)}
+
+  /* Workspace 3-col */
+  .workspace{display:grid;grid-template-columns:340px 1fr 340px;gap:0;min-height:0;overflow:hidden}
+  @media (max-width:1279px){.workspace{grid-template-columns:300px 1fr}}
+  @media (max-width:1023px){.workspace{grid-template-columns:1fr;overflow:auto}}
+
+  /* ─────── Left: Source picker + KB grounding ─────── */
+  .pane{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--canvas)}
+  .pane.left{border-right:1px solid var(--border)}
+  .pane.right{border-left:1px solid var(--border);background:var(--base)}
+  @media (max-width:1279px){.pane.right{display:none}}
+  @media (max-width:1023px){.pane{overflow:visible}.pane.left{border-right:0;border-bottom:1px solid var(--border)}}
+
+  .pane-head{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex:none}
+  .pane-eyebrow{font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t3);font-weight:700;line-height:1;margin-bottom:6px}
+  .pane-title{font-family:'DM Sans';font-size:14px;font-weight:700;margin:0;color:var(--t1)}
+  .pane-sub{font-size:11.5px;color:var(--t3);margin:3px 0 0;line-height:16px}
+
+  .pane-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px;min-height:0}
+  @media (max-width:1023px){.pane-body{overflow:visible}}
+
+  /* Source-type segmented tabs */
+  .src-tabs{display:flex;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px;gap:2px}
+  .src-tab{flex:1;height:30px;border-radius:4px;font-size:11.5px;font-weight:500;color:var(--t3);
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;line-height:1}
+  .src-tab svg{width:11px;height:11px}
+  .src-tab.on{background:var(--overlay);color:var(--t1);font-weight:600}
+  .src-tab.on svg{color:var(--secondary)}
+
+  /* Source picker (active = F14 Requirement) */
+  .src-search{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:6px;
+    background:var(--raised);border:1px solid var(--border);color:var(--t3);font-size:12px}
+  .src-search input{background:none;border:0;outline:none;flex:1;min-width:0;color:var(--t1);font-size:12.5px}
+  .src-search input::placeholder{color:var(--t4)}
+
+  .src-selected{background:var(--base);border:1.5px solid var(--ai-line);border-radius:var(--r-lg);
+    padding:12px 14px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+  .src-selected::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary)}
+  .src-selected-head{display:flex;align-items:center;gap:8px}
+  .src-id{font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:0.04em;
+    background:var(--ai-soft);color:var(--ai-accent);padding:2px 6px;border-radius:3px;border:1px solid var(--ai-line);line-height:1}
+  .src-status{font-family:'JetBrains Mono';font-size:9.5px;font-weight:600;letter-spacing:0.06em;
+    text-transform:uppercase;padding:2px 6px;border-radius:3px;line-height:1;
+    background:var(--pass-soft);color:var(--pass);border:1px solid var(--pass-line)}
+  .src-title{font-size:13px;font-weight:600;color:var(--t1);line-height:18px;margin:0}
+  .src-ac{font-size:11.5px;color:var(--t2);line-height:16px;margin:0;
+    border-top:1px solid var(--border);padding-top:8px;
+    font-family:'JetBrains Mono';font-size:11px}
+  .src-ac .ac-label{color:var(--t4);font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;display:block;margin-bottom:4px}
+  .src-ac ul{margin:0;padding:0 0 0 14px;color:var(--t2);font-family:inherit}
+  .src-ac li{font-size:11.5px;line-height:16px;margin-bottom:3px;list-style-type:'· ';font-family:'Inter'}
+
+  .src-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--t3);font-family:'JetBrains Mono';flex-wrap:wrap}
+  .src-meta .sep{color:var(--t4)}
+
+  /* KB grounding chunks */
+  .kb-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .kb-head .kb-title{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--t2)}
+  .kb-head .kb-title .ai-glyph{width:14px;height:14px;border-radius:3px;background:var(--ai-soft);
+    border:1px solid var(--ai-line);color:var(--secondary);
+    display:inline-flex;align-items:center;justify-content:center}
+  .kb-head .kb-title .ai-glyph svg{width:9px;height:9px}
+  .kb-head .kb-count{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3)}
+  .kb-toggle{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--t3)}
+  .kb-toggle input{accent-color:var(--secondary)}
+  .kb-list{display:flex;flex-direction:column;gap:6px}
+  .kb-chunk{background:var(--base);border:1px solid var(--border);border-radius:6px;
+    padding:8px 10px;display:flex;flex-direction:column;gap:5px;position:relative}
+  .kb-chunk-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .kb-chunk-id{font-family:'JetBrains Mono';font-size:10px;color:var(--ai-accent);font-weight:600;
+    background:var(--ai-soft);border:1px solid var(--ai-line);padding:1px 5px;border-radius:3px;line-height:1}
+  .kb-chunk-rel{font-family:'JetBrains Mono';font-size:9.5px;color:var(--t3);margin-left:auto}
+  .kb-chunk-rel b{color:var(--secondary);font-weight:700}
+  .kb-chunk-text{font-size:11px;line-height:15px;color:var(--t2);
+    display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+  .kb-chunk-loc{font-family:'JetBrains Mono';font-size:9.5px;color:var(--info);
+    background:var(--info-soft);border:1px solid var(--info-line);padding:1px 5px;border-radius:3px;line-height:1;width:fit-content}
+  .kb-add{height:30px;border:1px dashed var(--border-strong);border-radius:6px;color:var(--t3);
+    font-size:11.5px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .kb-add:hover{color:var(--ai-accent);border-color:var(--ai-line);background:var(--ai-soft)}
+  .kb-add svg{width:11px;height:11px}
+
+  /* Provider + Generate */
+  .provider{background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+  .prov-row{display:flex;align-items:center;gap:8px}
+  .prov-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);font-weight:700;flex:none}
+  .prov-select{flex:1;height:30px;background:var(--raised);border:1px solid var(--border);border-radius:5px;
+    padding:0 8px;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--t1)}
+  .prov-select .pdot{width:6px;height:6px;border-radius:999px;background:var(--pass)}
+  .prov-select .pname{font-weight:600}
+  .prov-select .pmodel{color:var(--t3);font-family:'JetBrains Mono';font-size:10.5px;margin-left:auto}
+  .prov-quota{font-size:10.5px;color:var(--t3);font-family:'JetBrains Mono';display:flex;align-items:center;gap:6px}
+  .prov-quota .qbar{flex:1;height:4px;background:var(--overlay);border-radius:999px;overflow:hidden;min-width:60px}
+  .prov-quota .qbar .qfill{height:100%;background:var(--pass);border-radius:999px;width:0.4%}
+
+  .gen-btn{height:42px;border-radius:8px;background:var(--primary);color:var(--primary-ink);
+    font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    transition:background 200ms,box-shadow 200ms}
+  .gen-btn:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5)}
+  .gen-btn[disabled]{background:var(--overlay);color:var(--t4);box-shadow:none;cursor:not-allowed}
+  .gen-btn svg{width:14px;height:14px}
+
+  /* ─────── Center: Generate stream + accept ─────── */
+  .center-pane{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--canvas)}
+  @media (max-width:1023px){.center-pane{overflow:visible}}
+  .center-head{padding:14px 20px 12px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:14px;background:var(--base);flex:none}
+  .center-h-text{flex:1;min-width:0}
+  .center-h-text h2{font-family:'DM Sans';font-size:15px;font-weight:700;margin:0;color:var(--t1)}
+  .center-h-text .sub{font-size:11.5px;color:var(--t3);margin-top:2px;font-family:'JetBrains Mono'}
+  .center-h-text .sub b{color:var(--t1);font-weight:600}
+  .center-actions{display:inline-flex;gap:6px;flex:none}
+  .ghost-btn{height:30px;padding:0 10px;border-radius:5px;border:1px solid var(--border);color:var(--t2);
+    font-size:11.5px;font-weight:500;display:inline-flex;align-items:center;gap:5px;line-height:1}
+  .ghost-btn:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .ghost-btn svg{width:11px;height:11px}
+
+  .case-list{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;min-height:0}
+  @media (max-width:1023px){.case-list{overflow:visible}}
+
+  /* Case card */
+  .case-card{background:var(--base);border:1px solid var(--border);border-radius:var(--r-ai);
+    padding:14px 16px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;
+    transition:border-color 150ms}
+  .case-card:hover{border-color:var(--border-strong)}
+  .case-card[data-state="accepted"]{background:rgba(52,211,153,0.04);border-color:var(--pass-line)}
+  .case-card[data-state="rejected"]{opacity:0.55}
+
+  .case-head{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .case-id{font-family:'JetBrains Mono';font-size:11px;font-weight:700;color:var(--primary);
+    background:var(--primary-soft);border:1px solid var(--primary-line);padding:2px 7px;border-radius:3px;line-height:1;letter-spacing:0.04em}
+  .case-title{flex:1;min-width:200px;font-size:14px;font-weight:600;color:var(--t1);line-height:20px;margin:0;text-wrap:pretty}
+  .case-sel{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border-strong);
+    background:var(--canvas);display:inline-flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+  .case-sel.on{background:var(--primary);border-color:var(--primary)}
+  .case-sel.on svg{width:11px;height:11px;color:var(--primary-ink)}
+
+  .case-meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;line-height:1}
+
+  /* Confidence + similarity chips with EXPLICIT labels (audit fix) */
+  .label-chip{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;
+    padding:3px 7px;border-radius:4px;line-height:1;border:1px solid;height:22px}
+  .label-chip .lc-label{font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;opacity:0.9}
+  .label-chip .lc-val{font-weight:700}
+  .label-chip .lc-tier{font-size:9.5px;font-weight:500;opacity:0.85;font-family:'Inter';text-transform:lowercase}
+  .conf-high{background:var(--pass-soft);color:var(--pass);border-color:var(--pass-line)}
+  .conf-med{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+  .conf-low{background:var(--fail-soft);color:var(--fail);border-color:var(--fail-line)}
+  .sim-high{background:var(--fail-soft);color:var(--fail);border-color:var(--fail-line)}
+  .sim-med{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+  .sim-low{background:var(--pass-soft);color:var(--pass);border-color:var(--pass-line)}
+
+  /* A2 attribution mini-tag (codify in Phase 3) */
+  .agent-tag{display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono';font-size:9px;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;color:var(--secondary);background:var(--ai-soft);
+    border:1px solid var(--ai-line);padding:2px 5px;border-radius:3px;line-height:1}
+
+  .case-grounding{font-size:11px;color:var(--t3);font-family:'JetBrains Mono';display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .case-grounding .g-label{font-weight:600;color:var(--t4);font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase}
+  .case-grounding .chunk-link{color:var(--ai-accent);background:var(--ai-soft);border:1px solid var(--ai-line);
+    padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;line-height:14px}
+  .case-grounding .req-link{color:var(--ai-accent);font-weight:600}
+
+  /* Case body — fixed visible height, internal scroll if a single case overflows.
+     Card itself is bigger; test case content scrolls inside if needed. */
+  .case-body{font-size:13px;line-height:19px;color:var(--t2);background:var(--canvas);border:1px solid var(--border);
+    border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;position:relative;
+    min-height:320px;max-height:440px;overflow-y:auto}
+  .case-body::-webkit-scrollbar{width:6px}
+  .case-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+  .case-body .step-row{display:flex;gap:8px;align-items:flex-start}
+  .case-body .step-num{font-family:'JetBrains Mono';font-size:10px;font-weight:700;color:var(--t4);flex:none;width:18px;line-height:18px}
+  .case-body .step-text{flex:1;color:var(--t2)}
+  .case-body .step-expect{color:var(--t3);font-size:11.5px;margin-left:26px;font-style:italic}
+
+  /* A2 dedupe pair */
+  .case-dup{background:var(--canvas);border:1px solid var(--warn-line);border-left:3px solid var(--warn);
+    border-radius:6px;padding:9px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .case-dup .dup-icon{width:18px;height:18px;border-radius:4px;background:var(--warn-soft);
+    color:var(--warn);display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .case-dup .dup-icon svg{width:11px;height:11px}
+  .case-dup .dup-text{flex:1;font-size:11.5px;color:var(--t2);line-height:16px;min-width:140px}
+  .case-dup .dup-text b{font-family:'JetBrains Mono';color:var(--primary);font-weight:600}
+  .case-dup .dup-actions{display:inline-flex;gap:5px;flex-wrap:wrap}
+  .case-dup .dup-act{height:26px;padding:0 8px;border-radius:4px;border:1px solid var(--border);color:var(--t2);font-size:10.5px;font-weight:500}
+  .case-dup .dup-act:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .case-dup .dup-act.primary{border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+  .case-dup .dup-act.primary:hover{background:rgba(45,212,191,0.18)}
+
+  /* Per-case action row */
+  .case-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .case-foot .case-act{height:30px;padding:0 10px;border-radius:5px;border:1px solid var(--border);color:var(--t2);
+    font-size:11.5px;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+  .case-foot .case-act:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .case-foot .case-act.accept{border-color:var(--pass-line);color:var(--pass);background:var(--pass-soft)}
+  .case-foot .case-act.accept:hover{background:rgba(52,211,153,0.22)}
+  .case-foot .case-act.reject{border-color:var(--border)}
+  .case-foot .case-act svg{width:11px;height:11px}
+  .case-foot .spacer{flex:1}
+  .case-foot .case-state{font-family:'JetBrains Mono';font-size:10px;font-weight:600;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--pass);background:var(--pass-soft);border:1px solid var(--pass-line);padding:3px 7px;border-radius:3px;line-height:1}
+
+  /* Streaming card */
+  .streaming{background:var(--base);border:1px solid var(--ai-line);border-radius:var(--r-ai);
+    padding:14px 16px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
+  .streaming::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(180deg,var(--secondary),var(--ai-accent),var(--secondary));
+    background-size:100% 200%;animation:streamPulse 1.4s linear infinite}
+  @keyframes streamPulse{0%{background-position:0 0}100%{background-position:0 -200%}}
+  @media (prefers-reduced-motion:reduce){.streaming::before{animation:none;background:var(--secondary)}}
+  .stream-head{display:flex;align-items:center;gap:8px}
+  .stream-glyph{width:18px;height:18px;border-radius:3px;background:var(--ai-soft);
+    border:1px solid var(--ai-line);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center}
+  .stream-glyph svg{width:11px;height:11px}
+  .stream-label{font-size:11px;font-weight:600;color:var(--ai-accent);font-family:'JetBrains Mono';letter-spacing:0.04em}
+  .stream-status{margin-left:auto;font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3)}
+  .stream-status .dot{display:inline-block;width:5px;height:5px;border-radius:999px;background:var(--secondary);
+    animation:pulseDot 1s ease-in-out infinite;margin-right:4px}
+  @keyframes pulseDot{0%,100%{opacity:0.3}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.stream-status .dot{animation:none;opacity:1}}
+  .stream-skel{display:flex;flex-direction:column;gap:6px}
+  .skel-line{height:10px;background:linear-gradient(90deg,var(--raised) 0%,var(--overlay) 50%,var(--raised) 100%);
+    background-size:200% 100%;border-radius:3px;animation:skelShimmer 1.6s linear infinite}
+  @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @media (prefers-reduced-motion:reduce){.skel-line{animation:none;background:var(--raised)}}
+  .skel-line.s{width:65%}
+  .skel-line.xs{width:40%}
+
+  /* Sticky footer in center pane */
+  .center-foot{height:60px;padding:0 20px;border-top:1px solid var(--border);background:var(--base);
+    display:flex;align-items:center;gap:12px;flex:none;font-size:12px;color:var(--t3)}
+  .cf-summary{flex:1;display:inline-flex;align-items:center;gap:14px;font-family:'JetBrains Mono';font-size:11.5px}
+  .cf-summary b{color:var(--t1);font-weight:600}
+  .cf-summary .sep{color:var(--t4)}
+  .btn-back{height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border);color:var(--t2);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .btn-back:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .btn-save{height:36px;padding:0 16px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+  .btn-save:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5)}
+  .btn-save .ct{font-family:'JetBrains Mono';font-size:11px;background:rgba(0,55,50,0.22);padding:1px 6px;border-radius:3px;font-weight:700}
+  .btn-save svg{width:13px;height:13px}
+
+  /* ─────── Right: Detail / Activity (collapsible) ─────── */
+  .right-tabs{display:flex;border-bottom:1px solid var(--border);flex:none;align-items:stretch}
+  .r-tab{flex:1;height:40px;font-size:12px;font-weight:600;color:var(--t3);
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
+    border-bottom:2px solid transparent;line-height:1}
+  .r-tab.on{color:var(--t1);border-bottom-color:var(--secondary)}
+  .r-tab .ct{font-family:'JetBrains Mono';font-size:10.5px;background:var(--overlay);color:var(--t2);padding:1px 5px;border-radius:3px}
+  .r-tab.on .ct{background:var(--ai-soft);color:var(--ai-accent)}
+  .r-close{width:36px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--t3);
+    border-left:1px solid var(--border)}
+  .r-close:hover{background:var(--raised);color:var(--fail)}
+  .r-close svg{width:14px;height:14px}
+
+  /* Activity reopen pill — inline in .center-actions, not absolute. Hidden until right pane is closed. */
+  .activity-reopen{height:30px;padding:0 10px 0 8px;
+    border-radius:5px;border:1px solid var(--ai-line);background:var(--ai-soft);color:var(--ai-accent);
+    font-size:11.5px;font-weight:600;display:none;align-items:center;gap:6px;line-height:1;font-family:'Inter';cursor:pointer}
+  .activity-reopen:hover{background:rgba(167,139,250,0.18);color:var(--t1)}
+  .activity-reopen svg{width:12px;height:12px}
+  .activity-reopen .ar-ct{font-family:'JetBrains Mono';font-size:10px;background:rgba(167,139,250,0.22);padding:1px 5px;border-radius:3px}
+  .workspace[data-right="closed"] .pane.right{display:none}
+  .workspace[data-right="closed"] .activity-reopen{display:inline-flex}
+  @media (min-width:1280px){
+    .workspace[data-right="closed"]{grid-template-columns:340px 1fr}
+  }
+
+  .right-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-height:0}
+  @media (max-width:1023px){.right-body{overflow:visible}}
+
+  .activity-item{display:flex;gap:10px;font-size:11.5px;line-height:16px;color:var(--t2);position:relative}
+  .activity-item::before{content:"";position:absolute;left:9px;top:22px;bottom:-12px;width:1px;background:var(--border)}
+  .activity-item:last-child::before{display:none}
+  .a-glyph{width:20px;height:20px;border-radius:5px;flex:none;display:inline-flex;align-items:center;justify-content:center;background:var(--raised);color:var(--t3);border:1px solid var(--border);position:relative;z-index:1}
+  .a-glyph.ai{background:var(--ai-soft);border-color:var(--ai-line);color:var(--secondary)}
+  .a-glyph.ok{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+  .a-glyph svg{width:11px;height:11px}
+  .a-body{flex:1;min-width:0}
+  .a-title{font-size:11.5px;font-weight:600;color:var(--t1);line-height:16px}
+  .a-title b{font-family:'JetBrains Mono';color:var(--ai-accent);font-weight:600}
+  .a-meta{font-family:'JetBrains Mono';font-size:10px;color:var(--t4);margin-top:2px}
+  .a-detail{font-size:11px;color:var(--t3);line-height:15px;margin-top:3px}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <span class="brand"><span class="brand-mark">QN</span><span class="brand-word">QA Nexus</span></span>
+    <button class="proj-pill" type="button" aria-label="Switch project">
+      <span class="dot">IR</span><span>Iksula Returns</span><span class="meta">· main</span>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <span class="topbar-spacer"></span>
+    <div class="global-search" role="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span class="label">Search everything…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+    <button class="icon-btn" aria-label="Notifications">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+    <span class="user-pill"><span class="user-av">KS</span><span class="name">Kishor S.</span></span>
+  </header>
+
+  <div class="body" id="bodyRoot">
+
+    <!-- RAIL -->
+    <aside class="rail" id="rail">
+      <button class="rail-toggle" id="railToggle" aria-label="Collapse navigation" title="Collapse">
+        <span class="rt-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        </span>
+        <span class="rt-label">Collapse</span>
+      </button>
+      <div class="rail-section">Plan</div>
+      <a class="nav-item" data-tone="info" data-label="Requirements" href="#">
+        <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg></span>
+        <span class="nav-label">Requirements</span>
+        <span class="nav-count">486</span>
+      </a>
+      <a class="nav-item" data-tone="primary" data-label="Knowledge Base" href="#">
+        <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2.5h10v11l-5-2-5 2v-11z"/></svg></span>
+        <span class="nav-label">Knowledge Base</span>
+      </a>
+
+      <div class="rail-section">Author</div>
+      <a class="nav-item active" data-tone="secondary" data-label="Test Cases" href="#" aria-current="page">
+        <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3z"/><path d="M6 8l1.5 1.5L11 6" stroke-linecap="round"/></svg></span>
+        <span class="nav-label">Test Cases</span>
+        <span class="nav-count">1,284</span>
+      </a>
+      <a class="nav-item" data-tone="fail" data-label="Defects" href="#">
+        <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 7v3M8 12h.01" stroke-linecap="round"/></svg></span>
+        <span class="nav-label">Defects</span>
+        <span class="nav-count">42</span>
+      </a>
+
+      <div class="rail-section">Insight</div>
+      <a class="nav-item" data-tone="warn" data-label="QA Value" href="#">
+        <span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke-linecap="round"/></svg></span>
+        <span class="nav-label">QA Value</span>
+      </a>
+    </aside>
+
+    <!-- MAIN: stepper + 3-col workspace -->
+    <main class="main">
+
+      <!-- Stepper -->
+      <nav class="stepper" aria-label="Generate phases">
+        <div class="step done">
+          <span class="step-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+          <span class="nm"><span class="lbl">Source</span><span class="meta">RET-247 + 3 chunks</span></span>
+        </div>
+        <div class="step current">
+          <span class="step-num">2</span>
+          <span class="nm"><span class="lbl">Generate</span><span class="meta">streaming · 3 of 5</span></span>
+        </div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <span class="nm"><span class="lbl">Review</span><span class="meta">accept · edit · reject</span></span>
+        </div>
+        <div class="step">
+          <span class="step-num">4</span>
+          <span class="nm"><span class="lbl">Accept</span><span class="meta">save to suite</span></span>
+        </div>
+      </nav>
+
+      <!-- Workspace -->
+      <div class="workspace" id="workspace">
+
+        <!-- LEFT: Source + KB grounding + Provider -->
+        <section class="pane left">
+          <div class="pane-head">
+            <div class="pane-eyebrow">Source · A1 input</div>
+            <h3 class="pane-title">What should A1 generate from?</h3>
+          </div>
+          <div class="pane-body">
+
+            <!-- Source-type segmented tabs -->
+            <div class="src-tabs" role="tablist" aria-label="Source type">
+              <button class="src-tab on" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                F14 Requirement
+              </button>
+              <button class="src-tab" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+                Jira Ticket
+              </button>
+              <button class="src-tab" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M8 13h8M8 17h5"/></svg>
+                Freeform
+              </button>
+            </div>
+
+            <!-- Search bar (picker) -->
+            <div class="src-search">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Search RET-, CART-, PAY-, AUTH-, OPS-…" value="" />
+              <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--t4)">486</span>
+            </div>
+
+            <!-- Selected source -->
+            <div class="src-selected">
+              <div class="src-selected-head">
+                <span class="src-id">RET-247</span>
+                <span class="src-status">Ready</span>
+                <span style="margin-left:auto;font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3)">F14</span>
+              </div>
+              <h4 class="src-title">Refund window for digital goods</h4>
+              <div class="src-meta">
+                <span>Sprint 42</span><span class="sep">·</span>
+                <span>Yogesh K.</span><span class="sep">·</span>
+                <span>updated 2d ago</span>
+              </div>
+              <div class="src-ac">
+                <span class="ac-label">Acceptance criteria</span>
+                <ul>
+                  <li>Refund window for digital goods is 14 days from delivery confirmation</li>
+                  <li>Refund retries up to 3 times on payment-gateway failure</li>
+                  <li>Partial refunds permitted; gift-card portion returns to wallet</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- KB grounding panel -->
+            <div>
+              <div class="kb-head" style="margin-bottom:8px">
+                <span class="kb-title">
+                  <span class="ai-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.8L19 9.7l-4.8 1.9L12 17l-1.9-5.4L5 9.7l5.1-1.9z"/></svg></span>
+                  KB grounding
+                </span>
+                <span class="kb-count">3 chunks · auto-suggested</span>
+              </div>
+
+              <div class="kb-list">
+                <div class="kb-chunk">
+                  <div class="kb-chunk-head">
+                    <span class="kb-chunk-id">CHUNK-RET-0341</span>
+                    <span class="kb-chunk-rel">rel <b>0.91</b></span>
+                  </div>
+                  <p class="kb-chunk-text">Refund window for digital goods is fourteen (14) calendar days from delivery confirmation. After this window, refund requests are auto-rejected unless escalated to support.</p>
+                  <span class="kb-chunk-loc">refund_policy_v3.pdf · p.4 · §2.1</span>
+                </div>
+                <div class="kb-chunk">
+                  <div class="kb-chunk-head">
+                    <span class="kb-chunk-id">CHUNK-RET-0287</span>
+                    <span class="kb-chunk-rel">rel <b>0.84</b></span>
+                  </div>
+                  <p class="kb-chunk-text">Refund API retries on payment-gateway failure up to three (3) times with exponential backoff (250ms, 500ms, 1s). After the third attempt the refund is queued for manual reconciliation.</p>
+                  <span class="kb-chunk-loc">api_spec_refund.md · p.12 · §4.3</span>
+                </div>
+                <div class="kb-chunk">
+                  <div class="kb-chunk-head">
+                    <span class="kb-chunk-id">CHUNK-RET-0342</span>
+                    <span class="kb-chunk-rel">rel <b>0.78</b></span>
+                  </div>
+                  <p class="kb-chunk-text">Partial refunds are permitted at item-level granularity. The gift-card portion of any refund returns to the customer's wallet rather than the source payment method.</p>
+                  <span class="kb-chunk-loc">refund_policy_v3.pdf · p.6 · §2.4</span>
+                </div>
+              </div>
+
+              <button class="kb-add" type="button" style="margin-top:8px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Add KB chunk
+              </button>
+
+              <label class="kb-toggle" style="margin-top:8px">
+                <input type="checkbox" />
+                Generate without KB grounding (pure-LLM)
+              </label>
+            </div>
+
+            <!-- Provider -->
+            <div class="provider">
+              <div class="prov-row">
+                <span class="prov-label">Provider</span>
+                <div class="prov-select">
+                  <span class="pdot"></span>
+                  <span class="pname">A1-Groq</span>
+                  <span class="pmodel">openai/gpt-oss-120b</span>
+                </div>
+              </div>
+              <div class="prov-quota">
+                <span>4/1000 today</span>
+                <span class="qbar"><span class="qfill"></span></span>
+                <span style="color:var(--pass)">free tier</span>
+              </div>
+              <div style="font-size:10.5px;color:var(--t4);font-family:'JetBrains Mono'">Fallback: A1-Gemini 2.5-flash</div>
+            </div>
+
+            <!-- Generate (already triggered, shown disabled to indicate active session) -->
+            <button class="gen-btn" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.8L19 9.7l-4.8 1.9L12 17l-1.9-5.4L5 9.7l5.1-1.9z"/></svg>
+              Generating…
+            </button>
+          </div>
+        </section>
+
+        <!-- CENTER: Generate stream + accept -->
+        <section class="center-pane">
+          <div class="center-head">
+            <div class="center-h-text">
+              <h2>5 test cases for <span style="color:var(--ai-accent)">RET-247</span></h2>
+              <div class="sub"><b>3</b> drafted<span style="color:var(--t4);margin:0 6px">·</span><b>2</b> streaming<span style="color:var(--t4);margin:0 6px">·</span>A2 dedup live</div>
+            </div>
+            <div class="center-actions">
+              <button class="activity-reopen" id="activityReopen" type="button" aria-label="Show activity log" title="Show activity">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                Activity
+                <span class="ar-ct">12</span>
+              </button>
+              <button class="ghost-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+                Re-generate all
+              </button>
+              <button class="ghost-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Accept all
+              </button>
+            </div>
+          </div>
+
+          <div class="case-list">
+
+            <!-- CASE 1 — high confidence, accepted -->
+            <article class="case-card" data-state="accepted">
+              <header class="case-head">
+                <span class="case-sel on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+                <span class="case-id">TC-RET-0341</span>
+                <h3 class="case-title">Refund request within 14-day window succeeds for digital good</h3>
+              </header>
+
+              <div class="case-meta-row">
+                <span class="label-chip conf-high"><span class="lc-label">Conf</span><span class="lc-val">92%</span><span class="lc-tier">high</span></span>
+                <span class="label-chip sim-low"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">34%</span><span class="lc-tier">distinct</span></span>
+                <div class="case-grounding">
+                  <span class="g-label">Grounded:</span>
+                  <span class="req-link">RET-247</span>
+                  <span style="color:var(--t4)">+</span>
+                  <span class="chunk-link">CHUNK-RET-0341</span>
+                </div>
+              </div>
+
+              <div class="case-body">
+                <div class="step-row"><span class="step-num">1.</span><span class="step-text">Customer purchases digital good X on day 0; delivery confirmation issued.</span></div>
+                <div class="step-row"><span class="step-num">2.</span><span class="step-text">On day 13, customer initiates refund via /api/refunds.</span></div>
+                <div class="step-row"><span class="step-num">3.</span><span class="step-text">System validates refund window against delivery_confirmed_at.</span></div>
+                <div class="step-expect">Expected: Refund accepted, status=approved, full amount returned to source PM.</div>
+              </div>
+
+              <footer class="case-foot">
+                <span class="case-state">✓ Accepted</span>
+                <div class="spacer"></div>
+                <button class="case-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>Edit</button>
+                <button class="case-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Re-gen variation</button>
+              </footer>
+            </article>
+
+            <!-- CASE 2 — medium confidence, A2 dedupe pair (likely dup) -->
+            <article class="case-card">
+              <header class="case-head">
+                <span class="case-sel on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+                <span class="case-id">TC-RET-0342</span>
+                <h3 class="case-title">Refund retries up to 3× on payment-gateway failure with exponential backoff</h3>
+              </header>
+
+              <div class="case-meta-row">
+                <span class="label-chip conf-high"><span class="lc-label">Conf</span><span class="lc-val">87%</span><span class="lc-tier">high</span></span>
+                <span class="label-chip sim-med"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">87%</span><span class="lc-tier">likely dup</span></span>
+                <div class="case-grounding">
+                  <span class="g-label">Grounded:</span>
+                  <span class="req-link">RET-247</span>
+                  <span style="color:var(--t4)">+</span>
+                  <span class="chunk-link">CHUNK-RET-0287</span>
+                </div>
+              </div>
+
+              <div class="case-body">
+                <div class="step-row"><span class="step-num">1.</span><span class="step-text">Trigger refund on order #RET-12044; mock payment gateway to return 503.</span></div>
+                <div class="step-row"><span class="step-num">2.</span><span class="step-text">Observe retry logs for 3 attempts at 250ms / 500ms / 1s intervals.</span></div>
+                <div class="step-row"><span class="step-num">3.</span><span class="step-text">After 3rd failure, verify refund moves to manual_reconciliation queue.</span></div>
+                <div class="step-expect">Expected: 3 retry attempts, exponential backoff observed, final state queued_manual.</div>
+              </div>
+
+              <!-- A2 dedupe pair surfaced -->
+              <div class="case-dup">
+                <span class="dup-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+                <div class="dup-text">
+                  <span class="agent-tag" style="margin-right:6px">A2</span>
+                  Likely duplicate of <b>TC-RET-0142</b> "Refund API retries on failure 3×" — similarity 87%.
+                </div>
+                <div class="dup-actions">
+                  <button class="dup-act primary">Merge (A2 suggest)</button>
+                  <button class="dup-act">Keep new</button>
+                  <button class="dup-act">Keep existing</button>
+                  <button class="dup-act">Mark distinct</button>
+                </div>
+              </div>
+
+              <footer class="case-foot">
+                <div class="spacer"></div>
+                <button class="case-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>Reject</button>
+                <button class="case-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>Edit</button>
+                <button class="case-act accept"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Accept</button>
+              </footer>
+            </article>
+
+            <!-- CASE 3 — low conf -->
+            <article class="case-card">
+              <header class="case-head">
+                <span class="case-sel"></span>
+                <span class="case-id">TC-RET-0343</span>
+                <h3 class="case-title">Partial refund of mixed cart returns gift-card portion to customer wallet</h3>
+              </header>
+
+              <div class="case-meta-row">
+                <span class="label-chip conf-med"><span class="lc-label">Conf</span><span class="lc-val">81%</span><span class="lc-tier">high</span></span>
+                <span class="label-chip sim-low"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">22%</span><span class="lc-tier">distinct</span></span>
+                <div class="case-grounding">
+                  <span class="g-label">Grounded:</span>
+                  <span class="req-link">RET-247</span>
+                  <span style="color:var(--t4)">+</span>
+                  <span class="chunk-link">CHUNK-RET-0342</span>
+                </div>
+              </div>
+
+              <div class="case-body">
+                <div class="step-row"><span class="step-num">1.</span><span class="step-text">Place order with 2 items: $30 paid via card + $20 paid via gift-card credit.</span></div>
+                <div class="step-row"><span class="step-num">2.</span><span class="step-text">Initiate partial refund of 1 item ($25) within window.</span></div>
+                <div class="step-expect">Expected: $5 returned to card, $20 returned to wallet; refund_split.gift_portion = 20.00.</div>
+              </div>
+
+              <footer class="case-foot">
+                <div class="spacer"></div>
+                <button class="case-act reject"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>Reject</button>
+                <button class="case-act"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></svg>Edit</button>
+                <button class="case-act accept"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Accept</button>
+              </footer>
+            </article>
+
+            <!-- CASE 4 — STREAMING (skeleton) -->
+            <article class="streaming">
+              <div class="stream-head">
+                <span class="stream-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.8L19 9.7l-4.8 1.9L12 17l-1.9-5.4L5 9.7l5.1-1.9z"/></svg></span>
+                <span class="stream-label">A1 generating TC-RET-0344</span>
+                <span class="stream-status"><span class="dot"></span>streaming · 0.74s</span>
+              </div>
+              <div class="stream-skel">
+                <div class="skel-line"></div>
+                <div class="skel-line s"></div>
+                <div class="skel-line xs"></div>
+              </div>
+            </article>
+
+            <!-- CASE 5 — queued -->
+            <article class="streaming" style="opacity:0.55;border-color:var(--border)">
+              <div class="stream-head">
+                <span class="stream-glyph" style="background:var(--raised);border-color:var(--border);color:var(--t4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                <span class="stream-label" style="color:var(--t3)">Queued · TC-RET-0345</span>
+                <span class="stream-status">waiting</span>
+              </div>
+            </article>
+
+          </div>
+
+          <footer class="center-foot">
+            <div class="cf-summary">
+              <span><b>1</b> accepted</span><span class="sep">·</span>
+              <span><b>2</b> awaiting review</span><span class="sep">·</span>
+              <span><b>2</b> generating</span><span class="sep">·</span>
+              <span style="color:var(--secondary)"><span class="agent-tag" style="margin-right:5px">A2</span><b style="color:var(--ai-accent)">1</b> dup pair</span>
+            </div>
+            <button class="btn-back">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              Back
+            </button>
+            <button class="btn-save">
+              Save & exit
+              <span class="ct">1 accepted</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </footer>
+        </section>
+
+        <!-- RIGHT: Activity / agent log -->
+        <aside class="pane right">
+          <div class="right-tabs" role="tablist">
+            <button class="r-tab on" role="tab">Activity <span class="ct">12</span></button>
+            <button class="r-tab" role="tab">Provenance</button>
+            <button class="r-close" id="activityClose" type="button" aria-label="Close activity panel" title="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+            </button>
+          </div>
+          <div class="right-body">
+
+            <div class="activity-item">
+              <span class="a-glyph ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.8L19 9.7l-4.8 1.9L12 17l-1.9-5.4L5 9.7l5.1-1.9z"/></svg></span>
+              <div class="a-body">
+                <div class="a-title"><b>A1 v2.3</b> started generation</div>
+                <div class="a-meta">12:42:08 · target 5 cases</div>
+                <div class="a-detail">Provider: A1-Groq (gpt-oss-120b) · grounded on RET-247 + 3 KB chunks</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="a-glyph ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+              <div class="a-body">
+                <div class="a-title">Drafted <b>TC-RET-0341</b></div>
+                <div class="a-meta">12:42:11 · 2.8s · 92% conf</div>
+                <div class="a-detail">A2 dedupe: 34% sim — distinct</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="a-glyph ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span>
+              <div class="a-body">
+                <div class="a-title">Kishor accepted <b>TC-RET-0341</b></div>
+                <div class="a-meta">12:42:31</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="a-glyph ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+              <div class="a-body">
+                <div class="a-title">Drafted <b>TC-RET-0342</b></div>
+                <div class="a-meta">12:42:14 · 3.1s · 87% conf</div>
+                <div class="a-detail" style="color:var(--warn)">A2 flagged dup vs TC-RET-0142 (87% sim)</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="a-glyph ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+              <div class="a-body">
+                <div class="a-title">Drafted <b>TC-RET-0343</b></div>
+                <div class="a-meta">12:42:18 · 2.4s · 81% conf</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <span class="a-glyph ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.8L19 9.7l-4.8 1.9L12 17l-1.9-5.4L5 9.7l5.1-1.9z"/></svg></span>
+              <div class="a-body">
+                <div class="a-title">A1 generating <b>TC-RET-0344</b></div>
+                <div class="a-meta">12:42:21 · streaming…</div>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ?variants=1 placeholder root (locked render — single canonical layout) -->
+<div id="tweaks-root"></div>
+
+<!--
+F16b v2 — VALIDATION (Phase 2 · Option C spec)
+═════════════════════════════════════════════
+SPEC ALIGNMENT (per user's Phase 2 directive)
+ 1. 3-source picker tab: F14 Requirement (default · selected) / Jira Ticket / Freeform Paste.
+    Downstream UI identical regardless of tab. Currently rendered: F14 mode showing RET-247. · OK
+ 2. Source picker shows RET-247 verbatim ("Refund window for digital goods" · Sprint 42 · Yogesh K.)
+    with acceptance-criteria preview list (3 ACs). · OK
+ 3. KB grounding panel: 3 chunks auto-suggested via F15 semantic search — CHUNK-RET-0341 (rel 0.91),
+    0287 (0.84), 0342 (0.78). Each shows locator pill (file·page·section, info-blue per Phase 3 SYS-8
+    external-source convention). "Add KB chunk" + "No KB grounding" toggle present. · OK
+ 4. Provider selector: A1-Groq default (openai/gpt-oss-120b), quota readout "4/1000 today · free tier"
+    with progress bar (0.4% green). Fallback line "A1-Gemini 2.5-flash" stated explicitly. · OK
+ 5. Streaming response panel: cases stream in (TC-RET-0344 in skeleton state with pulsing-violet left
+    edge + shimmer skel-lines). TC-RET-0345 queued. · OK
+ 6. Source attribution per TC: "Grounded: RET-247 + CHUNK-RET-0341" — inline, clickable-styled pills.
+    Each chunk link uses violet (AI/KB convention), req-link uses ai-accent for hierarchy. · OK
+ 7. Confidence: 92% / 87% / 81% — realistic spread per spec. Color-coded (green/amber/red tier). · OK
+ 8. EXPLICIT LABELS on all chips (audit fix for confidence-vs-similarity collision):
+    - Confidence chip: [Conf 92% high] — green=high (good)
+    - Similarity chip: [A2 Sim 34% distinct] — green=low-sim (good); [A2 Sim 87% likely dup] — amber=med-sim (bad)
+    User reads "high" / "likely dup" textual qualifier; color is supplementary. Red=good-vs-bad confusion eliminated. · OK
+ 9. A2 dedupe runs in parallel with A1 generation. TC-RET-0342 surfaces dup-pair vs TC-RET-0142
+    (similarity 87%). Inline pair-action row: Merge (A2 suggest, primary) · Keep new · Keep existing · Mark distinct. · OK
+10. Per-TC accept/edit/reject + bulk Accept-all/Re-generate-all in center-pane head. Accepted cases get
+    pass-line border + pass-soft bg + "✓ Accepted" state pill. · OK
+11. Stepper: Source → Generate → Review → Accept (4 phases). Source=done, Generate=current (teal accent
+    per F16c lock — current step uses teal because the stepper itself is a system-wizard primitive,
+    not an AI surface; same convention as F11/F11b). Done step gets teal-soft bg with check icon. · OK
+12. Save & exit CTA in center-foot returns to F22 with accepted TCs attached; ct chip shows "1 accepted". · OK
+SYSTEM COMPLIANCE
+13. Tokens fully consumed via :root from 01_SYSTEM.md §3 — no inline hex on UI surfaces. · OK
+14. Rail width 240px · violet active-rail accent · 36px topbar elements · 44×44 tap on icon-btn / user-pill. · OK
+15. Source-pill convention split (Phase 3 SYS-8):
+    - External: KB chunk locators (file·page·line) → info-blue
+    - Internal AI/KB: CHUNK-RET-IDs, RET-247 ref → violet/ai-accent
+    - Internal system: TC-RET-IDs (generated) → primary/teal
+    - System provider name (A1-Groq) → mono text, no pill (pure metadata)
+    Distinction is operational: pill color tells the QA where the thing LIVES, not what it IS. · OK
+16. width=device-width meta. No width=1600 hardcode. Mobile-first. · OK
+17. Workspace 3-col @1280+ (340 / fluid / 340) → 2-col @1024-1279 (drops right pane) → 1-col stack <1024.
+    Stepper scrolls horizontally on narrow viewports. · OK
+18. :focus-visible 2px violet outline. prefers-reduced-motion disables stream pulse + shimmer + dot pulse. · OK
+NEW PRIMITIVES (introduced; codified in Phase 3 memo v2)
+ - 4-phase stepper (also seen in F16c) — "wizard-stepper" primitive with done/current/future tier
+ - case-card (AI-generated test case): id-pill + selector + label-chips + grounding line + step body + dup-row + foot actions
+ - label-chip with explicit semantic label (NEW pattern — kills confidence/similarity color collision)
+ - agent-tag mini-pill (violet "A2" / "A1" prefix) — repeating across F16b + F16c, codify
+ - streaming card (pulsing-violet left edge + shimmer skel) — codify as canonical "AI generating" placeholder
+ - kb-chunk reference card (compact: id + rel + 2-line text + locator) — derivative of F15 chunk; codify smaller variant
+ - provider-quota mini-bar — codify for any LLM provider readout
+DATA CANON (verbatim)
+ - Source: RET-247 "Refund window for digital goods" (F14)
+ - KB chunks: CHUNK-RET-0341, CHUNK-RET-0287, CHUNK-RET-0342
+ - Provider: A1-Groq · openai/gpt-oss-120b · 4/1000 today
+ - Confidence spread: 0.92, 0.87, 0.81 (visible) + 0.74, 0.65 (in queued/streaming, unrendered)
+ - A2 dedupe: TC-RET-0342 vs TC-RET-0142 at 87% (likely dup); TC-RET-0341 at 34% (distinct)
+ - Generated TCs use TC-RET-### project prefix, NOT TC-PAY/AUTH
+ - Viewer: Kishor S. (QA Engineer)
+ - Project: Iksula Returns (RET) · Sprint 42
+INTENTIONALLY OUT OF SCOPE THIS FRAME
+ - Variants picker: locked single canonical layout (3-col workspace + stepper) at this phase.
+   Future variant exploration could include: tabbed source-types as accordion vs pill-tabs;
+   right-pane Activity vs Provenance default; case-card density. Add ?variants=1 wiring in next
+   pass if user wants exploration. Currently no picker mounted — file renders the locked canonical.
+
+CANONICAL LOCK (Phase 2 close)
+═════════════════════════════════════════════════════════════════════════════
+Locked layout: 3-tab source picker (F14 Requirement · Jira Ticket · Free text)
+with KB grounding panel (3 chunks from F15), Groq/Gemini provider with quota,
+streaming review-stream, A2 live dedupe sidecar, 4-phase stepper.
+
+Why locked:
+  · Single-tab "F14 only" rejected — Jira-source path is real per Iksula canon.
+  · Provider auto-select hidden — quota readout is essential for ops trust.
+  · Inline-list dedupe (vs sidecar) rejected — sidecar keeps stream uncluttered.
+  · 3-phase stepper (no Accept) rejected — accept gate is the human checkpoint.
+
+Recovery: append ?variants=1 to surface notice. No alternate variants are wired
+yet; future axes could include: provider-selector position (header vs footer),
+dedupe-sidecar collapsed-by-default, F14-vs-Jira tab default.
+-->
+<div id="variants-root"></div>
+<script>
+/* ── Rail collapse + Activity panel toggle (persisted in localStorage) ── */
+(function(){
+  var body = document.getElementById('bodyRoot');
+  var workspace = document.getElementById('workspace');
+  var railToggle = document.getElementById('railToggle');
+  var actClose = document.getElementById('activityClose');
+  var actReopen = document.getElementById('activityReopen');
+
+  // Restore state
+  try{
+    if(localStorage.getItem('f16b.rail') === 'collapsed') body.dataset.rail = 'collapsed';
+    if(localStorage.getItem('f16b.right') === 'closed')  workspace.dataset.right = 'closed';
+  }catch(e){}
+
+  function setRail(state){
+    if(state === 'collapsed') body.dataset.rail = 'collapsed';
+    else delete body.dataset.rail;
+    try{ localStorage.setItem('f16b.rail', state); }catch(e){}
+    railToggle.setAttribute('aria-label', state === 'collapsed' ? 'Expand navigation' : 'Collapse navigation');
+    railToggle.title = state === 'collapsed' ? 'Expand' : 'Collapse';
+  }
+  railToggle && railToggle.addEventListener('click', function(){
+    setRail(body.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
+  });
+
+  function setRight(state){
+    if(state === 'closed') workspace.dataset.right = 'closed';
+    else delete workspace.dataset.right;
+    try{ localStorage.setItem('f16b.right', state); }catch(e){}
+  }
+  actClose && actClose.addEventListener('click', function(){ setRight('closed'); });
+  actReopen && actReopen.addEventListener('click', function(){ setRight('open'); });
+})();
+</script>
+<script>
+(function(){
+  var on = new URLSearchParams(location.search).get('variants') === '1';
+  if(!on) return;
+  var root = document.getElementById('variants-root');
+  root.innerHTML = '<div style="position:fixed;right:16px;bottom:16px;z-index:200;'
+    +'background:#1A2233;border:1px solid #3B4660;border-radius:10px;padding:14px 16px;'
+    +'max-width:300px;font:500 12px/17px Inter,sans-serif;color:#C7D0DC;'
+    +'box-shadow:0 12px 32px -8px rgba(0,0,0,0.6)">'
+    +'<div style="font:700 10px/14px Inter;letter-spacing:0.1em;text-transform:uppercase;color:#A78BFA;margin-bottom:6px">VARIANTS · F16b</div>'
+    +'<div style="color:#F1F5F9;font-weight:600;margin-bottom:4px">Canonical lock active</div>'
+    +'No alternate variants implemented for this frame. 3-tab source picker + sidecar dedupe is locked'
+    +' (per Phase 1 audit). See lock-comment in source for rationale.'
+    +'</div>';
+})();
+</script>
+</body>
+</html>

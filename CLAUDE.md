@@ -19,7 +19,15 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 1. **$0/month cost gate is binding.** Any decision that would force a paid component requires Yogesh's explicit written approval first. Even $5/mo upgrades require an ADR and sign-off.
 2. **Free / OSI-approved OSS only.** Hosted services may be used if they have a free tier matching pilot scale (Groq, Gemini, Cloudflare, Neon, Render, Resend, Grafana Cloud, UptimeRobot, GitHub Actions).
-3. **Never modify the 41 locked HTML frames** in `QA Nexus/PM1/PM1_UI_v2/frame  html view/` (17 frames, TWO spaces in folder name) and `QA Nexus/PM1/PM1_UI_v2/frames - claude code build (PM1 v2.6-v2.8)/` (24 frames). Translate them to React components in `apps/web/src/app/**` instead. Reference with `// Implements F06 Sign In · see PM1_UI_v2/frame  html view/F06 Sign In.html`.
+3. **Never modify the 41 locked HTML frames** spanning **3 folders** in `QA Nexus/PM1/PM1_UI_v2/`:
+   - `frame  html view/` (17 frames, TWO spaces in folder name)
+   - `frames - claude code build (PM1 v2.6-v2.8)/` (20 frames)
+   - `Redesign Frame by claude design/` (4 v2 frames: F15, F16a, F16b, F16c — supersede the v1 originals removed from `frames - claude code build/` on 2026-05-03 per Claude Design Phase 1 audit findings)
+
+   Plus 3 supporting reference files in `Redesign Frame by claude design/`: `F15 Mobile Breakpoints.html`, `primitives-playground.html`, `2026-05-03-phase-3-drift-retrofit-memo.html`. These are NOT in the 41 count — they are binding patterns + retrofit guidance.
+
+   Translate them to React components in `apps/web/src/app/**` instead. Reference with `// Implements F06 Sign In · see PM1_UI_v2/frame  html view/F06 Sign In.html` or `// Implements F15 KB · see PM1_UI_v2/Redesign Frame by claude design/F15 Knowledge Base v2.html`.
+
 4. **Never add Material Design 3 tokens, tertiary colors, or extend `tailwind.config.ts`** beyond the locked palette. The `enforce-design-tokens.sh` PreToolUse hook will block. Respect its decision.
 5. **Never add anything on the ban list:** FastAPI, Ollama, Gemma 4 self-host, Redis, Valkey, BullMQ, ioredis, Neo4j, Graphiti, Keycloak, Vault, pgvectorscale, LangSmith, langchain, MUI, Chakra UI, Mantine, Material Design 3 tokens, daisyui, material-tailwind. The `enforce-pm1-stack.sh` PreToolUse hook will block.
 6. **Never put API keys, OAuth secrets, or session tokens in the repo.** `.env` is in `.gitignore`. Provider keys go in Render env vars. CI keys go in GitHub Secrets.

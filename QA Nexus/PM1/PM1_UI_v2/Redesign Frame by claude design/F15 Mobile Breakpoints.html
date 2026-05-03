@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>F15 — Breakpoint Review (320 / 768 / 1440)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17;--base:#111827;--raised:#1A2233;--overlay:#232C3F;
+    --border:#2A3347;--border-strong:#3B4660;
+    --t1:#F1F5F9;--t2:#C7D0DC;--t3:#8A94A6;--t4:#64748B;
+    --primary:#2DD4BF;--secondary:#A78BFA;--info:#60A5FA;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--canvas);color:var(--t1);
+    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+
+  .page{padding:32px 28px 80px;max-width:1760px;margin:0 auto}
+
+  .pgh{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+  .pgh h1{font-family:'DM Sans';font-size:24px;line-height:30px;font-weight:700;margin:0;letter-spacing:-0.01em}
+  .pgh .sub{font-size:13px;color:var(--t3);margin-top:6px;max-width:780px}
+  .pgh .right{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--t3);
+    font-family:'JetBrains Mono'}
+  .pgh .right .src{color:var(--primary)}
+  .pgh .right a{color:var(--primary);text-decoration:none;border-bottom:1px dashed rgba(45,212,191,0.4)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+  .legend-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;
+    border-radius:5px;background:var(--raised);border:1px solid var(--border);
+    font-size:11px;color:var(--t2);font-family:'JetBrains Mono'}
+  .legend-chip .dot{width:6px;height:6px;border-radius:999px}
+  .legend-chip.violet .dot{background:var(--secondary)}
+  .legend-chip.teal .dot{background:var(--primary)}
+  .legend-chip.info .dot{background:var(--info)}
+
+  /* Three frame columns, stacked vertically per request */
+  .frames{display:flex;flex-direction:column;gap:32px}
+
+  .frame{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:flex-start}
+  @media (max-width:900px){.frame{grid-template-columns:1fr}}
+
+  .frame-meta{position:sticky;top:24px}
+  .bp-tag{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:5px;
+    background:var(--overlay);border:1px solid var(--border);
+    font-family:'JetBrains Mono';font-size:11px;color:var(--secondary);font-weight:600;
+    letter-spacing:0.04em;line-height:1;margin-bottom:10px}
+  .frame-meta h2{font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:700;margin:0 0 8px;
+    color:var(--t1)}
+  .frame-meta .label{font-size:11px;color:var(--t3);
+    text-transform:uppercase;letter-spacing:0.08em;font-weight:600;
+    margin:14px 0 4px}
+  .frame-meta ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+  .frame-meta li{font-size:12px;line-height:17px;color:var(--t2);position:relative;padding-left:14px}
+  .frame-meta li::before{content:"";position:absolute;left:2px;top:7px;width:5px;height:5px;
+    border-radius:999px;background:var(--secondary);opacity:0.7}
+  .frame-meta li.teal::before{background:var(--primary)}
+  .frame-meta li code{font-family:'JetBrains Mono';font-size:11px;
+    background:var(--raised);color:var(--t1);padding:1px 5px;border-radius:3px}
+
+  .stage{position:relative;background:var(--base);border:1px solid var(--border);border-radius:12px;
+    padding:16px;overflow:hidden}
+  .stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+  .stage-head .id{font-family:'JetBrains Mono';font-size:11px;color:var(--t3);letter-spacing:0.04em}
+  .stage-head .id .v{color:var(--t1);font-weight:600}
+  .stage-head .ruler{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono';
+    font-size:10.5px;color:var(--t4)}
+
+  .frameWrap{position:relative;background:var(--canvas);border-radius:8px;overflow:hidden}
+  .frameWrap iframe{display:block;border:0;background:var(--canvas);transform-origin:top left}
+
+  /* Per-breakpoint sizing — see body data attrs */
+  body[data-bp="all"] .stage[data-w="320"] .frameWrap{width:320px;height:692px;margin:0 auto}
+  body[data-bp="all"] .stage[data-w="768"] .frameWrap{width:768px;height:600px;margin:0 auto}
+  body[data-bp="all"] .stage[data-w="1440"] .frameWrap{width:100%;max-width:1280px;height:760px;margin:0 auto}
+
+  .stage[data-w="320"] iframe{width:320px;height:692px}
+  .stage[data-w="768"] iframe{width:768px;height:600px}
+  .stage[data-w="1440"] iframe{width:1440px;height:856px;transform:scale(0.889)}
+
+  /* device chrome cosmetic */
+  .phone{position:relative;width:340px;margin:0 auto;padding:14px 10px;border:1px solid var(--border);
+    border-radius:32px;background:linear-gradient(180deg,#0e1422,#0a0f17)}
+  .phone::before{content:"";position:absolute;top:18px;left:50%;transform:translateX(-50%);
+    width:80px;height:6px;border-radius:999px;background:#000;opacity:0.5}
+  .phone .frameWrap{border-radius:24px}
+
+  .tablet{padding:0;border-radius:8px}
+
+  /* annotation chips overlaid */
+  .anno{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .anno-chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;
+    border-radius:4px;background:rgba(167,139,250,0.10);border:1px solid rgba(167,139,250,0.28);
+    font-size:10.5px;color:var(--secondary);font-family:'JetBrains Mono';font-weight:600;
+    letter-spacing:0.04em;text-transform:uppercase;line-height:1}
+  .anno-chip.teal{background:rgba(45,212,191,0.10);border-color:rgba(45,212,191,0.28);color:var(--primary)}
+  .anno-chip.warn{background:rgba(96,165,250,0.10);border-color:rgba(96,165,250,0.28);color:var(--info)}
+
+</style>
+</head>
+<body data-bp="all">
+
+<div class="page">
+
+  <header class="pgh">
+    <div>
+      <h1 class="display">F15 Knowledge Base — Breakpoint Review</h1>
+      <p class="sub">Three viewports stacked, all loading the same file. Mobile-first reflow at 320 px, tablet
+        adaptation at 768 px, full split-pane at 1440 px. Active-rail accent is violet
+        <span class="mono">#A78BFA</span> per <span class="mono">SYSTEM §4.2</span>; CTAs remain teal
+        <span class="mono">#2DD4BF</span> per CTA-vs-AI rule.</p>
+    </div>
+    <div class="right">
+      <span>Source:&nbsp;<a class="src" href="F15 Knowledge Base v2.html">F15 Knowledge Base v2.html</a></span>
+      <span>·</span>
+      <span>3 of 3 breakpoints rendered</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="legend-chip violet"><span class="dot"></span>Violet = AI / nav-active</span>
+    <span class="legend-chip teal"><span class="dot"></span>Teal = CTA / pass</span>
+    <span class="legend-chip info"><span class="dot"></span>Info = source-file pill</span>
+    <span class="legend-chip">Tap target ≥ 44 × 44 px on mobile</span>
+    <span class="legend-chip">No horizontal scroll at 320 px</span>
+  </div>
+
+  <div class="frames">
+
+    <!-- ─────────── 320 PX ─────────── -->
+    <div class="frame">
+      <div class="frame-meta">
+        <span class="bp-tag">320&nbsp;PX&nbsp;·&nbsp;MOBILE-FIRST</span>
+        <h2>Single-column, drawer everything</h2>
+
+        <div class="label">Reflow rules</div>
+        <ul>
+          <li>Left rail collapses behind a hamburger; brand-word + section labels hidden</li>
+          <li>Top-bar shows: hamburger · QA-Nexus mark · search-icon · avatar (no name)</li>
+          <li>Filter rail → bottom-pinned <code>Filters</code> FAB → slides up as a sheet</li>
+          <li>Search input + Semantic toggle stack vertically; Semantic chip moves below input</li>
+          <li>Result column = full width; cards lose right-side neighbour preview</li>
+        </ul>
+
+        <div class="label">Card density</div>
+        <ul>
+          <li class="teal">Excerpt clamped to <code>2 lines</code> (was 3 on desktop)</li>
+          <li class="teal">Source pill + <code>p.4 L17</code> locator stack vertically inside meta row</li>
+          <li class="teal">Relevance score moves above the title (priority of glanceability)</li>
+        </ul>
+
+        <div class="label">Detail panel</div>
+        <ul>
+          <li>Always full-screen bottom-sheet drawer with grip handle</li>
+          <li>Close = top-left chevron (one-handed reach)</li>
+          <li>Primary CTA <code>Use in test case →</code> pinned bottom, full-width</li>
+        </ul>
+
+        <div class="label">Bulk select</div>
+        <ul>
+          <li class="teal">Sticky bottom action bar, full-width, 56 px tall</li>
+          <li class="teal">Counter chip + <code>Use 2 chunks →</code> CTA, no <code>Cancel</code> on this BP — long-press to deselect</li>
+        </ul>
+
+        <div class="anno">
+          <span class="anno-chip">Hamburger drawer</span>
+          <span class="anno-chip teal">44px taps</span>
+          <span class="anno-chip warn">Bottom-sheet detail</span>
+          <span class="anno-chip">Filters FAB</span>
+        </div>
+      </div>
+
+      <div class="stage" data-w="320">
+        <div class="stage-head">
+          <span class="id">VIEWPORT&nbsp;<span class="v">320 × 692</span></span>
+          <span class="ruler">↔ 320 px · 1× scale</span>
+        </div>
+        <div class="phone">
+          <div class="frameWrap">
+            <iframe src="F15 Knowledge Base v2.html#mobile" loading="lazy" title="F15 at 320px"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────── 768 PX ─────────── -->
+    <div class="frame">
+      <div class="frame-meta">
+        <span class="bp-tag">768&nbsp;PX&nbsp;·&nbsp;TABLET</span>
+        <h2>Two-pane: filter chips inline, detail as drawer</h2>
+
+        <div class="label">Reflow rules</div>
+        <ul>
+          <li>Left rail still collapsed (icon-only, 56 px wide)</li>
+          <li>Filter chips return to inline top-row (above results)</li>
+          <li>Search bar full-width; Semantic toggle returns inline-right</li>
+          <li>Result list 1-column at 100 %, but <code>hybrid</code> density allows 2-up first row when there's room</li>
+        </ul>
+
+        <div class="label">Detail panel</div>
+        <ul>
+          <li>Side-drawer (right-docked, 60 % width) — not split-pane yet</li>
+          <li>Backdrop dimmed; tap outside dismisses</li>
+        </ul>
+
+        <div class="label">Tap targets</div>
+        <ul>
+          <li class="teal">All buttons remain ≥ 44 px until <code>min-width: 1024px</code> kicks in</li>
+        </ul>
+
+        <div class="anno">
+          <span class="anno-chip">Icon-rail</span>
+          <span class="anno-chip">Inline filter chips</span>
+          <span class="anno-chip teal">Side drawer</span>
+        </div>
+      </div>
+
+      <div class="stage tablet" data-w="768">
+        <div class="stage-head">
+          <span class="id">VIEWPORT&nbsp;<span class="v">768 × 600</span></span>
+          <span class="ruler">↔ 768 px · 1× scale</span>
+        </div>
+        <div class="frameWrap">
+          <iframe src="F15 Knowledge Base v2.html#tablet" loading="lazy" title="F15 at 768px"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────── 1440 PX ─────────── -->
+    <div class="frame">
+      <div class="frame-meta">
+        <span class="bp-tag">1440&nbsp;PX&nbsp;·&nbsp;DESKTOP</span>
+        <h2>Three-pane split: rail · results · detail</h2>
+
+        <div class="label">Layout</div>
+        <ul>
+          <li>240 px rail (canonical) · flex content · 420 px detail (split-pane)</li>
+          <li>Active rail item: violet 3 px left bar (per <code>SYSTEM §4.2</code>)</li>
+          <li>Top filter chips OR left filter rail — toggleable via Tweaks</li>
+        </ul>
+
+        <div class="label">Card density</div>
+        <ul>
+          <li class="teal">Default <code>card grid</code> 1-column 480 px-wide cards inside flex content</li>
+          <li class="teal">Excerpt 3 lines, full meta row inline</li>
+          <li class="teal">Hover = neighbour-preview tooltip on locator</li>
+        </ul>
+
+        <div class="label">Detail panel</div>
+        <ul>
+          <li>Right-docked split-pane, 420 px, no backdrop</li>
+          <li>Neighbour-chunks thread N−1 / N / N+1 always visible</li>
+        </ul>
+
+        <div class="anno">
+          <span class="anno-chip">Split-pane detail</span>
+          <span class="anno-chip teal">Full rail</span>
+          <span class="anno-chip">3-line excerpt</span>
+        </div>
+      </div>
+
+      <div class="stage" data-w="1440">
+        <div class="stage-head">
+          <span class="id">VIEWPORT&nbsp;<span class="v">1440 × 856</span></span>
+          <span class="ruler">↔ 1440 px · scaled to fit</span>
+        </div>
+        <div class="frameWrap">
+          <iframe src="F15 Knowledge Base v2.html#desktop" loading="lazy" title="F15 at 1440px"></iframe>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // Each iframe loads the same file but at different rendered widths.
+  // The browser's media queries fire based on the iframe's own width — so 320px iframe → mobile rules; etc.
+  // No JS resize hack needed.
+</script>
+
+</body>
+</html>

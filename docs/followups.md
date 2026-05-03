@@ -2,6 +2,43 @@
 
 ---
 
+## [2026-05-03] (v) P3 — Phase-1 audit of remaining 37 locked frames — M2-M4 ROLLING
+
+**Symptom (Day-7 close-ceremony, Step I):** Claude Design ran a Phase-1 spec-drift audit on the F15 + F16 cluster on 2026-05-03 and surfaced material drift between the locked HTML, `PM1_PRD`, `PM1_ERD`, and `01_SYSTEM.md`:
+
+- **F15 Knowledge Base** — wiki-vs-chunk-search mismatch (locked HTML showed wiki UX; spec called for vector-chunk search). Resolved by v2 redesign with histogram slider + snap-sheet drawer + Cowork-style scrollbars.
+- **F16a/b/c (Test Case generation cluster)** — multi-source / A2 dedupe / 5-step stepper additions surfaced. Resolved by v2 redesigns + new primitives-playground.html + 2026-05-03-phase-3-drift-retrofit-memo.html.
+
+**Implication:** the same audit pattern likely exists for the **other 37 locked frames** (17 in `frame  html view/` + 20 in `frames - claude code build (PM1 v2.6-v2.8)/`). Surfacing them in batch BEFORE React port begins for each milestone avoids costly rework later (e.g., porting F22 to React, then discovering A4 5-Layer accordion needs structural changes per spec).
+
+**Decision (M2-M4 rolling, ~2-3 hr per frame × 37 frames):**
+
+1. Apply the same Phase-1 audit template Claude Design used for F15 + F16 cluster. Cross-reference each frame against:
+   - `QA Nexus/PM1/PM1_PRD/PM1_PRD.md` v8.1 (current)
+   - `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` v2.1 (current)
+   - `QA Nexus/PM1/PM1_UI_v2/UI Files/01_SYSTEM.md` (design tokens + interaction patterns)
+2. **Priority order:**
+   - **M2 adjacent (top):** F11 (Jira Wizard 2-way sync surfaces), F14 family (already partially ported in PR #25 — re-audit first)
+   - **M3 adjacent:** F17 (Test Case Library), F18 (Test Suites)
+   - **M4 adjacent:** F19 (Run Console live state), F20 (Run Results), F21 (Defects Hub), F22 (Defect Detail with A4 RCA accordion)
+   - **M5 adjacent:** F23 (Reports Studio), F25 (Executive Dashboard Prove-mode), F26 (Agents), F28 (Settings & Audit)
+   - Remaining ~25 frames in batch by milestone owner
+3. Output per frame: drift items list + recommended v2 redesign or "no drift, ship as-is" verdict.
+4. Where drift surfaces v2-redesign-required: file separate Phase 2/3 redesign tasks for Claude Design.
+
+**Owner:** Yogesh + Claude Design (Wed 6 May reset onward, due to current 90% weekly limit).
+
+**Severity:** **P3** (no current impact; high value for M2+ React port quality + avoids per-milestone rework).
+
+**Cross-refs:**
+
+- `QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/2026-05-03-phase-3-drift-retrofit-memo.html` (Phase 1 → Phase 3 retrofit template)
+- `QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/primitives-playground.html` (canonical primitives for v2 patterns)
+- CLAUDE.md Hard Rule #3 (updated 2026-05-03 to reflect 3-folder layout post-supersede)
+- M0 completion report `docs/milestones/M0_completion_report.md` §4 D7
+
+---
+
 ## [2026-05-03] (u) P2 — Onboarding spec FE failures `:38` + `:44` (pre-existing, masked) — M1.5 SWEEP
 
 **Symptom (Day-7 close-ceremony PR #24):** After PR #24 (closes followup `(t)`) added the Postgres service container, **7 of 11 onboarding tests** went FAIL→PASS (`:123 /health`, `:145 /agents/a1/generate 401`, etc.). But **4 unique tests still fail across both browsers** (8 entries with retries):

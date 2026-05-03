@@ -1,0 +1,1995 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Knowledge Base · Chunk Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   F15 Knowledge Base v2 — chunk-retrieval surface
+   Tokens: ONLY from 01_SYSTEM.md
+   Mobile-first; breakpoints 480 / 768 / 1024 / 1440
+   ===================================================================== */
+:root{
+  /* Canvas (operate mode) */
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  /* Text */
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  /* Brand */
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  /* Semantic */
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  /* Soft tints (alpha overlays of approved hexes — not new colors) */
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+  /* Geometry */
+  --rail-w:240px; --topbar-h:56px; --tap:44px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-ai:14px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::selection{background:rgba(167,139,250,0.4);color:var(--t1)}
+input,textarea{font-family:inherit;color:inherit}
+
+/* ─── Custom scrollbar — SYS-17 (primitives-playground.html SB-1) ───
+   Always-visible thin scrollbar, --border-strong thumb, --secondary on hover,
+   transparent track. Applies globally to all scrollable surfaces. */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+::-webkit-scrollbar-corner{background:transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+/* Touch viewports: force scrollbar visible (iOS auto-hides by default).
+   Slightly thinner (6px) to preserve content width on mobile. */
+@media (hover:none) and (pointer:coarse){
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong)}
+}
+
+/* ───── App shell (rail collapsible ─ dynamic --rail-w) ───── */
+.app{min-height:100vh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr}
+@media (min-width:1024px){
+  .app{grid-template-columns:var(--rail-w) 1fr;grid-template-rows:1fr;
+       transition:grid-template-columns 220ms cubic-bezier(.4,0,.2,1)}
+}
+.app[data-rail="collapsed"]{--rail-w:64px}
+
+/* ───────── Top command bar ───────── */
+.topbar{position:sticky;top:0;z-index:40;height:var(--topbar-h);
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:var(--base);border-bottom:1px solid var(--border)}
+@media (min-width:1024px){
+  .topbar{grid-column:1 / -1;padding:0 16px;gap:12px}
+}
+.brand{display:inline-flex;align-items:center;gap:8px}
+.brand-mark{width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;
+  font-family:'DM Sans';font-weight:700;font-size:14px}
+.brand-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1)}
+@media (max-width:1023px){.brand-word{display:none}}
+
+.menu-btn{width:var(--tap);height:var(--tap);border-radius:8px;background:none;border:0;color:var(--t2);
+  display:inline-flex;align-items:center;justify-content:center}
+.menu-btn:hover{background:var(--raised);color:var(--t1)}
+@media (min-width:1024px){.menu-btn{display:none}}
+
+.proj-pill{display:none;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:6px;
+  background:var(--raised);border:1px solid var(--border);color:var(--t1);font-size:13px;font-weight:500}
+.proj-pill .dot{width:18px;height:18px;border-radius:4px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;font-size:9px;font-weight:700}
+.proj-pill .meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px}
+@media (min-width:768px){.proj-pill{display:inline-flex}}
+
+.global-search{flex:1;min-width:0;height:36px;border-radius:6px;background:var(--raised);
+  border:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--t3);font-size:13px}
+.global-search .kbd{margin-left:auto;font-family:'JetBrains Mono';font-size:10.5px;
+  border:1px solid var(--border);background:var(--base);color:var(--t3);padding:1px 5px;border-radius:4px}
+@media (max-width:767px){.global-search .label,.global-search .kbd{display:none}}
+
+.icon-btn{width:var(--tap);height:var(--tap);border-radius:6px;background:none;border:0;color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;position:relative}
+.icon-btn:hover{background:var(--raised);color:var(--t1)}
+.icon-btn .pip{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:999px;background:var(--secondary)}
+@media (min-width:1024px){.icon-btn{width:36px;height:36px}}
+
+.mode-toggle{display:none;height:32px;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px}
+.mode-toggle button{height:26px;padding:0 10px;border-radius:4px;background:none;border:0;color:var(--t3);
+  font-size:11px;font-weight:500;font-family:inherit}
+.mode-toggle button.on{background:var(--overlay);color:var(--t1);font-weight:600}
+@media (min-width:1024px){.mode-toggle{display:inline-flex}}
+
+.user-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:3px 10px 3px 3px;
+  border-radius:999px;background:var(--raised);border:1px solid var(--border)}
+.user-av{width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#0B0F17;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.user-pill .name{font-size:12.5px;color:var(--t1);font-weight:500}
+@media (max-width:767px){.user-pill .name{display:none}}
+
+/* ───────── Left rail ───────── */
+.rail{display:none;background:var(--base);border-right:1px solid var(--border);
+  flex-direction:column;padding:8px 8px 14px;overflow-y:auto;overflow-x:hidden;
+  height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}
+@media (min-width:1024px){.rail{display:flex}}
+.rail.mobile-open{display:flex;position:fixed;top:var(--topbar-h);left:0;bottom:0;width:280px;z-index:50;
+  height:calc(100vh - var(--topbar-h));box-shadow:0 0 0 9999px rgba(0,0,0,0.5)}
+
+/* Rail collapse toggle — Linear/Notion pattern.
+   Expanded: full-width "← COLLAPSE" text button (44px hit zone).
+   Collapsed: 44×44 icon-only with panel-expand glyph + 10px padding all sides. */
+.rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+  color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
+  margin:6px 0 8px;flex:none;border:1px solid transparent;width:100%;cursor:pointer;background:none}
+.rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
+.rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--t3)}
+.rail-toggle:hover .rt-icon{color:var(--t1)}
+.rail-toggle .rt-icon svg{width:16px;height:16px;transition:transform 220ms cubic-bezier(.4,0,.2,1)}
+.rail-toggle .rt-label{flex:1;text-align:left;text-transform:uppercase;white-space:nowrap}
+[data-rail="collapsed"] .rail-toggle{width:44px;height:44px;min-height:44px;padding:10px;justify-content:center;margin:6px auto 10px}
+[data-rail="collapsed"] .rail-toggle .rt-label{display:none}
+[data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}
+
+.nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);
+  padding:14px 12px 6px;font-weight:600;font-family:'JetBrains Mono';white-space:nowrap;overflow:hidden}
+[data-rail="collapsed"] .nav-section{visibility:hidden;height:8px;padding:6px 0 0;
+  border-top:1px solid var(--border);margin:6px 8px 0;font-size:0}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
+  font-size:13px;line-height:18px;min-height:36px;position:relative;white-space:nowrap;text-decoration:none}
+.nav-item:hover{background:var(--raised);color:var(--t1)}
+.nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;
+  background:var(--secondary);border-radius:0 2px 2px 0}
+.nav-item.disabled{color:var(--t4);opacity:0.55;cursor:not-allowed}
+
+/* Colored icon chip — each nav-item gets one accent for collapsed-state legibility */
+.nav-icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;background:var(--raised);border:1px solid var(--border);color:var(--t3);transition:all 180ms ease}
+.nav-icon svg{width:14px;height:14px}
+.nav-item:hover .nav-icon{transform:scale(1.05)}
+.nav-item.active .nav-icon{box-shadow:0 0 0 1px currentColor inset}
+.nav-item[data-tone="home"]      .nav-icon{background:var(--raised);border-color:var(--border-strong);color:var(--t1)}
+.nav-item[data-tone="primary"]   .nav-icon{background:var(--primary-soft);border-color:var(--primary-line);color:var(--primary)}
+.nav-item[data-tone="secondary"] .nav-icon{background:var(--ai-soft);border-color:var(--ai-line);color:var(--ai-accent)}
+.nav-item[data-tone="info"]      .nav-icon{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+.nav-item[data-tone="warn"]      .nav-icon{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.nav-item[data-tone="pass"]      .nav-icon{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+.nav-item[data-tone="fail"]      .nav-icon{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+
+.nav-count{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+.nav-item.active .nav-count{color:var(--secondary)}
+.nav-pill{margin-left:auto;font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;
+  padding:2px 6px;border-radius:3px;background:var(--raised);color:var(--t4);border:1px solid var(--border)}
+.nav-pill.lead{background:var(--ai-soft);color:var(--secondary);border-color:var(--ai-line)}
+
+/* Collapsed state — hide all but icon, center, show tooltips on hover */
+[data-rail="collapsed"] .rail{padding:8px 6px 14px}
+[data-rail="collapsed"] .nav-item{justify-content:center;padding:6px;gap:0}
+[data-rail="collapsed"] .nav-item > :not(.nav-icon){display:none}
+[data-rail="collapsed"] .nav-item.active::before{display:none}
+[data-rail="collapsed"] .nav-item.active .nav-icon{box-shadow:0 0 0 1.5px var(--secondary),0 0 0 4px var(--ai-soft)}
+[data-rail="collapsed"] .nav-item::after{content:attr(data-label);position:absolute;left:calc(100% + 12px);top:50%;
+  transform:translateY(-50%) translateX(-4px);background:var(--overlay);color:var(--t1);
+  font-size:12px;font-weight:500;padding:6px 10px;border-radius:6px;border:1px solid var(--border-strong);
+  white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 140ms,transform 140ms;
+  z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.4);font-family:'Inter'}
+[data-rail="collapsed"] .nav-item:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+[data-rail="collapsed"] .rail-foot{padding:12px 4px;justify-content:center}
+[data-rail="collapsed"] .rail-foot .who,
+[data-rail="collapsed"] .rail-foot > svg{display:none}
+
+.rail-foot{margin-top:auto;border-top:1px solid var(--border);padding:12px 10px;display:flex;align-items:center;gap:10px}
+.rail-foot .av{width:28px;height:28px;border-radius:999px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));color:#0B0F17;font-size:11px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center}
+.rail-foot .who{flex:1;min-width:0}
+.rail-foot .who .n{font-size:12.5px;font-weight:600;color:var(--t1)}
+.rail-foot .who .r{font-family:'JetBrains Mono';font-size:9.5px;color:var(--secondary);letter-spacing:0.05em;font-weight:600}
+
+/* ───────── Main ───────── */
+.main{min-width:0;display:flex;flex-direction:column}
+.content{flex:1;display:grid;grid-template-columns:1fr;min-height:0}
+@media (min-width:1280px){
+  .content[data-detail="open"][data-detail-mode="split"]{grid-template-columns:minmax(0,1fr) 420px}
+}
+
+/* ───────── Center column ───────── */
+.center{min-width:0;padding:18px 16px 64px;display:flex;flex-direction:column;gap:16px;overflow-x:clip}
+@media (min-width:768px){.center{padding:22px 24px 64px;gap:18px}}
+@media (min-width:1024px){.center{padding:24px 28px 80px;gap:20px}}
+
+/* breadcrumb */
+.crumb{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--t3);flex-wrap:wrap}
+.crumb a{color:var(--t3)}
+.crumb .sep{color:var(--t4)}
+.crumb .now{color:var(--t1);font-weight:600}
+
+/* question header */
+.qhead{display:flex;flex-direction:column;gap:14px}
+@media (min-width:768px){.qhead{flex-direction:row;align-items:flex-start;justify-content:space-between;gap:24px}}
+.qhead h1{font-family:'DM Sans';font-size:22px;line-height:28px;font-weight:700;
+  letter-spacing:-0.01em;color:var(--t1);margin:0;text-wrap:pretty}
+@media (min-width:768px){.qhead h1{font-size:26px;line-height:32px}}
+@media (min-width:1024px){.qhead h1{font-size:28px;line-height:36px}}
+.qhead .sub{font-size:13px;line-height:20px;color:var(--t3);margin-top:6px;max-width:60ch;text-wrap:pretty}
+.qhead-stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--t3);font-family:'JetBrains Mono'}
+.qhead-stats .v{color:var(--t1);font-weight:600}
+.qhead-stats .sep{color:var(--t4)}
+
+/* ─────── Search Atom (the hero) ─────── */
+.search-atom{background:var(--base);border:1px solid var(--border);border-radius:var(--r-ai);
+  position:relative;overflow:hidden}
+.search-atom::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--secondary) 0%,var(--ai-accent) 60%,rgba(167,139,250,0.2) 100%)}
+.search-row{display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px}
+@media (min-width:768px){.search-row{padding:12px 16px;gap:12px}}
+.search-row .si{flex:none;color:var(--t3)}
+.search-input{flex:1;min-width:0;background:transparent;border:0;outline:none;
+  font-size:15px;color:var(--t1);font-weight:500;line-height:24px;padding:8px 0}
+.search-input::placeholder{color:var(--t4);font-weight:400}
+.search-clear{width:28px;height:28px;border-radius:6px;border:0;background:var(--raised);color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none}
+.search-clear:hover{background:var(--overlay);color:var(--t1)}
+
+.search-meta{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;
+  border-top:1px solid var(--border);padding:10px 12px;background:rgba(11,15,23,0.4)}
+@media (min-width:768px){.search-meta{padding:10px 16px}}
+/* Semantic toggle */
+.sem-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);
+  background:var(--raised);border:1px solid var(--border);border-radius:999px;padding:4px 12px 4px 4px;height:32px}
+.sem-toggle .lbl{font-family:'JetBrains Mono';font-size:11px;letter-spacing:0.04em;color:var(--secondary);font-weight:600;text-transform:uppercase}
+.sem-toggle .switch{width:32px;height:18px;border-radius:999px;background:var(--secondary);position:relative;flex:none;transition:background 150ms}
+.sem-toggle .switch::after{content:"";position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:999px;background:#0B0F17;transition:left 150ms}
+.sem-toggle[aria-checked="false"] .switch{background:var(--border-strong)}
+.sem-toggle[aria-checked="false"] .switch::after{left:2px}
+.sem-toggle[aria-checked="false"] .lbl{color:var(--t3)}
+.sem-toggle .desc{color:var(--t3);font-size:11.5px;display:none}
+@media (min-width:520px){.sem-toggle .desc{display:inline}}
+
+.search-stats{margin-left:auto;display:inline-flex;align-items:center;gap:10px;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+.search-stats .v{color:var(--t2);font-weight:600}
+
+/* Suggestion / examples row */
+.suggest{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:10px 12px;border-top:1px solid var(--border)}
+@media (min-width:768px){.suggest{padding:10px 16px}}
+.suggest .lbl{font-family:'JetBrains Mono';font-size:10px;color:var(--t4);letter-spacing:0.06em;text-transform:uppercase;margin-right:4px}
+.suggest .s{font-size:12px;color:var(--t2);background:var(--raised);border:1px solid var(--border);border-radius:999px;
+  padding:5px 10px;line-height:1.2;cursor:pointer;min-height:28px;display:inline-flex;align-items:center}
+.suggest .s:hover{border-color:var(--ai-line);color:var(--t1)}
+
+/* ─────── Filter bar (variant: top chips / drawer / left-rail) ─────── */
+.filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:6px;
+  font-size:12px;color:var(--t2);background:var(--raised);border:1px solid var(--border);white-space:nowrap;flex:none;line-height:1}
+.filter-chip:hover{border-color:var(--border-strong);color:var(--t1)}
+.filter-chip b{color:var(--t3);font-weight:500;margin-right:2px}
+.filter-chip.active{border-color:var(--ai-line);color:var(--t1);background:var(--overlay)}
+.filter-chip svg{flex:none}
+.filter-pills{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.applied{font-size:11.5px;color:var(--t4);font-family:'JetBrains Mono'}
+.applied b{color:var(--t2)}
+.clear-all{background:none;border:0;color:var(--secondary);font-size:11.5px;font-family:'JetBrains Mono';padding:4px 6px;border-radius:4px}
+.clear-all:hover{background:var(--ai-soft)}
+
+.filter-tools{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+.density-toggle{display:inline-flex;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px;height:32px}
+.density-toggle button{height:26px;width:34px;border-radius:4px;background:none;border:0;color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center}
+.density-toggle button.on{background:var(--overlay);color:var(--t1)}
+
+/* Filter drawer (variant) */
+.filter-drawer-trigger{display:none;align-items:center;gap:6px}
+[data-filter-mode="drawer"] .filterbar > .filter-pills,
+[data-filter-mode="drawer"] .filterbar > .applied,
+[data-filter-mode="drawer"] .filterbar > .clear-all{display:none}
+[data-filter-mode="drawer"] .filter-drawer-trigger{display:inline-flex}
+
+/* ──── Inline value slider (Min score) — primitives-playground.html P-2 (with histogram) ──── */
+.vsl-chip{display:inline-flex;align-items:center;gap:10px;height:32px;padding:0 14px 0 12px;border-radius:6px;
+  border:1px solid var(--border);background:var(--raised);min-width:240px}
+.vsl-chip:hover{border-color:var(--border-strong)}
+.vsl-chip-label{font-size:12px;color:var(--t2);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.vsl-chip-label b{color:var(--t3);font-weight:500}
+.vsl-chip-val{font-family:'JetBrains Mono';color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;min-width:32px}
+.vsl{position:relative;flex:1;min-width:110px;display:block;outline:none}
+.vsl-track-wrap{position:relative;height:18px;display:flex;align-items:center;cursor:pointer;user-select:none;touch-action:none}
+/* Histogram (10 bars behind track) — opt-in via .vsl[data-histogram="on"] */
+.vsl-hist{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:18px;display:none;gap:2px;pointer-events:none}
+.vsl[data-histogram="on"] .vsl-hist{display:flex}
+.vsl-hist .bar{flex:1;border-radius:2px;background:var(--border-strong);opacity:0.15;align-self:center;
+  transition:opacity 180ms cubic-bezier(0.2,0.8,0.2,1)}
+.vsl-hist .bar.dim{opacity:0.05}
+.vsl-track{position:relative;flex:1;height:4px;border-radius:2px;background:var(--border);overflow:hidden}
+.vsl-track-fill{position:absolute;left:0;top:0;bottom:0;background:var(--primary);border-radius:2px;transition:width 180ms cubic-bezier(0.2,0.8,0.2,1)}
+.vsl.dragging .vsl-track-fill{transition:none}
+.vsl-thumb{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:999px;
+  background:var(--canvas);border:2px solid var(--primary);box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:grab;
+  transition:box-shadow 180ms cubic-bezier(0.2,0.8,0.2,1)}
+.vsl-thumb::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:999px}
+.vsl-thumb:hover,.vsl:focus-visible .vsl-thumb{box-shadow:0 2px 8px rgba(45,212,191,0.45),0 0 0 4px var(--primary-soft)}
+.vsl.dragging .vsl-thumb{cursor:grabbing;box-shadow:0 2px 12px rgba(45,212,191,0.55),0 0 0 6px var(--primary-soft)}
+.vsl-tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);
+  background:var(--t1);color:var(--canvas);font:700 11px/1 'JetBrains Mono';padding:3px 6px;border-radius:4px;
+  opacity:0;pointer-events:none;transition:opacity 180ms cubic-bezier(0.2,0.8,0.2,1),transform 180ms cubic-bezier(0.2,0.8,0.2,1);white-space:nowrap}
+.vsl-tooltip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);width:0;height:0;border:4px solid transparent;border-top-color:var(--t1)}
+.vsl-thumb:hover .vsl-tooltip,.vsl:focus-visible .vsl-tooltip,.vsl.dragging .vsl-tooltip{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:767px){.vsl-track{height:6px}.vsl-thumb{width:24px;height:24px}.vsl-hist{height:24px}}
+
+/* Left-rail filters (variant) */
+.filter-side{display:none;background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:14px;flex-direction:column;gap:14px;align-self:start;position:sticky;top:calc(var(--topbar-h) + 16px)}
+.filter-side h4{margin:0;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+  font-family:'JetBrains Mono';font-weight:700;color:var(--t3)}
+.filter-side .group{display:flex;flex-direction:column;gap:6px}
+.filter-side .opt{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t2);min-height:30px;cursor:pointer}
+.filter-side .opt input{accent-color:var(--secondary);width:14px;height:14px}
+.filter-side .opt .ct{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t4)}
+[data-filter-mode="side"] .filter-side{display:flex}
+[data-filter-mode="side"] .filterbar > .filter-pills,
+[data-filter-mode="side"] .filterbar > .applied{display:none}
+[data-filter-mode="side"] .center-grid{display:grid;grid-template-columns:1fr;gap:18px}
+@media (min-width:1024px){
+  [data-filter-mode="side"] .center-grid{grid-template-columns:220px 1fr}
+}
+
+/* ─────── Result list / card / hybrid ─────── */
+.results{display:flex;flex-direction:column;gap:10px}
+[data-density="grid"] .results{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:768px){[data-density="grid"] .results{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1280px){[data-density="grid"] .results{grid-template-columns:repeat(3,minmax(0,1fr))}}
+[data-density="hybrid"] .results{display:flex;flex-direction:column;gap:12px}
+
+.chunk{position:relative;background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color 120ms,transform 120ms,background 120ms}
+.chunk:hover{border-color:var(--border-strong);background:var(--raised)}
+.chunk.selected{border-color:var(--ai-line);background:var(--overlay);box-shadow:0 0 0 1px var(--ai-line) inset}
+.chunk.active{border-color:var(--primary-line);background:rgba(45,212,191,0.04);box-shadow:0 0 0 1px var(--primary-line) inset}
+@media (min-width:768px){.chunk{padding:16px}}
+[data-density="dense"] .chunk{padding:10px 12px;gap:6px}
+
+/* row 1: select + id + relevance */
+.chunk-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cb{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border-strong);
+  background:var(--raised);flex:none;cursor:pointer;position:relative}
+.cb:checked{background:var(--secondary);border-color:var(--secondary)}
+.cb:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #0B0F17;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb-tap{display:inline-flex;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);margin:-12px 0 -12px -10px;flex:none}
+@media (min-width:1024px){.cb-tap{width:32px;height:32px;margin:-7px 0 -7px -7px}}
+
+.chunk-id{font-family:'JetBrains Mono';font-size:11.5px;color:var(--secondary);font-weight:600;letter-spacing:0.02em}
+.chunk-id::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;background:var(--secondary);margin-right:6px;vertical-align:middle;opacity:0.7}
+.relevance{margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex:none}
+.rel-bar{width:48px;height:6px;border-radius:3px;background:var(--overlay);position:relative;overflow:hidden;flex:none}
+.rel-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.rel-bar.hi i{background:var(--pass)}
+.rel-bar.md i{background:var(--warn)}
+.rel-bar.lo i{background:var(--fail)}
+.rel-num{font-family:'JetBrains Mono';font-size:11.5px;font-weight:700}
+.rel-num.hi{color:var(--pass)}
+.rel-num.md{color:var(--warn)}
+.rel-num.lo{color:var(--fail)}
+
+/* row 2: chunk text */
+.chunk-text{margin:0;font-size:13.5px;line-height:20px;color:var(--t1);text-wrap:pretty}
+.chunk-text mark{background:var(--ai-soft);color:var(--t1);padding:0 3px;border-radius:3px;font-weight:500;
+  text-decoration:underline;text-decoration-color:var(--ai-line);text-underline-offset:3px}
+.chunk-text .term{color:var(--t1);font-weight:600;background:rgba(45,212,191,0.16);padding:0 3px;border-radius:3px}
+[data-density="dense"] .chunk-text{font-size:12.5px;line-height:18px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* row 3: source + locator + actions */
+.chunk-foot{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;font-size:12px;color:var(--t3);margin-top:2px}
+.src-pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:5px;
+  background:var(--overlay);border:1px solid var(--border);font-size:11px;color:var(--t2)}
+.src-pill .ext{font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:0.06em;padding:1px 5px;border-radius:3px}
+.src-pill .ext.xlsx{background:var(--pass-soft);color:var(--pass)}
+.src-pill .ext.csv{background:var(--primary-soft);color:var(--primary)}
+.src-pill .ext.mp4{background:var(--info-soft);color:var(--info)}
+.src-pill .ext.pdf{background:var(--fail-soft);color:var(--fail)}
+.src-pill .name{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.locator{font-family:'JetBrains Mono';font-size:11.5px;color:var(--t3)}
+.locator .v{color:var(--t2)}
+.proj-mini{font-family:'JetBrains Mono';font-size:10.5px;color:var(--info);background:var(--info-soft);
+  padding:1px 6px;border-radius:3px;letter-spacing:0.06em;font-weight:700;border:1px solid var(--info-line)}
+.chunk-actions{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+.btn-tiny{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border-radius:5px;
+  font-size:11.5px;font-weight:500;border:1px solid var(--border);background:transparent;color:var(--t2);
+  white-space:nowrap;flex:none}
+.btn-tiny:hover{background:var(--overlay);color:var(--t1);border-color:var(--border-strong)}
+.btn-tiny.primary{background:var(--primary);color:var(--primary-ink);border-color:var(--primary);font-weight:600}
+.btn-tiny.primary:hover{background:var(--primary);filter:brightness(1.05);box-shadow:0 0 16px -2px rgba(45,212,191,0.4)}
+.btn-tiny.ghost-ai{color:var(--secondary);border-color:var(--ai-line)}
+.btn-tiny.ghost-ai:hover{background:var(--ai-soft);color:var(--secondary)}
+@media (max-width:520px){.chunk-actions .btn-tiny.label-only{display:none}}
+
+/* hybrid: first 2 cards full-detail, rest dense */
+[data-density="hybrid"] .chunk:nth-child(n+3){padding:10px 12px;gap:5px}
+[data-density="hybrid"] .chunk:nth-child(n+3) .chunk-text{font-size:12.5px;line-height:18px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+[data-density="hybrid"] .chunk:nth-child(n+3) .chunk-foot .btn-tiny.label-only{display:none}
+
+/* ─────── Bulk action bar ─────── */
+.bulkbar{position:sticky;bottom:16px;z-index:10;display:flex;align-items:center;gap:10px;
+  background:var(--overlay);border:1px solid var(--ai-line);border-radius:var(--r-ai);
+  padding:10px 12px;box-shadow:0 12px 40px -8px rgba(0,0,0,0.6),0 0 0 1px rgba(167,139,250,0.1) inset;
+  margin:0 auto;width:fit-content;max-width:100%;flex-wrap:wrap}
+.bulkbar.hidden{display:none}
+.bulkbar .ct{font-family:'JetBrains Mono';font-size:12px;color:var(--secondary);font-weight:700}
+.bulkbar .sep{color:var(--t4);width:1px;height:18px;background:var(--border)}
+.bulkbar .lbl{font-size:12.5px;color:var(--t2)}
+
+/* ─────── Skeleton ─────── */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.sk{background:linear-gradient(90deg,var(--base) 0%,var(--raised) 50%,var(--base) 100%);
+  background-size:800px 100%;animation:shimmer 1.6s linear infinite;border-radius:6px}
+.sk-card{background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;display:flex;flex-direction:column;gap:10px}
+.sk-row{display:flex;gap:8px;align-items:center}
+
+/* ─────── Empty state ─────── */
+.empty{background:var(--base);border:1px dashed var(--border-strong);border-radius:var(--r-lg);
+  padding:40px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}
+.empty .glyph{width:56px;height:56px;border-radius:14px;background:var(--ai-soft);border:1px solid var(--ai-line);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--secondary)}
+.empty h3{font-family:'DM Sans';font-size:18px;font-weight:700;color:var(--t1);margin:0}
+.empty p{margin:0;font-size:13px;color:var(--t3);max-width:46ch;text-wrap:pretty}
+.empty .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:6px;
+  font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--raised);color:var(--t1);font-family:inherit}
+.btn:hover{background:var(--overlay);border-color:var(--border-strong)}
+.btn.primary{background:var(--primary);color:var(--primary-ink);border-color:var(--primary);font-weight:600}
+.btn.primary:hover{filter:brightness(1.05);box-shadow:0 0 22px -4px rgba(45,212,191,0.45)}
+.btn.ghost-ai{color:var(--secondary);border-color:var(--ai-line);background:transparent}
+.btn.ghost-ai:hover{background:var(--ai-soft)}
+
+/* ───────── Detail panel ───────── */
+.detail{background:var(--base);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.content[data-detail="closed"] .detail{display:none}
+
+/* split (default desktop) */
+@media (min-width:1280px){
+  .content[data-detail-mode="split"] .detail{position:sticky;top:var(--topbar-h);height:calc(100vh - var(--topbar-h))}
+}
+/* drawer (desktop alternative — overlay slide) */
+@media (min-width:1024px){
+  .content[data-detail-mode="drawer"] .detail{position:fixed;right:0;top:var(--topbar-h);width:480px;
+    height:calc(100vh - var(--topbar-h));z-index:30;
+    box-shadow:-24px 0 60px -12px rgba(0,0,0,0.55),0 0 0 1px var(--border)}
+}
+/* modal (desktop alternative — center modal) */
+.content[data-detail-mode="modal"] .detail-modal-bg{position:fixed;inset:0;background:rgba(11,15,23,0.7);z-index:60;display:flex;align-items:center;justify-content:center;padding:24px}
+.content[data-detail-mode="modal"] .detail{width:100%;max-width:640px;height:auto;max-height:84vh;border-radius:var(--r-ai);border:1px solid var(--border)}
+.content[data-detail="closed"] .detail-modal-bg{display:none}
+@media (max-width:1023px){.content[data-detail-mode="modal"] .detail-modal-bg{display:none}}
+
+/* sheet (mobile always) */
+@media (max-width:1023px){
+  .content[data-detail="open"] .detail{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:55;
+    max-height:88vh;border-radius:18px 18px 0 0;border-left:0;border-top:1px solid var(--border);
+    box-shadow:0 -16px 60px -12px rgba(0,0,0,0.6)}
+  .detail-backdrop{position:fixed;inset:0;background:rgba(11,15,23,0.55);z-index:54}
+  .content[data-detail="closed"] .detail-backdrop{display:none}
+}
+@media (min-width:1024px){.detail-backdrop{display:none}}
+
+.detail-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--overlay);border-bottom:1px solid var(--border);flex:none}
+.detail-head .grip{display:none;width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:0 auto}
+@media (max-width:1023px){.detail-head{padding-top:6px;flex-direction:column;gap:8px;align-items:stretch}.detail-head .grip{display:block}.detail-head .row{display:flex;align-items:center;gap:10px}}
+.detail-head .id{font-family:'JetBrains Mono';font-size:13px;color:var(--secondary);font-weight:700}
+.detail-head .close{margin-left:auto;width:var(--tap);height:var(--tap);border-radius:6px;background:none;border:0;color:var(--t3);display:inline-flex;align-items:center;justify-content:center}
+.detail-head .close:hover{background:var(--raised);color:var(--t1)}
+@media (min-width:1024px){.detail-head .close{width:32px;height:32px}}
+
+.detail-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.det-section h4{margin:0 0 6px;font-family:'JetBrains Mono';font-size:10px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase;font-weight:700}
+.det-text{font-size:13.5px;line-height:20px;color:var(--t1);margin:0;text-wrap:pretty}
+.det-text mark{background:var(--ai-soft);color:var(--t1);padding:0 3px;border-radius:3px}
+.det-text .term{color:var(--t1);background:rgba(45,212,191,0.16);padding:0 3px;border-radius:3px;font-weight:600}
+
+.det-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12px}
+.det-meta dt{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;align-self:center}
+.det-meta dd{margin:0;color:var(--t1);font-size:12.5px}
+
+.neighbors{display:flex;flex-direction:column;gap:8px}
+.nbr{padding:10px 12px;border-radius:var(--r-md);background:var(--raised);border-left:2px solid var(--border-strong);font-size:12.5px;line-height:18px;color:var(--t2);position:relative}
+.nbr.cur{background:var(--overlay);border-left-color:var(--secondary);color:var(--t1)}
+.nbr .id{font-family:'JetBrains Mono';font-size:10px;color:var(--t3);display:block;margin-bottom:4px;letter-spacing:0.04em}
+.nbr.cur .id{color:var(--secondary)}
+
+.det-actions{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding:14px;background:var(--base);flex:none}
+.det-actions .row{display:flex;gap:8px}
+.det-actions .btn{flex:1;justify-content:center;height:42px;font-weight:600}
+.det-actions .secondary-row{display:flex;gap:8px;flex-wrap:wrap}
+.det-actions .secondary-row .btn{flex:1;height:36px;font-weight:500}
+
+/* ───────── Mobile sticky bottom-bar for filter trigger ───────── */
+.mobile-fab{display:none}
+@media (max-width:767px){
+  [data-filter-mode="drawer"] .mobile-fab{display:inline-flex;position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;
+    height:44px;padding:0 16px;border-radius:999px;background:var(--overlay);border:1px solid var(--ai-line);
+    color:var(--t1);font-size:13px;align-items:center;gap:8px;font-weight:600;
+    box-shadow:0 12px 32px -8px rgba(0,0,0,0.6)}
+}
+
+/* ─── Filter drawer — snap-sheet on mobile, right-slide on desktop ───
+   Mobile pattern from primitives-playground.html P-1 (snap-sheet drawer)
+   Desktop fallback: right-slide overlay panel (existing behavior)        */
+.drawer{position:fixed;inset:0;z-index:70;display:none}
+.drawer.open{display:block}
+.drawer .bg{position:absolute;inset:0;background:rgba(0,0,0,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);
+  transition:background 380ms cubic-bezier(0.32,0.72,0,1),backdrop-filter 380ms cubic-bezier(0.32,0.72,0,1);pointer-events:none}
+.drawer.open .bg{background:rgba(0,0,0,0.4);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:auto}
+
+/* Desktop: right-slide overlay (>=768px) */
+@media (min-width:768px){
+  .drawer .panel{position:absolute;right:0;top:0;bottom:0;width:min(380px,90vw);background:var(--base);
+    border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;
+    transform:translateX(100%);transition:transform 280ms cubic-bezier(0.2,0.8,0.2,1)}
+  .drawer.open .panel{transform:none}
+  .drawer .grip{display:none}
+}
+
+/* Mobile (<768px): snap-sheet — playground P-1 */
+@media (max-width:767px){
+  .drawer .panel{position:absolute;left:0;right:0;bottom:0;height:100%;background:var(--base);
+    border-top:1px solid var(--border);border-top-left-radius:16px;border-top-right-radius:16px;
+    box-shadow:0 -8px 24px rgba(0,0,0,0.3);
+    transform:translateY(100%);transition:transform 380ms cubic-bezier(0.32,0.72,0,1),box-shadow 380ms cubic-bezier(0.32,0.72,0,1);
+    display:flex;flex-direction:column;overflow:hidden;will-change:transform;touch-action:none}
+  .drawer .panel::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+    background:linear-gradient(180deg,rgba(255,255,255,0.06),transparent);
+    border-top-left-radius:16px;border-top-right-radius:16px;pointer-events:none}
+  .drawer .panel.dragging{transition:none}
+  .drawer .panel.full{box-shadow:0 -16px 40px rgba(0,0,0,0.5)}
+  .drawer .grip{flex:none;height:24px;display:flex;align-items:center;justify-content:center;cursor:grab;padding-top:8px;touch-action:none}
+  .drawer .grip:active{cursor:grabbing}
+  .drawer .grip .bar{width:36px;height:4px;border-radius:2px;background:var(--border-strong);transition:background 180ms cubic-bezier(0.2,0.8,0.2,1)}
+  .drawer .grip:hover .bar,.drawer .panel.dragging .grip .bar{background:var(--t3)}
+}
+.drawer .head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);flex:none}
+.drawer .head h3{margin:0;font-family:'DM Sans';font-size:16px;color:var(--t1)}
+.drawer .body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:18px;-webkit-overflow-scrolling:touch}
+.drawer .foot{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex:none;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+.drawer .foot .btn{flex:1;justify-content:center;height:42px;font-weight:600}
+
+@media (prefers-reduced-motion:reduce){
+  .drawer .bg,.drawer .panel{transition:transform 180ms ease-out,background 180ms ease-out,backdrop-filter 180ms ease-out}
+}
+
+/* Misc */
+.spacer{height:24px}
+.divider{height:1px;background:var(--border);margin:4px 0}
+
+/* Tweaks panel surface */
+#tweaks-root{position:fixed;right:16px;bottom:16px;z-index:90}
+
+/* PRINT-CLEAN reduced motion */
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar" role="banner">
+    <button class="menu-btn" id="railToggle" aria-label="Open navigation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <div class="brand"><span class="brand-mark">Q</span><span class="brand-word">QA Nexus</span></div>
+    <button class="proj-pill" type="button">
+      <span class="dot">IR</span><span>Iksula Returns</span><span class="meta">· main</span>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <div class="global-search" role="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span class="label">Search everything…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+    <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v3L3 11h10l-1-2V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.5"/></svg><span class="pip"></span></button>
+    <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <div class="mode-toggle" role="tablist">
+      <button class="on" role="tab" aria-selected="true">Operate</button>
+      <button role="tab">Review</button>
+      <button role="tab">Prove</button>
+    </div>
+    <div class="user-pill"><span class="user-av">KP</span><span class="name">Kishor P.</span></div>
+  </header>
+
+  <!-- LEFT RAIL -->
+  <aside class="rail" id="rail" aria-label="Primary navigation">
+    <button class="rail-toggle" id="railCollapseToggle" type="button" aria-label="Collapse navigation" title="Collapse">
+      <span class="rt-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </span>
+      <span class="rt-label">Collapse</span>
+    </button>
+
+    <a class="nav-item" data-tone="home" data-label="Home" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 7L8 2.5 13.5 7V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7z"/></svg></span><span class="nav-label">Home</span></a>
+
+    <div class="nav-section">Plan</div>
+    <a class="nav-item" data-tone="info" data-label="Requirements" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg></span><span class="nav-label">Requirements</span><span class="nav-count">142</span></a>
+    <a class="nav-item" data-tone="primary" data-label="Test Plans &amp; Cycles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v3M11 2v3" stroke-linecap="round"/></svg></span><span class="nav-label">Test Plans &amp; Cycles</span></a>
+    <a class="nav-item" data-tone="pass" data-label="Test Cases" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3z"/><path d="M6 8l1.5 1.5L11 6" stroke-linecap="round"/></svg></span><span class="nav-label">Test Cases</span><span class="nav-count">1,284</span></a>
+
+    <div class="nav-section">Author</div>
+    <a class="nav-item" data-tone="warn" data-label="Test Suites" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H9zM9 9h4v4H9z"/></svg></span><span class="nav-label">Test Suites</span></a>
+    <a class="nav-item active" data-tone="secondary" data-label="Knowledge Base" href="#" aria-current="page"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2.5h10v11l-5-2-5 2v-11z"/></svg></span><span class="nav-label">Knowledge Base</span><span class="nav-count">1.2K chunks</span></a>
+    <a class="nav-item disabled" data-label="Automation Studio" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l3 3 7-7" stroke-linecap="round"/></svg></span><span class="nav-label">Automation Studio</span><span class="nav-pill">v1.5</span></a>
+    <a class="nav-item disabled" data-label="Data &amp; Mocks" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4"/></svg></span><span class="nav-label">Data &amp; Mocks</span><span class="nav-pill">v1.5</span></a>
+
+    <div class="nav-section">Run</div>
+    <a class="nav-item" data-tone="primary" data-label="Runs &amp; Sessions" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l8 5-8 5V3z"/></svg></span><span class="nav-label">Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+    <a class="nav-item" data-tone="info" data-label="Environments" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="12" height="8" rx="1"/><path d="M5 8h6" stroke-linecap="round"/></svg></span><span class="nav-label">Environments</span></a>
+
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" data-tone="info" data-label="Run Results" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke-linecap="round"/></svg></span><span class="nav-label">Run Results</span></a>
+    <a class="nav-item" data-tone="fail" data-label="Defects / Failures" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 7v3M8 12h.01" stroke-linecap="round"/></svg></span><span class="nav-label">Defects / Failures</span><span class="nav-count" style="color:var(--fail)">14</span></a>
+    <a class="nav-item" data-tone="warn" data-label="Reports" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="10" height="10" rx="1"/><path d="M6 10V7M8 10V5M10 10V8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+
+    <div class="rail-foot">
+      <span class="av">KP</span>
+      <div class="who"><div class="n">Kishor P.</div><div class="r">QA_ENGINEER</div></div>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--t3)"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <section class="main">
+    <div class="content" id="content"
+         data-detail="open"
+         data-detail-mode="split"
+         data-density="hybrid"
+         data-filter-mode="chips"
+         data-state="results">
+
+      <!-- CENTER -->
+      <div class="center" id="center">
+
+        <!-- breadcrumb -->
+        <nav class="crumb" aria-label="Breadcrumb">
+          <a href="#">Home</a><span class="sep">›</span>
+          <a href="#">Author</a><span class="sep">›</span>
+          <span class="now">Knowledge Base</span>
+        </nav>
+
+        <!-- Question header -->
+        <div class="qhead">
+          <div>
+            <h1>What does the Iksula Returns spec already say about this?</h1>
+            <p class="sub">Search every chunk we've ingested from uploaded docs and recordings — pull the right one into a test case in two clicks.</p>
+          </div>
+          <div class="qhead-stats">
+            <span><span class="v">1,284</span> chunks</span>
+            <span class="sep">·</span>
+            <span><span class="v">3</span> source files</span>
+            <span class="sep">·</span>
+            <span>last sync <span class="v">9:42 AM</span></span>
+          </div>
+        </div>
+
+        <!-- ─────────  Search atom  ───────── -->
+        <section class="search-atom" aria-label="Search the knowledge base">
+          <div class="search-row">
+            <svg class="si" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input class="search-input" id="searchInput" type="search" value="refund window for digital goods" placeholder="Ask the corpus — 'refund window for digital goods', 'partial returns RMA', 'payment reversal timeout'…" />
+            <button class="search-clear" id="searchClear" aria-label="Clear search">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+            </button>
+          </div>
+          <div class="search-meta">
+            <button class="sem-toggle" id="semToggle" role="switch" aria-checked="true" aria-label="Toggle semantic search">
+              <span class="switch"></span>
+              <span class="lbl">Semantic</span>
+              <span class="desc">cosine + keyword blend</span>
+            </button>
+            <span class="search-stats" id="searchStats">
+              <span><span class="v">7</span> chunks</span>
+              <span class="sep" style="color:var(--t4)">·</span>
+              <span><span class="v">312 ms</span></span>
+              <span class="sep" style="color:var(--t4)">·</span>
+              <span>top score <span class="v" style="color:var(--pass)">0.94</span></span>
+            </span>
+          </div>
+          <div class="suggest" id="suggest">
+            <span class="lbl">Try</span>
+            <button class="s">RMA approval flow</button>
+            <button class="s">payment reversal SLA</button>
+            <button class="s">partial returns</button>
+            <button class="s">return window holidays</button>
+            <button class="s" style="color:var(--secondary);border-color:var(--ai-line);background:var(--ai-soft)">✨ What's not yet covered?</button>
+          </div>
+        </section>
+
+        <!-- ─────────  Filter bar  ───────── -->
+        <div class="filterbar" id="filterbar">
+          <div class="filter-pills">
+            <button class="filter-chip active" type="button">
+              <b>Project:</b><span class="proj-mini" style="background:transparent;border:0;padding:0;color:var(--info)">RET</span>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="filter-chip" type="button">
+              <b>Source:</b>All files
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="filter-chip" type="button">
+              <b>Type:</b>xlsx · csv · mp4
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="filter-chip" type="button">
+              <b>Date:</b>Last 90 days
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <!-- Histogram bars use mocked distribution approximating expected relevance
+                 score spread across 1284 total chunks. FE wires real distribution from
+                 GET /api/kb/search response { distribution: number[10] } when API ships.
+                 Pattern reference: primitives-playground.html P-2 'with histogram' variant. -->
+            <div class="vsl-chip" title="Minimum relevance score · 1284 chunks">
+              <span class="vsl-chip-label"><b>Min score:</b><span class="vsl-chip-val" id="minScoreVal">0.50</span></span>
+              <div class="vsl" data-histogram="on" data-min="0" data-max="1" data-step="0.01" data-value="0.5" id="minScoreSlider" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.5" aria-label="Minimum relevance score">
+                <div class="vsl-track-wrap">
+                  <div class="vsl-hist" id="minScoreHist"></div>
+                  <div class="vsl-track"><div class="vsl-track-fill"></div></div>
+                  <div class="vsl-thumb"><div class="vsl-tooltip">0.50</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <span class="applied"><b>1</b> filter applied</span>
+          <button class="clear-all">Clear</button>
+
+          <button class="filter-chip filter-drawer-trigger" id="filterDrawerBtn" type="button">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
+            Filters <span style="font-family:'JetBrains Mono';color:var(--secondary);font-weight:700">1</span>
+          </button>
+
+          <div class="filter-tools">
+            <button class="filter-chip" type="button"><b>Sort:</b>Relevance<svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <div class="density-toggle" id="densityToggle">
+              <button data-d="dense" aria-label="Dense list" title="Dense list"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
+              <button data-d="hybrid" class="on" aria-label="Hybrid" title="Hybrid"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="12" height="5" rx="1"/><path d="M2 9h12M2 12h8" stroke-linecap="round"/></svg></button>
+              <button data-d="grid" aria-label="Card grid" title="Card grid"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────────  Layout body (filter side variant uses 2-col grid, others single col) ───────── -->
+        <div class="center-grid">
+
+          <!-- side filters (variant) -->
+          <aside class="filter-side" aria-label="Filters">
+            <h4>Project</h4>
+            <div class="group">
+              <label class="opt"><input type="checkbox" checked> Iksula Returns (RET) <span class="ct">1,284</span></label>
+              <label class="opt"><input type="checkbox"> Iksula Cart (CART) <span class="ct">412</span></label>
+              <label class="opt"><input type="checkbox"> Iksula Payments (PAY) <span class="ct">628</span></label>
+              <label class="opt"><input type="checkbox"> Iksula Auth (AUTH) <span class="ct">203</span></label>
+              <label class="opt"><input type="checkbox"> Iksula Ops (OPS) <span class="ct">98</span></label>
+            </div>
+            <div class="divider"></div>
+            <h4>File type</h4>
+            <div class="group">
+              <label class="opt"><input type="checkbox" checked> Excel <span class="ct">782</span></label>
+              <label class="opt"><input type="checkbox" checked> CSV <span class="ct">341</span></label>
+              <label class="opt"><input type="checkbox" checked> Video transcript <span class="ct">98</span></label>
+              <label class="opt"><input type="checkbox"> PDF <span class="ct">63</span></label>
+            </div>
+            <div class="divider"></div>
+            <h4>Date range</h4>
+            <div class="group">
+              <label class="opt"><input type="radio" name="dt" checked> Last 90 days</label>
+              <label class="opt"><input type="radio" name="dt"> Last 30 days</label>
+              <label class="opt"><input type="radio" name="dt"> All time</label>
+            </div>
+            <div class="divider"></div>
+            <h4>Min relevance</h4>
+            <div class="group">
+              <input type="range" min="0" max="100" value="50" style="accent-color:var(--secondary)" />
+              <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)">
+                <span>0.0</span><span style="color:var(--secondary)">0.50</span><span>1.0</span>
+              </div>
+            </div>
+          </aside>
+
+          <!-- ─────────  Main results column ───────── -->
+          <div class="results-col" id="resultsCol">
+
+            <!-- STATE: results -->
+            <div id="resultsState" class="results-state">
+              <div class="results" id="results">
+                <!-- chunk cards inserted by JS -->
+              </div>
+
+              <div class="bulkbar hidden" id="bulkbar" role="status" aria-live="polite">
+                <span class="ct"><span id="bulkCount">2</span> chunks selected</span>
+                <span class="sep"></span>
+                <span class="lbl">Use selection to:</span>
+                <button class="btn primary" style="height:32px;padding:0 12px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8l3 3 7-7"/></svg> Attach to test case</button>
+                <button class="btn ghost-ai" style="height:32px;padding:0 12px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5z"/></svg> Generate with A1</button>
+                <button class="btn" style="height:32px;padding:0 12px" id="bulkClear">Clear</button>
+              </div>
+            </div>
+
+            <!-- STATE: loading skeleton -->
+            <div id="loadingState" class="results-state" style="display:none">
+              <div class="results">
+                <div class="sk-card"><div class="sk-row"><div class="sk" style="width:80px;height:14px"></div><div class="sk" style="width:60px;height:14px;margin-left:auto"></div></div><div class="sk" style="height:18px;width:70%"></div><div class="sk" style="height:14px;width:90%"></div><div class="sk" style="height:14px;width:80%"></div><div class="sk-row"><div class="sk" style="width:140px;height:20px"></div><div class="sk" style="width:90px;height:20px"></div></div></div>
+                <div class="sk-card"><div class="sk-row"><div class="sk" style="width:90px;height:14px"></div><div class="sk" style="width:60px;height:14px;margin-left:auto"></div></div><div class="sk" style="height:18px;width:60%"></div><div class="sk" style="height:14px;width:88%"></div><div class="sk-row"><div class="sk" style="width:130px;height:20px"></div><div class="sk" style="width:80px;height:20px"></div></div></div>
+                <div class="sk-card"><div class="sk-row"><div class="sk" style="width:80px;height:14px"></div><div class="sk" style="width:60px;height:14px;margin-left:auto"></div></div><div class="sk" style="height:18px;width:75%"></div><div class="sk" style="height:14px;width:92%"></div><div class="sk-row"><div class="sk" style="width:140px;height:20px"></div><div class="sk" style="width:90px;height:20px"></div></div></div>
+                <div class="sk-card"><div class="sk-row"><div class="sk" style="width:80px;height:14px"></div><div class="sk" style="width:60px;height:14px;margin-left:auto"></div></div><div class="sk" style="height:18px;width:65%"></div><div class="sk" style="height:14px;width:85%"></div></div>
+              </div>
+            </div>
+
+            <!-- STATE: empty -->
+            <div id="emptyState" class="results-state" style="display:none">
+              <div class="empty">
+                <span class="glyph">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
+                </span>
+                <h3>No chunks match — yet.</h3>
+                <p>The corpus has 1,284 chunks across 3 files but nothing scored above your <span class="mono" style="color:var(--secondary)">0.50</span> threshold for this query. Lower the threshold, broaden filters, or upload another spec — A1 will index it within a minute.</p>
+                <div class="row">
+                  <button class="btn primary"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 11V3M3 8l5-5 5 5M2 13h12"/></svg>Upload a spec</button>
+                  <button class="btn">Lower threshold to 0.30</button>
+                  <button class="btn ghost-ai"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5z"/></svg>Ask A1 to summarise gaps</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- footer pagination -->
+            <div style="text-align:center;padding:18px 0 0;font-size:12px;color:var(--t3);font-family:'JetBrains Mono'" id="pageFoot">
+              Showing <span style="color:var(--t1);font-weight:600">7</span> of <span style="color:var(--t1);font-weight:600">7</span> matches
+              <span style="color:var(--t4);margin:0 6px">·</span>
+              <a href="#" style="color:var(--secondary);font-weight:500">Refine query</a>
+            </div>
+
+          </div><!-- /results-col -->
+        </div><!-- /center-grid -->
+      </div><!-- /center -->
+
+      <!-- DETAIL PANEL -->
+      <div class="detail-modal-bg" id="modalBg"><div class="detail-backdrop" id="detailBackdrop"></div>
+      <aside class="detail" id="detail" aria-label="Chunk detail">
+        <div class="detail-head">
+          <div class="grip" aria-hidden="true"></div>
+          <div class="row" style="display:flex;align-items:center;gap:10px;width:100%">
+            <span class="id" id="detId">CHUNK-RET-0341</span>
+            <span class="rel-num hi mono" id="detScore">0.94</span>
+            <button class="close" id="detClose" aria-label="Close detail"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+          </div>
+        </div>
+        <div class="detail-body">
+
+          <div class="det-section">
+            <h4>Chunk text</h4>
+            <p class="det-text" id="detText">
+              <mark>Refund window</mark> for <span class="term">digital goods</span> is <strong>14 calendar days from purchase</strong>, regardless of download or activation status. Physical goods follow the standard 30-day window. Where a download is partial or the file is corrupt, refund eligibility extends to 30 days; the support agent must attach the failed-download log (<span class="mono" style="color:var(--info);background:var(--info-soft);padding:0 4px;border-radius:3px">x-iksula-dl-trace</span>) when issuing the refund.
+            </p>
+          </div>
+
+          <div class="det-section">
+            <h4>Source</h4>
+            <dl class="det-meta">
+              <dt>File</dt><dd><span class="src-pill" style="height:auto"><span class="ext xlsx">XLSX</span><span class="name">return_policy_v2.xlsx</span></span></dd>
+              <dt>Locator</dt><dd class="mono">Sheet: <span style="color:var(--secondary)">Refund Rules</span> · p.4 · L17–28</dd>
+              <dt>Project</dt><dd><span class="proj-mini">RET</span> Iksula Returns</dd>
+              <dt>Indexed</dt><dd class="mono">2026-04-22 · 09:42 AM</dd>
+              <dt>Embedded by</dt><dd><span style="color:var(--secondary)">A1</span> · <span class="mono">bge-large-en-v1.5</span> · 1024-d</dd>
+            </dl>
+          </div>
+
+          <div class="det-section">
+            <h4>Neighboring chunks</h4>
+            <div class="neighbors">
+              <div class="nbr">
+                <span class="id">CHUNK-RET-0340 · prev</span>
+                Section 4.1: Eligibility. A refund is granted when the order is delivered, activated (digital), or otherwise successfully transmitted to the customer's account within the contractual SLA…
+              </div>
+              <div class="nbr cur">
+                <span class="id">CHUNK-RET-0341 · current</span>
+                Refund window for digital goods is 14 calendar days from purchase, regardless of download or activation status. Physical goods follow the standard 30-day window…
+              </div>
+              <div class="nbr">
+                <span class="id">CHUNK-RET-0342 · next</span>
+                Where the customer initiates a chargeback, the 14-day window is paused and replaced with the issuing bank's dispute timeline (typically 45 days) until resolution…
+              </div>
+            </div>
+          </div>
+
+          <div class="det-section">
+            <h4>Used in</h4>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="src-pill"><span class="ext" style="background:var(--primary-soft);color:var(--primary)">TC</span><span class="name mono">TC-RET-0418</span></span>
+              <span class="src-pill"><span class="ext" style="background:var(--primary-soft);color:var(--primary)">TC</span><span class="name mono">TC-RET-0421</span></span>
+              <span style="font-size:11.5px;color:var(--t4);align-self:center">2 test cases · 0 defects</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="det-actions">
+          <div class="row">
+            <button class="btn primary" id="useChunkBtn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8l3 3 7-7"/></svg>
+              Use this chunk in test case
+            </button>
+          </div>
+          <div class="secondary-row">
+            <button class="btn">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 4h7l3 3v7H2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              View source file
+            </button>
+            <button class="btn ghost-ai">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5z"/></svg>
+              Generate with A1
+            </button>
+          </div>
+        </div>
+      </aside>
+      </div><!-- /modal-bg -->
+
+    </div><!-- /content -->
+  </section><!-- /main -->
+
+  <!-- Mobile filter trigger (drawer mode only) -->
+  <button class="mobile-fab" id="mobileFab">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
+    Filters
+    <span style="font-family:'JetBrains Mono';color:var(--secondary);font-weight:700;background:var(--ai-soft);padding:1px 6px;border-radius:999px;font-size:11px">1</span>
+  </button>
+
+  <!-- Filter drawer -->
+  <div class="drawer" id="filterDrawer" role="dialog" aria-label="Filters" aria-modal="true">
+    <div class="bg" data-close="drawer"></div>
+    <div class="panel" id="filterDrawerPanel">
+      <div class="grip" id="filterDrawerGrip" aria-label="Drag to resize" tabindex="0">
+        <span class="bar"></span>
+      </div>
+      <div class="head">
+        <h3>Filters</h3>
+        <button class="icon-btn" data-close="drawer" aria-label="Close" style="margin-left:auto"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      </div>
+      <div class="body">
+        <div>
+          <h4 style="margin:0 0 8px;font-family:'JetBrains Mono';font-size:11px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase">Project</h4>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" checked style="accent-color:var(--secondary);width:16px;height:16px"> Iksula Returns (RET) <span class="mono" style="margin-left:auto;color:var(--t4);font-size:11px">1,284</span></label>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" style="accent-color:var(--secondary);width:16px;height:16px"> Iksula Cart (CART) <span class="mono" style="margin-left:auto;color:var(--t4);font-size:11px">412</span></label>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" style="accent-color:var(--secondary);width:16px;height:16px"> Iksula Payments (PAY) <span class="mono" style="margin-left:auto;color:var(--t4);font-size:11px">628</span></label>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" style="accent-color:var(--secondary);width:16px;height:16px"> Iksula Auth (AUTH) <span class="mono" style="margin-left:auto;color:var(--t4);font-size:11px">203</span></label>
+        </div>
+        <div>
+          <h4 style="margin:0 0 8px;font-family:'JetBrains Mono';font-size:11px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase">File type</h4>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" checked style="accent-color:var(--secondary);width:16px;height:16px"> Excel</label>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" checked style="accent-color:var(--secondary);width:16px;height:16px"> CSV</label>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" checked style="accent-color:var(--secondary);width:16px;height:16px"> Video transcript</label>
+          <label class="opt" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);min-height:36px"><input type="checkbox" style="accent-color:var(--secondary);width:16px;height:16px"> PDF</label>
+        </div>
+        <div>
+          <h4 style="margin:0 0 8px;font-family:'JetBrains Mono';font-size:11px;letter-spacing:0.08em;color:var(--t3);text-transform:uppercase">Min relevance</h4>
+          <input type="range" min="0" max="100" value="50" style="width:100%;accent-color:var(--secondary)" />
+          <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:11px;color:var(--t3);margin-top:4px">
+            <span>0.0</span><span style="color:var(--secondary)">0.50</span><span>1.0</span>
+          </div>
+        </div>
+      </div>
+      <div class="foot">
+        <button class="btn" data-close="drawer" style="background:transparent">Reset</button>
+        <button class="btn primary" data-close="drawer">Apply (7 results)</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ───────── Tweaks panel mount ───────── -->
+<div id="tweaks-root"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" data-tweaks-panel-inline>
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <input type="color" className="twk-swatch" value={value}
+             onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+
+<!-- ───────── F15 data + behavior ───────── -->
+<script>
+/* ============================================================
+   Realistic Iksula chunk corpus — RET project
+   Sources: return_policy_v2.xlsx, legacy_refund_test_cases.csv,
+            customer_return_flow_recording.mp4
+   ============================================================ */
+const CHUNKS = [
+  {
+    id:"CHUNK-RET-0341", score:0.94, file:"return_policy_v2.xlsx", ext:"xlsx",
+    loc:"p.4 · L17–28", project:"RET",
+    text:`<mark>Refund window</mark> for <span class="term">digital goods</span> is <strong>14 calendar days from purchase</strong>, regardless of download or activation status. Physical goods follow the standard 30-day window. Where a download is partial or the file is corrupt, refund eligibility extends to 30 days; the support agent must attach the failed-download log when issuing the refund.`,
+    section:"§4.2 Refund Rules",
+    used_in:["TC-RET-0418","TC-RET-0421"]
+  },
+  {
+    id:"CHUNK-RET-0287", score:0.89, file:"return_policy_v2.xlsx", ext:"xlsx",
+    loc:"p.3 · L41–55", project:"RET",
+    text:`<span class="term">Partial returns</span> are permitted for orders containing 2+ line items. The customer selects which units to return; the <mark>RMA flow</mark> issues one shipping label per shipment-zone group. Refund is calculated as <code class="mono" style="color:var(--info)">(unit_price × qty_returned) − pro_rata_discount</code> and is processed independently per group.`,
+    section:"§3.7 Partial Returns",
+    used_in:["TC-RET-0319"]
+  },
+  {
+    id:"CHUNK-RET-0512", score:0.81, file:"customer_return_flow_recording.mp4", ext:"mp4",
+    loc:"00:14:32 → 00:15:08", project:"RET",
+    text:`Speaker (PM): "When <span class="term">payment reversal</span> times out — and we've seen this happen with HDFC and SBI on UPI rails — the order falls into a <mark>'pending-reverse'</mark> state. The customer sees 'Refund initiated' but the bank ledger shows nothing for up to 72 hours. We need a reconciliation job that retries every 6h."`,
+    section:"PM walkthrough · Reversal edge cases",
+    used_in:[]
+  },
+  {
+    id:"CHUNK-RET-0198", score:0.76, file:"legacy_refund_test_cases.csv", ext:"csv",
+    loc:"row 142–148", project:"RET",
+    text:`Test scenario: <span class="term">RMA</span> approval requires 2-of-3 sign-off (CX agent, ops lead, finance) when refund amount exceeds ₹25,000. Below that threshold, single CX agent approval is sufficient. Test data includes the boundary case at exactly ₹25,000 — must route through the escalated path. Auto-approval is disabled for <mark>refund</mark> on COD orders.`,
+    section:"row 142 · approval matrix",
+    used_in:["TC-RET-0301"]
+  },
+  {
+    id:"CHUNK-RET-0455", score:0.72, file:"return_policy_v2.xlsx", ext:"xlsx",
+    loc:"p.6 · L9–22", project:"RET",
+    text:`Holidays and observed days off: the <mark>refund window</mark> excludes the following Indian Stock Exchange holidays (Republic Day, Holi, Independence Day, Gandhi Jayanti, Diwali, Christmas) plus state-specific holidays where the warehouse is located. Customer-facing copy must surface 'Effective return-by' rather than the 30-day raw count.`,
+    section:"§5.1 Calendar exceptions",
+    used_in:[]
+  },
+  {
+    id:"CHUNK-RET-0382", score:0.68, file:"legacy_refund_test_cases.csv", ext:"csv",
+    loc:"row 78–82", project:"RET",
+    text:`Edge case: <span class="term">refund</span> SLA breach during peak season (Diwali, Republic Day sale). Default SLA is 5–7 business days; during peak, this extends to 10 business days but the <mark>'Refund initiated'</mark> notification still fires within 24 hours of approval. UI must show extended-SLA banner on order detail.`,
+    section:"row 78 · seasonal SLA",
+    used_in:["TC-RET-0290"]
+  },
+  {
+    id:"CHUNK-RET-0623", score:0.54, file:"customer_return_flow_recording.mp4", ext:"mp4",
+    loc:"00:32:15 → 00:32:48", project:"RET",
+    text:`Speaker (Finance Lead): "On the <span class="term">payment reversal</span> for <mark>partial returns</mark> — we cannot split a single Razorpay payment_id across two reversal calls. So if the customer returns 2 of 3 items from one order, we issue one combined reversal and the discrepancy goes through the manual reconciliation queue. We've raised a ticket with Razorpay; not blocking pilot."`,
+    section:"Finance walkthrough · Reversal limitations",
+    used_in:[]
+  }
+];
+
+/* ─────────  Render results  ───────── */
+const resultsEl = document.getElementById('results');
+const bandFor = (s) => s>=0.85 ? "hi" : s>=0.65 ? "md" : "lo";
+
+function renderResults(){
+  resultsEl.innerHTML = CHUNKS.map((c,i) => {
+    const band = bandFor(c.score);
+    const isActive = i===0 ? "active" : "";
+    return `
+      <article class="chunk ${isActive}" data-id="${c.id}" tabindex="0">
+        <div class="chunk-head">
+          <label class="cb-tap" onclick="event.stopPropagation()">
+            <input type="checkbox" class="cb" data-id="${c.id}" />
+          </label>
+          <span class="chunk-id">${c.id}</span>
+          <span class="locator">${c.section}</span>
+          <span class="relevance">
+            <span class="rel-bar ${band}"><i style="width:${Math.round(c.score*100)}%"></i></span>
+            <span class="rel-num ${band}">${c.score.toFixed(2)}</span>
+          </span>
+        </div>
+        <p class="chunk-text">${c.text}</p>
+        <div class="chunk-foot">
+          <span class="src-pill">
+            <span class="ext ${c.ext}">${c.ext.toUpperCase()}</span>
+            <span class="name">${c.file}</span>
+          </span>
+          <span class="locator mono">${c.loc}</span>
+          <span class="proj-mini">${c.project}</span>
+          <span class="chunk-actions">
+            <button class="btn-tiny primary" data-act="use" data-id="${c.id}">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8l3 3 7-7"/></svg>
+              Use<span class="label-only"> in test</span>
+            </button>
+            <button class="btn-tiny" data-act="open" data-id="${c.id}">
+              Detail <span class="label-only">→</span>
+            </button>
+          </span>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+renderResults();
+
+/* ─────────  Selection / bulkbar  ───────── */
+const bulkbar = document.getElementById('bulkbar');
+const bulkCount = document.getElementById('bulkCount');
+function updateBulk(){
+  const n = document.querySelectorAll('.cb:checked').length;
+  bulkCount.textContent = n;
+  bulkbar.classList.toggle('hidden', n < 1);
+  document.querySelectorAll('.chunk').forEach(c => {
+    const cb = c.querySelector('.cb');
+    c.classList.toggle('selected', cb && cb.checked);
+  });
+}
+document.addEventListener('change', e => {
+  if (e.target.matches('.cb')) updateBulk();
+});
+document.getElementById('bulkClear').addEventListener('click', () => {
+  document.querySelectorAll('.cb:checked').forEach(cb => cb.checked = false);
+  updateBulk();
+});
+
+/* ─────────  Open detail panel  ───────── */
+const content = document.getElementById('content');
+const detail = document.getElementById('detail');
+const detClose = document.getElementById('detClose');
+const detailBackdrop = document.getElementById('detailBackdrop');
+function openDetail(id){
+  const chunk = CHUNKS.find(c => c.id === id) || CHUNKS[0];
+  document.getElementById('detId').textContent = chunk.id;
+  const score = document.getElementById('detScore');
+  const band = bandFor(chunk.score);
+  score.textContent = chunk.score.toFixed(2);
+  score.className = `rel-num ${band} mono`;
+  document.getElementById('detText').innerHTML = chunk.text;
+  content.dataset.detail = "open";
+  document.querySelectorAll('.chunk').forEach(c => c.classList.toggle('active', c.dataset.id===id));
+}
+function closeDetail(){
+  content.dataset.detail = "closed";
+}
+detClose.addEventListener('click', closeDetail);
+detailBackdrop && detailBackdrop.addEventListener('click', closeDetail);
+document.getElementById('modalBg').addEventListener('click', e => {
+  if (e.target.id === 'modalBg') closeDetail();
+});
+
+document.addEventListener('click', e => {
+  const card = e.target.closest('.chunk');
+  if (!card) return;
+  if (e.target.closest('.cb-tap')) return;
+  const act = e.target.closest('[data-act]');
+  if (act && act.dataset.act === 'use') {
+    e.preventDefault();
+    flashUse(act);
+    return;
+  }
+  openDetail(card.dataset.id);
+});
+
+function flashUse(btn){
+  const orig = btn.innerHTML;
+  btn.style.background = "var(--pass)";
+  btn.style.color = "#003100";
+  btn.style.borderColor = "var(--pass)";
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8l3 3 7-7"/></svg>Sent → F22`;
+  setTimeout(() => { btn.innerHTML = orig; btn.style.cssText=""; btn.classList.add('primary'); }, 1400);
+}
+
+/* ─────────  Density toggle  ───────── */
+document.getElementById('densityToggle').addEventListener('click', e => {
+  const b = e.target.closest('button[data-d]');
+  if (!b) return;
+  document.querySelectorAll('#densityToggle button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  content.dataset.density = b.dataset.d;
+  if (window.__setTweak) window.__setTweak('density', b.dataset.d);
+});
+
+/* ─────────  Filter drawer — snap-sheet on mobile, right-slide on desktop  ───────── */
+const drawer = document.getElementById('filterDrawer');
+const drawerPanel = document.getElementById('filterDrawerPanel');
+const drawerGrip = document.getElementById('filterDrawerGrip');
+const drawerBody = drawer.querySelector('.body');
+
+const SHEET_DETENTS = { large: 10, medium: 40, dismiss: 100 };
+let sheetCurrent = 'dismiss';
+let sheetDrag = null;
+const isMobile = () => window.matchMedia('(max-width:767px)').matches;
+
+function setSheetTranslate(pct, animate){
+  drawerPanel.classList.toggle('dragging', !animate);
+  drawerPanel.style.transform = `translateY(${pct}%)`;
+  const bg = drawer.querySelector('.bg');
+  const op = Math.max(0, Math.min(1, (100 - pct) / 90));
+  bg.style.background = `rgba(0,0,0,${0.4 * op})`;
+  bg.style.backdropFilter = `blur(${12 * op}px)`;
+  bg.style.webkitBackdropFilter = `blur(${12 * op}px)`;
+  bg.style.pointerEvents = pct < 95 ? 'auto' : 'none';
+  drawerPanel.classList.toggle('full', pct <= SHEET_DETENTS.large + 2);
+}
+function snapTo(name, animate=true){
+  sheetCurrent = name;
+  setSheetTranslate(SHEET_DETENTS[name], animate);
+  if(name === 'dismiss'){ setTimeout(() => { if(sheetCurrent === 'dismiss') drawer.classList.remove('open'); }, 380); }
+}
+
+function openDrawer(){
+  drawer.classList.add('open');
+  if(isMobile()){
+    requestAnimationFrame(() => snapTo('medium'));
+  }
+}
+function closeDrawer(){
+  if(isMobile()){
+    snapTo('dismiss');
+  } else {
+    drawer.classList.remove('open');
+    drawerPanel.style.transform = '';
+  }
+}
+
+document.getElementById('filterDrawerBtn').addEventListener('click', openDrawer);
+document.getElementById('mobileFab').addEventListener('click', openDrawer);
+drawer.addEventListener('click', e => { if (e.target.dataset.close === 'drawer') closeDrawer(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
+
+/* ── Snap-sheet drag handlers (mobile only) ── */
+function startSheetDrag(clientY, source){
+  if(!isMobile()) return;
+  const cur = parseFloat(drawerPanel.style.transform.match(/-?\d+\.?\d*/)?.[0]) || SHEET_DETENTS[sheetCurrent];
+  sheetDrag = { startY: clientY, startPct: cur, lastY: clientY, lastT: performance.now(), vy: 0, source };
+  drawerPanel.classList.add('dragging');
+}
+function moveSheetDrag(clientY){
+  if(!sheetDrag) return;
+  const h = drawerPanel.parentElement.getBoundingClientRect().height;
+  const delta = clientY - sheetDrag.startY;
+  let pct = sheetDrag.startPct + (delta / h) * 100;
+  if(pct < SHEET_DETENTS.large){ pct = SHEET_DETENTS.large + (pct - SHEET_DETENTS.large) * 0.4; }
+  pct = Math.max(0, Math.min(100, pct));
+  const now = performance.now();
+  const dt = now - sheetDrag.lastT;
+  if(dt > 0) sheetDrag.vy = (clientY - sheetDrag.lastY) / dt;
+  sheetDrag.lastY = clientY; sheetDrag.lastT = now;
+  setSheetTranslate(pct, false);
+}
+function endSheetDrag(){
+  if(!sheetDrag) return;
+  const pct = parseFloat(drawerPanel.style.transform.match(/-?\d+\.?\d*/)?.[0]) || 100;
+  const v = sheetDrag.vy;
+  sheetDrag = null;
+  if(v > 0.5){ snapTo('dismiss'); return; }
+  if(v < -0.5){ snapTo('large'); return; }
+  if(pct > 70) snapTo('dismiss');
+  else if(pct > 25) snapTo('medium');
+  else snapTo('large');
+}
+drawerGrip.addEventListener('pointerdown', e => {
+  if(!isMobile()) return;
+  e.preventDefault();
+  drawerGrip.setPointerCapture(e.pointerId);
+  startSheetDrag(e.clientY, 'grip');
+});
+drawerGrip.addEventListener('pointermove', e => moveSheetDrag(e.clientY));
+drawerGrip.addEventListener('pointerup', e => {
+  if(drawerGrip.hasPointerCapture(e.pointerId)) drawerGrip.releasePointerCapture(e.pointerId);
+  endSheetDrag();
+});
+drawerGrip.addEventListener('pointercancel', endSheetDrag);
+drawerBody.addEventListener('pointerdown', e => {
+  if(!isMobile() || drawerBody.scrollTop > 0) return;
+  if(e.target.closest('button, a, input, .filter-chip, .chip')) return;
+  startSheetDrag(e.clientY, 'body');
+});
+drawerBody.addEventListener('pointermove', e => { if(sheetDrag?.source === 'body') moveSheetDrag(e.clientY); });
+drawerBody.addEventListener('pointerup', () => { if(sheetDrag?.source === 'body') endSheetDrag(); });
+
+/* ─────────  Min-score slider — primitives-playground.html P-2  ───────── */
+function VSlider(el){
+  const min = parseFloat(el.dataset.min || 0);
+  const max = parseFloat(el.dataset.max || 1);
+  const step = parseFloat(el.dataset.step || 0.01);
+  const wrap = el.querySelector('.vsl-track-wrap');
+  const fill = el.querySelector('.vsl-track-fill');
+  const thumb = el.querySelector('.vsl-thumb');
+  const tip = el.querySelector('.vsl-tooltip');
+  const hist = el.querySelector('.vsl-hist');
+  let value = parseFloat(el.dataset.value || min);
+  let dragging = false, debounceT;
+  /* Mocked distribution — 1284 total chunks across 10 buckets, bell-shaped, peaks at 0.5–0.6.
+     FE replaces with API distribution[10] when GET /api/kb/search response is wired. */
+  if(hist){
+    const fakeDist = [50, 80, 120, 180, 220, 260, 220, 130, 30, 4];
+    const peak = Math.max(...fakeDist);
+    fakeDist.forEach(h => {
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = (4 + (h / peak) * 14) + 'px';
+      hist.appendChild(bar);
+    });
+  }
+  function fmt(v){ return v.toFixed(2); }
+  function render(){
+    const pct = ((value - min) / (max - min)) * 100;
+    fill.style.width = pct + '%';
+    thumb.style.left = pct + '%';
+    if(tip) tip.textContent = fmt(value);
+    el.dataset.value = value;
+    el.setAttribute('aria-valuenow', value);
+    if(hist){
+      const thumbBin = Math.floor(pct / 10);
+      Array.from(hist.children).forEach((bar, i) => bar.classList.toggle('dim', i < thumbBin));
+    }
+  }
+  function setValue(v, src='programmatic'){
+    v = Math.max(min, Math.min(max, v));
+    v = Math.round(v / step) * step;
+    if(Math.abs(v - value) < step / 2) return;
+    value = parseFloat(v.toFixed(4));
+    render();
+    clearTimeout(debounceT);
+    debounceT = setTimeout(() => {
+      el.dispatchEvent(new CustomEvent('change', {detail:{value, source:src}, bubbles:true}));
+    }, 100);
+  }
+  function fromClientX(x){
+    const r = wrap.getBoundingClientRect();
+    return min + Math.max(0, Math.min(1, (x - r.left) / r.width)) * (max - min);
+  }
+  wrap.addEventListener('pointerdown', e => {
+    wrap.setPointerCapture(e.pointerId);
+    dragging = true; el.classList.add('dragging');
+    setValue(fromClientX(e.clientX), 'pointer');
+  });
+  wrap.addEventListener('pointermove', e => { if(dragging) setValue(fromClientX(e.clientX), 'pointer'); });
+  wrap.addEventListener('pointerup', e => {
+    if(wrap.hasPointerCapture(e.pointerId)) wrap.releasePointerCapture(e.pointerId);
+    dragging = false; el.classList.remove('dragging');
+  });
+  el.addEventListener('keydown', e => {
+    const big = e.shiftKey ? step * 10 : step;
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowDown'){ e.preventDefault(); setValue(value - big, 'key'); }
+    else if(e.key === 'ArrowRight' || e.key === 'ArrowUp'){ e.preventDefault(); setValue(value + big, 'key'); }
+    else if(e.key === 'Home'){ e.preventDefault(); setValue(min, 'key'); }
+    else if(e.key === 'End'){ e.preventDefault(); setValue(max, 'key'); }
+  });
+  render();
+  return { setValue, getValue: () => value };
+}
+const minScoreSlider = VSlider(document.getElementById('minScoreSlider'));
+document.getElementById('minScoreSlider').addEventListener('change', e => {
+  document.getElementById('minScoreVal').textContent = e.detail.value.toFixed(2);
+});
+
+/* ─────────  Semantic toggle  ───────── */
+const sem = document.getElementById('semToggle');
+sem.addEventListener('click', () => {
+  const next = sem.getAttribute('aria-checked') === 'true' ? 'false' : 'true';
+  sem.setAttribute('aria-checked', next);
+});
+
+/* ─────────  Search states (loading / empty / results) via tweak  ───────── */
+function setState(s){
+  content.dataset.state = s;
+  document.getElementById('resultsState').style.display = s==='results' ? '' : 'none';
+  document.getElementById('loadingState').style.display = s==='loading' ? '' : 'none';
+  document.getElementById('emptyState').style.display = s==='empty' ? '' : 'none';
+  document.getElementById('pageFoot').style.display = s==='results' ? '' : 'none';
+  if (s==='empty') {
+    document.getElementById('searchInput').value = "irrelevant query xyz123";
+    document.getElementById('searchStats').innerHTML = `<span><span class="v">0</span> chunks</span><span style="color:var(--t4)">·</span><span><span class="v">204 ms</span></span>`;
+  }
+}
+
+/* ─────────  Mobile rail toggle  ───────── */
+document.getElementById('railToggle').addEventListener('click', () => {
+  document.getElementById('rail').classList.toggle('mobile-open');
+});
+
+/* ─────────  Desktop rail collapse (≥1024px) — persisted  ───────── */
+(function(){
+  var app = document.getElementById('app');
+  var btn = document.getElementById('railCollapseToggle');
+  if(!app || !btn) return;
+  try{
+    if(localStorage.getItem('f15.rail') === 'collapsed') app.dataset.rail = 'collapsed';
+  }catch(e){}
+  function setState(state){
+    if(state === 'collapsed') app.dataset.rail = 'collapsed';
+    else delete app.dataset.rail;
+    try{ localStorage.setItem('f15.rail', state); }catch(e){}
+    btn.setAttribute('aria-label', state === 'collapsed' ? 'Expand navigation' : 'Collapse navigation');
+    btn.title = state === 'collapsed' ? 'Expand' : 'Collapse';
+  }
+  btn.addEventListener('click', function(){
+    setState(app.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
+  });
+})();
+
+/* ─────────  Suggestion chips → search  ───────── */
+document.getElementById('suggest').addEventListener('click', e => {
+  const s = e.target.closest('.s');
+  if (!s) return;
+  document.getElementById('searchInput').value = s.textContent.replace(/^✨\s*/, '');
+  setState('loading');
+  setTimeout(() => setState('results'), 700);
+});
+
+/* ─────────  Clear search  ───────── */
+document.getElementById('searchClear').addEventListener('click', () => {
+  document.getElementById('searchInput').value = "";
+  document.getElementById('searchInput').focus();
+});
+</script>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     F15 CANONICAL LOCK (Yogesh, 2026-05-03)
+     ─────────────────────────────────────────────────────────────────────
+     Locked desktop combination — this is the binding M2 reference:
+       • Card density:      Hybrid     (first 2 full + rest condensed)
+       • Filter placement:  Top chips  (inline, always-visible)
+       • Detail panel:      Split-pane (zero close-clicks per chunk;
+                              chosen for scan-and-drill throughput,
+                              7-15 chunks/query under sprint-peak load)
+       • Loading + Empty:   approved as-shown
+       • Bulk-select bar:   visible only when ≥1 chunk selected
+     Mobile (<768px): detail panel becomes full-screen bottom-sheet drawer.
+
+     The variant picker below is HIDDEN by default. CSS for non-canonical
+     variants (drawer, modal, dense list, card grid, side filters,
+     filter drawer) remains in the stylesheet for audit value but is
+     never the default render.
+
+     To inspect alternates (audit / FE handoff only): append ?variants=1
+     to the URL. The Tweaks panel will render and the toolbar toggle
+     will be wired up. Without that flag, this file renders the locked
+     canonical combination and nothing else.
+     ───────────────────────────────────────────────────────────────────── -->
+<script type="text/babel">
+const { useState, useEffect } = React;
+const { TweaksPanel, useTweaks, TweakSection, TweakRadio, TweakSelect, TweakToggle, TweakButton } = window;
+
+// Canonical defaults — DO NOT change these without a new variant-lock decision.
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "hybrid",
+  "filterMode": "chips",
+  "detailMode": "split",
+  "viewState": "results",
+  "showBulk": true
+}/*EDITMODE-END*/;
+
+// Variant picker is hidden unless the URL has ?variants=1
+const VARIANTS_VISIBLE = /[?&]variants=1\b/.test(location.search);
+
+function F15Tweaks() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  // expose for vanilla JS too
+  useEffect(() => { window.__setTweak = setTweak; }, [setTweak]);
+
+  // Apply to DOM
+  useEffect(() => {
+    const c = document.getElementById('content');
+    if (!c) return;
+    c.dataset.density = t.density;
+    c.dataset.filterMode = t.filterMode;
+    c.dataset.detailMode = t.detailMode;
+    // sync density toggle UI
+    document.querySelectorAll('#densityToggle button').forEach(b => {
+      b.classList.toggle('on', b.dataset.d === t.density);
+    });
+  }, [t.density, t.filterMode, t.detailMode]);
+
+  useEffect(() => {
+    if (typeof setState === 'function') setState(t.viewState);
+    else window.setState && window.setState(t.viewState);
+  }, [t.viewState]);
+
+  useEffect(() => {
+    const cbs = document.querySelectorAll('.cb');
+    if (t.showBulk) {
+      cbs[0] && (cbs[0].checked = true);
+      cbs[2] && (cbs[2].checked = true);
+    } else {
+      cbs.forEach(c => c.checked = false);
+    }
+    cbs[0] && cbs[0].dispatchEvent(new Event('change', { bubbles: true }));
+  }, [t.showBulk]);
+
+  return (
+    <TweaksPanel title="F15 variants" defaultOpen={false}>
+      <TweakSection title="Result density"
+        hint="Hybrid = first 2 full + rest condensed (default). Compare against pure list and pure card-grid.">
+        <TweakRadio value={t.density} onChange={v => setTweak('density', v)}
+          options={[
+            { value: 'dense',  label: 'Dense list' },
+            { value: 'hybrid', label: 'Hybrid' },
+            { value: 'grid',   label: 'Card grid' }
+          ]} />
+      </TweakSection>
+
+      <TweakSection title="Filter placement"
+        hint="Top chips = inline always-visible. Drawer = right-slide on demand. Side rail = persistent left column on desktop.">
+        <TweakRadio value={t.filterMode} onChange={v => setTweak('filterMode', v)}
+          options={[
+            { value: 'chips',  label: 'Top chips' },
+            { value: 'drawer', label: 'Drawer' },
+            { value: 'side',   label: 'Left rail' }
+          ]} />
+      </TweakSection>
+
+      <TweakSection title="Detail panel (desktop)"
+        hint="Mobile is always a bottom sheet. Choose how desktop renders the chunk detail.">
+        <TweakRadio value={t.detailMode} onChange={v => setTweak('detailMode', v)}
+          options={[
+            { value: 'split',  label: 'Split-pane' },
+            { value: 'drawer', label: 'Right drawer' },
+            { value: 'modal',  label: 'Center modal' }
+          ]} />
+      </TweakSection>
+
+      <TweakSection title="Frame state">
+        <TweakRadio value={t.viewState} onChange={v => setTweak('viewState', v)}
+          options={[
+            { value: 'results', label: 'Results' },
+            { value: 'loading', label: 'Loading' },
+            { value: 'empty',   label: 'Empty' }
+          ]} />
+        <TweakToggle label="Show bulk-select bar" checked={t.showBulk}
+          onChange={v => setTweak('showBulk', v)} />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('tweaks-root'));
+if (VARIANTS_VISIBLE) {
+  root.render(<F15Tweaks />);
+} else {
+  // Locked render path — no variant picker, no toolbar toggle.
+  // Apply the canonical defaults to the DOM directly so the page renders
+  // exactly as locked without mounting the Tweaks UI.
+  const c = document.getElementById('content');
+  if (c) {
+    c.dataset.density    = TWEAK_DEFAULTS.density;
+    c.dataset.filterMode = TWEAK_DEFAULTS.filterMode;
+    c.dataset.detailMode = TWEAK_DEFAULTS.detailMode;
+  }
+  document.querySelectorAll('#densityToggle button').forEach(b => {
+    b.classList.toggle('on', b.dataset.d === TWEAK_DEFAULTS.density);
+  });
+}
+</script>
+
+</body>
+</html>

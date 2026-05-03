@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Bulk Import Test Cases</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+    --border:#2A3347; --border-strong:#3B4660;
+    --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+    --primary:#2DD4BF; --primary-ink:#003732;
+    --secondary:#A78BFA; --ai-accent:#C4B5FD;
+    --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+    --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+    --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+    --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+    --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+    --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+    --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+    --rail-w:240px; --topbar-h:56px; --tap:44px;
+    --r-sm:4px; --r-md:6px; --r-lg:10px; --r-ai:12px; --r-modal:14px;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;background:var(--canvas);color:var(--t1);
+    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;min-height:100vh}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+  button{font-family:inherit;cursor:pointer;color:inherit;background:none;border:0}
+  input,select{font-family:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+
+  /* ─── Custom scrollbar — SYS-17 (primitives-playground.html SB-1) ─── */
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+  ::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+  ::-webkit-scrollbar-corner{background:transparent}
+  *{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+  @media (hover:none) and (pointer:coarse){
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-thumb{background:var(--border-strong)}
+  }
+
+  /* Backdrop shell (dimmed) */
+  .shell{position:fixed;inset:0;display:grid;grid-template-rows:var(--topbar-h) 1fr;
+    filter:blur(4px) brightness(0.55);opacity:0.9;pointer-events:none}
+  .topbar{height:var(--topbar-h);display:flex;align-items:center;gap:12px;padding:0 16px;
+    background:var(--base);border-bottom:1px solid var(--border)}
+  .brand-mark{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .brand-word{font-family:'DM Sans';font-size:15px;font-weight:700}
+  .body{display:grid;grid-template-columns:var(--rail-w) 1fr}
+  .rail{background:var(--base);border-right:1px solid var(--border);padding:14px 8px;display:flex;flex-direction:column;gap:6px}
+  .nav-stub{height:34px;background:var(--raised);border-radius:6px}
+  .nav-stub.active{background:var(--overlay);position:relative}
+  .nav-stub.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:var(--secondary);border-radius:0 2px 2px 0}
+  .main-stub{padding:24px;display:flex;flex-direction:column;gap:14px}
+  .row-stub{height:48px;background:var(--base);border:1px solid var(--border);border-radius:8px}
+
+  /* Scrim + Modal */
+  .scrim{position:fixed;inset:0;background:rgba(11,15,23,0.72);backdrop-filter:blur(4px);z-index:50;
+    display:flex;align-items:center;justify-content:center;padding:24px}
+  .modal{width:min(1120px,100%);height:min(860px,calc(100vh - 48px));background:var(--base);
+    border:1px solid var(--border);border-radius:var(--r-modal);
+    box-shadow:0 40px 88px -24px rgba(0,0,0,0.8),0 0 0 1px rgba(45,212,191,0.06);
+    display:flex;flex-direction:column;overflow:hidden;opacity:1;
+    animation:modalIn 280ms cubic-bezier(0.2,0.8,0.2,1)}
+  @keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(0.98)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.modal{animation:none}}
+  @media (max-width:767px){
+    .scrim{padding:0;align-items:flex-end}
+    .modal{width:100%;max-height:100%;height:100%;border-radius:0}
+  }
+
+  /* Header */
+  .m-head{padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;flex:none}
+  .head-icon{width:40px;height:40px;border-radius:10px;background:var(--primary-soft);
+    border:1px solid var(--primary-line);color:var(--primary);
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .head-icon svg{width:20px;height:20px}
+  .head-body{flex:1;min-width:0}
+  .m-eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary);font-weight:700;margin-bottom:2px;display:inline-flex;align-items:center;gap:6px}
+  .file-pill{font-family:'JetBrains Mono';color:var(--info);background:var(--info-soft);
+    border:1px solid var(--info-line);padding:1px 6px;border-radius:3px;letter-spacing:0.04em;font-weight:600;text-transform:none;font-size:9.5px}
+  .file-pill.neutral{color:var(--t3);background:var(--overlay);border-color:var(--border-strong)}
+  .m-title{font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:700;margin:0}
+  .m-sub{font-size:12px;color:var(--t3);margin-top:2px}
+  .m-sub b{color:var(--t2)}
+  .m-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);color:var(--t3);
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .m-close:hover{color:var(--t1);background:var(--raised)}
+  .m-close svg{width:13px;height:13px}
+
+  /* 5-step stepper */
+  .stepper{height:60px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--border);background:var(--base);flex:none;overflow-x:auto}
+  .step{flex:1;min-width:130px;display:flex;align-items:center;gap:10px;padding:16px 0;
+    font-size:12.5px;font-weight:600;color:var(--t3);border-bottom:2px solid transparent;
+    justify-content:center;position:relative;line-height:1}
+  .step + .step::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:1px;height:18px;background:var(--border)}
+  .step .step-num{width:22px;height:22px;border-radius:999px;border:1.5px solid var(--border-strong);
+    display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;flex:none}
+  .step.done{color:var(--t2)}
+  .step.done .step-num{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+  .step.done .step-num svg{width:11px;height:11px}
+  .step.current{color:var(--t1);border-bottom-color:var(--primary)}
+  .step.current .step-num{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);box-shadow:0 0 0 4px var(--primary-soft)}
+  .step .nm{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+  .step .nm .lbl{font-size:12.5px;font-weight:600}
+  .step .nm .meta{font-size:9.5px;font-weight:400;color:var(--t4);font-family:'JetBrains Mono'}
+  .step.current .nm .meta{color:var(--primary)}
+  .step.done .nm .meta{color:var(--pass)}
+
+  /* Body */
+  .m-body{flex:1;padding:18px 24px;overflow-y:auto;background:var(--canvas);display:flex;flex-direction:column;gap:14px;min-height:0}
+
+  /* Phase summary cards (Steps 1-3 done) */
+  .done-card{background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);padding:11px 16px;
+    display:flex;align-items:center;gap:12px;flex:none}
+  .done-card .dc-icon{width:28px;height:28px;border-radius:6px;background:var(--pass-soft);
+    border:1px solid var(--pass-line);color:var(--pass);
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .done-card .dc-icon svg{width:13px;height:13px}
+  .done-card .dc-title{font-family:'DM Sans';font-size:13px;font-weight:600;color:var(--t1);margin:0;line-height:18px}
+  .done-card .dc-meta{font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono';margin-top:1px;line-height:15px}
+  .done-card .dc-meta b{color:var(--t1);font-weight:600}
+  .done-card .dc-meta .sep{color:var(--t4);margin:0 6px}
+  .done-card .dc-link{margin-left:auto;font-size:11px;color:var(--t3);font-weight:500}
+  .done-card .dc-link:hover{color:var(--ai-accent)}
+
+  /* Current phase: Dedupe */
+  .phase-card{background:var(--base);border:1px solid var(--border);border-radius:var(--r-ai);
+    padding:14px 18px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;flex:none}
+  .phase-head{display:flex;align-items:center;gap:12px}
+  .phase-icon{width:32px;height:32px;border-radius:7px;background:var(--ai-soft);
+    border:1px solid var(--ai-line);color:var(--secondary);
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .phase-icon svg{width:15px;height:15px}
+  .phase-text{flex:1;min-width:0}
+  .phase-text h3{font-family:'DM Sans';font-size:15px;line-height:20px;font-weight:700;margin:0}
+  .phase-text h3 .count{color:var(--warn);font-family:'JetBrains Mono'}
+  .phase-text p{font-size:11.5px;color:var(--t3);margin:1px 0 0}
+  .phase-text p .agent-tag{display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--secondary);background:var(--ai-soft);border:1px solid var(--ai-line);padding:1px 4px;border-radius:3px;line-height:1;margin-right:5px}
+  .phase-progress{font-family:'JetBrains Mono';font-size:11px;color:var(--pass);font-weight:600;
+    background:var(--pass-soft);border:1px solid var(--pass-line);padding:4px 9px;border-radius:4px;line-height:1}
+
+  /* Strategy radio group */
+  .strategy{background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:none}
+  .strategy-eyebrow{font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t3);font-weight:700;margin:0}
+  .strategy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:767px){.strategy-grid{grid-template-columns:1fr}}
+  .strategy-card{background:var(--canvas);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;
+    cursor:pointer;display:flex;align-items:flex-start;gap:9px;text-align:left;width:100%;font:inherit;color:inherit}
+  .strategy-card:hover{border-color:var(--border-strong);background:var(--raised)}
+  .strategy-card.on{border-color:var(--primary);background:var(--primary-soft);box-shadow:inset 0 0 0 1px var(--primary-line)}
+  .strategy-radio{width:16px;height:16px;border-radius:999px;border:1.5px solid var(--border-strong);
+    background:var(--canvas);flex:none;margin-top:2px;display:inline-flex;align-items:center;justify-content:center}
+  .strategy-card.on .strategy-radio{border-color:var(--primary)}
+  .strategy-card.on .strategy-radio::after{content:"";width:8px;height:8px;border-radius:999px;background:var(--primary)}
+  .strategy-body{flex:1;min-width:0}
+  .strategy-title{font-size:13px;color:var(--t1);font-weight:600;margin:0;line-height:18px}
+  .strategy-desc{font-size:11.5px;color:var(--t3);margin:2px 0 0;line-height:16px}
+  .strategy-card.on .strategy-title{color:var(--primary)}
+
+  /* Pair list */
+  .pair-list{background:var(--base);border:1px solid var(--border);border-radius:var(--r-lg);
+    display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:320px}
+  @media (max-width:1023px){.pair-list{min-height:240px}}
+  .pair-thead{padding:11px 14px;background:var(--overlay);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;flex-wrap:wrap}
+  .pair-thead-left{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--t3);display:inline-flex;align-items:center;gap:8px}
+  .pair-thead-left .n{color:var(--t1);font-family:'JetBrains Mono';font-weight:700;background:var(--raised);padding:2px 7px;border-radius:4px;text-transform:none;letter-spacing:0;font-size:11px}
+  .ghost-btn{height:28px;padding:0 10px;border-radius:5px;border:1px solid var(--border);color:var(--t2);font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:5px;line-height:1}
+  .ghost-btn:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .ghost-btn svg{width:11px;height:11px}
+
+  .pair-rows{flex:1;overflow-y:auto;min-height:0}
+
+  .dup-row{display:grid;grid-template-columns:1fr 22px 1fr 130px 130px;column-gap:14px;
+    align-items:center;padding:10px 14px;border-top:1px solid var(--border)}
+  .dup-row:first-child{border-top:0}
+  .dup-row:hover{background:rgba(45,212,191,0.03)}
+  @media (max-width:1023px){.dup-row{grid-template-columns:1fr 1fr;gap:8px;padding:10px}}
+
+  .dup-side{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .dup-side .label{font-size:9px;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;line-height:14px;display:inline-flex;align-items:center;gap:6px}
+  .dup-side.new .label{color:var(--info)}
+  .dup-side.new .label::before{content:"NEW (row "attr(data-row)")";font-family:'JetBrains Mono';font-size:9px;font-weight:700;color:var(--info);background:var(--info-soft);border:1px solid var(--info-line);padding:1px 4px;border-radius:3px;line-height:1}
+  .dup-side.exist .label{color:var(--t3)}
+  .dup-side.exist .label::before{content:"EXISTING";font-family:'JetBrains Mono';font-size:9px;font-weight:700;color:var(--t3);background:var(--overlay);border:1px solid var(--border-strong);padding:1px 4px;border-radius:3px;line-height:1}
+  .dup-id{font-family:'JetBrains Mono';font-size:10.5px;color:var(--primary);line-height:14px}
+  .dup-side.new .dup-id{color:var(--t4)}
+  .dup-title{font-size:12.5px;line-height:17px;color:var(--t1);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .dup-arrow{display:flex;align-items:center;justify-content:center;color:var(--secondary)}
+  .dup-arrow svg{width:14px;height:14px}
+  @media (max-width:1023px){.dup-arrow{display:none}}
+
+  /* Explicit-label sim chip — audit fix */
+  .label-chip{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono';font-size:10px;font-weight:600;
+    padding:3px 7px;border-radius:4px;line-height:1;border:1px solid;height:22px;justify-self:start}
+  .label-chip .agent-tag{font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--secondary);background:var(--ai-soft);padding:1px 4px;border-radius:2px;line-height:1;border:1px solid var(--ai-line)}
+  .label-chip .lc-label{font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;opacity:0.85}
+  .label-chip .lc-val{font-weight:700}
+  .label-chip .lc-tier{font-size:9.5px;font-weight:500;font-family:'Inter';text-transform:lowercase;opacity:0.85}
+  .sim-high{background:var(--fail-soft);color:var(--fail);border-color:var(--fail-line)}
+  .sim-med{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+  .sim-low{background:var(--info-soft);color:var(--info);border-color:var(--info-line)}
+
+  .pair-action{height:30px;border-radius:5px;border:1px solid var(--border);background:var(--overlay);color:var(--t1);
+    font-size:11.5px;font-weight:500;padding:0 10px;display:inline-flex;align-items:center;justify-content:space-between;gap:6px;width:100%}
+  .pair-action:hover{border-color:var(--border-strong);background:var(--raised)}
+  .pair-action .chev{color:var(--t3)}
+
+  /* Footer */
+  .m-foot{height:64px;display:flex;align-items:center;padding:0 24px;border-top:1px solid var(--border);background:var(--base);flex:none;gap:12px;font-size:12px}
+  .agent-id{display:inline-flex;align-items:center;gap:6px}
+  .agent-glyph{width:24px;height:24px;border-radius:5px;background:var(--ai-soft);border:1px solid var(--ai-line);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center}
+  .agent-glyph svg{width:13px;height:13px}
+  .agent-name{font-size:12px;font-weight:600;color:var(--t1)}
+  .agent-version{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);margin-left:2px}
+  .agent-meta{font-size:11.5px;color:var(--t3);font-family:'JetBrains Mono';flex:1;line-height:1.3}
+  .agent-meta b{color:var(--t1);font-weight:600}
+  .agent-meta .sep{color:var(--t4);margin:0 6px}
+  .btn-back{height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border);color:var(--t2);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+  .btn-back:hover{color:var(--t1);background:var(--raised);border-color:var(--border-strong)}
+  .btn-import{height:36px;padding:0 16px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+  .btn-import:hover{background:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5)}
+  .btn-import .ct{font-family:'JetBrains Mono';font-size:11px;background:rgba(0,55,50,0.22);padding:1px 6px;border-radius:3px;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- Backdrop -->
+<div class="shell" aria-hidden="true">
+  <div class="topbar">
+    <span class="brand-mark"></span>
+    <span class="brand-word">QA Nexus</span>
+  </div>
+  <div class="body">
+    <aside class="rail">
+      <div class="nav-stub" style="width:80%"></div>
+      <div class="nav-stub" style="width:60%"></div>
+      <div class="nav-stub active" style="width:75%"></div>
+      <div class="nav-stub" style="width:55%"></div>
+    </aside>
+    <main class="main-stub">
+      <div class="row-stub"></div>
+      <div class="row-stub"></div>
+      <div class="row-stub"></div>
+      <div class="row-stub"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="scrim" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="modal">
+
+    <header class="m-head">
+      <span class="head-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <path d="M17 8l-5-5-5 5"/>
+          <path d="M12 3v12"/>
+        </svg>
+      </span>
+      <div class="head-body">
+        <div class="m-eyebrow">
+          Bulk Import · Test Cases
+          <span class="file-pill">legacy_refund_test_cases.csv</span>
+          <span class="file-pill neutral">2.4 MB</span>
+        </div>
+        <h2 id="m-title" class="m-title display">Resolve duplicates before import</h2>
+        <p class="m-sub">Source: <b>TestRail export</b> · 247 rows · 8 fields mapped · 2 rows excluded · A2 found <b>14</b> potential matches.</p>
+      </div>
+      <button class="m-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <!-- 5-step stepper -->
+    <nav class="stepper" aria-label="Import phases">
+      <div class="step done">
+        <span class="step-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+        <span class="nm"><span class="lbl">Upload</span><span class="meta">1 file · 2.4 MB</span></span>
+      </div>
+      <div class="step done">
+        <span class="step-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+        <span class="nm"><span class="lbl">Map fields</span><span class="meta">8 of 9 mapped</span></span>
+      </div>
+      <div class="step done">
+        <span class="step-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+        <span class="nm"><span class="lbl">Validate</span><span class="meta">245 valid · 2 excluded</span></span>
+      </div>
+      <div class="step current">
+        <span class="step-num">4</span>
+        <span class="nm"><span class="lbl">Dedupe</span><span class="meta">14 potential matches</span></span>
+      </div>
+      <div class="step">
+        <span class="step-num">5</span>
+        <span class="nm"><span class="lbl">Summary</span><span class="meta">awaiting strategy</span></span>
+      </div>
+    </nav>
+
+    <!-- Body -->
+    <div class="m-body">
+
+      <!-- Step 1-3 collapsed summaries -->
+      <div class="done-card">
+        <span class="dc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span>
+        <div>
+          <h4 class="dc-title">Upload &amp; Map &amp; Validate complete</h4>
+          <p class="dc-meta">
+            <b>247</b> rows<span class="sep">·</span>
+            <b>8/9</b> fields mapped<span class="sep">·</span>
+            <span style="color:var(--info)">Steps→test_steps</span><span class="sep">·</span>
+            <span style="color:var(--info)">Expected→expected_results</span><span class="sep">·</span>
+            <b>245</b> valid<span class="sep">·</span>
+            <span style="color:var(--warn)">2 excluded</span>
+            <span style="color:var(--t4);margin-left:6px">(Row 17: expected_results empty · Row 89: malformed steps)</span>
+          </p>
+        </div>
+        <button class="dc-link">Review ↑</button>
+      </div>
+
+      <!-- Phase: A2 dedup -->
+      <section class="phase-card">
+        <div class="phase-head">
+          <span class="phase-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.8L19 9.7l-4.8 1.9L12 17l-1.9-5.4L5 9.7l5.1-1.9z"/></svg></span>
+          <div class="phase-text">
+            <h3><span class="count">14</span> potential duplicates found in 245 valid rows</h3>
+            <p><span class="agent-tag">A2 v1.1</span>pgvector + cosine similarity · scanned in 11.4s · 78% precision on last import</p>
+          </div>
+          <span class="phase-progress">scan complete</span>
+        </div>
+      </section>
+
+      <!-- Strategy -->
+      <section class="strategy" role="radiogroup" aria-label="Default merge strategy">
+        <p class="strategy-eyebrow">Default strategy <span style="color:var(--t4);text-transform:none;letter-spacing:0;font-weight:400">— override per-row below</span></p>
+        <div class="strategy-grid">
+          <button class="strategy-card" role="radio" aria-checked="false">
+            <span class="strategy-radio"></span>
+            <div class="strategy-body">
+              <p class="strategy-title">Keep new (replace)</p>
+              <p class="strategy-desc">Imported row overwrites the existing TC. Use for canonical migrations.</p>
+            </div>
+          </button>
+          <button class="strategy-card" role="radio" aria-checked="false">
+            <span class="strategy-radio"></span>
+            <div class="strategy-body">
+              <p class="strategy-title">Keep existing (skip)</p>
+              <p class="strategy-desc">Skip the imported row if a match exists. Safest for additive imports.</p>
+            </div>
+          </button>
+          <button class="strategy-card on" role="radio" aria-checked="true">
+            <span class="strategy-radio"></span>
+            <div class="strategy-body">
+              <p class="strategy-title">Review each manually</p>
+              <p class="strategy-desc">Decide row-by-row below. Recommended for first import of new source.</p>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Pairs -->
+      <section class="pair-list">
+        <div class="pair-thead">
+          <span class="pair-thead-left">Duplicate pairs <span class="n">14</span></span>
+          <div style="display:inline-flex;gap:8px">
+            <button class="ghost-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Sort: similarity ↓</button>
+            <button class="ghost-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export pairs</button>
+          </div>
+        </div>
+
+        <div class="pair-rows">
+
+          <!-- Row 12 — high similarity (canonical sample per spec) -->
+          <div class="dup-row">
+            <div class="dup-side new" data-row="12">
+              <span class="label"></span>
+              <span class="dup-id">row 12</span>
+              <span class="dup-title" title="Refund retry on payment failure (3x backoff)">Refund retry on payment failure (3x backoff)</span>
+            </div>
+            <div class="dup-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l8 7-8 7"/></svg></div>
+            <div class="dup-side exist">
+              <span class="label"></span>
+              <span class="dup-id">TC-RET-0089</span>
+              <span class="dup-title">Refund API retries on failure 3× with backoff</span>
+            </div>
+            <span class="label-chip sim-high"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">91%</span><span class="lc-tier">likely dup</span></span>
+            <button class="pair-action">Keep existing<svg class="chev" width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+
+          <!-- Row 23 — high -->
+          <div class="dup-row">
+            <div class="dup-side new" data-row="23">
+              <span class="label"></span>
+              <span class="dup-id">row 23</span>
+              <span class="dup-title" title="14-day refund window for digital goods">14-day refund window for digital goods</span>
+            </div>
+            <div class="dup-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l8 7-8 7"/></svg></div>
+            <div class="dup-side exist">
+              <span class="label"></span>
+              <span class="dup-id">TC-RET-0341</span>
+              <span class="dup-title">Refund request within 14-day window succeeds</span>
+            </div>
+            <span class="label-chip sim-high"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">93%</span><span class="lc-tier">likely dup</span></span>
+            <button class="pair-action">Keep existing<svg class="chev" width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+
+          <!-- Row 41 — medium -->
+          <div class="dup-row">
+            <div class="dup-side new" data-row="41">
+              <span class="label"></span>
+              <span class="dup-id">row 41</span>
+              <span class="dup-title" title="Gift card portion returns to wallet">Gift card portion returns to wallet</span>
+            </div>
+            <div class="dup-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l8 7-8 7"/></svg></div>
+            <div class="dup-side exist">
+              <span class="label"></span>
+              <span class="dup-id">TC-RET-0343</span>
+              <span class="dup-title">Partial refund returns gift-card portion to wallet</span>
+            </div>
+            <span class="label-chip sim-med"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">84%</span><span class="lc-tier">probable dup</span></span>
+            <button class="pair-action">Review pair<svg class="chev" width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+
+          <!-- Row 58 — medium -->
+          <div class="dup-row">
+            <div class="dup-side new" data-row="58">
+              <span class="label"></span>
+              <span class="dup-id">row 58</span>
+              <span class="dup-title" title="Refund request after window auto-rejected">Refund request after window auto-rejected</span>
+            </div>
+            <div class="dup-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l8 7-8 7"/></svg></div>
+            <div class="dup-side exist">
+              <span class="label"></span>
+              <span class="dup-id">TC-RET-0202</span>
+              <span class="dup-title">Out-of-window refund returns rejected status</span>
+            </div>
+            <span class="label-chip sim-med"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">81%</span><span class="lc-tier">probable dup</span></span>
+            <button class="pair-action">Review pair<svg class="chev" width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+
+          <!-- Row 79 — low -->
+          <div class="dup-row">
+            <div class="dup-side new" data-row="79">
+              <span class="label"></span>
+              <span class="dup-id">row 79</span>
+              <span class="dup-title" title="Refund auditor visibility for partial returns">Refund auditor visibility for partial returns</span>
+            </div>
+            <div class="dup-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l8 7-8 7"/></svg></div>
+            <div class="dup-side exist">
+              <span class="label"></span>
+              <span class="dup-id">TC-RET-0418</span>
+              <span class="dup-title">Auditor sees partial-refund line items in dashboard</span>
+            </div>
+            <span class="label-chip sim-low"><span class="agent-tag">A2</span><span class="lc-label">Sim</span><span class="lc-val">68%</span><span class="lc-tier">possible dup</span></span>
+            <button class="pair-action">Keep both<svg class="chev" width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="m-foot">
+      <div class="agent-id">
+        <span class="agent-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.09 5.26L19 10l-4.91 1.74L12 17l-2.09-5.26L5 10l4.91-1.74z"/></svg></span>
+        <span class="agent-name">A2<span class="agent-version">v1.1</span></span>
+      </div>
+      <p class="agent-meta">
+        Will import <b>231 new</b> rows<span class="sep">·</span>handle <b>14 dups</b> per strategy<span class="sep">·</span><b>2 excluded</b> from validate<span class="sep">·</span>destination <b>RET / Refund Core</b>
+      </p>
+      <button class="btn-back">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Back to validate
+      </button>
+      <button class="btn-import">
+        Continue
+        <span class="ct">231 new</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </footer>
+
+  </div>
+</div>
+
+<!--
+F16c v2 — VALIDATION (Phase 2 · Option C)
+═════════════════════════════════════════
+SPEC ALIGNMENT
+ 1. 5-step stepper: Upload (done) → Map fields (done) → Validate (done) → Dedupe (CURRENT) → Summary.
+    Steps 1-3 collapsed into a single done-card recap so this frame focuses on the active phase
+    (Dedupe) without losing context. Map+Validate were the new-per-brief steps. · OK
+ 2. Iksula data canon verbatim:
+    - File: legacy_refund_test_cases.csv (2.4 MB · 247 rows)
+    - Mapping: Steps→test_steps, Expected→expected_results
+    - Validation error: "Row 17: expected_results column empty" + "Row 89: malformed steps"
+    - Dup pair: row 12 vs TC-RET-0089 (sim 91%)
+    - Generated TC IDs use TC-RET-### project prefix (NOT TC-PAY) · OK
+ 3. EXPLICIT-LABEL sim chips: [A2 Sim 91% likely dup], [A2 Sim 84% probable dup], [A2 Sim 68% possible dup].
+    Three tiers with textual qualifier — kills the "red=bad-vs-red=good" cross-frame collision flagged in audit. · OK
+ 4. Strategy radio group preserved (Keep new / Keep existing / Review each — selected). · OK
+SYSTEM COMPLIANCE
+ 5. Tokens fully consumed via :root from 01_SYSTEM.md §3 — no inline hex on UI. · OK
+ 6. width=device-width meta. Modal width min(1120, 100%) — degrades to drawer below 768px. · OK
+ 7. Stepper scrolls horizontally on narrow viewports (overflow-x:auto). · OK
+ 8. Strategy grid 3-col → 1-col stack <768px. Pair-row 5-col grid → 2-col on <1024 (drops arrow). · OK
+ 9. Rail width 240px (in dimmed backdrop) · violet active-rail accent. · OK
+10. Source-pill convention split: file-pill = info-blue (external file source); TC-RET-IDs = teal
+    (internal system); A2 mini-tag = violet (AI agent). Per Phase 3 SYS-8. · OK
+11. :focus-visible 2px violet outline · prefers-reduced-motion disables modal entrance. · OK
+NEW PRIMITIVES (codified in Phase 3 memo v2)
+ - 5-step wizard stepper (extending the 4-phase variant from F16b/F11)
+ - done-card collapsed-summary primitive (compact recap of completed wizard phases)
+ - phase-card current-phase callout (icon + h3 + meta + status pill)
+ - strategy-card radio (3-option semantic radio with selected = primary-tinted)
+ - dup-row 5-col grid (NEW info-blue / arrow / EXISTING / sim-chip / action)
+ - label-chip with explicit semantic tier label (continues from F16b)
+INTENTIONALLY OUT OF SCOPE
+ - Variants picker not mounted on this frame (canonical layout locked).
+ - Step 5 Summary view not rendered (would be a follow-on frame F16c-summary).
+
+CANONICAL LOCK (Phase 2 close)
+═════════════════════════════════════════════════════════════════════════════
+Locked layout: 5-step stepper (Upload → Map → Validate → Dedupe → Summary) with
+Steps 1-3 collapsed into a done-card recap; Dedupe is the active phase showing
+strategy radio + 14 dup pairs with explicit-label sim chips.
+
+Why locked:
+  · 4-step (no Validate) rejected — validate gate caught 2 errors here, must surface.
+  · All-steps-expanded rejected — too tall for 1120×860 modal at 768px width.
+  · Auto-strategy (Keep new everywhere) rejected — first-import default is Review.
+  · Simple sim percentage (no tier label) rejected — fails audit color-collision check.
+
+Recovery: append ?variants=1 to surface notice. Future axes could include: step
+collapse mode (all expanded vs current accordion), dedupe sort default, strategy
+default (Keep new vs Keep existing vs Review).
+-->
+<div id="variants-root"></div>
+<script>
+(function(){
+  var on = new URLSearchParams(location.search).get('variants') === '1';
+  if(!on) return;
+  var root = document.getElementById('variants-root');
+  root.innerHTML = '<div style="position:fixed;right:16px;bottom:16px;z-index:200;'
+    +'background:#1A2233;border:1px solid #3B4660;border-radius:10px;padding:14px 16px;'
+    +'max-width:300px;font:500 12px/17px Inter,sans-serif;color:#C7D0DC;'
+    +'box-shadow:0 12px 32px -8px rgba(0,0,0,0.6)">'
+    +'<div style="font:700 10px/14px Inter;letter-spacing:0.1em;text-transform:uppercase;color:#A78BFA;margin-bottom:6px">VARIANTS · F16c</div>'
+    +'<div style="color:#F1F5F9;font-weight:600;margin-bottom:4px">Canonical lock active</div>'
+    +'No alternate variants implemented for this frame. 5-step stepper with explicit-label sim chips'
+    +' is locked (per Phase 1 audit). See lock-comment in source for rationale.'
+    +'</div>';
+})();
+</script>
+</body>
+</html>
