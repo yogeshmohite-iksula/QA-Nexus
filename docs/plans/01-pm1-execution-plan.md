@@ -49,15 +49,15 @@
 
 ## M0 → M6 timeline + status
 
-| Mn  | Window                  | Status                 | Headline                                                                                                                         |
-| --- | ----------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| M0  | 2026-04-27 → 2026-05-10 | **CLOSING 2026-05-03** | 15/19 ACs PASS · 2 AUTO (Sun cron + UptimeRobot 24h obs) · 2 DEFERRED to M1 (AC007 LLM key UI · AC013 Grafana env vars) · 0 FAIL |
-| M1  | 2026-05-11 → 2026-05-24 | **IN PROGRESS**        | F06+F07+RBAC+magic-link invites + F26m1 Agent Model Assignment + F27m1 User Mgmt + F28m1 LLM Provider Config                     |
-| M2  | 2026-05-25 → 2026-06-14 | NOT STARTED            | Document Catalog (12 templates) + KB ingestion + F12-F15                                                                         |
-| M3  | 2026-06-15 → 2026-07-05 | NOT STARTED            | TipTap test-case editor + A1 Generation + A2 Dedup + F14-F18                                                                     |
-| M4  | 2026-07-06 → 2026-07-26 | NOT STARTED            | Test Runs (live WS) + Defects + A4 5-Layer RCA + Jira 2-way + F18-F22                                                            |
-| M5  | 2026-07-27 → 2026-08-16 | NOT STARTED            | Reports Studio (4 templates) + F23-F28 + 8-user pilot Day-0                                                                      |
-| M6  | 2026-08-17 → 2026-09-21 | NOT STARTED            | Full reports suite + GA-readiness sweep (12 acceptance gates)                                                                    |
+| Mn  | Window                  | Status                | Headline                                                                                                                                                                                                                                      |
+| --- | ----------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0  | 2026-04-27 → 2026-05-03 | **CLOSED 2026-05-03** | **17/19 PASS · 0 FAIL · 2 DEFERRED to M1.5** (AC007 LLM key UI · AC013 3rd Slack rule). AC012 footnoted-PASS (manual workflow_dispatch; scheduled cron drift on first activation). Completion report: `../milestones/M0_completion_report.md` |
+| M1  | 2026-05-11 → 2026-05-24 | **IN PROGRESS**       | F06+F07+RBAC+magic-link invites + F26m1 Agent Model Assignment + F27m1 User Mgmt + F28m1 LLM Provider Config                                                                                                                                  |
+| M2  | 2026-05-25 → 2026-06-14 | NOT STARTED           | Document Catalog (12 templates) + KB ingestion + F12-F15                                                                                                                                                                                      |
+| M3  | 2026-06-15 → 2026-07-05 | NOT STARTED           | TipTap test-case editor + A1 Generation + A2 Dedup + F14-F18                                                                                                                                                                                  |
+| M4  | 2026-07-06 → 2026-07-26 | NOT STARTED           | Test Runs (live WS) + Defects + A4 5-Layer RCA + Jira 2-way + F18-F22                                                                                                                                                                         |
+| M5  | 2026-07-27 → 2026-08-16 | NOT STARTED           | Reports Studio (4 templates) + F23-F28 + 8-user pilot Day-0                                                                                                                                                                                   |
+| M6  | 2026-08-17 → 2026-09-21 | NOT STARTED           | Full reports suite + GA-readiness sweep (12 acceptance gates)                                                                                                                                                                                 |
 
 **Per-milestone detail in `02-milestones/Mn-*.md`.**
 

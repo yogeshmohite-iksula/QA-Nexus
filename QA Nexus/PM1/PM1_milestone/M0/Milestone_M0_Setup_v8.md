@@ -1,5 +1,9 @@
 # Milestone M0: Infrastructure & Setup (PM1 v8.0 — locked free-OSS stack)
 
+> **Status: CLOSED 2026-05-03** — see `docs/milestones/M0_completion_report.md`
+> Final tally: **17 PASS / 0 FAIL / 2 DEFERRED** (AC007 LLM key UI + AC013 3rd Slack rule both → M1.5)
+> AC012 footnote: scheduled cron missed first activation (GitHub free-tier drift); manual workflow_dispatch SUCCESS proves end-to-end pipeline.
+
 **QA Nexus PM1 — Foundational Plumbing on Free Tiers**
 
 ## Cover Page
@@ -10,7 +14,7 @@
 | **Milestone** | M0 — Infrastructure & Setup |
 | **Version** | v8.0 (locked free-OSS, replaces v1.0) |
 | **Date Created** | 2026-04-25 |
-| **Status** | Approved — ready for kickoff |
+| **Status** | **CLOSED 2026-05-03** — see `docs/milestones/M0_completion_report.md` |
 | **Owner** | DevOps + Backend Lead |
 | **Duration** | **2 weeks** (2026-04-27 → 2026-05-10) |
 | **Team Size** | 3 FTE (1 DevOps/Backend Lead, 2 Backend) — reduced from 3 dedicated due to simpler stack |

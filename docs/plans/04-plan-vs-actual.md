@@ -17,21 +17,21 @@
 
 ### M0 — Setup & infrastructure
 
-| Field                       | Planned                  | Actual (as of 2026-05-02 Day 6, pre-Sunday-close)                                                                                                                           |
-| --------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Window                      | 2026-04-27 → 2026-05-10  | 2026-04-27 → **2026-05-03** (closing 7 days early)                                                                                                                          |
-| Tasks closed                | 35 of 35                 | ~32 of 35 confirmed code-side (91%); 3 deferred → M1                                                                                                                        |
-| Hours burned                | 298 estimated            | ~278 burned (~93%)                                                                                                                                                          |
-| Acceptance gates passed     | 19 PASS / 0 FAIL         | **15 PASS / 2 AUTO / 2 DEFERRED / 0 FAIL** (intentional handoffs to M1)                                                                                                     |
-| Frames ported               | 0 (M0 was "shells only") | **12 of 41 frames RWD-clean** (F06+F06b+F06c+F07+F08-F13)                                                                                                                   |
-| ADRs added                  | 4 expected               | **6 ADRs** (002, 003, 004, 006, 007 forthcoming, 009) + ADR-003 amendment                                                                                                   |
-| Followups filed             | (no estimate)            | **18 entries (a-r)** — 6 closed, 12 open                                                                                                                                    |
-| Hotfixes during Mn          | 0 expected               | **5-stage Render boot regression chain Day-4 evening** (logger / LLM / sharp dup-key / sharp pin / memory guard)                                                            |
-| Pre-push gates              | 1 (CHANGELOG)            | **3 gates** added Day-5 (typecheck / frozen-lockfile / CHANGELOG)                                                                                                           |
-| Monthly cost                | $0                       | **$0** confirmed                                                                                                                                                            |
-| Drift count                 | 0                        | **6 drift items surfaced** (D1-D6 in `01-pm1-execution-plan.md`)                                                                                                            |
-| Spec amendments recommended | 0                        | **2** — bge-large→bge-small in PM1_PRD §6 / PM1_ERD §3 (rides with MS0-T017+AC008 amendment)                                                                                |
-| Notes                       | —                        | M0 ran ahead of plan; visual-confirmation gate (Rule 13) and RWD rule (Rule 12) both established mid-Mn after F06 + F06b iterations exposed gaps in automation-only checks. |
+| Field                       | Planned                  | Actual (FINAL 2026-05-03 — M0 CLOSED)                                                                                                                                                 |
+| --------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Window                      | 2026-04-27 → 2026-05-10  | 2026-04-27 → **2026-05-03** (closed 7 days early on planned spec; close ceremony ran ~6 hr into Day 8 due to CI Postgres deficit unmasking — see M0 completion report §1)             |
+| Tasks closed                | 35 of 35                 | ~32 of 35 confirmed code-side (91%); 3 deferred → M1                                                                                                                                  |
+| Hours burned                | 298 estimated            | ~278 burned (~93%)                                                                                                                                                                    |
+| Acceptance gates passed     | 19 PASS / 0 FAIL         | **17 PASS / 0 FAIL / 2 DEFERRED to M1.5** (15 unconditional + 2 footnoted: AC009 24h obs window completed; AC012 manual workflow_dispatch SUCCESS — first scheduled cron drift noted) |
+| Frames ported               | 0 (M0 was "shells only") | **12 of 41 frames RWD-clean** (F06+F06b+F06c+F07+F08-F13)                                                                                                                             |
+| ADRs added                  | 4 expected               | **6 ADRs** (002, 003, 004, 006, 007 forthcoming, 009) + ADR-003 amendment                                                                                                             |
+| Followups filed             | (no estimate)            | **18 entries (a-r)** — 6 closed, 12 open                                                                                                                                              |
+| Hotfixes during Mn          | 0 expected               | **5-stage Render boot regression chain Day-4 evening** (logger / LLM / sharp dup-key / sharp pin / memory guard)                                                                      |
+| Pre-push gates              | 1 (CHANGELOG)            | **3 gates** added Day-5 (typecheck / frozen-lockfile / CHANGELOG)                                                                                                                     |
+| Monthly cost                | $0                       | **$0** confirmed                                                                                                                                                                      |
+| Drift count                 | 0                        | **6 drift items surfaced** (D1-D6 in `01-pm1-execution-plan.md`)                                                                                                                      |
+| Spec amendments recommended | 0                        | **2** — bge-large→bge-small in PM1_PRD §6 / PM1_ERD §3 (rides with MS0-T017+AC008 amendment)                                                                                          |
+| Notes                       | —                        | M0 ran ahead of plan; visual-confirmation gate (Rule 13) and RWD rule (Rule 12) both established mid-Mn after F06 + F06b iterations exposed gaps in automation-only checks.           |
 
 ### M1 — Users, Roles & RBAC
 

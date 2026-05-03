@@ -1,8 +1,11 @@
-# M0 — Setup & infrastructure (CLOSING 2026-05-03, 7 days early)
+# M0 — Setup & infrastructure (CLOSED 2026-05-03)
 
-> **Last updated:** 2026-05-02 (Day 6 — pre-close snapshot)
+> **Status:** **CLOSED 2026-05-03** (Day 7 close ceremony, ran ~6 hr into Day 8)
+> **Last updated:** 2026-05-03 (post-close)
+> **Final tally:** 17 PASS / 0 FAIL / 2 DEFERRED to M1.5 (AC007 + AC013)
 > **Authority:** Summary view. Binding spec:
-> `../../../QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md` (v8.0).
+> `../../../QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md` (v8.0, marked CLOSED).
+> Completion report: `../../milestones/M0_completion_report.md`.
 
 ---
 
