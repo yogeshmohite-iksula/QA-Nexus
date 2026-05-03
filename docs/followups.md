@@ -2,6 +2,37 @@
 
 ---
 
+## [2026-05-03] (u) P2 — Onboarding spec FE failures `:38` + `:44` (pre-existing, masked) — M1.5 SWEEP
+
+**Symptom (Day-7 close-ceremony PR #24):** After PR #24 (closes followup `(t)`) added the Postgres service container, **7 of 11 onboarding tests** went FAIL→PASS (`:123 /health`, `:145 /agents/a1/generate 401`, etc.). But **4 unique tests still fail across both browsers** (8 entries with retries):
+
+| Test                                                                                          | Browsers                         | Likely cause                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/e2e/tests/onboarding.spec.ts:38` "signed-out user lands on /sign-in"                    | chromium-desktop + mobile-safari | Pure FE redirect logic. Investigate router middleware in `apps/web/src/middleware.ts` or equivalent App Router redirect setup.                                     |
+| `apps/e2e/tests/onboarding.spec.ts:44` "sign-in form triggers magic-link send (stub mode OK)" | chromium-desktop + mobile-safari | Depends on **T021 BetterAuth magic-link wiring**, explicitly deferred to M1.5 pending Yogesh's cookie-domain ADR-007. Test will resolve naturally when T021 lands. |
+
+**Pre-existing context:** Both tests have been failing on every CI run since they were added; previously masked by `continue-on-error: true` on the `Run Playwright tests` step in `.github/workflows/e2e.yml`. PR #24 unmasked the partial picture (4 still-failing vs 7 newly-passing), enabling this followup.
+
+**Decision (M1.5 sweep, ~1-2 hr):**
+
+1. `:44` — wait until T021 magic-link wiring lands. Test should pass automatically.
+2. `:38` — investigate FE `/sign-in` redirect. If real bug, fix before pilot. If also depends on T021 (e.g., session-cookie check route), mark `.skip` until T021.
+3. **After both `:38` + `:44` are green:** remove `continue-on-error: true` from the playwright step in `e2e.yml`. Otherwise future masked regressions ship undetected — that's the structural debt followup `(t)` §6 captured.
+
+**Owner:** FE chat (M1.5 sweep, alongside T021 BetterAuth magic-link work).
+
+**Severity:** **P2** — no current pilot impact; tracks the masking debt that lets future real regressions ship undetected. Deadline: before pilot launch (M5 Day-0).
+
+**Cross-refs:**
+
+- `apps/e2e/tests/onboarding.spec.ts` lines 38 + 44
+- `apps/api/docs/integrations/betterauth-invitations.md` (T021 plan, on PR #22 branch)
+- `.github/workflows/e2e.yml` line 128 (the `continue-on-error: true` to remove)
+- Followup `(t)` §6 (the bonus masking-removal item that was deferred)
+- Day-7 EOD `docs/eod-reports/2026-05-03-day-7.md` (the original masking discovery)
+
+---
+
 ## [2026-05-03] (t) P0 — CI Postgres service deficit — DAY 8 MORNING BLOCKING
 
 **Symptom (Day-7 close-ceremony, PR #22 Step 4):** PR #22 (BE M1) E2E job fails 100% with all 22 playwright tests in `tests/onboarding.spec.ts` red across both chromium-desktop + mobile-safari. API never boots within the 60s `/health` budget. After Path δ instrumented `Tail server logs (always — diagnostic)` (PR #23 commit `4bb478c`), api.log dump revealed root cause:
