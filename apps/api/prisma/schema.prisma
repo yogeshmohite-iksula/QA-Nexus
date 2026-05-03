@@ -258,6 +258,13 @@ model User {
   organizationalLabel String?   @map("organizational_label")
   passwordHash        String    @map("password_hash") // argon2id
   activatedAt         DateTime? @map("activated_at") @db.Timestamptz(6)
+  /// M1 — Day-6 PM. NULL = active or invited (per derivation in
+  /// UsersService.deriveStatus); set to disable + revoke sessions.
+  /// Schema delta: apps/api/prisma/raw/migrations/0003_users_disabled_at.sql
+  disabledAt          DateTime? @map("disabled_at") @db.Timestamptz(6)
+  /// M1 — Day-6 PM. Stamped whenever role transitions via PATCH
+  /// /api/users/:id/role. Surfaced via UserDetailResponse for F27.
+  roleChangedAt       DateTime? @map("role_changed_at") @db.Timestamptz(6)
   lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(6)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 

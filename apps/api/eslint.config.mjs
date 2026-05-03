@@ -44,4 +44,18 @@ export default [
       '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
+
+  // Restore root config test-file relaxation (root
+  // eslint.config.mjs line 54-68 turns no-explicit-any OFF
+  // for *.spec.ts / *.test.ts / __tests__/**). The apps/api
+  // '**/*.ts' override on line 23-28 inadvertently re-enables
+  // it because flat-config later-block-wins. Tests
+  // legitimately need `any` for jest mocks + partial fixtures
+  // + DI metadata-reflect.
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts', '**/__tests__/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];
