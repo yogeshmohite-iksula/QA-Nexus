@@ -134,8 +134,8 @@ commits.** Reasons:
       Returns `{ token, expiresAt }`. Pass back through to the controller.
 - [ ] `apps/api/src/invitations/invitations.controller.ts` — `accept()`:
       after service returns, call `res.cookie('better-auth.session_token',
-    token, { httpOnly: true, secure: NODE_ENV==='production', sameSite:
-    'lax', maxAge: <expiresAt - now> })`. Switch the controller signature
+token, { httpOnly: true, secure: NODE_ENV==='production', sameSite:
+'lax', maxAge: <expiresAt - now> })`. Switch the controller signature
       from returning `AcceptInvitationResponse` directly to using
       `@Res({ passthrough: true })` so we can write the cookie + still
       return the JSON body.
