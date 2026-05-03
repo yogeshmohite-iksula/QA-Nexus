@@ -48,6 +48,25 @@ jobs:
     name: playwright (chromium + mobile-safari)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Per followup (t): Postgres service container with pgvector preloaded.
+    # Replaces the long-standing localhost:5432 placeholder gap that caused
+    # PrismaService.onModuleInit() to throw + abort API bootstrap. pgvector
+    # image is pg15 base + vector extension precompiled — no apt-install
+    # gymnastics + no version drift vs Neon free (also pg15 + pgvector).
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     env:
       # Test mode — no real BetterAuth secret needed; CI uses an ephemeral one.
       BETTER_AUTH_SECRET: "ci-only-do-not-use-in-prod-32-bytes-min-padding="
@@ -55,10 +74,11 @@ jobs:
       EMBEDDING_MODEL_ID: "Xenova/bge-small-en-v1.5"
       NODE_ENV: "production"
       PORT: "3001"
-      # DATABASE_URL falls back to a non-functional placeholder; tests that
-      # need it are .skip until T012 wires CI secrets.
-      DATABASE_URL: "${{ secrets.NEON_TEST_DATABASE_URL || 'postgresql://invalid:invalid@localhost:5432/postgres' }}"
-      DIRECT_URL: "${{ secrets.NEON_TEST_DIRECT_URL || 'postgresql://invalid:invalid@localhost:5432/postgres' }}"
+      # DATABASE_URL points to the postgres service container above.
+      # NEON_TEST_DATABASE_URL secret can override for future T012 wiring
+      # against a real Neon test branch.
+      DATABASE_URL: "${{ secrets.NEON_TEST_DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres' }}"
+      DIRECT_URL: "${{ secrets.NEON_TEST_DIRECT_URL || 'postgresql://postgres:postgres@localhost:5432/postgres' }}"
       # FE base URL the playwright config reads
       E2E_BASE_URL: "http://localhost:3000"
       E2E_API_BASE_URL: "http://localhost:3001"
@@ -91,22 +111,73 @@ jobs:
       - name: Typecheck e2e workspace
         run: pnpm --filter @qa-nexus/e2e typecheck
 
+      # Per followup (t): bring fresh CI Postgres up to schema.prisma's current
+      # model so PrismaService.onModuleInit's $connect() succeeds + the API
+      # actually boots. Approach:
+      #   1. Wait for the postgres service container to accept connections
+      #      (the services block's --health-cmd already gates this, but we
+      #      pg_isready once more here as a belt-and-suspenders + it surfaces
+      #      a clear error message in this step's logs if Postgres is dead).
+      #   2. CREATE EXTENSION pgvector (required by Unsupported('vector(384)')
+      #      columns in schema.prisma).
+      #   3. `prisma db push` syncs all tables from schema.prisma. Tolerant of
+      #      future schema additions (e.g. PR #22's User.disabledAt + .role
+      #      ChangedAt land via schema.prisma; no separate 0003 script needed
+      #      for fresh CI DB — that script exists for production migrations).
+      #   4. Optional `init_rls_hnsw.sql` (RLS + HNSW) — skipped for now as
+      #      onboarding.spec.ts doesn't query vectors or hit RLS-protected
+      #      paths. Add if/when a test needs it.
+      # Seed step intentionally OMITTED — onboarding.spec.ts:38/44/123/145
+      # only need API up, not specific user rows. Add when first non-skipped
+      # test needs seeded data.
+      - name: Initialize Postgres + apply schema (followup t)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # 1. Confirm Postgres is up (services health-cmd already passed,
+          #    but echo a clear message into this step's log).
+          for i in $(seq 1 10); do
+            if pg_isready -h localhost -p 5432 -U postgres -d postgres; then
+              echo "✓ Postgres reachable on attempt $i"
+              break
+            fi
+            sleep 2
+          done
+          # 2. CREATE EXTENSION pgvector (idempotent).
+          psql -h localhost -p 5432 -U postgres -d postgres \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          # 3. Sync schema.prisma to the fresh DB. --skip-generate avoids
+          #    re-running prisma generate (build step already did). --accept
+          #    -data-loss is safe on a fresh CI DB with zero rows.
+          pnpm --filter @qa-nexus/api exec prisma db push \
+            --skip-generate --accept-data-loss
+
       - name: Start API in background
         run: |
           # Use start:prod so we exercise the same code path as Render
           pnpm --filter @qa-nexus/api start:prod > /tmp/api.log 2>&1 &
           echo $! > /tmp/api.pid
           # Wait for /health to respond (max 60s — embedding model load takes ~38s)
+          API_READY="false"
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
             if [ "$code" = "200" ] || [ "$code" = "503" ]; then
               echo "✓ API is responding (HTTP $code) after ${i}*2s"
+              API_READY="true"
               break
             fi
             sleep 2
           done
           curl -s http://localhost:3001/health | head -c 500 || true
           echo ""
+          # Fail-fast (followup t §6 bonus): if API never came up, exit 1
+          # so the diagnostic step + downstream tests don't run against a
+          # dead API. The `Tail server logs (always — diagnostic)` step
+          # below will still execute via `if: always()` and dump api.log.
+          if [ "$API_READY" != "true" ]; then
+            echo "::error::API failed to boot in 60s — see Tail server logs step for api.log + system snapshot"
+            exit 1
+          fi
 
       - name: Start FE (next dev) in background
         run: |
