@@ -2,6 +2,114 @@
 
 ---
 
+## [2026-05-03] (u) P2 — Onboarding spec FE failures `:38` + `:44` (pre-existing, masked) — M1.5 SWEEP
+
+**Symptom (Day-7 close-ceremony PR #24):** After PR #24 (closes followup `(t)`) added the Postgres service container, **7 of 11 onboarding tests** went FAIL→PASS (`:123 /health`, `:145 /agents/a1/generate 401`, etc.). But **4 unique tests still fail across both browsers** (8 entries with retries):
+
+| Test                                                                                          | Browsers                         | Likely cause                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/e2e/tests/onboarding.spec.ts:38` "signed-out user lands on /sign-in"                    | chromium-desktop + mobile-safari | Pure FE redirect logic. Investigate router middleware in `apps/web/src/middleware.ts` or equivalent App Router redirect setup.                                     |
+| `apps/e2e/tests/onboarding.spec.ts:44` "sign-in form triggers magic-link send (stub mode OK)" | chromium-desktop + mobile-safari | Depends on **T021 BetterAuth magic-link wiring**, explicitly deferred to M1.5 pending Yogesh's cookie-domain ADR-007. Test will resolve naturally when T021 lands. |
+
+**Pre-existing context:** Both tests have been failing on every CI run since they were added; previously masked by `continue-on-error: true` on the `Run Playwright tests` step in `.github/workflows/e2e.yml`. PR #24 unmasked the partial picture (4 still-failing vs 7 newly-passing), enabling this followup.
+
+**Decision (M1.5 sweep, ~1-2 hr):**
+
+1. `:44` — wait until T021 magic-link wiring lands. Test should pass automatically.
+2. `:38` — investigate FE `/sign-in` redirect. If real bug, fix before pilot. If also depends on T021 (e.g., session-cookie check route), mark `.skip` until T021.
+3. **After both `:38` + `:44` are green:** remove `continue-on-error: true` from the playwright step in `e2e.yml`. Otherwise future masked regressions ship undetected — that's the structural debt followup `(t)` §6 captured.
+
+**Owner:** FE chat (M1.5 sweep, alongside T021 BetterAuth magic-link work).
+
+**Severity:** **P2** — no current pilot impact; tracks the masking debt that lets future real regressions ship undetected. Deadline: before pilot launch (M5 Day-0).
+
+**Cross-refs:**
+
+- `apps/e2e/tests/onboarding.spec.ts` lines 38 + 44
+- `apps/api/docs/integrations/betterauth-invitations.md` (T021 plan, on PR #22 branch)
+- `.github/workflows/e2e.yml` line 128 (the `continue-on-error: true` to remove)
+- Followup `(t)` §6 (the bonus masking-removal item that was deferred)
+- Day-7 EOD `docs/eod-reports/2026-05-03-day-7.md` (the original masking discovery)
+
+---
+
+## [2026-05-03] (t) P0 — CI Postgres service deficit — DAY 8 MORNING BLOCKING
+
+**Symptom (Day-7 close-ceremony, PR #22 Step 4):** PR #22 (BE M1) E2E job fails 100% with all 22 playwright tests in `tests/onboarding.spec.ts` red across both chromium-desktop + mobile-safari. API never boots within the 60s `/health` budget. After Path δ instrumented `Tail server logs (always — diagnostic)` (PR #23 commit `4bb478c`), api.log dump revealed root cause:
+
+```
+Bootstrap failed: PrismaClientInitializationError:
+  Can't reach database server at `localhost:5432`
+  at Proxy.onModuleInit (apps/api/dist/prisma/prisma.service.js:27:9)
+```
+
+**Root cause:** `.github/workflows/e2e.yml` has **no `services: postgres:` block**. `DATABASE_URL` falls back to `postgresql://invalid:invalid@localhost:5432/postgres` (line 60). PrismaService.onModuleInit() calls `prisma.$connect()` eagerly → throws → API bootstrap aborts → /health never responds → tests fail. Long-standing structural debt previously **masked** by `.skip` markers on all DB-touching tests; unmasked 2026-05-03 by PR #22 M1 BE which added new non-skipped tests (`onboarding.spec.ts:123` `/health`, `:145` `/agents/a1/generate 401`, `:38` sign-in redirect, `:44` magic-link form trigger) requiring real API up.
+
+**Falsified hypotheses** (kept for posterity — three halts today):
+
+- ❌ Path α: GH Actions infra flake (re-run on `f5f9d43` failed identically; 50-min window pattern was coincidence, not cause)
+- ❌ Path β: bge-large model load timeout (main `68b3ac0` E2E PASSED at 07:40 UTC TODAY _with_ bge-large; PR #23 with bge-small still FAILED at 10:27 UTC)
+- ❌ Speculation: HF CDN flake on first-fetch (api.log shows model load completed before the Prisma error)
+
+**Decision (Day-8 morning, ~3-4 hr):**
+
+1. Open `fix/ci-postgres-service` PR off main (post-PR #23 merge).
+2. Add `services: postgres:` block to `.github/workflows/e2e.yml`:
+   ```yaml
+   services:
+     postgres:
+       image: pgvector/pgvector:pg15 # NOT vanilla postgres:15 — we need pgvector ext
+       env:
+         POSTGRES_PASSWORD: postgres
+         POSTGRES_USER: postgres
+         POSTGRES_DB: postgres
+       ports:
+         - 5432:5432
+       options: >-
+         --health-cmd pg_isready
+         --health-interval 10s
+         --health-timeout 5s
+         --health-retries 5
+   ```
+3. Set `DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"` (keep `${{ secrets.NEON_TEST_DATABASE_URL }}` fallback for future T012 wiring).
+4. Add new step `Apply raw migrations` BEFORE `Start API in background`:
+   ```yaml
+   - name: Apply raw migrations (0001 → 0003)
+     run: |
+       pnpm --filter @qa-nexus/api prisma:apply-raw:0001
+       pnpm --filter @qa-nexus/api prisma:apply-raw:0002
+       pnpm --filter @qa-nexus/api prisma:apply-raw:0003  # M1 users.disabled_at + role_changed_at
+   ```
+5. Add minimal Iksula 8-user seed step (verbatim from `CLAUDE.md` canon) for tests that need authenticated context.
+6. **Bonus fix (in same PR):** make `Start API in background` step actually exit 1 on /health timeout (currently the for-loop exits silently → masks failure → diagnostic step couldn't trigger via `if: failure()`). Append after for-loop:
+   ```bash
+   if [ "$code" != "200" ] && [ "$code" != "503" ]; then
+     echo "::error::API failed to boot in 60s — see Tail server logs step"
+     exit 1
+   fi
+   ```
+
+**Acceptance:**
+
+- [ ] CI on the fix PR: all 7 checks green INCLUDING playwright (no longer masked by `continue-on-error`)
+- [ ] After merge, rebase PR #22 → CI green → ready for squash-merge
+- [ ] Future M1+ tests can hit real Postgres in CI without `.skip` workarounds
+- [ ] Diagnostic dump (Path δ from PR #23) remains in place — useful regardless
+
+**Owner:** BE+1 (DevOps lift; one engineer can do alone in 3-4 hr).
+
+**Severity:** **P0** — blocks all BE M1+ PRs from merging cleanly until resolved. M0 close ceremony is paused on this.
+
+**Cross-refs:**
+
+- `.github/workflows/e2e.yml` lines 58-61 (existing placeholder fallback comment)
+- PR #22 (`feature/be-m1-users-schema` HEAD `f5f9d43`) — blocked
+- PR #23 (`fix/ci-embedding-model-id` HEAD `4bb478c`) — drift D2 + Path δ instrumentation; merge first
+- `docs/plans/01-pm1-execution-plan.md` drift D2 (env-var alignment, NOW resolved by PR #23)
+- `docs/eod-reports/2026-05-03-day-7.md` (full investigation timeline)
+
+---
+
 ## [2026-05-02] (r) Audit log span correlation — wire trace_id/span_id into audit_log + back-pointer attribute — M1 MORNING
 
 **Symptom (Day-5 code audit FIND-5):** `auditService.write()` writes a Postgres row. `tracer.startActiveSpan('llm.complete', ...)` (Day-5 #3) emits a Grafana span. The two events have no correlation field. Incident postmortems that need to bridge "this audit row" ↔ "this trace" rely on timestamp + actor_id heuristics — brittle.
