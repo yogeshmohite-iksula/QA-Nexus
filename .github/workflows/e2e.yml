@@ -52,7 +52,7 @@ jobs:
       # Test mode — no real BetterAuth secret needed; CI uses an ephemeral one.
       BETTER_AUTH_SECRET: "ci-only-do-not-use-in-prod-32-bytes-min-padding="
       BETTER_AUTH_URL: "http://localhost:3001"
-      EMBEDDING_MODEL_ID: "Xenova/bge-large-en-v1.5"
+      EMBEDDING_MODEL_ID: "Xenova/bge-small-en-v1.5"
       NODE_ENV: "production"
       PORT: "3001"
       # DATABASE_URL falls back to a non-functional placeholder; tests that
@@ -135,13 +135,28 @@ jobs:
           path: apps/e2e/playwright-report/
           retention-days: 14
 
-      - name: Tail server logs on failure
-        if: failure()
+      - name: Tail server logs + system snapshot (always — diagnostic)
+        # NOTE: prior version was `if: failure()` but that NEVER ran because
+        # `continue-on-error: true` on the Run Playwright tests step above
+        # masks the failure from `failure()`. Switched to `if: always()` so
+        # we get evidence regardless. Cost on success is ~30 lines of clean
+        # boot logs; cost on failure is actionable diagnostic.
+        if: always()
         run: |
-          echo "=== /tmp/api.log (last 100) ==="
-          tail -100 /tmp/api.log || true
-          echo "=== /tmp/web.log (last 100) ==="
-          tail -100 /tmp/web.log || true
+          echo "=== /tmp/api.log (last 200 lines) ==="
+          tail -200 /tmp/api.log || echo "(api.log empty or missing)"
+          echo ""
+          echo "=== /tmp/web.log (last 100 lines) ==="
+          tail -100 /tmp/web.log || echo "(web.log empty or missing)"
+          echo ""
+          echo "=== process snapshot (top 30) ==="
+          ps auxf | head -30 || true
+          echo ""
+          echo "=== memory snapshot ==="
+          free -h || vm_stat || true
+          echo ""
+          echo "=== disk snapshot ==="
+          df -h || true
 
       - name: Stop background servers
         if: always()
