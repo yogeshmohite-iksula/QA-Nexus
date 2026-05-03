@@ -90,6 +90,8 @@ interface HealthResponse {
       endpoint?: string;
       last_export_at?: string;
       error?: string;
+      env_present?: Record<string, boolean>;
+      deferred_reason?: string;
     };
     logs: {
       exporter: 'configured' | 'deferred' | 'error';
@@ -97,6 +99,8 @@ interface HealthResponse {
       endpoint?: string;
       last_export_at?: string;
       error?: string;
+      env_present?: Record<string, boolean>;
+      deferred_reason?: string;
     };
   };
 }
@@ -145,6 +149,8 @@ export class HealthController {
           endpoint: traceStatus.exporter_endpoint,
           last_export_at: traceStatus.last_export_at,
           error: traceStatus.error,
+          env_present: traceStatus.env_present,
+          deferred_reason: traceStatus.deferred_reason,
         },
         logs: {
           exporter: logStatus.status,
@@ -152,6 +158,8 @@ export class HealthController {
           endpoint: logStatus.exporter_endpoint,
           last_export_at: logStatus.last_export_at,
           error: logStatus.error,
+          env_present: logStatus.env_present,
+          deferred_reason: logStatus.deferred_reason,
         },
       },
     };

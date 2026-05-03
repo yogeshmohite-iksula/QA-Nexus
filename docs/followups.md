@@ -2,6 +2,246 @@
 
 ---
 
+## [2026-05-03] (u) P2 — Onboarding spec FE failures `:38` + `:44` (pre-existing, masked) — M1.5 SWEEP
+
+**Symptom (Day-7 close-ceremony PR #24):** After PR #24 (closes followup `(t)`) added the Postgres service container, **7 of 11 onboarding tests** went FAIL→PASS (`:123 /health`, `:145 /agents/a1/generate 401`, etc.). But **4 unique tests still fail across both browsers** (8 entries with retries):
+
+| Test                                                                                          | Browsers                         | Likely cause                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/e2e/tests/onboarding.spec.ts:38` "signed-out user lands on /sign-in"                    | chromium-desktop + mobile-safari | Pure FE redirect logic. Investigate router middleware in `apps/web/src/middleware.ts` or equivalent App Router redirect setup.                                     |
+| `apps/e2e/tests/onboarding.spec.ts:44` "sign-in form triggers magic-link send (stub mode OK)" | chromium-desktop + mobile-safari | Depends on **T021 BetterAuth magic-link wiring**, explicitly deferred to M1.5 pending Yogesh's cookie-domain ADR-007. Test will resolve naturally when T021 lands. |
+
+**Pre-existing context:** Both tests have been failing on every CI run since they were added; previously masked by `continue-on-error: true` on the `Run Playwright tests` step in `.github/workflows/e2e.yml`. PR #24 unmasked the partial picture (4 still-failing vs 7 newly-passing), enabling this followup.
+
+**Decision (M1.5 sweep, ~1-2 hr):**
+
+1. `:44` — wait until T021 magic-link wiring lands. Test should pass automatically.
+2. `:38` — investigate FE `/sign-in` redirect. If real bug, fix before pilot. If also depends on T021 (e.g., session-cookie check route), mark `.skip` until T021.
+3. **After both `:38` + `:44` are green:** remove `continue-on-error: true` from the playwright step in `e2e.yml`. Otherwise future masked regressions ship undetected — that's the structural debt followup `(t)` §6 captured.
+
+**Owner:** FE chat (M1.5 sweep, alongside T021 BetterAuth magic-link work).
+
+**Severity:** **P2** — no current pilot impact; tracks the masking debt that lets future real regressions ship undetected. Deadline: before pilot launch (M5 Day-0).
+
+**Cross-refs:**
+
+- `apps/e2e/tests/onboarding.spec.ts` lines 38 + 44
+- `apps/api/docs/integrations/betterauth-invitations.md` (T021 plan, on PR #22 branch)
+- `.github/workflows/e2e.yml` line 128 (the `continue-on-error: true` to remove)
+- Followup `(t)` §6 (the bonus masking-removal item that was deferred)
+- Day-7 EOD `docs/eod-reports/2026-05-03-day-7.md` (the original masking discovery)
+
+---
+
+## [2026-05-03] (t) P0 — CI Postgres service deficit — DAY 8 MORNING BLOCKING
+
+**Symptom (Day-7 close-ceremony, PR #22 Step 4):** PR #22 (BE M1) E2E job fails 100% with all 22 playwright tests in `tests/onboarding.spec.ts` red across both chromium-desktop + mobile-safari. API never boots within the 60s `/health` budget. After Path δ instrumented `Tail server logs (always — diagnostic)` (PR #23 commit `4bb478c`), api.log dump revealed root cause:
+
+```
+Bootstrap failed: PrismaClientInitializationError:
+  Can't reach database server at `localhost:5432`
+  at Proxy.onModuleInit (apps/api/dist/prisma/prisma.service.js:27:9)
+```
+
+**Root cause:** `.github/workflows/e2e.yml` has **no `services: postgres:` block**. `DATABASE_URL` falls back to `postgresql://invalid:invalid@localhost:5432/postgres` (line 60). PrismaService.onModuleInit() calls `prisma.$connect()` eagerly → throws → API bootstrap aborts → /health never responds → tests fail. Long-standing structural debt previously **masked** by `.skip` markers on all DB-touching tests; unmasked 2026-05-03 by PR #22 M1 BE which added new non-skipped tests (`onboarding.spec.ts:123` `/health`, `:145` `/agents/a1/generate 401`, `:38` sign-in redirect, `:44` magic-link form trigger) requiring real API up.
+
+**Falsified hypotheses** (kept for posterity — three halts today):
+
+- ❌ Path α: GH Actions infra flake (re-run on `f5f9d43` failed identically; 50-min window pattern was coincidence, not cause)
+- ❌ Path β: bge-large model load timeout (main `68b3ac0` E2E PASSED at 07:40 UTC TODAY _with_ bge-large; PR #23 with bge-small still FAILED at 10:27 UTC)
+- ❌ Speculation: HF CDN flake on first-fetch (api.log shows model load completed before the Prisma error)
+
+**Decision (Day-8 morning, ~3-4 hr):**
+
+1. Open `fix/ci-postgres-service` PR off main (post-PR #23 merge).
+2. Add `services: postgres:` block to `.github/workflows/e2e.yml`:
+   ```yaml
+   services:
+     postgres:
+       image: pgvector/pgvector:pg15 # NOT vanilla postgres:15 — we need pgvector ext
+       env:
+         POSTGRES_PASSWORD: postgres
+         POSTGRES_USER: postgres
+         POSTGRES_DB: postgres
+       ports:
+         - 5432:5432
+       options: >-
+         --health-cmd pg_isready
+         --health-interval 10s
+         --health-timeout 5s
+         --health-retries 5
+   ```
+3. Set `DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"` (keep `${{ secrets.NEON_TEST_DATABASE_URL }}` fallback for future T012 wiring).
+4. Add new step `Apply raw migrations` BEFORE `Start API in background`:
+   ```yaml
+   - name: Apply raw migrations (0001 → 0003)
+     run: |
+       pnpm --filter @qa-nexus/api prisma:apply-raw:0001
+       pnpm --filter @qa-nexus/api prisma:apply-raw:0002
+       pnpm --filter @qa-nexus/api prisma:apply-raw:0003  # M1 users.disabled_at + role_changed_at
+   ```
+5. Add minimal Iksula 8-user seed step (verbatim from `CLAUDE.md` canon) for tests that need authenticated context.
+6. **Bonus fix (in same PR):** make `Start API in background` step actually exit 1 on /health timeout (currently the for-loop exits silently → masks failure → diagnostic step couldn't trigger via `if: failure()`). Append after for-loop:
+   ```bash
+   if [ "$code" != "200" ] && [ "$code" != "503" ]; then
+     echo "::error::API failed to boot in 60s — see Tail server logs step"
+     exit 1
+   fi
+   ```
+
+**Acceptance:**
+
+- [ ] CI on the fix PR: all 7 checks green INCLUDING playwright (no longer masked by `continue-on-error`)
+- [ ] After merge, rebase PR #22 → CI green → ready for squash-merge
+- [ ] Future M1+ tests can hit real Postgres in CI without `.skip` workarounds
+- [ ] Diagnostic dump (Path δ from PR #23) remains in place — useful regardless
+
+**Owner:** BE+1 (DevOps lift; one engineer can do alone in 3-4 hr).
+
+**Severity:** **P0** — blocks all BE M1+ PRs from merging cleanly until resolved. M0 close ceremony is paused on this.
+
+**Cross-refs:**
+
+- `.github/workflows/e2e.yml` lines 58-61 (existing placeholder fallback comment)
+- PR #22 (`feature/be-m1-users-schema` HEAD `f5f9d43`) — blocked
+- PR #23 (`fix/ci-embedding-model-id` HEAD `4bb478c`) — drift D2 + Path δ instrumentation; merge first
+- `docs/plans/01-pm1-execution-plan.md` drift D2 (env-var alignment, NOW resolved by PR #23)
+- `docs/eod-reports/2026-05-03-day-7.md` (full investigation timeline)
+
+---
+
+## [2026-05-02] (r) Audit log span correlation — wire trace_id/span_id into audit_log + back-pointer attribute — M1 MORNING
+
+**Symptom (Day-5 code audit FIND-5):** `auditService.write()` writes a Postgres row. `tracer.startActiveSpan('llm.complete', ...)` (Day-5 #3) emits a Grafana span. The two events have no correlation field. Incident postmortems that need to bridge "this audit row" ↔ "this trace" rely on timestamp + actor_id heuristics — brittle.
+
+**Decision (M1 morning, ~1.5 hr):**
+
+1. Migration: add `trace_id VARCHAR(32) NULL` + `span_id VARCHAR(16) NULL` columns to `audit_log` table. Raw SQL per ADR-002 split.
+2. `AuditService.write()` reads `trace.getActiveSpan()?.spanContext()` and populates the new columns.
+3. Conversely, when an audit row is written inside an active span, set span attributes `audit_log.row_id` + `audit_log.kind` so Grafana can link forward to F28 Settings & Audit URL.
+4. F28 UI (M1) renders the trace_id as a link to Grafana Tempo when present.
+
+**Owner:** BE chat (M1 morning, before F28 ships).
+
+**Cross-refs:** PM1_ERD §3.13 (audit log) · `.claude/rules/api.md` (OTel binding rule) · `docs/audits/code-audit.md` FIND-5.
+
+---
+
+## [2026-05-02] (q) Test coverage for packages/shared schemas — M1 FIRST HALF
+
+**Symptom (Day-5 code audit FIND-2):** `apps/api/src/` has 84 jest tests across 5 spec files (good). `packages/shared/src/` has **zero** tests despite owning the canonical Zod schemas that BE↔FE depend on. A subtle regression — say relaxing `.min(1)` to `.min(0)` — wouldn't be caught by typecheck.
+
+**Decision (M1 first half, ~3 hr):**
+
+1. Add `packages/shared/src/__tests__/schemas.spec.ts` with one happy-path + 2-3 edge-case tests per schema in `packages/shared/src/schemas/*`.
+2. Aim for 40-60 tests covering the canonical request/response shapes used by BE controllers + FE forms.
+3. Use jest with the same `passWithNoTests` pattern as the existing test:smoke setup.
+4. **Defer apps/web unit tests** — Pattern A means components are mostly intent-routing + render. Visual gates + Playwright e2e cover the meaningful regressions. RTL would be high-cost / low-marginal-value.
+
+**Owner:** BE chat owns shared schemas; tests land alongside the M1 endpoint expansion. FE chat skips per recommendation above (revisit M2 if a concrete miss surfaces).
+
+**Cross-refs:** `docs/audits/code-audit.md` FIND-2 · `packages/shared/src/schemas/*`.
+
+---
+
+## [2026-05-02] (p) Audit-log discipline static-analysis gate — DAY 6 MORNING P1
+
+**Symptom (Day-5 code audit FIND-1):** PM1_ERD §3.13 + CLAUDE.md Hard Rule 7 + `.claude/rules/api.md` all bind: every state-changing endpoint (POST/PUT/PATCH/DELETE) must write an audit row synchronously. Day-5 audit identified at least **10 such endpoints** across 6 controllers — but did NOT verify each one actually writes via `auditService.write(...)`. Could be 100% compliant. Could be 50%. **Unknown coverage = compliance gap.**
+
+**Decision (Day-6 morning, ~40 min):**
+
+1. **(~30 min)** Write `scripts/audit-discipline-check.sh`:
+   - Greps every `@Post`/`@Put`/`@Patch`/`@Delete` decorator in `apps/api/src/**/*.controller.ts`
+   - For each match, scans the surrounding method body (next ~50 lines until next class member) for `auditService.write(` or `audit.write(`
+   - Allows `// audit-exempt: <reason>` markers (e.g. otel-test endpoints don't need rows)
+   - Lists violations + returns non-zero
+2. **(~10 min)** Wire as `.husky/pre-push` gate 4/4 (alongside typecheck, frozen-lockfile, CHANGELOG).
+3. For each violation surfaced: either add `auditService.write(...)` OR add the explicit exempt marker.
+
+**Acceptance:** zero violations after Day-6 morning fix-up; gate self-validates on the next push.
+
+**Owner:** MAIN (Day-6 morning).
+
+**Cross-refs:** PM1_ERD §3.13 · CLAUDE.md Hard Rule 7 · `.claude/rules/api.md` "Audit log" section · `docs/audits/code-audit.md` FIND-1.
+
+---
+
+## [2026-05-01] (o) FE/MAIN long-session image-dimension API errors — DEV-EXPERIENCE — IMMEDIATE
+
+**Symptom (recurring twice during M1 prep):** FE chat session crashes with `An image in the conversation exceeds the dimension limit for many-image requests (2000px). Start a new session with fewer images.` after ~5+ visual-gate cycles. Forces context loss + brief recovery into a new session. Hit twice during F28 commit phase on Day 5.
+
+**Root cause:** macOS retina captures screenshots at 2x — a `1440px` viewport screenshot is actually saved as 2880px. Anthropic's API rejects accumulated >2000px-dimension images in many-image requests. M0 (12 frames × 2 viewports) + M1 (3 frames × 2 viewports) = 30+ screenshots in FE's session by M1 commit time.
+
+**Recurrence cost:** ~10-15 min per crash (recovery brief + context loss). Will recur every 5-7 visual gates (every 1-2 days at current pace) without a fix. Across PM1 (38 more frame ports M2-M5) = ~6-10 more crashes if unaddressed.
+
+**3-layer permanent fix:**
+
+### Layer 1 — Auto-resize pre-commit hook (~15 min build, 0 ongoing cost)
+
+Append to `.husky/pre-commit`:
+
+```bash
+# Resize docs/screenshots/*.png to max 1500px wide before commit
+for f in $(git diff --cached --name-only --diff-filter=ACMR | grep -E "^docs/screenshots/.*\.png$"); do
+  if [ -f "$f" ]; then
+    actual_width=$(sips -g pixelWidth "$f" | tail -1 | awk '{print $2}')
+    if [ "$actual_width" -gt 1500 ]; then
+      echo "  📐 Resizing $f from ${actual_width}px → 1500px wide"
+      sips -Z 1500 "$f" --out "$f" > /dev/null
+      git add "$f"
+    fi
+  fi
+done
+```
+
+Uses macOS native `sips` (no install needed). Lossless quality drop is imperceptible at viewport sizes. Existing >2000px screenshots get caught + resized when they next pass through commit.
+
+### Layer 2 — Session discipline (CLAUDE.md Hard Rule 14)
+
+Add to CLAUDE.md Hard Rules:
+
+> **14. FE/MAIN chat sessions MUST restart at every PR boundary OR every 5 visual gates, whichever comes first.** Image accumulation in long Cowork sessions causes recurring `image dimension exceeds 2000px` API errors. Per-PR sessions keep context bounded. Each new session loads a 1-paragraph "where I left off" brief from the previous session's last message — total restart overhead ~2 min vs ~30 min spent debugging mid-PR API failures. Established 2026-05-01 after F28 commit hit the API limit twice in a row.
+
+### Layer 3 — Locked HTML never inline-loaded into chat context
+
+Add to FE/MAIN compact instructions (CLAUDE.md):
+
+> Locked HTML files in `PM1_UI_v2/` are REFERENCE ONLY. Never load full file into chat context (50-200KB each). Use Read with `offset` + `limit` to scan sections; otherwise read the structure summary in the corresponding frame `.md` description file. Same caution applies to chunky `CHANGELOG.md` and `docs/` files >50KB.
+
+**Owner:** MAIN (Layer 1 + Layer 2 + Layer 3 wiring) + PM/Cowork (CLAUDE.md edit + verification).
+
+**ETA:** Day 5 evening or Day 6 morning. ~30 min total.
+
+**Acceptance:** zero `image dimension exceeds 2000px` errors observed across the next 10 visual-gate cycles AFTER hook lands. Confirmed by FE + MAIN reporting clean session lifecycles in EOD.
+
+---
+
+## [2026-05-01] (n) OTel metrics SDK wire — MeterProvider + 3 named meters — DAY 6 / M0 close window
+
+**Status:** Day-5 OTel wire shipped traces (LLM gateway `llm.complete` span) + `/admin/otel/test-trace` endpoint + `/health` env_present diagnostics. **Metrics SDK setup deferred** to Day-6 because the no-op tracer already provides full trace observability once env vars land; metrics adds value but isn't blocking M0 close.
+
+**Day-6 scope (~1-1.5 hr):**
+
+1. Add `MeterProvider` + `PeriodicExportingMetricReader` + `OTLPMetricExporter` to NodeSDK config in `apps/api/src/observability/otel.config.ts`. Pointed at `GRAFANA_CLOUD_OTLP_ENDPOINT/v1/metrics`.
+2. Create `apps/api/src/observability/metrics.ts` exposing 3 named meters via `metrics.getMeter('qa-nexus-api')`:
+   - `embedding.latency_ms` — histogram, observed in `EmbeddingService.embed()`
+   - `audit_log.writes_total` — counter, incremented in `AuditService.write()`
+   - `llm.tokens_total` — counter labeled `{provider, model, kind: input|output}`, incremented in `LLMGatewayService.completeInternal()` (alongside the existing span attributes)
+3. Tests verify the meters emit on call (mocked `metrics.getMeter` returns a fake meter that records calls).
+4. Update `/health` to surface `otel.metrics.exporter` status + `last_export_at` (similar to traces/logs).
+
+**Owner:** MAIN.
+
+**ETA:** Day-6 morning, ~1-1.5 hr.
+
+**Cross-refs:**
+
+- `apps/api/src/observability/otel.config.ts` — where MeterProvider goes
+- `.claude/rules/api.md` — binding rule on LLM gateway spans (already covered by Day-5 work; metrics is bonus)
+- ADR-009 + ADR-003 amendment — for context on why deferred-mode-by-default is the pattern
+
+---
+
 ## [2026-04-30] (m) R2 free-tier quota alert system — Yogesh login banner — M1 USER-FACING
 
 **Symptom (Day-4 afternoon):** During R2 provisioning (T013), Yogesh added a Cloudflare credit card to enable R2 (free-tier still $0/mo, but requires card on file). He flagged a real risk: **a runaway upload — bug, infinite loop, or compromised credential — could silently exceed the 10 GB-month free tier and start billing his personal card**. He explicitly asked: "I want alert before my money cut. When 50% reached, then after every 10% — 60, 70, 80, 90, and 100% limit reach. Can you make one pop up alert come on the website when me Yogesh login?"
