@@ -49,12 +49,19 @@ export const SmtpEnv = z.object({
 export type SmtpEnv = z.infer<typeof SmtpEnv>;
 
 /**
- * Parse SMTP env vars from process.env. Throws ZodError with a
- * concise list of missing/invalid keys when called at boot — the
- * resulting message is safe to surface in logs (does NOT include
- * SMTP_PASSWORD's value, only the field name if it failed validation).
+ * Parse SMTP env vars. Throws Error with a concise list of missing/
+ * invalid keys when called at boot — the resulting message is safe
+ * to surface in logs (does NOT include SMTP_PASSWORD's value, only
+ * the field name if it failed validation).
+ *
+ * Caller MUST pass the env object explicitly (typically `process.env`
+ * from BE). `packages/shared` is consumed by both apps/api (Node) and
+ * apps/web (Next.js client-side); referencing `process.env` directly
+ * here would require `@types/node` in shared and would couple the FE
+ * to a Node-only global. Pattern: keep shared platform-agnostic;
+ * inject the env at the call site.
  */
-export function parseSmtpEnv(env: NodeJS.ProcessEnv = process.env): SmtpEnv {
+export function parseSmtpEnv(env: Record<string, string | undefined>): SmtpEnv {
   const result = SmtpEnv.safeParse({
     SMTP_HOST: env.SMTP_HOST,
     SMTP_PORT: env.SMTP_PORT,
