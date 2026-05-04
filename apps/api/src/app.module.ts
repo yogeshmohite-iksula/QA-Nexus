@@ -15,6 +15,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { UsersModule } from './users/users.module';
+import { KbModule } from './kb/kb.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     InvitationsModule, // M1 wired Day-6 — endpoints active per InvitationsController
     UsersModule, // M1 Day-6 PM Block 1 — F27 Admin tab endpoints
+    KbModule, // M2 Day-8 Step 4 — chunk-search contract scaffold (stubbed)
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)
     HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts
   ],
