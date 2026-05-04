@@ -2,6 +2,34 @@
 
 ---
 
+## [2026-05-04] (z) P3 — M2.5 PDF parser re-evaluation gate (`pdf-parse` → `pdfjs-dist`) — DEFERRED to post-pilot
+
+**Symptom (Day-8 Part C, ADR-010):** M2 chunking service (PR #34, Step 5) ships `pdf-parse@^2.4.5` over the implicit canonical `pdfjs-dist` because pdfjs-dist's `canvas` peer-dep would push the BE service past Render Free's 512 MB ceiling (recreating the Day-4 bge-large OOM condition). The decision is correct under current cost-gate constraints but worth re-evaluating once any of the following is true:
+
+1. **Render upgrade approved** — Hobby ($7/mo) lifts the ceiling to 2 GB, making the canvas overhead negligible. Yogesh would need to approve the cost-gate exception via a separate ADR.
+2. **Mozilla ships a canvas-free `pdfjs-dist` build** — there is an open RFE in the upstream `mozilla/pdf.js` issue tracker for a `--no-canvas` build target. If/when this lands, the M2 chunking pipeline could swap back to the canonical parser without operational risk.
+3. **`pdf-parse` v3.x stalls or breaks against a `pdfjs-dist` API change** — the v2.x line is small-team-maintained (modicum/pdf-parse). If a `pdfjs-dist` text-extraction API shift breaks `pdf-parse` and the upstream maintainer doesn't ship a fix within ~2 weeks, we should pre-emptively migrate.
+
+**Decision (M2.5 work, ~2-4 hr — only if any trigger above fires):**
+
+1. Inventory all `pdf-parse` import sites (currently 1: `apps/api/src/chunking/parsers/pdf-parser.ts`).
+2. Swap to `pdfjs-dist` + canvas (if trigger 1) OR canvas-free `pdfjs-dist` (if trigger 2) OR alternative library (if trigger 3 + maintainer exit).
+3. Re-run `apps/api/src/chunking/__tests__/parsers.spec.ts` — all pdf cases must pass against the new parser. Output text shape must be byte-identical (or differ only in whitespace normalization) to avoid a chunk-embedding cache invalidation.
+4. Update ADR-010 with a "Superseded by ADR-XXX" header pointing to the new decision.
+
+**Owner:** BE chat.
+**Effort:** S-M (2-4 hr depending on trigger).
+**Severity:** P3 (no functional impact today; current solution is production-fit for pilot scale).
+
+**Cross-references:**
+
+- `docs/architecture/adr-010-pdf-parser-choice.md` (the decision being re-evaluated)
+- `docs/architecture/adr-003-embedding-model.md` (sister 512 MB constraint that drove bge-small)
+- `apps/api/src/chunking/parsers/pdf-parser.ts` (the implementation site)
+- Mozilla `pdf.js` upstream RFE tracker (link to be added if/when the canvas-free build lands)
+
+---
+
 ## [2026-05-04] (y) P1 — Wrong slug shape in `generateStaticParams()` on `[slug]` project routes — ✅ FIXED 2026-05-04 (this PR)
 
 **Symptom (Day 8 PR #31 visual gate):** Two pages 500 at runtime with the Next.js error:
