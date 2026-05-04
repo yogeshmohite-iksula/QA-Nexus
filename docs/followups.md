@@ -2,6 +2,54 @@
 
 ---
 
+## [2026-05-04] (y) P1 — Wrong slug shape in `generateStaticParams()` on `[slug]` project routes — ✅ FIXED 2026-05-04 (this PR)
+
+**Symptom (Day 8 PR #31 visual gate):** Two pages 500 at runtime with the Next.js error:
+
+```
+Page '/projects/[slug]/<route>/page' is missing param '/projects/[slug]/<route>'
+in 'generateStaticParams()', which is required with 'output: export' config.
+```
+
+Affected pages confirmed:
+
+- `/projects/ret/imports/`
+- `/projects/ret/sources/jira/step-2/`
+
+**Original hypothesis (visual-gate ping):** "Missing `generateStaticParams()`."
+
+**Actual root cause (this PR's investigation):** The function EXISTS on all 5 dynamic routes — but it returns the wrong slug **shape**. Each route hardcoded long display slugs (`iksula-returns`, `iksula-commerce`, `iksula-payments`, `iksula-mobile`, `iksula-ops`), but the URL convention used everywhere else in the app (router pushes, the M1 admin shell, the home-empty rail, the F14m\* dynamic routes) is **lowercased project `key`** (`ret`, `cart`, `pay`, `auth`, `ops`). When a user navigated to `/projects/ret/imports/`, the `'ret'` slug wasn't in the pre-built list → Next 500. Pre-existing across 5 files, originally landed in early Day-3/4 ports before the URL convention crystallized.
+
+**Fix (this PR):** Replace each route's hardcoded list with a seed-derived enumeration:
+
+```ts
+import { projects } from '@/lib/demo-seed';
+
+export function generateStaticParams() {
+  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
+}
+```
+
+Single source of truth (`projects` from `lib/demo-seed`), automatic coverage of all 5 Iksula seed projects (`auth`, `cart`, `ops`, `pay`, `ret`), and self-extending when the seed grows. Once BE M2 schema lands + the projects table is populated, this becomes a build-time DB lookup.
+
+**Files fixed (5):**
+
+- `apps/web/app/projects/[slug]/imports/page.tsx`
+- `apps/web/app/projects/[slug]/sources/jira/page.tsx`
+- `apps/web/app/projects/[slug]/sources/jira/step-2/page.tsx`
+- `apps/web/app/projects/[slug]/sources/jira/step-3/page.tsx`
+- `apps/web/app/projects/[slug]/upload/page.tsx`
+
+**Verification:** `pnpm --filter web build` passes — `output: 'export'` static-build emits `out/projects/{auth,cart,ops,pay,ret}/{imports,sources/jira,sources/jira/step-2,sources/jira/step-3,upload}/index.html`.
+
+**Pre-existing — NOT introduced by Phase 3 retrofit (PR #31).** Confirmed: PR #31's edits were pure CSS class swaps (`var(--primary)` → `var(--secondary)`).
+
+**Reference template:** F14m1 + F14m2 + F14m3 dynamic routes already use the correct pattern — `REQUIREMENTS.map((r) => ({ key: r.key.toLowerCase() }))`. The pattern just hadn't propagated to `projects/[slug]/**` yet.
+
+**Closed by:** PR opened 2026-05-04 (this same day) titled `fix(web): correct generateStaticParams slug shape on [slug] project routes (closes followup y)`.
+
+---
+
 ## [2026-05-03] (v) P3 — Phase-1 audit of remaining 37 locked frames — M2-M4 ROLLING
 
 **Symptom (Day-7 close-ceremony, Step I):** Claude Design ran a Phase-1 spec-drift audit on the F15 + F16 cluster on 2026-05-03 and surfaced material drift between the locked HTML, `PM1_PRD`, `PM1_ERD`, and `01_SYSTEM.md`:

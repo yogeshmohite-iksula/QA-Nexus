@@ -7,6 +7,7 @@
 // MS0-T030.5+ (BetterAuth + Atlassian REST + webhook listener).
 
 import type { Metadata } from 'next';
+import { projects } from '@/lib/demo-seed';
 import { ConnectJiraStep3Page } from '@/components/sources-jira/connect-jira-step3-page';
 
 interface PageProps {
@@ -18,16 +19,11 @@ export const metadata: Metadata = {
   description: 'Confirm the Jira connection + preview sample data. Step 3 of 3.',
 };
 
-// Required for Next.js `output: 'export'` on dynamic routes.
-// TODO: replace with central seed module post-followup-i.
+// `output: 'export'` requires this to enumerate every reachable [slug]
+// at build time. Slug shape = lowercased project `key`. Closes followup
+// (y) — surfaced 2026-05-04 PR #31 visual gate.
 export function generateStaticParams() {
-  return [
-    { slug: 'iksula-returns' },
-    { slug: 'iksula-commerce' },
-    { slug: 'iksula-payments' },
-    { slug: 'iksula-mobile' },
-    { slug: 'iksula-ops' },
-  ];
+  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
 }
 
 export default async function JiraConnectStep3Page({ params }: PageProps) {
