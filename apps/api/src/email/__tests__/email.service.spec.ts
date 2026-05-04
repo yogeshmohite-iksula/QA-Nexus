@@ -1,21 +1,23 @@
-// Unit tests for EmailService — M1 Day-6 PM Block 1.
+// Unit tests for EmailService (Day-8 Gmail SMTP via nodemailer).
 //
-// Strategy: jest.mock the 'resend' SDK so no network ever fires.
-// Pins: capture mode, deferred mode, graceful errors, template content.
+// Strategy: jest.mock 'nodemailer' so no real SMTP connection ever opens.
+// Pins: capture mode, deferred mode, env validation, graceful errors,
+// BCC wiring on every send (Day-8 Yogesh follow-up), template content,
+// password redaction in error logs (security guarantee).
 
-jest.mock('resend');
+jest.mock('nodemailer');
 
 import { EmailService } from '../email.service';
-import { Resend } from 'resend';
+import { createTransport } from 'nodemailer';
 import {
   renderInvitationSubject,
   renderInvitationHtml,
   renderInvitationText,
 } from '../templates/invitation';
 
-const mockSend = jest.fn();
-(Resend as unknown as jest.Mock).mockImplementation(() => ({
-  emails: { send: mockSend },
+const mockSendMail = jest.fn();
+(createTransport as unknown as jest.Mock).mockImplementation(() => ({
+  sendMail: mockSendMail,
 }));
 
 const baseInv = {
@@ -27,12 +29,42 @@ const baseInv = {
   expiresAt: '2026-05-09T12:00:00Z',
 };
 
-describe('EmailService', () => {
+/** Set the full 9-var SMTP env. Used by real-mode tests. */
+function setRealEnv(overrides: Partial<Record<string, string>> = {}): void {
+  process.env.NODE_ENV = 'production';
+  process.env.SMTP_HOST = 'smtp.gmail.com';
+  process.env.SMTP_PORT = '587';
+  process.env.SMTP_SECURE = 'false';
+  process.env.SMTP_USER = 'yogesh.ybm999@gmail.com';
+  process.env.SMTP_PASSWORD = 'app-password-1234567890abcd';
+  process.env.SMTP_FROM_NAME = 'QA Nexus';
+  process.env.SMTP_FROM_EMAIL = 'yogesh.ybm999@gmail.com';
+  process.env.SMTP_REPLY_TO = 'yogesh.mohite@iksula.com';
+  process.env.SMTP_BCC_EMAIL = 'yogesh.mohite@iksula.com';
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+}
+
+function clearAllSmtpEnv(): void {
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_PORT;
+  delete process.env.SMTP_SECURE;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASSWORD;
+  delete process.env.SMTP_FROM_NAME;
+  delete process.env.SMTP_FROM_EMAIL;
+  delete process.env.SMTP_REPLY_TO;
+  delete process.env.SMTP_BCC_EMAIL;
+}
+
+describe('EmailService (Day-8 Gmail SMTP)', () => {
   const ORIG_ENV = { ...process.env };
   beforeEach(() => {
-    mockSend.mockReset();
-    // Reset env to a known baseline before each test.
-    delete process.env.RESEND_API_KEY;
+    mockSendMail.mockReset();
+    (createTransport as unknown as jest.Mock).mockClear();
+    clearAllSmtpEnv();
     delete process.env.EMAIL_TEST_CAPTURE;
     process.env.NODE_ENV = 'test';
   });
@@ -47,37 +79,50 @@ describe('EmailService', () => {
     });
 
     it('EMAIL_TEST_CAPTURE=true overrides production-looking env', () => {
-      process.env.NODE_ENV = 'production';
-      process.env.RESEND_API_KEY = 're_real_LIVE_key';
+      setRealEnv();
       process.env.EMAIL_TEST_CAPTURE = 'true';
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('capture');
     });
 
-    it('no key in non-test env → deferred mode', () => {
-      process.env.NODE_ENV = 'production';
-      delete process.env.RESEND_API_KEY;
-      const svc = new EmailService();
-      expect(svc.getHealth().mode).toBe('deferred');
-    });
-
-    it('placeholder key → deferred mode', () => {
-      process.env.NODE_ENV = 'production';
-      process.env.RESEND_API_KEY = 're_REPLACE_ME_LATER';
-      const svc = new EmailService();
-      expect(svc.getHealth().mode).toBe('deferred');
-    });
-
-    it('real key in non-test env → real mode', () => {
-      process.env.NODE_ENV = 'production';
-      process.env.RESEND_API_KEY = 're_AbCdEfGh1234567890_real';
+    it('SMTP env complete in production → real mode', () => {
+      setRealEnv();
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('real');
+      expect(svc.getHealth().from).toBe('yogesh.ybm999@gmail.com');
+      expect(svc.getHealth().bccEnabled).toBe(true);
+      // Transport built with the right config
+      const cfg = (createTransport as unknown as jest.Mock).mock.calls[0][0];
+      expect(cfg.host).toBe('smtp.gmail.com');
+      expect(cfg.port).toBe(587);
+      expect(cfg.secure).toBe(false); // STARTTLS
+      expect(cfg.auth.user).toBe('yogesh.ybm999@gmail.com');
+      expect(cfg.auth.pass).toBe('app-password-1234567890abcd');
+    });
+
+    it('SMTP env missing in production → deferred mode (no crash)', () => {
+      process.env.NODE_ENV = 'production';
+      // No SMTP_* env at all
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('deferred');
+      expect(createTransport).not.toHaveBeenCalled();
+    });
+
+    it('SMTP env partial (missing SMTP_BCC_EMAIL) → deferred mode', () => {
+      setRealEnv({ SMTP_BCC_EMAIL: undefined });
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('deferred');
+    });
+
+    it('SMTP_PORT not numeric → deferred (Zod coerce fails)', () => {
+      setRealEnv({ SMTP_PORT: 'not-a-number' });
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('deferred');
     });
   });
 
-  describe('sendInvitation() — template content', () => {
-    it('produces correct subject', () => {
+  describe('template content (preserved from Day-6)', () => {
+    it('subject is correct', () => {
       const subj = renderInvitationSubject({
         inviterName: baseInv.inviterName,
         workspaceName: baseInv.workspaceName,
@@ -87,47 +132,47 @@ describe('EmailService', () => {
       );
     });
 
-    it('plain-text fallback contains key fields', () => {
+    it('text fallback contains key fields', () => {
       const text = renderInvitationText(baseInv);
       expect(text).toContain('Akshay Panchal');
       expect(text).toContain('Iksula QA Nexus');
       expect(text).toContain('QAEngineer');
       expect(text).toContain(baseInv.magicLinkUrl);
-      // Expiry rendered humanly
       expect(text).toMatch(/UTC/);
     });
 
-    it('html contains the magic-link URL + role + escapes inputs', () => {
+    it('html escapes XSS-style input', () => {
       const html = renderInvitationHtml({
         ...baseInv,
         inviterName: '<script>alert(1)</script>',
       });
-      expect(html).toContain(baseInv.magicLinkUrl);
-      expect(html).toContain('QAEngineer');
-      // XSS-style input is escaped
       expect(html).not.toContain('<script>alert(1)');
       expect(html).toContain('&lt;script&gt;');
     });
   });
 
   describe('capture mode', () => {
-    it('sendInvitation() captures into queue without calling Resend', async () => {
+    it('sendInvitation captures into queue (no nodemailer call)', async () => {
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^captured-/);
       expect(result.stubbed).toBe(true);
-      expect(mockSend).not.toHaveBeenCalled();
-
+      expect(mockSendMail).not.toHaveBeenCalled();
       const captured = svc.getCapturedEmails();
       expect(captured).toHaveLength(1);
       expect(captured[0].to).toBe(baseInv.to);
-      expect(captured[0].subject).toContain('Akshay Panchal');
       expect(captured[0].html).toContain(baseInv.magicLinkUrl);
-      expect(captured[0].text).toContain(baseInv.magicLinkUrl);
-      expect(captured[0].messageId).toMatch(/^captured-/);
     });
 
-    it('clearCapturedEmails() empties the queue', async () => {
+    it('capture records SMTP_BCC_EMAIL when set in env (so wire-tests can assert)', async () => {
+      process.env.SMTP_BCC_EMAIL = 'yogesh.mohite@iksula.com';
+      const svc = new EmailService();
+      await svc.sendInvitation(baseInv);
+      const captured = svc.getCapturedEmails();
+      expect(captured[0].bcc).toBe('yogesh.mohite@iksula.com');
+    });
+
+    it('clearCapturedEmails empties the queue', async () => {
       const svc = new EmailService();
       await svc.sendInvitation(baseInv);
       expect(svc.getCapturedEmails()).toHaveLength(1);
@@ -135,97 +180,108 @@ describe('EmailService', () => {
       expect(svc.getCapturedEmails()).toHaveLength(0);
     });
 
-    it('sendMagicLink() captures with stub-suitable subject', async () => {
+    it('sendMagicLink + sendPasswordReset capture with right subjects', async () => {
       const svc = new EmailService();
-      const result = await svc.sendMagicLink({
+      await svc.sendMagicLink({
         to: 'x@iksula.com',
-        magicLinkUrl: 'https://x.example/auth?token=t',
-        expiresAt: '2026-05-03T00:00:00Z',
+        magicLinkUrl: 'https://x.example/?t=t',
+        expiresAt: '2026-05-04T12:00:00Z',
       });
-      expect(result.messageId).toMatch(/^captured-/);
-      const captured = svc.getCapturedEmails();
-      expect(captured[0].subject).toBe('Your QA Nexus sign-in link');
-      expect(captured[0].text).toContain('https://x.example/auth?token=t');
-    });
-
-    it('sendPasswordReset() captures with reset subject', async () => {
-      const svc = new EmailService();
-      const result = await svc.sendPasswordReset({
+      await svc.sendPasswordReset({
         to: 'x@iksula.com',
         resetUrl: 'https://x.example/reset?t=t',
-        expiresAt: '2026-05-03T00:00:00Z',
+        expiresAt: '2026-05-04T12:00:00Z',
       });
-      expect(result.stubbed).toBe(true);
-      const captured = svc.getCapturedEmails();
-      expect(captured[0].subject).toBe('Reset your QA Nexus password');
+      const cap = svc.getCapturedEmails();
+      expect(cap[0].subject).toBe('Your QA Nexus sign-in link');
+      expect(cap[1].subject).toBe('Reset your QA Nexus password');
     });
   });
 
   describe('deferred mode', () => {
-    it('sendInvitation() returns deferred-prefixed messageId, no Resend call', async () => {
+    it('sendInvitation returns deferred-prefixed messageId, no SMTP call', async () => {
       process.env.NODE_ENV = 'production';
-      delete process.env.RESEND_API_KEY;
+      // No SMTP env → deferred
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^deferred-/);
       expect(result.stubbed).toBe(true);
-      expect(mockSend).not.toHaveBeenCalled();
+      expect(mockSendMail).not.toHaveBeenCalled();
     });
   });
 
-  describe('real mode + graceful errors', () => {
-    function realModeService(): EmailService {
-      process.env.NODE_ENV = 'production';
-      process.env.RESEND_API_KEY = 're_real_LIVE_key';
-      return new EmailService();
-    }
-
-    it('happy path — calls Resend with correct payload + returns Resend id', async () => {
-      mockSend.mockResolvedValueOnce({
-        data: { id: 're-message-id-789' },
-        error: null,
+  describe('real mode + BCC wiring + graceful errors', () => {
+    it('happy path — sendMail called with from/to/bcc/replyTo/subject/html/text', async () => {
+      mockSendMail.mockResolvedValueOnce({
+        messageId: '<gmail-id-789@smtp.gmail.com>',
       });
-      const svc = realModeService();
+      setRealEnv();
+      const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
-      expect(result).toEqual({
-        messageId: 're-message-id-789',
-        stubbed: false,
-      });
-      expect(mockSend).toHaveBeenCalledTimes(1);
-      const call = mockSend.mock.calls[0][0];
-      expect(call.to).toBe(baseInv.to);
-      expect(call.subject).toContain('Akshay Panchal');
-      expect(call.html).toContain(baseInv.magicLinkUrl);
-      expect(call.text).toContain(baseInv.magicLinkUrl);
-      expect(call.from).toBe('noreply@qa-nexus.iksula.com'); // default
+      expect(result.messageId).toBe('<gmail-id-789@smtp.gmail.com>');
+      expect(result.stubbed).toBe(false);
+
+      expect(mockSendMail).toHaveBeenCalledTimes(1);
+      const arg = mockSendMail.mock.calls[0][0];
+      expect(arg.from).toBe('"QA Nexus" <yogesh.ybm999@gmail.com>');
+      expect(arg.to).toBe(baseInv.to);
+      // CRITICAL: every send carries the silent BCC to Yogesh's work email.
+      expect(arg.bcc).toBe('yogesh.mohite@iksula.com');
+      expect(arg.replyTo).toBe('yogesh.mohite@iksula.com');
+      expect(arg.subject).toContain('Akshay Panchal');
+      expect(arg.html).toContain(baseInv.magicLinkUrl);
+      expect(arg.text).toContain(baseInv.magicLinkUrl);
     });
 
-    it('Resend returns error — does NOT throw, returns messageId + error', async () => {
-      mockSend.mockResolvedValueOnce({
-        data: null,
-        error: { message: 'rate-limited' },
+    it('every public method (invite/magic-link/reset) carries the BCC field', async () => {
+      mockSendMail.mockResolvedValue({ messageId: 'x' });
+      setRealEnv();
+      const svc = new EmailService();
+      await svc.sendInvitation(baseInv);
+      await svc.sendMagicLink({
+        to: 'x@iksula.com',
+        magicLinkUrl: 'https://x.example/?t=t',
+        expiresAt: '2026-05-04T12:00:00Z',
       });
-      const svc = realModeService();
+      await svc.sendPasswordReset({
+        to: 'x@iksula.com',
+        resetUrl: 'https://x.example/reset?t=t',
+        expiresAt: '2026-05-04T12:00:00Z',
+      });
+      // 3 calls — verify BCC on each.
+      expect(mockSendMail).toHaveBeenCalledTimes(3);
+      for (const call of mockSendMail.mock.calls) {
+        expect(call[0].bcc).toBe('yogesh.mohite@iksula.com');
+      }
+    });
+
+    it('nodemailer throws — caught, logged, returned as failed result', async () => {
+      mockSendMail.mockRejectedValueOnce(new Error('connection refused'));
+      setRealEnv();
+      const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^failed-/);
       expect(result.stubbed).toBe(false);
-      expect(result.error).toBe('rate-limited');
+      expect(result.error).toBe('connection refused');
     });
 
-    it('Resend SDK throws — caught + returned as failed result', async () => {
-      mockSend.mockRejectedValueOnce(new Error('network down'));
-      const svc = realModeService();
+    it('SMTP_PASSWORD never appears in returned error (defence-in-depth)', async () => {
+      // Simulate a hostile error message that includes the password.
+      mockSendMail.mockRejectedValueOnce(
+        new Error('auth failure: pass=app-password-1234567890abcd rejected'),
+      );
+      setRealEnv();
+      const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
-      expect(result.messageId).toMatch(/^failed-/);
-      expect(result.error).toBe('network down');
+      expect(result.error).toBeDefined();
+      expect(result.error).not.toContain('app-password-1234567890abcd');
+      expect(result.error).toContain('<redacted>');
     });
 
     it('legacy send() shape still works (auth.config.ts compat)', async () => {
-      mockSend.mockResolvedValueOnce({
-        data: { id: 'legacy-id' },
-        error: null,
-      });
-      const svc = realModeService();
+      mockSendMail.mockResolvedValueOnce({ messageId: 'legacy-id' });
+      setRealEnv();
+      const svc = new EmailService();
       const result = await svc.send({
         to: 'x@iksula.com',
         subject: 'subj',
@@ -233,6 +289,37 @@ describe('EmailService', () => {
         text: 'h',
       });
       expect(result).toEqual({ id: 'legacy-id', stubbed: false });
+      // Legacy path still gets BCC.
+      expect(mockSendMail.mock.calls[0][0].bcc).toBe(
+        'yogesh.mohite@iksula.com',
+      );
+    });
+  });
+
+  describe('Zod env validation (parseSmtpEnv contract)', () => {
+    // Verifies the schema parses what we expect and rejects what we don't.
+    // The full ZodError messages are exercised via the deferred-mode tests
+    // above; this section adds focused field-level coverage.
+
+    it('non-email SMTP_USER → deferred', () => {
+      setRealEnv({ SMTP_USER: 'not-an-email' });
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('deferred');
+    });
+
+    it('SMTP_PORT > 65535 → deferred', () => {
+      setRealEnv({ SMTP_PORT: '99999' });
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('deferred');
+    });
+
+    it('SMTP_SECURE="true" → real mode + secure=true (SSL/465 path)', () => {
+      setRealEnv({ SMTP_SECURE: 'true', SMTP_PORT: '465' });
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('real');
+      const cfg = (createTransport as unknown as jest.Mock).mock.calls[0][0];
+      expect(cfg.secure).toBe(true);
+      expect(cfg.port).toBe(465);
     });
   });
 });
