@@ -95,6 +95,12 @@ You are a **Principal Product Designer for B2B QA engineering platforms**. You p
 - `#3B4660` — strong on dark / focus ring
 - `#E5E7EB` — subtle on light
 
+**Tap targets (mobile-first, codified by SYS-6 retrofit 2026-05-04):**
+- `--tap: 44px` — minimum hit-area floor for ALL interactive elements
+  below the 1024 px viewport (per §6 rule). 44 px matches WCAG 2.5.5
+  Target Size (Enhanced) AA + Apple HIG. React ports apply via
+  Tailwind `min-h-[44px]` / `min-w-[44px]` (or `min-h-[var(--tap)]`).
+
 ## 3.2 FORBIDDEN — do not generate any of these
 
 ❌ **NO Material Design 3 color tokens.** No `primary-container`, `on-primary`, `surface-tint`, `surface-bright`, `surface-container-low/high/highest`, `inverse-surface`, `inverse-primary`, `tertiary-fixed`, `on-tertiary`, `surface-variant`. These are all forbidden. We have 4 canvas values (`canvas / base / raised / overlay`), period.
@@ -195,6 +201,13 @@ Home                               ← role-aware destination
 
 **Active rail item:** 3 px left accent bar `#A78BFA` (violet), background `#232C3F` overlay, text `#F1F5F9`.
 
+> **Phase 3 retrofit confirmation (SYS-1, 2026-05-04):** Active-state
+> accent is **violet** (`#A78BFA` = `--secondary`) across all rails —
+> distinct from the **teal** CTA accent (`#2DD4BF` = `--primary`). Frames
+> shipping a teal left-edge bar on rail items (F14 + old F15) are drift
+> against this contract. The F14-2 violet sweep retrofits those frames
+> to match. Rule of thumb: rails are violet, CTAs are teal.
+
 **Hover on non-active:** `#1A2233`.
 
 **Section labels:** Inter 10/600, UPPERCASE, `#8A94A6`, letter-spacing 0.08em.
@@ -241,6 +254,44 @@ Home                               ← role-aware destination
 - Main canvas outer padding: **32 px**
 - Rail inner padding: **16 px** both axes
 - Evidence rail padding: **24 px**
+
+### 4.4.1 Breakpoints — mobile-first contract (Phase 3 retrofit SYS-7, 2026-05-04)
+
+The 1600×1024 canvas above is the **desktop reference**. Every ported
+React component MUST also implement these breakpoints. No frame is
+"complete" until verified at all 7 widths.
+
+| Breakpoint | Width  | Tailwind | Reflow rules                                                                    |
+|------------|--------|----------|---------------------------------------------------------------------------------|
+| Mobile XS  | 320    | (base)   | Single column. Hamburger nav. All interactives ≥ 44×44 (per §6 / §3.1 `--tap`). |
+| Mobile S   | 480    | (base)   | Single column. Hamburger nav. Form fields edge-to-edge with safe-area padding.   |
+| Tablet     | 768    | `md:`    | 2-col grid available. Modals upgrade from full-screen drawer to 90% sheet.      |
+| Desktop S  | 1024   | `lg:`    | Left primary rail expands from icon-only to full-label. Evidence rail bottom-sheet → right-docked. Tap-target floor relaxes. |
+| Desktop M  | 1280   | `xl:`    | 12-col grid kicks in. Multi-pane layouts unlock.                                |
+| Desktop L  | 1440   | (custom) | Default Yogesh-screen reference. All locked HTML frames pin around this width.  |
+| Desktop XL | 1600   | `2xl:`   | Canvas reference width. Outer max-width caps further widening.                   |
+
+**Component-specific reflow contracts:**
+
+- **Left primary rail:** full-label (240–272 px) above 1024; icon-only
+  (88 px) at 768–1023; hamburger (top-bar trigger + drawer overlay)
+  below 768.
+- **Modals:** Stage Modal (1120×860) → 90% width sheet at md (768–1023)
+  → full-screen drawer below md. Edit Modal (960×720) → 90% sheet at md
+  → drawer below. Picker (720×640) → 90% sheet at md → drawer below.
+  Confirm (480×360) → 90% sheet at md → drawer below.
+- **Right evidence rail:** docked-right (380 px) above 1024; collapsible
+  bottom-sheet drawer below 1024 (drag-to-dismiss, peek-state at 88 px).
+- **Top command bar:** all 8 slots above 1024; condensed (logo + project
+  + search + avatar) at 768–1023; (logo + hamburger + avatar) below 768.
+  ⌘K command palette stays accessible at all widths via the hamburger
+  menu's first item below 768.
+- **Tables:** standard table grid above 1024; per-row card-stack
+  pattern below 1024 (each cell becomes a labelled `dt`/`dd` pair).
+
+**Verification:** Every visual confirmation gate (Hard Rule 13) MUST
+include 320 + 1440 screenshots minimum. 768 + 1024 screenshots are
+required for any frame that uses a 2-col grid or right rail.
 - 12-column grid in main canvas, 24 px gutter
 
 ## 4.5 Global keyboard shortcuts (pinned)
@@ -266,6 +317,20 @@ Never use one interaction pattern for everything:
 | **Stage Modal** | Create / generate / approve flows (F10, F12, F16a/b/c, F22) | 1120 × 860 |
 | **Inspection Sheet** | Read-heavy detail, right-docked | 420 × 1024 |
 | **Persistent Assistant Rail** | Evidence + AI context on operational frames | 380 × flex |
+
+> **Phase 3 retrofit (SYS-6, 2026-05-04) — 44×44 tap-target rule:**
+> All interactive elements (buttons, links, chips, dropdowns, row
+> action triggers, tab buttons, close icons, drag handles) MUST be
+> at least **44×44 px** below the **1024 px** viewport. Promotes the
+> previously-ad-hoc per-frame `--tap: 44px` custom property into the
+> canonical token list (see §3.1 "Tap targets"). Above 1024 px the
+> floor relaxes — desktop pointer + keyboard users don't need the
+> larger target. React ports apply with Tailwind `min-h-[44px]` (or
+> `min-h-[var(--tap)]`) on every actionable element under the lg
+> breakpoint. Matches WCAG 2.5.5 Target Size (Enhanced) AA + Apple
+> HIG. F15 v2 already implements this; F14 + F27/F28 retrofit
+> followups verify each interactive element's hit area on the 320 px
+> visual gate.
 
 # 7. HTML implementation rules (anti-MD3)
 
@@ -389,6 +454,8 @@ Print this and check every generated frame against it:
 | `05_ANALYSE_AND_GOVERN.md` | F23 Reports Studio · F24 QA Value · F25 Executive Dashboard (Prove mode) · F26 Agents · **F26m1 Agent Model Assignment Modal (NEW v2.10)** · F27 Users & Roles · F27m1 Invite User Modal · F28 Settings & Audit · **F28m1 LLM Provider Configuration Modal (NEW v2.10)** |
 
 **Paste order:** 01_SYSTEM first (prime), then one workflow file at a time, generate its frames, move to next file.
+
+> **Phase 3 retrofit info-model lock (SYS-8, 2026-05-04):** **F15 = chunk-retrieval surface (per `PM1_ERD §3.7`).** It is the AI Knowledge Base view that retrieves text chunks from indexed documents — NOT a wiki / published-articles surface. The "published articles" concept is **post-pilot (F-future)** and is not part of PM1. This pin prevents F15 from re-drifting toward the old wiki info model that earlier mocks experimented with. F15 v2 (in `Redesign Frame by claude design/F15 Knowledge Base v2.html`) is the canonical implementation reference; the older `F15 Knowledge Base.html` in `frame  html view/` remains for historical reference only.
 
 ## Appendix C — v2.2 Canonized Conventions (2026-04-24)
 

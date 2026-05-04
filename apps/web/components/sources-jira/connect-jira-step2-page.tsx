@@ -387,7 +387,7 @@ function JiraProjectPicker({
                 className={[
                   'flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
                   p.key === selectedKey
-                    ? 'bg-[var(--primary)]/[0.06] border-l-[3px] border-[var(--primary)] pl-[9px]'
+                    ? 'bg-[var(--secondary)]/[0.06] border-l-[3px] border-[var(--secondary)] pl-[9px]'
                     : 'hover:bg-[var(--raised)]',
                 ].join(' ')}
               >
