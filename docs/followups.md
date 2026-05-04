@@ -50,6 +50,41 @@ Single source of truth (`projects` from `lib/demo-seed`), automatic coverage of 
 
 ---
 
+## [2026-05-04] (x) P2 — Day-0 admin seed mechanism (bootstrap gap blocking automated email warmup) — BUNDLE INTO T021
+
+**Symptom (Day-8 PM):** Gmail SMTP wiring (PR #26 / ADR-008) merged + Render-deployed. Warmup test per ADR-008 §6 needs the BE chat to call `POST /api/invitations` with an Admin session cookie. **Bootstrap gap discovered:** the only mechanism to acquire a session cookie is the BetterAuth magic-link login flow — which itself depends on SMTP working (the very thing we're testing). BE chat cannot break the loop without manual cookie injection from Yogesh's browser.
+
+**Risk accepted (~24-48h interim):** Gmail SMTP code in production but unverified for real outbound delivery. Acceptable for pilot scale (8 internal users; no automated invitation sends until Day 9+). Yogesh can optionally fire the warmup curl pre-T021 with a manually-injected session token.
+
+**Decision (Day-9 work, ~1-2 hr — folded into T021):**
+
+1. Add a Day-0 admin seed mechanism that does NOT depend on magic-link working. Options:
+   - **(a)** `pnpm --filter @qa-nexus/api admin:seed-session --email yogesh.mohite@iksula.com --ttl 1h` — one-off CLI that mints a short-TTL Admin session row directly via Prisma (skips BetterAuth's send/verify dance). Use only at Day-0 bootstrap or pre-T021 acceptance windows.
+   - **(b)** Render-only env var `BOOTSTRAP_ADMIN_TOKEN` that, when set, lets a single curl call to `POST /admin/bootstrap/session` mint a session for the seeded Admin email. Auto-disables once a magic-link send succeeds.
+   - **(c)** Manual SQL — Yogesh inserts an `auth_session` row via Neon console with a known token. Crude but zero-code.
+
+   **Recommendation: (a)** — keeps the bootstrap mechanism in code where it's auditable + version-controlled.
+
+2. Bundle into T021 (BetterAuth magic-link wiring) since both touch the auth surface and ship as one PR. Avoids a separate auth-touching PR + separate review cycle.
+
+3. Document the bootstrap flow in `docs/runbooks/day-0-admin-seed.md` (NEW, ~50 lines): when to use it, security model (TTL bounded, audit-logged, never reusable), how to retire post-magic-link.
+
+4. Audit: every bootstrap-session mint writes an `admin_bootstrap_session_minted` row to `audit_log` with the actor email + TTL + reason (free-text justification). Chain-binding per Hard Rule 7.
+
+5. Update ADR-008 §6 status from "DEFERRED" to "VERIFIED" once warmup succeeds.
+
+**Owner:** BE chat (folds into T021 BetterAuth wiring).
+**Effort:** M (bundled into T021's ~6-hr surface).
+**Severity:** P2 (blocks automated email warmup verification but NOT pilot functionality — Yogesh can still send invitations manually via the interim manual-cookie path if needed).
+
+**Cross-references:**
+
+- `docs/architecture/adr-008-email-service-gmail-smtp.md` §6 (acceptance gate, deferred state)
+- `apps/api/docs/integrations/betterauth-invitations.md` (T021 plan)
+- `apps/api/src/auth/auth.service.ts` (BetterAuth wiring entry point)
+
+---
+
 ## [2026-05-03] (v) P3 — Phase-1 audit of remaining 37 locked frames — M2-M4 ROLLING
 
 **Symptom (Day-7 close-ceremony, Step I):** Claude Design ran a Phase-1 spec-drift audit on the F15 + F16 cluster on 2026-05-03 and surfaced material drift between the locked HTML, `PM1_PRD`, `PM1_ERD`, and `01_SYSTEM.md`:

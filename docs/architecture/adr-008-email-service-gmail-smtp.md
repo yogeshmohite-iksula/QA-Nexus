@@ -126,16 +126,34 @@ When IT cooperates (M1.5 → M2 window) the swap is:
 
 ## 6. Acceptance gate (warmup test, post-merge)
 
-**Pre-rollout to pilot:**
+> **STATUS — DEFERRED to Day 9 post-T021 (amended 2026-05-04 PM).**
+> The warmup procedure below was originally specified for the same-day
+> post-merge window. **Bootstrap gap discovered 2026-05-04 PM:** the
+> warmup test needs an Admin session cookie to call `POST /api/invitations`,
+> but the only mechanism to obtain one is the BetterAuth magic-link login
+> flow — which itself depends on SMTP working (the very thing we're
+> testing). Cleanest fix is during T021 magic-link wiring on Day 9, which
+> includes the proper Day-0 admin seed mechanism (followup `(x)` —
+> `docs/followups.md`). At T021 land, the natural login flow exists →
+> session cookie → fire warmup naturally → verify per the steps below.
+>
+> **Risk accepted in the interim (~24-48h window):** Gmail SMTP code is
+> in production but unverified for real outbound delivery. Acceptable for
+> pilot scale (8 internal users; no automated invitation sends until
+> Day 9+). If Yogesh wants pre-T021 verification, he can run the curl
+> from §6.4 below with a manually-injected session token (DevTools cookie
+> copy) — but this is optional, not blocking.
 
-1. PR `feat(api): Gmail SMTP wiring via nodemailer (ADR-008)` merges to main.
-2. Render auto-redeploys (~2 min).
+**Pre-rollout to pilot (run on Day 9 post-T021 magic-link wiring):**
+
+1. PR `feat(api): Gmail SMTP wiring via nodemailer (ADR-008)` merges to main. ✅ **DONE** 2026-05-04 PM (PR #26 merged at `a6a2137`).
+2. Render auto-redeploys (~2 min). ✅ **DONE** 2026-05-04 PM.
 3. Yogesh confirms `/health` shows `email.mode: real` (M1.5 follow-up to surface the field; meanwhile check Render logs for `EmailService REAL: smtp.gmail.com:587 secure=false from=yogesh.ybm999@gmail.com bcc=yogesh.mohite@iksula.com` boot line).
-4. Send a test invite to `akshay@iksula.com` from F27 Admin tab (or via curl).
+4. Send a test invite to `yogesh.mohite@iksula.com` from F27 Admin tab (or via curl with Day-9 magic-link-acquired session cookie). **Recipient corrected to `yogesh.mohite@iksula.com`** — earlier draft referenced `akshay@iksula.com` (stale). Day-8 brief override is binding.
 5. **Verify three things:**
-   - `akshay@iksula.com` receives the invitation in the **inbox** (not spam). If spam → halt rollout, surface to Yogesh (deliverability fix needed before more sends).
-   - `yogesh.mohite@iksula.com` receives the BCC copy in the inbox.
-   - The BCC copy does NOT show `Bcc:` in the recipient's headers (Gmail strips it; verify Akshay's headers don't show Yogesh's address).
+   - `yogesh.mohite@iksula.com` receives the invitation in the **inbox** (not spam). If spam → halt rollout, surface to Yogesh (deliverability fix needed before more sends).
+   - `yogesh.mohite@iksula.com` ALSO receives the BCC copy in the inbox (so 2 copies total — primary + BCC, both to the same address since recipient = BCC target on this warmup; for normal pilot sends the BCC will be a separate copy to Yogesh).
+   - The recipient copy does NOT show `Bcc:` in the headers (Gmail strips it).
 6. If all three pass → roll out invitations to remaining 6 pilot users.
 7. If any fails → halt + ADR amendment.
 
