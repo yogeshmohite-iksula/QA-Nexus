@@ -254,6 +254,44 @@ Home                               ← role-aware destination
 - Main canvas outer padding: **32 px**
 - Rail inner padding: **16 px** both axes
 - Evidence rail padding: **24 px**
+
+### 4.4.1 Breakpoints — mobile-first contract (Phase 3 retrofit SYS-7, 2026-05-04)
+
+The 1600×1024 canvas above is the **desktop reference**. Every ported
+React component MUST also implement these breakpoints. No frame is
+"complete" until verified at all 7 widths.
+
+| Breakpoint | Width  | Tailwind | Reflow rules                                                                    |
+|------------|--------|----------|---------------------------------------------------------------------------------|
+| Mobile XS  | 320    | (base)   | Single column. Hamburger nav. All interactives ≥ 44×44 (per §6 / §3.1 `--tap`). |
+| Mobile S   | 480    | (base)   | Single column. Hamburger nav. Form fields edge-to-edge with safe-area padding.   |
+| Tablet     | 768    | `md:`    | 2-col grid available. Modals upgrade from full-screen drawer to 90% sheet.      |
+| Desktop S  | 1024   | `lg:`    | Left primary rail expands from icon-only to full-label. Evidence rail bottom-sheet → right-docked. Tap-target floor relaxes. |
+| Desktop M  | 1280   | `xl:`    | 12-col grid kicks in. Multi-pane layouts unlock.                                |
+| Desktop L  | 1440   | (custom) | Default Yogesh-screen reference. All locked HTML frames pin around this width.  |
+| Desktop XL | 1600   | `2xl:`   | Canvas reference width. Outer max-width caps further widening.                   |
+
+**Component-specific reflow contracts:**
+
+- **Left primary rail:** full-label (240–272 px) above 1024; icon-only
+  (88 px) at 768–1023; hamburger (top-bar trigger + drawer overlay)
+  below 768.
+- **Modals:** Stage Modal (1120×860) → 90% width sheet at md (768–1023)
+  → full-screen drawer below md. Edit Modal (960×720) → 90% sheet at md
+  → drawer below. Picker (720×640) → 90% sheet at md → drawer below.
+  Confirm (480×360) → 90% sheet at md → drawer below.
+- **Right evidence rail:** docked-right (380 px) above 1024; collapsible
+  bottom-sheet drawer below 1024 (drag-to-dismiss, peek-state at 88 px).
+- **Top command bar:** all 8 slots above 1024; condensed (logo + project
+  + search + avatar) at 768–1023; (logo + hamburger + avatar) below 768.
+  ⌘K command palette stays accessible at all widths via the hamburger
+  menu's first item below 768.
+- **Tables:** standard table grid above 1024; per-row card-stack
+  pattern below 1024 (each cell becomes a labelled `dt`/`dd` pair).
+
+**Verification:** Every visual confirmation gate (Hard Rule 13) MUST
+include 320 + 1440 screenshots minimum. 768 + 1024 screenshots are
+required for any frame that uses a 2-col grid or right rail.
 - 12-column grid in main canvas, 24 px gutter
 
 ## 4.5 Global keyboard shortcuts (pinned)
