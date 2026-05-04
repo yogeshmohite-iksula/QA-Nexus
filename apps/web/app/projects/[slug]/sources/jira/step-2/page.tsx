@@ -6,6 +6,7 @@
 // land with MS0-T030.5+ (BetterAuth + Atlassian OAuth + REST API client).
 
 import type { Metadata } from 'next';
+import { projects } from '@/lib/demo-seed';
 import { ConnectJiraStep2Page } from '@/components/sources-jira/connect-jira-step2-page';
 
 interface PageProps {
@@ -18,16 +19,12 @@ export const metadata: Metadata = {
     'Map Jira issue types, priorities, and custom fields to QA Nexus entities. Step 2 of 3.',
 };
 
-// Required for Next.js `output: 'export'` on dynamic routes. Mirrors the
-// F11a slug list — TODO: replace with central seed module post-followup-i.
+// `output: 'export'` requires this to enumerate every reachable [slug]
+// at build time. Slug shape = lowercased project `key` (matches the
+// URL convention used across the app). Closes followup (y) — surfaced
+// 2026-05-04 PR #31 visual gate.
 export function generateStaticParams() {
-  return [
-    { slug: 'iksula-returns' },
-    { slug: 'iksula-commerce' },
-    { slug: 'iksula-payments' },
-    { slug: 'iksula-mobile' },
-    { slug: 'iksula-ops' },
-  ];
+  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
 }
 
 export default async function JiraConnectStep2Page({ params }: PageProps) {

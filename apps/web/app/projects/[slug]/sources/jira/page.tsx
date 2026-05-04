@@ -10,6 +10,7 @@
 // at /step-2 and /step-3 respectively.
 
 import type { Metadata } from 'next';
+import { projects } from '@/lib/demo-seed';
 import { ConnectJiraStep1Page } from '@/components/sources-jira/connect-jira-step1-page';
 
 interface PageProps {
@@ -22,23 +23,14 @@ export const metadata: Metadata = {
     'Authorize QA Nexus to read your Jira workspace. Step 1 of 3: Authorize, Map, Verify.',
 };
 
-// Required by Next.js `output: 'export'` for dynamic routes — enumerate
-// the slugs that should be pre-rendered. The list below mirrors the F09
-// stub canon for now so the visual gate compiles statically.
-//
-// TODO: replace with the central seed module's project slugs once
-// seed-centralization (Day-4 P1 followup i) lands. Until then this is the
-// only acceptable hardcoded slug list — the UI itself accepts any slug
-// at runtime via the [slug] param, so newly-created projects still work
-// in dev mode (`pnpm dev`).
+// `output: 'export'` requires this to enumerate every reachable [slug]
+// at build time. Slug shape = lowercased project `key` (matches the
+// URL convention: /projects/ret/sources/jira, /projects/cart/...,
+// etc.). Pre-build covers the 5 Iksula seed projects; once BE M2 schema
+// lands + projects table is populated, this becomes a build-time DB
+// lookup. Closes followup (y) — surfaced 2026-05-04 PR #31 visual gate.
 export function generateStaticParams() {
-  return [
-    { slug: 'iksula-returns' },
-    { slug: 'iksula-commerce' },
-    { slug: 'iksula-payments' },
-    { slug: 'iksula-mobile' },
-    { slug: 'iksula-ops' },
-  ];
+  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
 }
 
 export default async function JiraConnectPage({ params }: PageProps) {
