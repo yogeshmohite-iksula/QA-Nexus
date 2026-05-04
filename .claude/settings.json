@@ -268,8 +268,6 @@
       "Bash(gh repo delete:*)",
       "Bash(DROP TABLE:*)",
       "Bash(TRUNCATE:*)",
-      "Edit(QA Nexus/PM1/PM1_UI_v2/**)",
-      "Write(QA Nexus/PM1/PM1_UI_v2/**)",
       "Edit(.env)",
       "Write(.env)",
       "Edit(apps/**/.env)",
