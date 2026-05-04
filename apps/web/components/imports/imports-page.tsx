@@ -504,7 +504,7 @@ function NavItem({
       className={[
         'group relative flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
         highlighted
-          ? 'border-l-[3px] border-[var(--primary)] bg-[var(--raised)] pl-[9px] font-medium text-[var(--text-primary)]'
+          ? 'border-l-[3px] border-[var(--secondary)] bg-[var(--raised)] pl-[9px] font-medium text-[var(--text-primary)]'
           : disabled
             ? 'cursor-not-allowed text-[var(--text-disabled)]'
             : 'text-[var(--text-secondary)] hover:bg-[var(--raised)] hover:text-[var(--text-primary)]',
@@ -936,7 +936,7 @@ function ImportRowCard({
       {row.isSelected && (
         <span
           aria-hidden="true"
-          className="absolute left-0 top-0 hidden h-full w-[3px] bg-[var(--primary)] lg:block"
+          className="absolute left-0 top-0 hidden h-full w-[3px] bg-[var(--secondary)] lg:block"
         />
       )}
       <div className="lg:contents">

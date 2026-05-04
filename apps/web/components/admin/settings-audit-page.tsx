@@ -481,7 +481,7 @@ function TabButton({
       {active && (
         <span
           aria-hidden="true"
-          className="absolute left-0 top-1/2 hidden h-5 w-[3px] -translate-y-1/2 rounded-r bg-[var(--primary)] lg:block"
+          className="absolute left-0 top-1/2 hidden h-5 w-[3px] -translate-y-1/2 rounded-r bg-[var(--secondary)] lg:block"
         />
       )}
       <span className="truncate">{tab.label}</span>
