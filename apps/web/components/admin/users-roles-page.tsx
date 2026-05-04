@@ -32,11 +32,17 @@
 
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import type { UserPublic } from '@qa-nexus/shared';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
-import { useTeamRoster, useTeamMember } from '@/lib/contexts/TeamRosterContext';
+import { useTeamMember } from '@/lib/contexts/TeamRosterContext';
+import {
+  useAdminUsersList,
+  useRoleChangeMutation,
+  useStatusToggleMutation,
+} from '@/lib/hooks/use-admin-users';
+import type { UserListItem, UserRole } from '@/lib/api/users-api';
+import { UsersListEmpty, UsersListError, UsersListSkeleton } from './users-list-view-states';
 import { useProjectList } from '@/lib/contexts/ProjectContext';
 import { SEED_IDS } from '@/lib/demo-seed';
 import { AdminShell } from './admin-shell';
@@ -260,61 +266,57 @@ function roleLabelOf(role: string): string {
 
 export function UsersRolesPage() {
   const router = useRouter();
-  const me = useCurrentUser();
-  const { members } = useTeamRoster();
+  // `me` is reserved for future use (audit-feed actor highlight,
+  // self-row guard) — kept here so the swap-in stays minimal.
+  useCurrentUser();
   const projects = useProjectList();
 
+  // Pattern B (Day-8 PM flip): users list comes from the real BE.
+  // useAdminUsersList wraps `GET /api/users` via TanStack Query.
+  const { data, isLoading, isError, error, refetch } = useAdminUsersList();
+  const roleMutation = useRoleChangeMutation();
+  const statusMutation = useStatusToggleMutation();
+
+  // Memoize so downstream `useMemo` deps stay stable when `data` is
+  // undefined (otherwise the `?? []` literal recreates on every render
+  // and re-fires the role-counts memo).
+  const members: UserListItem[] = useMemo(() => data?.users ?? [], [data]);
   const totalUsers = members.length;
   const pendingCount = PENDING_INVITES.length;
   const slotsTotal = 25;
   const slotsRemaining = slotsTotal - totalUsers - pendingCount;
 
-  useEffect(() => {
-    const statusBreakdown = members.reduce<Record<string, number>>((acc, m) => {
-      const status = USER_META[m.id]?.status ?? 'active';
-      acc[status] = (acc[status] ?? 0) + 1;
-      return acc;
-    }, {});
-    // PATTERN-A: load users list deferred until M1 (T030.5) - real /api/users GET on mount
-    console.info('pattern-a:deferred:users-list-load', {
-      workspaceId: me.workspaceId,
-      totalUsers,
-      pendingInvites: pendingCount,
-      statusBreakdown,
-    });
-  }, [me.workspaceId, totalUsers, pendingCount, members]);
-
   function onInviteOpen() {
-    // PATTERN-A: open invite modal deferred until M1 (T030.5) - navigate to /admin/users/invite
-    console.info('pattern-a:deferred:users-invite-open', { from: 'F27' });
     router.push('/admin/users/invite');
   }
-  function onRoleChange(userId: string, oldRole: string, newRole: string) {
-    // PATTERN-A: change user role deferred until M1 (T030.5) - real /api/users/:id PATCH role
-    console.info('pattern-a:deferred:users-role-change', { userId, oldRole, newRole });
+  function onRoleChange(userId: string, _oldRole: string, newRole: string) {
+    roleMutation.mutate({ userId, newRole: newRole as UserRole });
   }
   function onStatusToggle(userId: string, action: 'deactivate' | 'reactivate') {
-    // PATTERN-A: toggle user status deferred until M1 (T030.5) - real /api/users/:id PATCH status
-    console.info('pattern-a:deferred:users-status-toggle', { userId, action });
+    const newStatus: 'active' | 'disabled' = action === 'deactivate' ? 'disabled' : 'active';
+    statusMutation.mutate({ userId, newStatus });
   }
   function onProjectAssign(userId: string, projectKey: string, action: 'add' | 'remove') {
-    // PATTERN-A: assign user project deferred until M1 (T030.5) - real /api/users/:id/projects PUT
+    // Per-project assignment lands in BE Block 2 (ProjectMembersController).
+    // Pattern A marker preserved here until that endpoint ships.
+    // PATTERN-A: assign user project deferred until M1-block2 - real /api/users/:id/projects PUT
     console.info('pattern-a:deferred:users-project-assign', { userId, projectKey, action });
   }
   function onInviteResend(invitationId: string, email: string) {
-    // PATTERN-A: resend invitation deferred until M1 (T030.5) - real /api/invitations/:id/resend POST
+    // PATTERN-A: resend invitation deferred until M1.5 - real /api/invitations/:id/resend POST
     console.info('pattern-a:deferred:users-invite-resend', { invitationId, email });
   }
   function onInviteRevoke(invitationId: string, email: string) {
-    // PATTERN-A: revoke invitation deferred until M1 (T030.5) - real /api/invitations/:id DELETE
+    // PATTERN-A: revoke invitation deferred until M1.5 - real /api/invitations/:id DELETE
     console.info('pattern-a:deferred:users-invite-revoke', { invitationId, email });
   }
   function onFilterChange(kind: string, value: string) {
-    // PATTERN-A: change users filter deferred until M1 (T030.5) - client-only filter state, no BE call
+    // Filter state stays client-side for v1; server-side filter via
+    // ListUsersQuery will land when the chip menus get built out.
     console.info('pattern-a:deferred:users-filter-change', { kind, value });
   }
   function onAuditOpen(eventId: string) {
-    // PATTERN-A: open audit detail deferred until M1 (T030.5) - deeplink to /admin/settings#audit-log
+    // PATTERN-A: open audit detail deferred until M1.5 - deeplink to /admin/settings#audit-log
     console.info('pattern-a:deferred:users-audit-open', { eventId });
     router.push('/admin/settings#audit-log');
   }
@@ -329,6 +331,35 @@ export function UsersRolesPage() {
       { admin: 0, lead: 0, engineer: 0, stakeholder: 0 },
     );
   }, [members]);
+
+  // ─────────── View-state branches ───────────
+  if (isLoading) {
+    return (
+      <AdminShell active="users-roles">
+        <main className="flex flex-1 flex-col gap-7 px-4 py-6 sm:px-6 sm:py-8 lg:gap-8 lg:px-8 xl:px-10">
+          <UsersListSkeleton />
+        </main>
+      </AdminShell>
+    );
+  }
+  if (isError) {
+    return (
+      <AdminShell active="users-roles">
+        <main className="flex flex-1 flex-col gap-7 px-4 py-6 sm:px-6 sm:py-8 lg:gap-8 lg:px-8 xl:px-10">
+          <UsersListError message={error?.message} onRetry={() => refetch()} />
+        </main>
+      </AdminShell>
+    );
+  }
+  if (members.length === 0) {
+    return (
+      <AdminShell active="users-roles">
+        <main className="flex flex-1 flex-col gap-7 px-4 py-6 sm:px-6 sm:py-8 lg:gap-8 lg:px-8 xl:px-10">
+          <UsersListEmpty onInvite={onInviteOpen} />
+        </main>
+      </AdminShell>
+    );
+  }
 
   return (
     <AdminShell active="users-roles">
@@ -479,7 +510,7 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
 // ---------------------------------------------------------------------------
 
 interface CurrentTeamSectionProps {
-  members: UserPublic[];
+  members: UserListItem[];
   projects: Array<{ id: string; key: string; name: string }>;
   onRoleChange: (userId: string, oldRole: string, newRole: string) => void;
   onStatusToggle: (userId: string, action: 'deactivate' | 'reactivate') => void;
@@ -554,24 +585,37 @@ function TeamRow({
   onStatusToggle,
   onProjectAssign,
 }: {
-  member: UserPublic;
+  member: UserListItem;
   onRoleChange: (oldRole: string, newRole: string) => void;
   onStatusToggle: (action: 'deactivate' | 'reactivate') => void;
   onProjectAssign: (projectKey: string, action: 'add' | 'remove') => void;
 }) {
+  // Project assignments still come from the seed-side USER_META until
+  // BE Block 2 (ProjectMembersController) ships per-project endpoints.
   const meta = USER_META[member.id] ?? {
     projectKeys: [],
     lastActiveRelative: '—',
     status: 'active' as const,
   };
+  // Display "Active" / "Invited" / "Disabled" — map BE status verbatim.
+  // The UI's existing StatusChip only knows 'active' | 'pending'; widen
+  // by mapping BE 'invited' → chip 'pending', 'disabled' → chip 'pending'
+  // (dimmed) until the chip surfaces a third tone (followup).
+  const chipStatus: 'active' | 'pending' = member.status === 'active' ? 'active' : 'pending';
   const cls = roleClassOf(member.role);
+  // BE returns ISO `lastSeenAt`; format relative for the row.
+  const lastActive = formatRelativeFromIso(member.lastSeenAt);
+  // Row-action label: "deactivate" when active, "reactivate" otherwise.
+  const statusActionVerb: 'deactivate' | 'reactivate' =
+    member.status === 'active' ? 'deactivate' : 'reactivate';
+  const statusActionLabel = statusActionVerb === 'deactivate' ? 'Disable' : 'Re-enable';
   return (
     <li className="grid grid-cols-1 gap-2 border-b border-[var(--border-subtle)] px-4 py-3 last:border-b-0 lg:grid-cols-[minmax(0,1.6fr)_140px_minmax(0,1.4fr)_120px_120px_60px] lg:items-center lg:gap-3 lg:px-5 lg:py-3.5">
       <div className="flex items-center gap-3">
-        <Avatar initials={initialsOf(member.displayName)} tone={cls} />
+        <Avatar initials={initialsOf(member.name)} tone={cls} />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-[13px] font-medium text-[var(--text-primary)]">
-            {member.displayName}
+            {member.name}
           </span>
           <span className="truncate font-mono text-[11px] text-[var(--text-tertiary)]">
             {member.email}
@@ -602,14 +646,12 @@ function TeamRow({
         )}
       </div>
       <div>
-        <StatusChip status={meta.status} />
+        <StatusChip status={chipStatus} />
       </div>
-      <div className="font-mono text-[11px] text-[var(--text-tertiary)]">
-        {meta.lastActiveRelative}
-      </div>
+      <div className="font-mono text-[11px] text-[var(--text-tertiary)]">{lastActive}</div>
       <div className="flex items-center justify-end gap-1">
         <RowActionButton
-          ariaLabel={`Change role for ${member.displayName}`}
+          ariaLabel={`Change role for ${member.name}`}
           onClick={() => onRoleChange(member.role, member.role)}
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -622,8 +664,8 @@ function TeamRow({
           </svg>
         </RowActionButton>
         <RowActionButton
-          ariaLabel={`Deactivate ${member.displayName}`}
-          onClick={() => onStatusToggle(meta.status === 'active' ? 'deactivate' : 'reactivate')}
+          ariaLabel={`${statusActionLabel} ${member.name}`}
+          onClick={() => onStatusToggle(statusActionVerb)}
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
             <path d="M3 8h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -632,6 +674,28 @@ function TeamRow({
       </div>
     </li>
   );
+}
+
+// Format an ISO timestamp into a compact relative string ("2h", "3d",
+// "2w", "—" for null). BE returns `lastSeenAt: ISO | null`.
+function formatRelativeFromIso(iso: string | null): string {
+  if (!iso) return '—';
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return '—';
+  const diffMs = Date.now() - ts;
+  if (diffMs < 60_000) return 'just now';
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo`;
+  const years = Math.floor(days / 365);
+  return `${years}y`;
 }
 
 function Avatar({ initials, tone }: { initials: string; tone: RoleClass }) {

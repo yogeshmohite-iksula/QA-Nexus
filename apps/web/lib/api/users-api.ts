@@ -1,126 +1,119 @@
-// F27 Users & Roles — API client scaffolding (Pattern A→B flip prep).
+// F27 Users & Roles — REAL BE-wired API client (Pattern B).
 //
-// Day-8 BE-gated: real `GET /api/admin/users` + role/status PATCH
-// endpoints land in BE+1's PR. This file ships the schema + fetcher
-// SHAPES so the FE side can wire TanStack Query against them now,
-// then flip the in-memory stub fetcher to a real `fetch()` in 30 min
-// once the endpoint is confirmed live.
+// Day-8 PM flip. PR #36 (`e70c227`) shipped the canonical Zod schemas
+// + `GET/PATCH /api/users[/:id/role|status]` endpoints. This file now
+// imports the wire schemas directly from `@qa-nexus/shared` and hits
+// the real BE — the previous Day-8 morning stub layer is gone.
 //
-// PAUSE points are explicitly marked with `// PAUSE — wait BE+1 …`
-// comments so the swap-out is mechanical when BE+1 ships.
+// Endpoints:
+//   - GET   /api/users                    → ListUsersResponse
+//   - PATCH /api/users/:id/role           → ChangeUserRoleResponse
+//   - PATCH /api/users/:id/status         → ChangeUserStatusResponse
 //
-// Schema canon (subject to confirmation when packages/shared
-// publishes the BE Zod schema):
-// - PM1_ERD §3.4 TB-001 `user`
-// - PM1_ERD §3.5 TB-002 `team_member` (project-scoped role +
-//     deactivation — joined onto user for the F27 list view)
-// - PM1_ERD §3.6 TB-003 `invitation` (separate endpoint)
+// Connection-pause recipe in `users-roles-page.connection-pause.md`
+// is now CLOSED — this PR is the swap-in.
 
-import { z } from 'zod';
+import {
+  ChangeUserRoleInput,
+  ChangeUserRoleResponse,
+  ChangeUserStatusInput,
+  ChangeUserStatusResponse,
+  ListUsersResponse,
+  type UserListItem,
+  type UserStatus,
+  type UserRole,
+} from '@qa-nexus/shared';
+
+export type {
+  ChangeUserRoleInput,
+  ChangeUserRoleResponse,
+  ChangeUserStatusInput,
+  ChangeUserStatusResponse,
+  ListUsersResponse,
+  UserListItem,
+  UserStatus,
+  UserRole,
+};
+
+// Re-export schema values for runtime parsing in the fetchers below
+// (so the FE types stay in lockstep with the BE wire shape).
+export {
+  ChangeUserRoleInput as ChangeUserRoleInputSchema,
+  ChangeUserRoleResponse as ChangeUserRoleResponseSchema,
+  ChangeUserStatusInput as ChangeUserStatusInputSchema,
+  ChangeUserStatusResponse as ChangeUserStatusResponseSchema,
+  ListUsersResponse as ListUsersResponseSchema,
+} from '@qa-nexus/shared';
 
 // ---------------------------------------------------------------------------
-// Schemas — match the expected BE shape per ERD §3.4 / §3.5.
-//
-// PAUSE — wait BE+1 confirmation that `packages/shared` publishes the
-// canonical Zod schema. Once it does:
-//   1. Replace these local schemas with `import { userListItemSchema } from '@qa-nexus/shared'`
-//   2. Delete this file's local definition.
-//   3. Run `pnpm --filter web typecheck` to confirm zero diff.
+// Fetchers
 // ---------------------------------------------------------------------------
 
-export const adminUserRoleValues = ['Admin', 'Lead', 'QAEngineer', 'Stakeholder'] as const;
-export type AdminUserRole = (typeof adminUserRoleValues)[number];
-
-export const adminUserStatusValues = ['active', 'pending', 'inactive'] as const;
-export type AdminUserStatus = (typeof adminUserStatusValues)[number];
-
-export const adminUserListItemSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
-  displayName: z.string().min(1),
-  role: z.enum(adminUserRoleValues),
-  status: z.enum(adminUserStatusValues),
-  projectKeys: z.array(z.string()),
-  lastActiveAt: z.string().nullable(), // ISO timestamp or null for never-active invites
-  createdAt: z.string(),
-});
-
-export type AdminUserListItem = z.infer<typeof adminUserListItemSchema>;
-
-export const adminUserListResponseSchema = z.object({
-  users: z.array(adminUserListItemSchema),
-  total: z.number().int().min(0),
-});
-
-export type AdminUserListResponse = z.infer<typeof adminUserListResponseSchema>;
-
-// Mutation request schemas — for `useRoleChange` + `useStatusToggle`
-// optimistic-update hooks (defined in `use-user-mutations.ts`).
-export const roleChangeRequestSchema = z.object({
-  userId: z.string().uuid(),
-  role: z.enum(adminUserRoleValues),
-});
-export type RoleChangeRequest = z.infer<typeof roleChangeRequestSchema>;
-
-export const statusToggleRequestSchema = z.object({
-  userId: z.string().uuid(),
-  action: z.enum(['deactivate', 'reactivate']),
-});
-export type StatusToggleRequest = z.infer<typeof statusToggleRequestSchema>;
-
-// ---------------------------------------------------------------------------
-// Fetchers — currently STUBS returning seed data. Real fetch swaps in
-// at the connection point.
-// ---------------------------------------------------------------------------
-
-/** Stub fetcher — returns the seed roster as a Promise so the
- *  TanStack Query hook can call `await fetcher()` without changing
- *  shape when the real fetch swaps in.
- *
- *  PAUSE — wait BE+1 confirmation that GET /api/admin/users is live
- *  + Zod schema published in packages/shared. Then replace this body
- *  with:
- *
- *      const res = await fetch('/api/admin/users', { credentials: 'include' });
- *      if (!res.ok) throw new Error(`HTTP ${res.status}`);
- *      const json = await res.json();
- *      return adminUserListResponseSchema.parse(json);
- *
- *  No other call site needs to change. The hook + the F27 component
- *  consume the parsed shape, not the raw response.
- */
-export async function fetchAdminUsers(): Promise<AdminUserListResponse> {
-  // Lazy-import the seed roster only inside the stub so production
-  // bundles can drop this entire branch via tree-shaking once the
-  // real fetch lands.
-  const { stubAdminUserList } = await import('./users-stub-data');
-  // Mimic a brief network round-trip so loading-state UI actually
-  // renders during dev. Real fetch will replace this latency.
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  return adminUserListResponseSchema.parse(stubAdminUserList);
+/** GET /api/users — list every user in the active workspace.
+ *  Cookie session; cross-workspace + auth-missing get 401/403 from the
+ *  RolesGuard. */
+export async function fetchAdminUsers(): Promise<ListUsersResponse> {
+  const res = await fetch('/api/users', {
+    credentials: 'include',
+    headers: { accept: 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error(`GET /api/users → HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  return ListUsersResponse.parse(json);
 }
 
-/** Stub role-change mutator. PAUSE — replace with a real
- *  `PATCH /api/admin/users/:id/role` once BE+1 ships. The optimistic
- *  update layer in `use-user-mutations.ts` does NOT change. */
-export async function patchUserRole(req: RoleChangeRequest): Promise<AdminUserListItem> {
-  roleChangeRequestSchema.parse(req); // validate request shape
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  // Stub: pull the seed row, swap the role, return.
-  const { stubAdminUserList } = await import('./users-stub-data');
-  const user = stubAdminUserList.users.find((u) => u.id === req.userId);
-  if (!user) throw new Error(`User ${req.userId} not found in stub`);
-  return adminUserListItemSchema.parse({ ...user, role: req.role });
+/** PATCH /api/users/:id/role — change a user's workspace-level role.
+ *  Service-side guards: cannot change own role, cannot demote last
+ *  Admin, cannot change role of an invited (un-accepted) user. The FE
+ *  surfaces those rejections via the mutation `onError` toast. */
+export async function patchUserRole(req: ChangeUserRoleInput): Promise<ChangeUserRoleResponse> {
+  ChangeUserRoleInput.parse(req); // validate request shape pre-flight
+  const res = await fetch(`/api/users/${req.userId}/role`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ newRole: req.newRole }),
+  });
+  if (!res.ok) {
+    // Surface the BE error message verbatim when the body is JSON.
+    let msg = `PATCH /api/users/${req.userId}/role → HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body.message === 'string') msg = body.message;
+    } catch {
+      // ignore non-JSON bodies; keep the generic message
+    }
+    throw new Error(msg);
+  }
+  const json = await res.json();
+  return ChangeUserRoleResponse.parse(json);
 }
 
-/** Stub deactivate / reactivate mutator. PAUSE — replace with a real
- *  `PATCH /api/admin/users/:id/status` once BE+1 ships. */
-export async function patchUserStatus(req: StatusToggleRequest): Promise<AdminUserListItem> {
-  statusToggleRequestSchema.parse(req);
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  const { stubAdminUserList } = await import('./users-stub-data');
-  const user = stubAdminUserList.users.find((u) => u.id === req.userId);
-  if (!user) throw new Error(`User ${req.userId} not found in stub`);
-  const nextStatus: AdminUserStatus = req.action === 'deactivate' ? 'inactive' : 'active';
-  return adminUserListItemSchema.parse({ ...user, status: nextStatus });
+/** PATCH /api/users/:id/status — disable / re-enable a user. Disabling
+ *  purges BetterAuth sessions (the response carries `sessionsRevoked`).
+ *  Service-side guards: cannot disable self, cannot disable last Admin. */
+export async function patchUserStatus(
+  req: ChangeUserStatusInput,
+): Promise<ChangeUserStatusResponse> {
+  ChangeUserStatusInput.parse(req);
+  const res = await fetch(`/api/users/${req.userId}/status`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ newStatus: req.newStatus }),
+  });
+  if (!res.ok) {
+    let msg = `PATCH /api/users/${req.userId}/status → HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body.message === 'string') msg = body.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+  const json = await res.json();
+  return ChangeUserStatusResponse.parse(json);
 }
