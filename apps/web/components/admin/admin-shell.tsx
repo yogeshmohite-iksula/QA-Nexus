@@ -1,10 +1,15 @@
-// AdminShell — shared top-bar + left-rail chrome for the M1 admin
-// surface (F27 Users & Roles, F27m1 Invite User Modal, F28 Settings &
-// Audit). Same layout pattern as F13 ImportsPage but with a different
-// active item in the Govern section per the route.
+// AdminShell — shared top-bar + left-rail chrome for project-context
+// pages. Originally landed for the M1 admin surface (F27 Users & Roles,
+// F27m1 Invite User Modal, F28 Settings & Audit); extended Day-8 PM to
+// support the Author surface (F15 Knowledge Base) per Phase 3 retrofit
+// + visual-gate consistency feedback.
 //
 // All identity comes from `useCurrentUser()` + `useProjectList()` per
 // ADR-006 — NO local data.ts entries.
+//
+// Naming followup: rename `AdminShell` → `AppShell` (or `WorkspaceShell`)
+// once the rail item count grows past the Govern section. Tracked in
+// docs/followups.md (post-M2 cleanup).
 
 'use client';
 
@@ -13,11 +18,14 @@ import type { ReactNode } from 'react';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
 import { useProjectList } from '@/lib/contexts/ProjectContext';
 
-export type AdminNavActive = 'users-roles' | 'settings-audit';
+export type AdminNavActive = 'users-roles' | 'settings-audit' | 'knowledge-base';
 
 interface AdminShellProps {
   active: AdminNavActive;
   children: ReactNode;
+  /** Optional — required when `active='knowledge-base'` so the KB nav
+   *  link can route to /projects/<slug>/kb. Lowercased project key. */
+  projectKeyLower?: string;
 }
 
 function shortName(displayName: string): string {
@@ -39,7 +47,7 @@ function initialsOf(displayName: string): string {
     .toUpperCase();
 }
 
-export function AdminShell({ active, children }: AdminShellProps) {
+export function AdminShell({ active, children, projectKeyLower }: AdminShellProps) {
   const me = useCurrentUser();
   const projects = useProjectList();
   const meName = shortName(me.displayName);
@@ -59,6 +67,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
           meName={meName}
           meInitials={meInitials}
           meRoleLabel={meRoleLabel}
+          projectKeyLower={projectKeyLower}
         />
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       </div>
@@ -181,11 +190,13 @@ function AdminLeftRail({
   meName,
   meInitials,
   meRoleLabel,
+  projectKeyLower,
 }: {
   active: AdminNavActive;
   meName: string;
   meInitials: string;
   meRoleLabel: string;
+  projectKeyLower?: string;
 }) {
   return (
     <aside
@@ -203,7 +214,12 @@ function AdminLeftRail({
         </NavSection>
         <NavSection title="Author">
           <NavLink href="/" label="Test Suites" disabled />
-          <NavLink href="/" label="Knowledge Base" disabled />
+          <NavLink
+            href={projectKeyLower ? `/projects/${projectKeyLower}/kb` : '/'}
+            label="Knowledge Base"
+            active={active === 'knowledge-base'}
+            disabled={!projectKeyLower && active !== 'knowledge-base'}
+          />
           <NavLink href="/" label="Automation Studio" disabled badge="v1.5" />
           <NavLink href="/" label="Data & Mocks" disabled badge="v1.5" />
         </NavSection>

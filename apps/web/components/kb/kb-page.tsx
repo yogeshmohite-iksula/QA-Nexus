@@ -22,8 +22,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Sliders, X } from 'lucide-react';
-import { HomeShell } from '@/components/home/home-shell';
+import { ChevronRight, Sliders, X } from 'lucide-react';
+import { AdminShell } from '@/components/admin/admin-shell';
 import { useKbSearch } from '@/lib/hooks/use-kb-search';
 import type { KbSearchRequest } from '@/lib/api/kb-api';
 import { KbSearchBar } from './kb-search-bar';
@@ -41,9 +41,9 @@ interface KbPageProps {
 
 export function KbPage(props: KbPageProps) {
   return (
-    <HomeShell>
+    <AdminShell active="knowledge-base" projectKeyLower={props.projectKey.toLowerCase()}>
       <KbPageContent {...props} />
-    </HomeShell>
+    </AdminShell>
   );
 }
 
@@ -79,19 +79,24 @@ function KbPageContent({ projectId, projectKey, projectName }: KbPageProps) {
 
   return (
     <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
-      {/* Page header — breadcrumb + question header */}
+      {/* Page header — breadcrumb + question header. Breadcrumb style:
+          lowercase labels separated by chevron icons (matches the F14
+          Requirements pattern that's the canonical project-context
+          breadcrumb on the M2 branch). */}
       <header className="flex flex-col gap-2">
         <nav aria-label="Breadcrumb">
-          <ol className="flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+          <ol className="flex items-center gap-1.5 text-[12.5px] text-[var(--text-tertiary)]">
             <li>
               <a
-                href={`/projects/${projectKey.toLowerCase()}`}
+                href="/home"
                 className="hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
               >
-                {projectName}
+                Home
               </a>
             </li>
-            <li aria-hidden="true">/</li>
+            <li aria-hidden="true">
+              <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
+            </li>
             <li>
               <a
                 href={`/projects/${projectKey.toLowerCase()}`}
@@ -100,7 +105,9 @@ function KbPageContent({ projectId, projectKey, projectName }: KbPageProps) {
                 Author
               </a>
             </li>
-            <li aria-hidden="true">/</li>
+            <li aria-hidden="true">
+              <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
+            </li>
             <li className="text-[var(--text-secondary)]">Knowledge Base</li>
           </ol>
         </nav>
