@@ -238,3 +238,113 @@ export const RevokeInvitationInput = z.object({
   reason: z.string().max(500).optional(),
 });
 export type RevokeInvitationInput = z.infer<typeof RevokeInvitationInput>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M1 Day-8 — FE-friendly named exports for F27 Pattern A→B wiring.
+// Background: FE+1 had Pattern A scaffolding PAUSE-marker'd in PR #28
+// waiting for stable schema names against which to build the F27 Admin
+// users table + invite form. The shapes below alias / extend the M1
+// internals above so the FE import surface stays compact and future
+// internal renames don't churn `apps/web`.
+//
+// Mapping table (FE name → BE concept):
+//   UserDetailItem           → canonical user record shape (already exported
+//                              above, M1 Day-6 PM). FE imports this directly.
+//   UserListResponse         → ListUsersResponse + optional pagination
+//   UserCreateRequest        → minimal F27 invite form (email/name/role)
+//   UserUpdateRequest        → partial(role | disabledAt) — service splits
+//                              to PATCH /users/:id/role | /users/:id/status
+//   UserInviteResponse       → POST /api/invitations success body, with
+//                              the plaintext token surfaced ONCE
+//
+// Naming note: `UserPublic` (type) + `UserPublicSchema` (const) already
+// exist above as the auth-internal "stripped passwordHash" variant. The
+// F27-facing canonical shape is `UserDetailItem`, which is what
+// `GET /api/users/:id` actually returns and what FE+1's PR #28 scaffolding
+// targets.
+//
+// Note: TB-002 has no `updatedAt` column — row-level updates are tracked
+// per-field (`activatedAt`, `lastLoginAt`, `roleChangedAt`, `disabledAt`).
+// The FE should pick the field that matches the column it's rendering
+// (e.g. F27 "Last seen" → lastSeenAt). This is intentional per PM1_ERD §3.5
+// — see `apps/api/prisma/schema.prisma:252-269`.
+// ─────────────────────────────────────────────────────────────────────
+
+/// Optional pagination envelope for list responses. Omitted today
+/// (M1 pilot has 8 users — total fits in one page); FE should treat
+/// presence as a future-compat hint and fall back to `users.length`
+/// when absent. Server-side pagination lands in M3.
+export const PaginationMeta = z.object({
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive().max(200),
+});
+export type PaginationMeta = z.infer<typeof PaginationMeta>;
+
+/// User list response — superset of `ListUsersResponse` with optional
+/// pagination metadata. Backwards-compatible: existing controller code
+/// that returns `{ ok, users }` still parses cleanly.
+export const UserListResponse = z.object({
+  ok: z.literal(true),
+  users: z.array(UserListItem),
+  pagination: PaginationMeta.optional(),
+});
+export type UserListResponse = z.infer<typeof UserListResponse>;
+
+/// Create-user request — F27 Admin "Invite user" form. Currently MAPS
+/// to `POST /api/invitations` (no direct user-row create — users are
+/// always invited first per PM1_PRD §3.2 "only Lead+Admin can grow the
+/// team"). The service layer expands this into `CreateInvitationInput`
+/// by setting `projectScopeJson=[]` (workspace-wide) +
+/// `expiresInHours=168` (7-day default). Kept distinct from
+/// `CreateInvitationInput` so the F27 form binding stays minimal — the
+/// project-scope picker is a Phase-2 enhancement.
+export const UserCreateRequest = z.object({
+  email: z.string().email(),
+  name: NonEmpty,
+  role: UserRole,
+});
+export type UserCreateRequest = z.infer<typeof UserCreateRequest>;
+
+/// Update-user request (partial role + status). The BE splits this into
+/// the appropriate PATCH endpoint:
+///   - `role` present       → `PATCH /api/users/:id/role`
+///   - `disabledAt` present → `PATCH /api/users/:id/status`
+/// At least one field MUST be set; both is allowed (sequenced API calls).
+/// `disabledAt: null` = re-enable; `disabledAt: Timestamp` = disable.
+export const UserUpdateRequest = z
+  .object({
+    role: UserRole.optional(),
+    disabledAt: Timestamp.nullable().optional(),
+  })
+  .refine((v) => v.role !== undefined || v.disabledAt !== undefined, {
+    message: 'at least one of `role` or `disabledAt` is required',
+  });
+export type UserUpdateRequest = z.infer<typeof UserUpdateRequest>;
+
+/// Invitation create result — exact shape returned by
+/// `InvitationsService.create()` and surfaced by the controller. The
+/// plaintext `token` field travels across the wire ONCE so the
+/// EmailService (or FE during dev) can build the magic-link URL.
+/// Subsequent reads only see `InvitationListItem` (which strips
+/// `tokenHash` → `shortRef`).
+export const InvitationCreateResult = z.object({
+  id: Uuid,
+  invitedEmail: z.string().email(),
+  /** Plaintext token (64 hex chars). Present ONLY on initial create —
+   *  the persisted form is `sha256(token)`. NEVER log this value. */
+  token: z.string().length(64),
+  shortRef: z.string().length(8),
+  expiresAt: Timestamp,
+});
+export type InvitationCreateResult = z.infer<typeof InvitationCreateResult>;
+
+/// User invite response — formal name for what `POST /api/invitations`
+/// returns. Used by FE to extract the magic-link token immediately
+/// after the invite call (in M1 the FE displays the URL in a copy-to-
+/// clipboard chip while we wire the SMTP send via `EmailService`).
+export const UserInviteResponse = z.object({
+  ok: z.literal(true),
+  invitation: InvitationCreateResult,
+});
+export type UserInviteResponse = z.infer<typeof UserInviteResponse>;
