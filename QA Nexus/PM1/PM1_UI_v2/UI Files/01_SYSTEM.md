@@ -195,6 +195,13 @@ Home                               ← role-aware destination
 
 **Active rail item:** 3 px left accent bar `#A78BFA` (violet), background `#232C3F` overlay, text `#F1F5F9`.
 
+> **Phase 3 retrofit confirmation (SYS-1, 2026-05-04):** Active-state
+> accent is **violet** (`#A78BFA` = `--secondary`) across all rails —
+> distinct from the **teal** CTA accent (`#2DD4BF` = `--primary`). Frames
+> shipping a teal left-edge bar on rail items (F14 + old F15) are drift
+> against this contract. The F14-2 violet sweep retrofits those frames
+> to match. Rule of thumb: rails are violet, CTAs are teal.
+
 **Hover on non-active:** `#1A2233`.
 
 **Section labels:** Inter 10/600, UPPERCASE, `#8A94A6`, letter-spacing 0.08em.
