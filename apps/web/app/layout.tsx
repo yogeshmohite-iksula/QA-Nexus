@@ -12,6 +12,7 @@ import './globals.css';
 // Pages because they hold pure local state (no fetch, Pattern A compatible).
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
 import { ProjectProvider } from '@/lib/contexts/ProjectContext';
+import { QueryProvider } from '@/lib/contexts/QueryProvider';
 import { TeamRosterProvider } from '@/lib/contexts/TeamRosterContext';
 import { Toaster } from 'sonner';
 
@@ -58,11 +59,13 @@ export default function RootLayout({
       className={`${inter.variable} ${dmSans.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
-        <CurrentUserProvider>
-          <ProjectProvider>
-            <TeamRosterProvider>{children}</TeamRosterProvider>
-          </ProjectProvider>
-        </CurrentUserProvider>
+        <QueryProvider>
+          <CurrentUserProvider>
+            <ProjectProvider>
+              <TeamRosterProvider>{children}</TeamRosterProvider>
+            </ProjectProvider>
+          </CurrentUserProvider>
+        </QueryProvider>
         {/*
           Sonner toaster — F27m1 fires success on submit, error on
           submit-failure, AdminGuard fires the `?error=admin-required`
