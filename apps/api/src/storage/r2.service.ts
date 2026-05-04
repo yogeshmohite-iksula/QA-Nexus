@@ -196,6 +196,31 @@ export class R2Service {
     return client.send(cmd);
   }
 
+  /**
+   * Fetch an object's bytes by key. Server-side helper — used by
+   * internal flows (e.g., ChunkingService that pulls a source file
+   * from R2 to parse it). NOT exposed via any public endpoint;
+   * external callers go through presignedDownload() to read directly.
+   *
+   * Returns the full Buffer in memory; safe for the file-size cap
+   * the upload pipeline enforces (Step 7 will set max 25 MB per
+   * upload, well within Render Free's heap budget).
+   */
+  async getObject(key: string): Promise<Buffer> {
+    const client = this.requireClient();
+    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    const response = await client.send(cmd);
+    if (!response.Body) {
+      throw new Error(`R2 getObject(${key}): empty response body`);
+    }
+    // The aws-sdk-v3 Body is a Readable stream in Node. Drain to Buffer.
+    const chunks: Buffer[] = [];
+    for await (const chunk of response.Body as NodeJS.ReadableStream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
   /** Delete an object by key. */
   async deleteObject(key: string): Promise<void> {
     const client = this.requireClient();

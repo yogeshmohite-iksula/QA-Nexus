@@ -149,3 +149,36 @@ export const ChunkDetailResponse = z.object({
   stubbed: z.boolean(),
 });
 export type ChunkDetailResponse = z.infer<typeof ChunkDetailResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M2 Day-8 Step 5 — chunking service request/response.
+//
+// Internal Admin-only endpoint POST /api/admin/kb/chunk-document.
+// Step 7's upload completion hook will call ChunkingService directly
+// (not via this endpoint) — the endpoint stays as a manual re-chunk
+// surface for ops + a debug entry point.
+// ─────────────────────────────────────────────────────────────────────
+
+export const ChunkDocumentRequest = z.object({
+  /** UUID of the existing KbDocument row (caller created it upstream). */
+  documentId: Uuid,
+  /** Original file name — used for format detection (.pdf/.xlsx/.csv/.txt/.md). */
+  fileName: z.string().min(3).max(512),
+  /** Object key in the R2 bucket (caller knows; e.g.,
+   *  `projects/RET/uploads/return_policy_v2.xlsx`). */
+  r2Key: z.string().min(3).max(1024),
+});
+export type ChunkDocumentRequest = z.infer<typeof ChunkDocumentRequest>;
+
+export const ChunkDocumentResponse = z.object({
+  ok: z.literal(true),
+  documentId: Uuid,
+  /** Detected source format. */
+  format: z.enum(['pdf', 'xlsx', 'csv', 'txt']),
+  chunkCount: z.number().int().nonnegative(),
+  /** First chunk's text (truncated to 80 chars) — sanity-check that the
+   *  right file got chunked. NOT a security risk: Admin already has
+   *  read access to the source file via the upload pipeline. */
+  firstChunkPreview: z.string(),
+});
+export type ChunkDocumentResponse = z.infer<typeof ChunkDocumentResponse>;
