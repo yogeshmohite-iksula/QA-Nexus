@@ -4,16 +4,19 @@
 // @xenova/transformers (in-process WASM, no separate inference server) and
 // exposes EmbeddingService.embed(text) -> 1024-dim Float32Array.
 //
-// Model selection — IMPORTANT note for reviewers:
+// Model selection — IMPORTANT note for reviewers (Day-8 Step-6 amended):
 //   - PM1 binding spec (CLAUDE.md + database.md) says Qwen3-Embedding-0.6B.
 //   - As of 2026-04-28, Xenova/Qwen3-Embedding-0.6B is NOT yet published as
 //     an ONNX-converted model on Hugging Face. transformers.js needs ONNX.
-//   - Default is Xenova/bge-large-en-v1.5 (verified 1024-dim, BGE family,
-//     widely-used sentence-transformer). Same vector dimension as Qwen3,
-//     so the schema's vector(1024) column + HNSW index continue to fit.
+//   - Day-4 PM Render Free 512 MB OOM forced bge-large → bge-small swap
+//     (ADR-003 amendment + ADR-009). Schema migrated to vector(384) per
+//     apps/api/prisma/raw/migrations/0002_vector_384_dim.sql (Day-5).
+//   - Default is now Xenova/bge-small-en-v1.5 (384-dim, ~33 MB resident).
+//     MTEB avg 62.17 vs bge-large's 64.23 = -2.06 pt quality cost in
+//     exchange for fitting under 512 MB. Re-eval at M3 per followup (l).
 //   - Override at runtime via EMBEDDING_MODEL_ID=... When Xenova publishes
-//     a Qwen3-0.6B ONNX, swap by setting that env var (no schema change
-//     needed). Filed as Day-3+ followup.
+//     a Qwen3-0.6B ONNX OR we move off Free tier, swap by setting that
+//     env var (schema swap if dim differs).
 //
 // Eager-load strategy: model loads at NestJS bootstrap via OnModuleInit so
 // the first /embedding call is warm, not cold. Cold loads can take 3-5s
@@ -34,8 +37,8 @@ type FeatureExtractionPipeline = (
   opts?: { pooling?: 'mean' | 'cls' | 'none'; normalize?: boolean },
 ) => Promise<{ data: Float32Array; dims: number[] }>;
 
-const DEFAULT_MODEL_ID = 'Xenova/bge-large-en-v1.5';
-const EXPECTED_DIM = 1024;
+const DEFAULT_MODEL_ID = 'Xenova/bge-small-en-v1.5';
+const EXPECTED_DIM = 384;
 
 /**
  * Approximate resident-memory footprint per known model, in MB. Used by
@@ -206,38 +209,81 @@ export class EmbeddingService implements OnModuleInit {
     };
   }
 
-  /** Embed a single text into a 1024-dim Float32Array.
+  /** Embed a single text into a 384-dim Float32Array.
    *  Uses mean-pooling + L2-normalisation (the standard sentence-transformer
    *  setup; matches downstream cosine-similarity HNSW indexes). */
   async embed(text: string): Promise<Float32Array> {
     if (typeof text !== 'string' || text.length === 0) {
       throw new Error('embed(text): text must be a non-empty string');
     }
-    let extractor = this.extractor;
-    if (!extractor) {
-      // Fall through to the in-flight load, or kick a fresh one off if init
-      // never ran (eg. unit-test directly newing the service).
-      if (!this.loadingPromise) {
-        this.loadingPromise = this.loadModel();
-      }
-      try {
-        extractor = await this.loadingPromise;
-        this.extractor = extractor;
-      } catch (err) {
-        throw new ServiceUnavailableException(
-          `embedding model unavailable: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
+    const extractor = await this.requireExtractor();
     const out = await extractor(text, { pooling: 'mean', normalize: true });
     if (out.data.length !== EXPECTED_DIM) {
       throw new Error(
         `embedding dim mismatch: expected ${EXPECTED_DIM}, got ${out.data.length} ` +
-          `(model=${this.loadedModelId}). Schema vector(1024) won't accept this. ` +
+          `(model=${this.loadedModelId}). Schema vector(${EXPECTED_DIM}) won't accept this. ` +
           `Fix EMBEDDING_MODEL_ID env var.`,
       );
     }
     return out.data;
+  }
+
+  /** Embed a batch of texts. The underlying transformers.js extractor
+   *  accepts string[] and emits a flat Float32Array of size
+   *  texts.length × EXPECTED_DIM, which we slice into per-text chunks.
+   *  Materially faster than serial embed() calls (one WASM bridge
+   *  crossing per batch instead of N) — important for the M2 KB
+   *  embedding flow which writes ~50 chunks per document.
+   *
+   *  Returns Float32Array per input text, in input order. Throws
+   *  ServiceUnavailableException if model deferred. Throws Error on
+   *  dim mismatch (pinned by test). */
+  async embedBatch(texts: string[]): Promise<Float32Array[]> {
+    if (!Array.isArray(texts) || texts.length === 0) {
+      throw new Error('embedBatch(texts): texts must be a non-empty array');
+    }
+    if (texts.some((t) => typeof t !== 'string' || t.length === 0)) {
+      throw new Error(
+        'embedBatch(texts): every entry must be a non-empty string',
+      );
+    }
+    const extractor = await this.requireExtractor();
+    const out = await extractor(texts, { pooling: 'mean', normalize: true });
+    const expectedTotal = texts.length * EXPECTED_DIM;
+    if (out.data.length !== expectedTotal) {
+      throw new Error(
+        `embedBatch dim mismatch: expected ${expectedTotal} ` +
+          `(${texts.length} × ${EXPECTED_DIM}), got ${out.data.length} ` +
+          `(model=${this.loadedModelId}).`,
+      );
+    }
+    // Slice the flat output into per-text Float32Arrays. Each slice is
+    // a view into the same underlying buffer — copy via slice() so the
+    // caller can safely mutate / pass around without aliasing.
+    const result: Float32Array[] = [];
+    for (let i = 0; i < texts.length; i++) {
+      const start = i * EXPECTED_DIM;
+      result.push(out.data.slice(start, start + EXPECTED_DIM));
+    }
+    return result;
+  }
+
+  /** Internal: ensure the extractor is loaded. Awaits the in-flight
+   *  loading promise if a load is already in progress, kicks one off
+   *  if neither extractor nor loadingPromise exists (test path). */
+  private async requireExtractor(): Promise<FeatureExtractionPipeline> {
+    if (this.extractor) return this.extractor;
+    if (!this.loadingPromise) {
+      this.loadingPromise = this.loadModel();
+    }
+    try {
+      this.extractor = await this.loadingPromise;
+      return this.extractor;
+    } catch (err) {
+      throw new ServiceUnavailableException(
+        `embedding model unavailable: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   /** Internal: load the model. Wrapped so onModuleInit + lazy embed() share. */

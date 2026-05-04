@@ -66,6 +66,41 @@ return { ok: true, chunk: toChunkDetail(row), stubbed: false };
 
 Wire shape unchanged. FE diff = zero. `stubbed: false` flips the banner off.
 
+---
+
+## M2 Day-8 Step 6 — Embedding service (REAL, ships with PR)
+
+**Status:** REAL. Admin-gated endpoint; deferred-pattern under-the-hood.
+
+| Component              | Status                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| Endpoint               | ✅ REAL — `POST /api/admin/kb/embed-document` (Admin only)                                              |
+| Wire schema            | ✅ REAL — `EmbedDocumentRequest` / `EmbedDocumentResponse` in `packages/shared/src/schemas/kb.ts`       |
+| Embedder               | ✅ REAL — `EmbeddingService.embedBatch()` → `Xenova/bge-small-en-v1.5` (384-dim, ~33 MB)                |
+| Persistence            | ✅ REAL — raw SQL `UPDATE kb_chunks SET embedding = $1::vector` per row (single tx)                     |
+| Idempotent             | ✅ REAL — pulls only `WHERE embedding IS NULL`; re-running returns `embeddedCount: 0`                   |
+| Cross-workspace safety | ✅ REAL — workspace mismatch on documentId → 404 (no leak)                                              |
+| Audit                  | ✅ REAL — synchronous `kb_chunks_embedded` row per call (incl. no-op); payload omits chunk_text/vectors |
+
+### Workflow (Step 5 → Step 6 → Step 4 search)
+
+1. Admin creates `KbDocument` row + uploads file to R2 (manual today; auto-orchestrated in Step 7).
+2. Admin POSTs to `/api/admin/kb/chunk-document` (Step 5) → `KbChunk` rows written, `embedding` left NULL.
+3. Admin POSTs to `/api/admin/kb/embed-document` (Step 6, this PR) → `embedding` columns populated.
+4. KB search via `POST /api/projects/:projectId/kb/search` (Step 4 stub today) — M2 final swap will read these embeddings via pgvector HNSW.
+
+Step 7 (next) will fold steps 2 + 3 into the upload-completion hook so a successful R2 upload auto-chunks + auto-embeds without manual triggers.
+
+### Stale-defaults fix bundled into this PR
+
+`apps/api/src/embedding/embedding.service.ts` had `EXPECTED_DIM = 1024` + `DEFAULT_MODEL_ID = 'Xenova/bge-large-en-v1.5'` left over from before the Day-5 `vector(384)` migration (0002). Step 6 corrects both to 384 + `Xenova/bge-small-en-v1.5` so `embed()` no longer throws on real model output. Memory guard map already had `bge-small` listed (~33 MB) so the load path is unchanged.
+
+### What's NOT in Step 6
+
+- ❌ pgvector HNSW search wiring (still stubbed in `kb.controller.ts` — M2 final swap)
+- ❌ Auto-embed-on-chunking trigger (Step 7)
+- ❌ Re-embed-on-model-change CLI (M3 if/when we swap embedding models)
+
 ## Cross-references
 
 - `packages/shared/src/schemas/kb.ts` — Zod contract (the source of truth)
