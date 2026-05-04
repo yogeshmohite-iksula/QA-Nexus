@@ -17,6 +17,7 @@ import { ObservabilityModule } from './observability/observability.module';
 import { UsersModule } from './users/users.module';
 import { KbModule } from './kb/kb.module';
 import { LlmConfigModule } from './admin/llm-config/llm-config.module';
+import { ChunkingModule } from './chunking/chunking.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { LlmConfigModule } from './admin/llm-config/llm-config.module';
     UsersModule, // M1 Day-6 PM Block 1 — F27 Admin tab endpoints
     KbModule, // M2 Day-8 Step 4 — chunk-search contract scaffold (stubbed)
     LlmConfigModule, // M1.5 Day-8 Step 3 — F26 Admin LLM-config tab endpoints
+    ChunkingModule, // M2 Day-8 Step 5 — file → kb_chunks parser + persistence
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)
     HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts
   ],
