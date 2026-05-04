@@ -108,6 +108,15 @@ changelog_touched=$(echo "$all_changed_files" | grep -E '^docs/CHANGELOG\.md$' |
 
 if [ -n "$changelog_touched" ]; then
   echo "  ✓ docs/CHANGELOG.md updated in push range — guard satisfied"
+  # Belt-and-suspenders gate 4/4 (informational, non-blocking) — refresh
+  # the operator-facing work-log token sheets. Primary trigger is the Stop
+  # hook (Option A); this push-time pass catches sessions where Stop hook
+  # missed (e.g. crashed, force-killed). See docs/observability/
+  # work-log-schema-v2.md.
+  if command -v python3 >/dev/null 2>&1 && [ -f "scripts/rebuild-work-log-tokens.py" ]; then
+    echo "→ pre-push gate 4/4 (informational): refresh work-log token sheets"
+    python3 scripts/rebuild-work-log-tokens.py 2>/dev/null && echo "  ✓ work-log Tokens — sheets refreshed" || echo "  (skipped — script error; non-blocking)"
+  fi
   exit 0
 fi
 

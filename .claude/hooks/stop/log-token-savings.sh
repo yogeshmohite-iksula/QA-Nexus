@@ -112,4 +112,12 @@ printf '{"session_id":"%s","chat_role":"%s","date":"%s","started_at":"%s","ended
   "$commits_today" \
   >> "$log"
 
+# Auto-refresh the operator-facing work-log token sheets (Option A per
+# work-log-schema-v2.md). Reads conversation file via Option β when
+# available, falls back to Option α heuristic. Non-blocking — Stop hook
+# contract requires exit 0 regardless.
+if command -v python3 >/dev/null 2>&1 && [ -f "$CLAUDE_PROJECT_DIR/scripts/rebuild-work-log-tokens.py" ]; then
+  python3 "$CLAUDE_PROJECT_DIR/scripts/rebuild-work-log-tokens.py" >/dev/null 2>&1 || true
+fi
+
 exit 0
