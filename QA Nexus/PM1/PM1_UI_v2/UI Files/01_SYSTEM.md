@@ -397,6 +397,8 @@ Print this and check every generated frame against it:
 
 **Paste order:** 01_SYSTEM first (prime), then one workflow file at a time, generate its frames, move to next file.
 
+> **Phase 3 retrofit info-model lock (SYS-8, 2026-05-04):** **F15 = chunk-retrieval surface (per `PM1_ERD §3.7`).** It is the AI Knowledge Base view that retrieves text chunks from indexed documents — NOT a wiki / published-articles surface. The "published articles" concept is **post-pilot (F-future)** and is not part of PM1. This pin prevents F15 from re-drifting toward the old wiki info model that earlier mocks experimented with. F15 v2 (in `Redesign Frame by claude design/F15 Knowledge Base v2.html`) is the canonical implementation reference; the older `F15 Knowledge Base.html` in `frame  html view/` remains for historical reference only.
+
 ## Appendix C — v2.2 Canonized Conventions (2026-04-24)
 
 The following conventions are BINDING and supersede any looser guidance in earlier sections. See `DESIGN_EVOLUTION_v2.2.md` for full rationale.
