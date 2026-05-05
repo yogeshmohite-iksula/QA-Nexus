@@ -111,41 +111,43 @@ function SignInPageInner() {
 
     setState('submitting');
 
-    try {
-      await authClient.signIn.magicLink({
-        email: value,
-        callbackURL: '/home',
-        // errorCallbackURL is a server-side BetterAuth config (T021), not a
-        // client param. Error redirect is configured in the BE's magicLink()
-        // plugin options; FE handles errors via the catch + ?error= searchParam.
-      });
-      setSentToEmail(value);
-      setResendCountdown(RESEND_SECONDS);
-      setState('sent');
-    } catch (err) {
+    // BetterAuth client resolves with { data, error } — never throws.
+    // errorCallbackURL is a server-side BetterAuth config option (set in
+    // BE T021's magicLink() plugin), not a client-side parameter.
+    const { error } = await authClient.signIn.magicLink({
+      email: value,
+      callbackURL: '/home',
+    });
+
+    if (error) {
       setState('initial');
       toast.error('Failed to send magic link', {
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: error.message ?? 'Please try again.',
       });
+      return;
     }
+
+    setSentToEmail(value);
+    setResendCountdown(RESEND_SECONDS);
+    setState('sent');
   }
 
   async function handleResend() {
     if (resendCountdown > 0 || state !== 'sent') return;
-    try {
-      await authClient.signIn.magicLink({
-        email: sentToEmail,
-        callbackURL: '/home',
-      });
-      toast.success('Magic link resent', {
-        description: `Sent another link to ${sentToEmail}.`,
-      });
-      setResendCountdown(RESEND_SECONDS);
-    } catch (err) {
+    const { error } = await authClient.signIn.magicLink({
+      email: sentToEmail,
+      callbackURL: '/home',
+    });
+    if (error) {
       toast.error('Failed to resend magic link', {
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: error.message ?? 'Please try again.',
       });
+      return;
     }
+    toast.success('Magic link resent', {
+      description: `Sent another link to ${sentToEmail}.`,
+    });
+    setResendCountdown(RESEND_SECONDS);
   }
 
   function handleUseDifferentEmail() {
