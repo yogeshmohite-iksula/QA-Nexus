@@ -182,3 +182,29 @@ export const ChunkDocumentResponse = z.object({
   firstChunkPreview: z.string(),
 });
 export type ChunkDocumentResponse = z.infer<typeof ChunkDocumentResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M2 Day-8 Step 6 — Embedding endpoint contracts.
+// ─────────────────────────────────────────────────────────────────────
+
+export const EmbedDocumentRequest = z.object({
+  /** UUID of the existing KbDocument row. Chunks for this document
+   *  must already exist (run chunking first via the Step 5 endpoint). */
+  documentId: Uuid,
+});
+export type EmbedDocumentRequest = z.infer<typeof EmbedDocumentRequest>;
+
+export const EmbedDocumentResponse = z.object({
+  ok: z.literal(true),
+  documentId: Uuid,
+  /** Number of chunks newly embedded in THIS call. 0 = idempotent no-op
+   *  (every chunk already had a vector). */
+  embeddedCount: z.number().int().nonnegative(),
+  /** Total chunks for the document (embedded + already-embedded). */
+  totalChunks: z.number().int().nonnegative(),
+  /** Chunks that already had an embedding before this call ran. */
+  alreadyEmbedded: z.number().int().nonnegative(),
+  /** Convenience flag for FE: true if nothing needed embedding. */
+  noop: z.boolean(),
+});
+export type EmbedDocumentResponse = z.infer<typeof EmbedDocumentResponse>;
