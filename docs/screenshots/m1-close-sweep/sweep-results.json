@@ -1,0 +1,120 @@
+[
+  {
+    "label": "F06 sign-in",
+    "route": "/sign-in",
+    "outPath": "f06-sign-in-1440.png",
+    "status": 200,
+    "finalUrl": "/sign-in/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F06B set-password",
+    "route": "/set-password",
+    "outPath": "f06b-set-password-1440.png",
+    "status": 200,
+    "finalUrl": "/set-password/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F06C reset-password",
+    "route": "/sign-in/forgot",
+    "outPath": "f06c-reset-password-1440.png",
+    "status": 200,
+    "finalUrl": "/sign-in/forgot/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F07 onboarding-step1",
+    "route": "/onboarding/step-1",
+    "outPath": "f07-onboarding-step1-1440.png",
+    "status": 404,
+    "finalUrl": "/onboarding/step-1/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F07B onboarding-step2",
+    "route": "/onboarding/step-2",
+    "outPath": "f07b-onboarding-step2-1440.png",
+    "status": 404,
+    "finalUrl": "/onboarding/step-2/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F07C onboarding-step3",
+    "route": "/onboarding/step-3",
+    "outPath": "f07c-onboarding-step3-1440.png",
+    "status": 404,
+    "finalUrl": "/onboarding/step-3/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F07D onboarding-step4",
+    "route": "/onboarding/step-4",
+    "outPath": "f07d-onboarding-step4-1440.png",
+    "status": 404,
+    "finalUrl": "/onboarding/step-4/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F08 home-empty",
+    "route": "/home",
+    "outPath": "f08-home-empty-1440.png",
+    "status": 200,
+    "finalUrl": "/home/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F09 projects",
+    "route": "/projects",
+    "outPath": "f09-projects-1440.png",
+    "status": 200,
+    "finalUrl": "/projects/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F27 users",
+    "route": "/admin/users",
+    "outPath": "f27-users-1440.png",
+    "status": "ERROR",
+    "error": "page.goto: Timeout 15000ms exceeded.\nCall log:\n  - navigating to \"http://localho",
+    "captured": false,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F28 settings",
+    "route": "/admin/settings",
+    "outPath": "f28-settings-1440.png",
+    "status": 200,
+    "finalUrl": "/admin/settings/",
+    "redirected": false,
+    "captured": true,
+    "viewport": "1440x900"
+  },
+  {
+    "label": "F27 users mobile",
+    "route": "/admin/users",
+    "outPath": "f27-users-320.png",
+    "status": "ERROR",
+    "error": "page.goto: Timeout 15000ms exceeded.\nCall log:\n  - navigating to \"http://localho",
+    "captured": false,
+    "viewport": "320x568"
+  }
+]
