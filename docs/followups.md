@@ -2,26 +2,21 @@
 
 ---
 
-## [2026-05-05] (ab) P0 — F27 `/admin/users` BLOCKER: GET /api/users returns 404, full content area blank — `[m1-close-day-10]`
+## ~~[2026-05-05] (ab) P0 — F27 `/admin/users` BLOCKER: GET /api/users returns 404~~ ✅ RESOLVED
 
-**Symptom (Day-9 afternoon, M1 close visual sweep):** Loading `/admin/users` at any viewport (320 px + 1440 px verified) renders only a red error banner. The page shell + nav rail load, but the entire content area (user table, invite panel, role pills, avatar chips, stats row, pending invites) is blank. `GET /api/users → HTTP 404` in the network tab.
+**Resolved:** 2026-05-05 — PR `fix/users-controller-wiring` (Day-10 morning).
 
-**Root cause hypothesis:**
+**Root cause (confirmed):** Hypothesis 1 was wrong — BE wiring was already correct:
+`UsersController` in `UsersModule.controllers[]` ✓ · `UsersModule` in `AppModule.imports[]` ✓.
+**Actual root cause: hypothesis 2** — `apps/web/lib/api/users-api.ts` called `fetch('/api/users')`
+with a relative URL, routing to the Next.js dev server (port 3000) instead of the NestJS backend
+(port 3001). In production (static Cloudflare Pages export), the same relative URL would hit
+Cloudflare Pages with no proxy rule to Render — also a 404.
 
-1. `/api/users` endpoint is not registered on the NestJS backend — `apps/api/src/users/users.controller.ts` may not be wired into `AppModule.controllers` (or `UsersModule.imports`).
-2. OR the Cloudflare Pages → Render proxy rewrite is not forwarding `/api/users` (Next.js static export means there's no built-in `/api/*` route handler — the FE talks to the BE directly via `NEXT_PUBLIC_API_BASE_URL`).
-3. OR the BE is deployed but missing the M1 Day-6 PM users routes.
-
-**Fix path (BE owner, ~30 min):**
-
-1. Confirm `apps/api/src/users/users.controller.ts` has `@Controller('users')` decorator (NOT `@Controller('admin/users')` — the Next.js call is to `/api/users` per `apps/web/lib/api/users-api.ts`).
-2. Confirm `UsersController` is in `UsersModule.controllers[]` and `UsersModule` is in `AppModule.imports[]`.
-3. Smoke-test against running BE: `curl -i http://localhost:3001/api/users` → 200 + JSON.
-4. If the route is registered but proxy is wrong, re-check `NEXT_PUBLIC_API_BASE_URL` resolution at runtime (likely `http://localhost:3001` in dev).
-
-**Owner:** BE chat (M1 close polish — Day-10 morning batch).
-**Effort:** S (~30 min).
-**Severity:** P0 — F27 is unusable; blocks M1 close acceptance gate for Users & Roles surface.
+**Fix applied (`apps/web/lib/api/users-api.ts`):**
+Added `API_BASE = NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001'` constant (trailing-slash
+stripped). All three fetchers (`fetchAdminUsers`, `patchUserRole`, `patchUserStatus`) now use
+`${API_BASE}/api/users/…` — absolute URLs, same pattern as `apps/web/lib/auth/client.ts`.
 
 **Cross-references:**
 
