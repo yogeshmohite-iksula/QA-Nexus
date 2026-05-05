@@ -208,3 +208,48 @@ export const EmbedDocumentResponse = z.object({
   noop: z.boolean(),
 });
 export type EmbedDocumentResponse = z.infer<typeof EmbedDocumentResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M2 Day-8 Step 7 — Upload-completion orchestrator (chunking + embedding
+// in a single call). Closes the two-call pattern from Steps 5 + 6.
+// ─────────────────────────────────────────────────────────────────────
+
+/// Same body shape as ChunkDocumentRequest — callers porting from the
+/// two-call pattern just change the URL path. Intentional symmetry.
+export const FinalizeUploadRequest = z.object({
+  /** UUID of the existing KbDocument row (caller created it before
+   *  starting the upload). */
+  documentId: Uuid,
+  /** Original file name — used for format detection + audit preview. */
+  fileName: z.string().min(3).max(512),
+  /** Object key in the R2 bucket (caller knows; e.g.,
+   *  `projects/RET/uploads/return_policy_v2.xlsx`). */
+  r2Key: z.string().min(3).max(1024),
+});
+export type FinalizeUploadRequest = z.infer<typeof FinalizeUploadRequest>;
+
+export const FinalizeUploadResponse = z.object({
+  ok: z.literal(true),
+  documentId: Uuid,
+  /** Detected source format. */
+  format: z.enum(['pdf', 'xlsx', 'csv', 'txt']),
+  /** Chunk count from Stage 2 (chunking). */
+  chunkCount: z.number().int().nonnegative(),
+  /** Newly-embedded chunk count from Stage 3 (embedding). After a
+   *  successful re-chunk this equals `chunkCount` (every chunk is fresh
+   *  + needs embedding). */
+  embeddedCount: z.number().int().nonnegative(),
+  /** Chunks that already had an embedding before this call ran. After
+   *  a successful re-chunk this is always 0; surfaced for symmetry
+   *  with the Step-6 embed endpoint. */
+  alreadyEmbedded: z.number().int().nonnegative(),
+  /** Total chunks for the document. */
+  totalChunks: z.number().int().nonnegative(),
+  /** Wall-clock duration in ms (R2 fetch → chunk → embed → audit). */
+  totalDurationMs: z.number().int().nonnegative(),
+  /** First chunk's text (truncated to 80 chars) — sanity-check that the
+   *  right file got chunked. NOT a security risk: Admin already has
+   *  read access to the source file via the upload pipeline. */
+  firstChunkPreview: z.string(),
+});
+export type FinalizeUploadResponse = z.infer<typeof FinalizeUploadResponse>;
