@@ -426,7 +426,7 @@ function SentState({
       </div>
 
       <p className="text-text-tertiary mt-8 text-[12px] leading-[18px]">
-        Didn&apos;t see the email? Check Spam or Promotions, or wait 30 seconds and resend.
+        Didn&apos;t see the email? Check Spam or Promotions, or wait a moment and resend.
       </p>
     </div>
   );
