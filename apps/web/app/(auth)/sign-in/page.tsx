@@ -31,7 +31,7 @@
 
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Loader2, Mail, MailCheck } from 'lucide-react';
@@ -50,7 +50,19 @@ const RESEND_SECONDS = 60;
 // firing the (deferred) request.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Next.js 15 + `output: 'export'` requires `useSearchParams()` to live
+// inside a <Suspense> boundary at the route segment, otherwise the
+// static prerender bails. The default export is a thin Suspense wrapper;
+// all real logic lives in <SignInPageInner />.
 export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPageInner />
+    </Suspense>
+  );
+}
+
+function SignInPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
