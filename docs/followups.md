@@ -2,6 +2,37 @@
 
 ---
 
+## [2026-05-05] (aa) P3 — Parent-zone migration plan if pilot expands beyond `qanexus.iksula.com` — DEFERRED to PM2
+
+**Symptom (Day-9 morning, ADR-007):** T021 BetterAuth magic-link wiring (PR forthcoming) sets cross-subdomain session cookies via `crossSubDomainCookies.domain: '.qanexus.iksula.com'` so `app.` and `api.` subdomains share one session. The wildcard parent-domain choice is correct for PM1 pilot scale (8 internal Iksula users, single zone) but couples session cookies to that exact zone.
+
+**Trigger to revisit:** any of the following.
+
+1. **Pilot expansion to a different zone** — e.g. moving `app.` and `api.` to `qa.iksula.com` for a 50-user wave. Cookie domain must change in lockstep with the deployment domain swap.
+2. **Multi-tenant plan (PM3)** — if PM3 ships per-customer subdomains (e.g. `acme.qanexus.iksula.com`), the wildcard cookie strategy still works WITHIN the zone but requires per-tenant session isolation logic in `auth.service.ts` (workspace-id check on every session resolve, which we already do — so this might be a no-op).
+3. **Embedded-iframe surfaces (PM2)** — if PM2 ships a Jira app embedded in `iksula.atlassian.net`, the embedded surface won't share the session cookie with `app.qanexus.iksula.com` due to CHIPS partitioning. Either accept dual-sign-in OR move to a token-passing model for the embed.
+
+**Decision (PM2 work, ~4-6 hr — only if any trigger above fires):**
+
+1. Inventory all `crossSubDomainCookies.domain` references (currently 1: `apps/api/src/auth/auth.config.ts` plus the env-var coupling on `BETTER_AUTH_URL`).
+2. Add an env-driven domain config so dev / staging / prod can target different parent zones without code changes (`BETTER_AUTH_COOKIE_DOMAIN` env override already in place from T021 — this followup adds the migration runbook + tested cutover path).
+3. Update `apps/web/middleware.ts` cookie-domain expectation if the cookie name changes (BetterAuth allows custom cookie naming).
+4. Migrate active sessions OR force a re-sign-in window during the cutover (8 users, low impact for PM1 pilot — higher impact at PM3 scale).
+5. Update ADR-007 with a "Superseded by ADR-XXX" header pointing to the new decision.
+
+**Owner:** BE chat (folds into PM2 deployment-architecture work).
+**Effort:** M-L (4-6 hr depending on trigger; multi-tenant case + embedded-iframe case are L).
+**Severity:** P3 (no functional impact today; current solution is production-fit for PM1 pilot scale).
+
+**Cross-references:**
+
+- `docs/architecture/adr-007-cookie-domain.md` (the decision being re-evaluated)
+- `apps/api/src/auth/auth.config.ts` (implementation site, T021 PR)
+- `apps/web/middleware.ts` (FE cookie reader, T021 PR)
+- `docs/SECURITY.md` (cookie domain trust boundary section, added by T021 PR)
+
+---
+
 ## [2026-05-04] (z) P3 — M2.5 PDF parser re-evaluation gate (`pdf-parse` → `pdfjs-dist`) — DEFERRED to post-pilot
 
 **Symptom (Day-8 Part C, ADR-010):** M2 chunking service (PR #34, Step 5) ships `pdf-parse@^2.4.5` over the implicit canonical `pdfjs-dist` because pdfjs-dist's `canvas` peer-dep would push the BE service past Render Free's 512 MB ceiling (recreating the Day-4 bge-large OOM condition). The decision is correct under current cost-gate constraints but worth re-evaluating once any of the following is true:
