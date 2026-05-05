@@ -31,6 +31,29 @@
 - `apps/web/middleware.ts` (FE cookie reader, T021 PR)
 - `docs/SECURITY.md` (cookie domain trust boundary section, added by T021 PR)
 
+## [2026-05-05] (zz) P3 — Add `docs/observability/jira-exports/` to `.gitignore`
+
+**Symptom:** `git status` on every FE branch since Day-3 has shown:
+
+```
+?? docs/observability/jira-exports/
+```
+
+Untracked dir, never committed, but creates persistent visual clutter in every status / diff and risks accidentally `git add .`-ing a file with PII pulled from Jira during local debugging.
+
+**Fix:** add to root `.gitignore`:
+
+```
+# Local Jira-export scratchpad — never commit (may contain Iksula PII)
+docs/observability/jira-exports/
+```
+
+Also worth a one-line README inside `docs/observability/jira-exports/` (existing dir) noting it's a scratch space + gitignored.
+
+**Owner:** FE chat — 2-min job, can fold into any incoming PR.
+
+**Severity:** P3 (cosmetic + minor PII-leak guardrail). No urgency, but the longer it sits the more confused future contributors will be about whether it's a tracked path.
+
 ---
 
 ## [2026-05-04] (z) P3 — M2.5 PDF parser re-evaluation gate (`pdf-parse` → `pdfjs-dist`) — DEFERRED to post-pilot
