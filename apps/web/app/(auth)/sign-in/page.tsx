@@ -1,28 +1,15 @@
-// F06 Sign In — magic-link Pattern A scaffold (Day-9, M1 close prep).
+// F06 Sign In — magic-link Pattern B (BetterAuth live wiring, T021 + ADR-007).
 //
-// Per Day-9 brief + BetterAuth research: the "verify the magic link
-// click" route is owned by BetterAuth at `/api/auth/magic-link/verify`
-// — there is NO custom verify page on the FE. The link auto-
-// authenticates + redirects to the `callbackURL` we pass to
-// `signIn.magicLink()`. So this file owns just the email-entry UX +
-// "Check your inbox" success state.
+// BetterAuth's magic-link plugin owns the verify route at
+// `/api/auth/magic-link/verify` — the link auto-authenticates +
+// redirects via `callbackURL`. This file owns the email-entry UX +
+// "Check your inbox" success state only.
 //
-// 4 view states (Pattern A):
+// 4 view states:
 //   - Initial:    email input + "Send magic link" button
 //   - Submitting: button disabled + spinner
 //   - Sent:       "Check your inbox at <email>" + 60 s resend timer
-//   - Error:      Sonner toast (invalid email / rate-limit)
-//
-// Pattern A marker:
-//   console.info('pattern-a:deferred:sign-in:send-magic-link', { email });
-//
-// Pattern B target (post BE T021 + ADR-007 land):
-//   import { authClient } from '@/lib/auth/client';
-//   await authClient.signIn.magicLink({
-//     email,
-//     callbackURL: '/home',
-//     errorCallbackURL: '/sign-in?error=expired',
-//   });
+//   - Error:      Sonner toast (surfaced from authClient catch or ?error= param)
 //
 // Anti-drift: TEAL `var(--primary)` for the Send button (system CTA).
 // VIOLET `var(--secondary)` reserved for AI surfaces; "Contact Site
@@ -33,14 +20,14 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Loader2, Mail, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { Input, InputWrap, InputIcon } from '@/components/ui/input';
 import { BrandMark } from '@/components/auth/brand-mark';
 import { EvidenceMesh } from '@/components/auth/evidence-mesh';
-import { useAuth } from '@/lib/auth/use-auth';
 
 type SignInState = 'initial' | 'submitting' | 'sent';
 
@@ -63,9 +50,7 @@ export default function SignInPage() {
 }
 
 function SignInPageInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
   const [state, setState] = useState<SignInState>('initial');
@@ -126,37 +111,41 @@ function SignInPageInner() {
 
     setState('submitting');
 
-    // PATTERN-A: send-magic-link deferred until M1 (T021) - real BetterAuth POST /api/auth/magic-link/sign-in
-    console.info('pattern-a:deferred:sign-in:send-magic-link', { email: value });
-
-    // Simulated network round-trip so loading state is observable.
-    // Pattern B replaces this with the real `authClient.signIn.magicLink()`
-    // call; the link click then redirects via BetterAuth's own verify
-    // route — we don't see "Sent" in the real flow, the user sees a
-    // server-issued "magic-link sent" page or this same Sent state if
-    // the FE handles it.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    // Pattern A side-effect: stamp a stub user into AuthProvider's
-    // localStorage so subsequent route guards "see" us as signed-in
-    // when we manually navigate to /home for visual gating. Pattern B
-    // does NOT do this — the real flow gates on the link click + BE
-    // session-cookie issuance.
-    await signIn(value);
-
-    setSentToEmail(value);
-    setResendCountdown(RESEND_SECONDS);
-    setState('sent');
+    try {
+      await authClient.signIn.magicLink({
+        email: value,
+        callbackURL: '/home',
+        // errorCallbackURL is a server-side BetterAuth config (T021), not a
+        // client param. Error redirect is configured in the BE's magicLink()
+        // plugin options; FE handles errors via the catch + ?error= searchParam.
+      });
+      setSentToEmail(value);
+      setResendCountdown(RESEND_SECONDS);
+      setState('sent');
+    } catch (err) {
+      setState('initial');
+      toast.error('Failed to send magic link', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    }
   }
 
-  function handleResend() {
+  async function handleResend() {
     if (resendCountdown > 0 || state !== 'sent') return;
-    // PATTERN-A: resend-magic-link deferred until M1 (T021) - real BetterAuth POST /api/auth/magic-link/sign-in
-    console.info('pattern-a:deferred:sign-in:resend-magic-link', { email: sentToEmail });
-    toast.success('Magic link resent', {
-      description: `Sent another link to ${sentToEmail}.`,
-    });
-    setResendCountdown(RESEND_SECONDS);
+    try {
+      await authClient.signIn.magicLink({
+        email: sentToEmail,
+        callbackURL: '/home',
+      });
+      toast.success('Magic link resent', {
+        description: `Sent another link to ${sentToEmail}.`,
+      });
+      setResendCountdown(RESEND_SECONDS);
+    } catch (err) {
+      toast.error('Failed to resend magic link', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    }
   }
 
   function handleUseDifferentEmail() {
@@ -238,7 +227,6 @@ function SignInPageInner() {
               resendCountdown={resendCountdown}
               onResend={handleResend}
               onUseDifferentEmail={handleUseDifferentEmail}
-              onSimulateInbox={() => router.push('/home')}
             />
           ) : (
             <InitialState
@@ -365,19 +353,9 @@ interface SentStateProps {
   resendCountdown: number;
   onResend: () => void;
   onUseDifferentEmail: () => void;
-  /** Pattern A only — clicking "Open inbox" simulates the magic-link
-   *  redirect to /home. Pattern B drops this — the real flow lands the
-   *  user there via the BetterAuth verify route, not via this button. */
-  onSimulateInbox: () => void;
 }
 
-function SentState({
-  email,
-  resendCountdown,
-  onResend,
-  onUseDifferentEmail,
-  onSimulateInbox,
-}: SentStateProps) {
+function SentState({ email, resendCountdown, onResend, onUseDifferentEmail }: SentStateProps) {
   const canResend = resendCountdown === 0;
   return (
     <div className="text-center">
@@ -408,11 +386,6 @@ function SentState({
       </p>
 
       <div className="mt-8 flex flex-col gap-3">
-        <Button type="button" variant="primary" className="w-full" onClick={onSimulateInbox}>
-          <span>Simulate inbox click → /home</span>
-          <ArrowRight size={18} aria-hidden="true" />
-        </Button>
-
         <button
           type="button"
           onClick={onResend}
