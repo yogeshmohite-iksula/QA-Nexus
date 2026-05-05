@@ -2,6 +2,69 @@
 
 ---
 
+## [2026-05-05] (ab) P0 — F27 `/admin/users` BLOCKER: GET /api/users returns 404, full content area blank — `[m1-close-day-10]`
+
+**Symptom (Day-9 afternoon, M1 close visual sweep):** Loading `/admin/users` at any viewport (320 px + 1440 px verified) renders only a red error banner. The page shell + nav rail load, but the entire content area (user table, invite panel, role pills, avatar chips, stats row, pending invites) is blank. `GET /api/users → HTTP 404` in the network tab.
+
+**Root cause hypothesis:**
+
+1. `/api/users` endpoint is not registered on the NestJS backend — `apps/api/src/users/users.controller.ts` may not be wired into `AppModule.controllers` (or `UsersModule.imports`).
+2. OR the Cloudflare Pages → Render proxy rewrite is not forwarding `/api/users` (Next.js static export means there's no built-in `/api/*` route handler — the FE talks to the BE directly via `NEXT_PUBLIC_API_BASE_URL`).
+3. OR the BE is deployed but missing the M1 Day-6 PM users routes.
+
+**Fix path (BE owner, ~30 min):**
+
+1. Confirm `apps/api/src/users/users.controller.ts` has `@Controller('users')` decorator (NOT `@Controller('admin/users')` — the Next.js call is to `/api/users` per `apps/web/lib/api/users-api.ts`).
+2. Confirm `UsersController` is in `UsersModule.controllers[]` and `UsersModule` is in `AppModule.imports[]`.
+3. Smoke-test against running BE: `curl -i http://localhost:3001/api/users` → 200 + JSON.
+4. If the route is registered but proxy is wrong, re-check `NEXT_PUBLIC_API_BASE_URL` resolution at runtime (likely `http://localhost:3001` in dev).
+
+**Owner:** BE chat (M1 close polish — Day-10 morning batch).
+**Effort:** S (~30 min).
+**Severity:** P0 — F27 is unusable; blocks M1 close acceptance gate for Users & Roles surface.
+
+**Cross-references:**
+
+- Visual sweep evidence: `docs/screenshots/m1-close-sweep/f27-users-{1440,320}.png`
+- Locked HTML reference: `QA Nexus/PM1/PM1_UI_v2/frame  html view/F27 Users & Roles.html`
+
+---
+
+## [2026-05-05] (ac) P2 — F07 onboarding route mismatch — spec says `/onboarding/step-{1..4}`, actual routes are `/founder` + `/invited/{lead-admin,qa-engineer,stakeholder}` — `[m1-close-day-10]`
+
+**Symptom (Day-9 afternoon, M1 close visual sweep):** All four `/onboarding/step-N` URLs return 404. The actual implemented routes for the F07/a/b/c/d onboarding flow are role-conditional: `/founder` (deployer-admin first-run wizard) + `/invited/lead-admin` + `/invited/qa-engineer` + `/invited/stakeholder` (per-role welcome screens).
+
+**Visual evidence:** content at the actual routes renders correctly (`docs/screenshots/m1-close-sweep/f07-*.png`); this is purely a routing-spec alignment issue, NOT a visual regression.
+
+**Decision needed:** which is canonical — the M0 spec naming (`/onboarding/step-N`, generic 4-step wizard) or the implemented role-conditional naming (`/founder` + `/invited/*`)? The implemented form aligns better with the actual UX (different roles see different content) but the spec naming is referenced in PRD §7 + M0 backlog.
+
+**Fix path (~15 min):**
+
+- **Option A (rename code → spec)**: rename folders to `app/(auth)/onboarding/step-{1..4}/page.tsx` with conditional content per role.
+- **Option B (rename spec → code)**: update PRD §7 + M0 backlog to reference `/founder` + `/invited/*` paths.
+
+Option B is recommended (preserve the role-conditional UX which is materially better than a generic 4-step wizard for an 8-user pilot).
+
+**Owner:** PM (Yogesh) for spec decision; FE chat (Day-10) for the code/doc alignment after decision.
+**Effort:** S (~15 min for either option).
+**Severity:** P2 — visual gates pass; only spec/code drift.
+
+---
+
+## [2026-05-05] (ad) P3 — F08 `/home` has no separate empty-state route — `[m1-close-day-10]`
+
+**Symptom (Day-9 afternoon, M1 close visual sweep):** `/home` always renders the data-state dashboard (with active sprint, attention panel populated). The locked HTML F08 (empty state) and F08b (data state) are TWO frames per `01_SYSTEM.md` mapping; the React port collapses them into one route that conditionally renders based on data presence (not a URL flag).
+
+**Decision needed:** is "F08 empty" a distinct acceptance gate that needs a `?empty=1` query-param toggle or an `/admin/seed-clear` dev-only flow, or is the data-driven conditional render acceptable?
+
+**Recommendation:** data-driven conditional is fine — the empty state will be visible naturally when a fresh workspace has no projects/sprints. Add a Storybook-style preview route (e.g. `/__preview/home-empty`) ONLY if dev-side visual gating needs it before pilot data lands.
+
+**Owner:** Yogesh (decide); FE chat to implement if preview route is wanted.
+**Effort:** S (~10 min) for preview route, OR 0 effort to accept current behaviour.
+**Severity:** P3 — visually verifiable in pilot use; not blocking M1 close.
+
+---
+
 ## [2026-05-05] (aa) P3 — Parent-zone migration plan if pilot expands beyond `qanexus.iksula.com` — DEFERRED to PM2
 
 **Symptom (Day-9 morning, ADR-007):** T021 BetterAuth magic-link wiring (PR forthcoming) sets cross-subdomain session cookies via `crossSubDomainCookies.domain: '.qanexus.iksula.com'` so `app.` and `api.` subdomains share one session. The wildcard parent-domain choice is correct for PM1 pilot scale (8 internal Iksula users, single zone) but couples session cookies to that exact zone.
