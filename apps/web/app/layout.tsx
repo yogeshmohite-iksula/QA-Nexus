@@ -10,6 +10,7 @@ import './globals.css';
 // CurrentUser to compute "teammates excluding self"). All three are
 // 'use client' islands; they don't break SSR for static-export Cloudflare
 // Pages because they hold pure local state (no fetch, Pattern A compatible).
+import { AuthProvider } from '@/lib/auth/use-auth';
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
 import { ProjectProvider } from '@/lib/contexts/ProjectContext';
 import { QueryProvider } from '@/lib/contexts/QueryProvider';
@@ -60,11 +61,13 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <QueryProvider>
-          <CurrentUserProvider>
-            <ProjectProvider>
-              <TeamRosterProvider>{children}</TeamRosterProvider>
-            </ProjectProvider>
-          </CurrentUserProvider>
+          <AuthProvider>
+            <CurrentUserProvider>
+              <ProjectProvider>
+                <TeamRosterProvider>{children}</TeamRosterProvider>
+              </ProjectProvider>
+            </CurrentUserProvider>
+          </AuthProvider>
         </QueryProvider>
         {/*
           Sonner toaster — F27m1 fires success on submit, error on
