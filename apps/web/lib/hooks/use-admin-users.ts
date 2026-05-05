@@ -1,13 +1,13 @@
-// F27 admin-users TanStack Query hooks — Pattern A→B flip layer.
+// F27 admin-users TanStack Query hooks — Pattern B (real BE).
 //
 // Three hooks:
-// - useAdminUsersList()      → query (cached list)
-// - useRoleChangeMutation()  → optimistic role swap
-// - useStatusToggleMutation() → optimistic deactivate / reactivate
+// - useAdminUsersList()      → query (cached `GET /api/users`)
+// - useRoleChangeMutation()  → optimistic role swap (PATCH .../role)
+// - useStatusToggleMutation() → optimistic deactivate/reactivate (PATCH .../status)
 //
-// PAUSE points marked inline. Real BE wires lands at MS0-T030.5+
-// via the BE+1 PR. The optimistic-update plumbing is wired NOW
-// (commented invocations) so the swap-out is mechanical.
+// Wire shape: `@qa-nexus/shared` `ListUsersResponse` + `ChangeUser{Role,Status}Input/Response`.
+// Optimistic-update + Sonner toast + cache rollback all wired here so
+// the F27 component just calls `mutation.mutate(req)`.
 
 'use client';
 
@@ -17,33 +17,31 @@ import {
   fetchAdminUsers,
   patchUserRole,
   patchUserStatus,
-  type AdminUserListItem,
-  type AdminUserListResponse,
-  type AdminUserRole,
-  type RoleChangeRequest,
-  type StatusToggleRequest,
+  type ChangeUserRoleInput,
+  type ChangeUserRoleResponse,
+  type ChangeUserStatusInput,
+  type ChangeUserStatusResponse,
+  type ListUsersResponse,
+  type UserListItem,
 } from '@/lib/api/users-api';
 
-// Single source of truth for the cache key. Mutations reach into
-// the cache via this key for optimistic updates.
+// Single source of truth for the cache key. Mutations reach into the
+// cache via this key for optimistic updates.
 export const adminUsersListQueryKey = ['admin', 'users', 'list'] as const;
 
 /**
- * Read-side hook. Returns `{ data, isLoading, isError, error, refetch }`.
+ * Read-side hook. Returns the standard
+ * `{ data, isLoading, isError, error, refetch }` envelope.
  *
- * F27 component uses:
- *   const { data, isLoading, isError } = useAdminUsersList();
+ * F27 component:
+ *   const { data, isLoading, isError, error, refetch } = useAdminUsersList();
  *   if (isLoading) return <UsersListSkeleton />;
- *   if (isError) return <UsersListError onRetry={refetch} />;
+ *   if (isError) return <UsersListError onRetry={() => refetch()} />;
  *   const users = data?.users ?? [];
- *
- * PAUSE — wait BE+1 confirmation that GET /api/admin/users is live +
- * Zod schema published in packages/shared. Then update
- * `fetchAdminUsers` to do a real `fetch()` (see comment in
- * `users-api.ts`). NO change required at this hook level.
+ *   if (users.length === 0) return <UsersListEmpty onInvite={…} />;
  */
 export function useAdminUsersList() {
-  return useQuery<AdminUserListResponse, Error>({
+  return useQuery<ListUsersResponse, Error>({
     queryKey: adminUsersListQueryKey,
     queryFn: fetchAdminUsers,
     staleTime: 30_000, // 30 s — short enough that role changes from
@@ -60,19 +58,21 @@ export function useAdminUsersList() {
  * Optimistic flow:
  * 1. onMutate — snapshot current cache, write the next role into
  *    the cache so the row updates immediately.
- * 2. mutationFn — POST/PATCH to BE.
- * 3. onError — roll the cache back to the snapshot + fire error toast.
- * 4. onSuccess — fire success toast.
- * 5. onSettled — refetch to reconcile against authoritative BE state.
+ * 2. mutationFn — PATCH to BE.
+ * 3. onError — roll the cache back to the snapshot + fire error toast
+ *    (uses the BE-provided `message` when present — service guards
+ *    return human-readable failures like "Cannot demote last Admin").
+ * 4. onSuccess — fire success toast + cache the BE-authoritative row.
+ * 5. onSettled — invalidate to reconcile any out-of-band changes.
  */
 export function useRoleChangeMutation() {
   const qc = useQueryClient();
 
   return useMutation<
-    AdminUserListItem,
+    ChangeUserRoleResponse,
     Error,
-    RoleChangeRequest,
-    { snapshot: AdminUserListResponse | undefined }
+    ChangeUserRoleInput,
+    { snapshot: ListUsersResponse | undefined }
   >({
     mutationFn: patchUserRole,
 
@@ -80,19 +80,19 @@ export function useRoleChangeMutation() {
       // Cancel in-flight queries so the optimistic write doesn't get
       // clobbered by a stale fetch landing mid-mutation.
       await qc.cancelQueries({ queryKey: adminUsersListQueryKey });
-      const snapshot = qc.getQueryData<AdminUserListResponse>(adminUsersListQueryKey);
+      const snapshot = qc.getQueryData<ListUsersResponse>(adminUsersListQueryKey);
       if (snapshot) {
-        qc.setQueryData<AdminUserListResponse>(adminUsersListQueryKey, {
+        qc.setQueryData<ListUsersResponse>(adminUsersListQueryKey, {
           ...snapshot,
-          users: snapshot.users.map((u) =>
-            u.id === req.userId ? { ...u, role: req.role as AdminUserRole } : u,
+          users: snapshot.users.map(
+            (u): UserListItem => (u.id === req.userId ? { ...u, role: req.newRole } : u),
           ),
         });
       }
       return { snapshot };
     },
 
-    onError: (err, req, ctx) => {
+    onError: (err, _req, ctx) => {
       // Roll back to the pre-mutate snapshot.
       if (ctx?.snapshot) {
         qc.setQueryData(adminUsersListQueryKey, ctx.snapshot);
@@ -102,47 +102,68 @@ export function useRoleChangeMutation() {
       });
     },
 
-    onSuccess: (updated, req) => {
-      toast.success(`Role updated to ${req.role}`, {
-        description: `${updated.displayName} now has ${req.role} access.`,
+    onSuccess: (resp, req) => {
+      // BE returned the authoritative row — write it back so cache
+      // matches `roleChangedAt` etc. (UserDetailItem is a superset of
+      // UserListItem; strip extras to keep the list-row shape).
+      qc.setQueryData<ListUsersResponse>(adminUsersListQueryKey, (prev) =>
+        prev
+          ? {
+              ...prev,
+              users: prev.users.map(
+                (u): UserListItem =>
+                  u.id === req.userId
+                    ? {
+                        id: resp.user.id,
+                        email: resp.user.email,
+                        name: resp.user.name,
+                        role: resp.user.role,
+                        status: resp.user.status,
+                        createdAt: resp.user.createdAt,
+                        lastSeenAt: resp.user.lastSeenAt,
+                      }
+                    : u,
+              ),
+            }
+          : prev,
+      );
+      toast.success(`Role updated to ${req.newRole}`, {
+        description: `${resp.user.name} now has ${req.newRole} access.`,
       });
     },
 
     onSettled: () => {
-      // Reconcile cache against BE — drops the optimistic write +
-      // pulls the authoritative row.
-      // PAUSE — invalidate is correct shape but currently triggers
-      // a stub re-fetch that returns the unchanged seed. Once BE+1
-      // lands, this becomes the real reconcile call.
       qc.invalidateQueries({ queryKey: adminUsersListQueryKey });
     },
   });
 }
 
 /**
- * Status-toggle mutation (deactivate / reactivate). Same optimistic
- * + rollback + toast pattern as role-change.
+ * Status-toggle mutation (active ⇌ disabled). Same optimistic +
+ * rollback + toast pattern as role-change. The response also reports
+ * `sessionsRevoked` (number) — surfaced in the success-toast description
+ * when ≥1 (otherwise omitted to keep the toast quiet on first-time
+ * disables of users who never signed in).
  */
 export function useStatusToggleMutation() {
   const qc = useQueryClient();
 
   return useMutation<
-    AdminUserListItem,
+    ChangeUserStatusResponse,
     Error,
-    StatusToggleRequest,
-    { snapshot: AdminUserListResponse | undefined }
+    ChangeUserStatusInput,
+    { snapshot: ListUsersResponse | undefined }
   >({
     mutationFn: patchUserStatus,
 
     onMutate: async (req) => {
       await qc.cancelQueries({ queryKey: adminUsersListQueryKey });
-      const snapshot = qc.getQueryData<AdminUserListResponse>(adminUsersListQueryKey);
+      const snapshot = qc.getQueryData<ListUsersResponse>(adminUsersListQueryKey);
       if (snapshot) {
-        const nextStatus = req.action === 'deactivate' ? 'inactive' : 'active';
-        qc.setQueryData<AdminUserListResponse>(adminUsersListQueryKey, {
+        qc.setQueryData<ListUsersResponse>(adminUsersListQueryKey, {
           ...snapshot,
-          users: snapshot.users.map((u) =>
-            u.id === req.userId ? { ...u, status: nextStatus } : u,
+          users: snapshot.users.map(
+            (u): UserListItem => (u.id === req.userId ? { ...u, status: req.newStatus } : u),
           ),
         });
       }
@@ -154,23 +175,45 @@ export function useStatusToggleMutation() {
         qc.setQueryData(adminUsersListQueryKey, ctx.snapshot);
       }
       toast.error(
-        req.action === 'deactivate' ? 'Could not deactivate user' : 'Could not reactivate user',
+        req.newStatus === 'disabled' ? 'Could not disable user' : 'Could not re-enable user',
         { description: err.message || 'Try again or contact support if it persists.' },
       );
     },
 
-    onSuccess: (updated, req) => {
-      toast.success(
-        req.action === 'deactivate'
-          ? `${updated.displayName} deactivated`
-          : `${updated.displayName} reactivated`,
-        {
-          description:
-            req.action === 'deactivate'
-              ? 'They no longer have access to this workspace.'
-              : 'Access restored — invite email sent on next sign-in.',
-        },
+    onSuccess: (resp, req) => {
+      qc.setQueryData<ListUsersResponse>(adminUsersListQueryKey, (prev) =>
+        prev
+          ? {
+              ...prev,
+              users: prev.users.map(
+                (u): UserListItem =>
+                  u.id === req.userId
+                    ? {
+                        id: resp.user.id,
+                        email: resp.user.email,
+                        name: resp.user.name,
+                        role: resp.user.role,
+                        status: resp.user.status,
+                        createdAt: resp.user.createdAt,
+                        lastSeenAt: resp.user.lastSeenAt,
+                      }
+                    : u,
+              ),
+            }
+          : prev,
       );
+
+      const action = req.newStatus === 'disabled' ? 'disabled' : 're-enabled';
+      const sessionPart =
+        resp.sessionsRevoked > 0
+          ? ` ${resp.sessionsRevoked} session${resp.sessionsRevoked === 1 ? '' : 's'} revoked.`
+          : '';
+      toast.success(`${resp.user.name} ${action}`, {
+        description:
+          (req.newStatus === 'disabled'
+            ? 'They no longer have access to this workspace.'
+            : 'Access restored — user must magic-link in to start a new session.') + sessionPart,
+      });
     },
 
     onSettled: () => {
