@@ -29,7 +29,8 @@
     "prisma:seed": "prisma db seed",
     "prisma:apply-raw": "prisma db execute --file prisma/raw/init_rls_hnsw.sql --schema prisma/schema.prisma",
     "prisma:apply-raw:0002": "prisma db execute --file prisma/raw/migrations/0002_vector_384_dim.sql --schema prisma/schema.prisma",
-    "prisma:apply-raw:0003": "prisma db execute --file prisma/raw/migrations/0003_users_disabled_at.sql --schema prisma/schema.prisma"
+    "prisma:apply-raw:0003": "prisma db execute --file prisma/raw/migrations/0003_users_disabled_at.sql --schema prisma/schema.prisma",
+    "verify:audit": "ts-node --transpile-only --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' ../../scripts/verify-audit-chain.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
