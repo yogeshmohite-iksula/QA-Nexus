@@ -12,6 +12,12 @@
 //
 // Connection-pause recipe in `users-roles-page.connection-pause.md`
 // is now CLOSED — this PR is the swap-in.
+//
+// Fix (followup ab, 2026-05-05): relative `/api/users` was hitting the
+// Next.js dev server (port 3000) instead of the NestJS backend (port
+// 3001).  Use NEXT_PUBLIC_API_BASE_URL — the same pattern as
+// `apps/web/lib/auth/client.ts`.  Defaults to http://localhost:3001 for
+// local dev; set to the Render URL in Cloudflare Pages env vars.
 
 import {
   ChangeUserRoleInput,
@@ -46,6 +52,15 @@ export {
 } from '@qa-nexus/shared';
 
 // ---------------------------------------------------------------------------
+// Base URL — absolute so calls reach NestJS on a separate origin.
+// In local dev NEXT_PUBLIC_API_BASE_URL defaults to http://localhost:3001.
+// In production it is set to the Render URL in Cloudflare Pages env vars.
+// ---------------------------------------------------------------------------
+const API_BASE = (
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001') as string
+).replace(/\/$/, '');
+
+// ---------------------------------------------------------------------------
 // Fetchers
 // ---------------------------------------------------------------------------
 
@@ -53,7 +68,7 @@ export {
  *  Cookie session; cross-workspace + auth-missing get 401/403 from the
  *  RolesGuard. */
 export async function fetchAdminUsers(): Promise<ListUsersResponse> {
-  const res = await fetch('/api/users', {
+  const res = await fetch(`${API_BASE}/api/users`, {
     credentials: 'include',
     headers: { accept: 'application/json' },
   });
@@ -70,7 +85,7 @@ export async function fetchAdminUsers(): Promise<ListUsersResponse> {
  *  surfaces those rejections via the mutation `onError` toast. */
 export async function patchUserRole(req: ChangeUserRoleInput): Promise<ChangeUserRoleResponse> {
   ChangeUserRoleInput.parse(req); // validate request shape pre-flight
-  const res = await fetch(`/api/users/${req.userId}/role`, {
+  const res = await fetch(`${API_BASE}/api/users/${req.userId}/role`, {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
@@ -98,7 +113,7 @@ export async function patchUserStatus(
   req: ChangeUserStatusInput,
 ): Promise<ChangeUserStatusResponse> {
   ChangeUserStatusInput.parse(req);
-  const res = await fetch(`/api/users/${req.userId}/status`, {
+  const res = await fetch(`${API_BASE}/api/users/${req.userId}/status`, {
     method: 'PATCH',
     credentials: 'include',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
