@@ -2,6 +2,51 @@
 
 ---
 
+## [2026-05-06] (ak) P2 — `[m2-followup]` author-time hook for missing `AdminShell` wrap on `/(app)/*` routes
+
+**Symptom (Day-11 visual gate):** F12 KB Upload (PR #52, already merged)
+and F13 KB Imports (uncommitted) both shipped without their `AdminShell`
+wrapper — page rendered as a full-bleed body with a custom top header
+instead of the canonical app shell (left rail + top utility bar +
+project switcher). Same regression had previously occurred on F15 in M1
+and was caught by visual gate. The pattern is now confirmed across
+three frames; relying on visual gate alone scales linearly with FE
+surface area.
+
+**Root cause:** No author-time enforcement that pages under
+`apps/web/app/(app)/**/page.tsx` either (a) use `<AdminShell>` directly
+or (b) render a component whose top-level export wraps in `<AdminShell>`.
+The `enforce-design-tokens.sh` and `enforce-pm1-stack.sh` PreToolUse
+hooks catch ban-list deps and raw hex / MD3 tokens but don't inspect
+JSX structural patterns.
+
+**Severity:** P2 — visual-gate is catching regressions, but each catch
+costs ~45 min of rework + a fix PR. Cheaper to block at author time.
+
+**Fix path (~60 min):**
+
+1. New PreToolUse hook `.claude/hooks/pre-tool-use/enforce-app-shell.sh`
+   — fires on Edit|Write to `apps/web/app/\(app\)/.*\.tsx` AND
+   `apps/web/components/.*-page\.tsx`.
+2. Block when the file is the default-export entry for an `(app)/`
+   route AND neither imports `AdminShell` nor has a comment marker
+   `// no-shell:OK <reason>` on the export line.
+3. Settings wiring in `.claude/settings.json` — append next to
+   `enforce-rwd.sh` (P1.1 hook from 2026-04-27 audit).
+4. Self-test fixtures: synthetic Edit event JSON for (a) a fresh
+   `(app)/foo/page.tsx` without `AdminShell` → exit 1, (b) a wrapped
+   page → exit 0, (c) a marker-bypassed page → exit 0.
+
+**Reference:** This PR (`fix/web-kb-routes-admin-shell-wrap`) +
+`apps/web/components/kb/kb-page.tsx` (canonical F15 wrap pattern).
+Sibling discipline-cascade item to `enforce-rwd.sh` (Rule 12).
+
+**Owner:** FE chat. Land alongside the next FE discipline batch.
+
+**Tag:** `[m2-followup]`
+
+---
+
 ## [2026-05-06] (ae) P2 — PRD/ERD/CLAUDE.md drift: embedding model spec says 1024-dim bge-large, code is 384-dim bge-small — `[m2-blocker]` (spec-only)
 
 **Symptom (Day-11 skill alignment audit):** `PM1_PRD v8.1` and `PM1_ERD v2.1` both contain a 2026-04-28 implementation note saying _"PM1 ships with `Xenova/bge-large-en-v1.5` (1024-dim, ONNX, Apache-2.0)"_. `CLAUDE.md` "Locked tech stack" section says the same. **However**, the live code in `apps/api/prisma/schema.prisma` declares `KbChunk.embedding` as `Unsupported("vector(384)")` per ADR-003 amendment + ADR-009 (Day-5 migration `0002_vector_384_dim.sql`). The active runtime model is `Xenova/bge-small-en-v1.5` to fit Render Free's 512 MB memory ceiling.

@@ -7,14 +7,19 @@
 //   GREEN var(--pass) = success state
 //   RED var(--fail) = error state
 //
+// Shell wrap: AdminShell with active="knowledge-base" + projectKeyLower="ret"
+// (Iksula Returns anchor). Matches F15 KB pattern — single source of truth
+// for KB nav rail + top utility bar. Page no longer renders its own
+// project header (the shell does).
+//
 // Pattern A: stub upload (setInterval progress). Pattern B lands Thu 7 May.
 // Anti-drift: ZERO axios / fetch / useMutation here.
 
 'use client';
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, FileText, Loader2, UploadCloud, XCircle } from 'lucide-react';
+import { ChevronRight, CheckCircle2, FileText, Loader2, UploadCloud, XCircle } from 'lucide-react';
+import { AdminShell } from '@/components/admin/admin-shell';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,11 +73,20 @@ function isAccepted(name: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Main component
+// Main component — thin shell wrapper. Matches F15 split: shell-wrap fn
+// returns AdminShell wrapping the content fn. projectKeyLower="ret" for
+// the Iksula Returns anchor (per Day-11 brief).
 // ---------------------------------------------------------------------------
 
 export function KbUploadPage() {
-  const router = useRouter();
+  return (
+    <AdminShell active="knowledge-base" projectKeyLower="ret">
+      <KbUploadPageContent />
+    </AdminShell>
+  );
+}
+
+function KbUploadPageContent() {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -198,31 +212,48 @@ export function KbUploadPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--canvas)]">
-      {/* ── Top bar ── */}
-      <header className="border-b border-[var(--border-subtle)] bg-[var(--base)] px-4 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-[1120px] items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            aria-label="Go back"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--overlay)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-          >
-            <ArrowLeft size={16} aria-hidden />
-          </button>
-          <div className="flex min-w-0 flex-col">
-            <h1 className="font-display truncate text-[15px] font-semibold leading-[20px] text-[var(--text-primary)]">
-              Upload to Knowledge Base
-            </h1>
-            <p className="text-[11.5px] text-[var(--text-tertiary)]">
-              PDF · Word · Markdown · Plain text &mdash; max 50 MB
-            </p>
-          </div>
-        </div>
+    <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+      {/* Page header — breadcrumb + title. Project header text is owned by
+          AdminShell's top utility bar; we only own the page-scoped trail. */}
+      <header className="flex flex-col gap-2">
+        <nav aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1.5 text-[12.5px] text-[var(--text-tertiary)]">
+            <li>
+              <a
+                href="/home"
+                className="hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+              >
+                Home
+              </a>
+            </li>
+            <li aria-hidden="true">
+              <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
+            </li>
+            <li>
+              <a
+                href="/projects/ret/kb"
+                className="hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+              >
+                Knowledge Base
+              </a>
+            </li>
+            <li aria-hidden="true">
+              <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
+            </li>
+            <li className="text-[var(--text-secondary)]">Upload document</li>
+          </ol>
+        </nav>
+        <h1 className="font-display text-[20px] font-bold leading-[26px] tracking-[-0.01em] text-[var(--text-primary)] sm:text-[24px] sm:leading-[32px]">
+          Upload document
+        </h1>
+        <p className="text-[13px] leading-[18px] text-[var(--text-tertiary)] sm:text-[14px]">
+          PDF · Word · Markdown · Plain text &mdash; max 50 MB.
+        </p>
       </header>
 
-      {/* ── Main content ── */}
-      <main className="mx-auto w-full max-w-[640px] flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      {/* ── Body — constrained reading width for the upload form ── */}
+      <div className="mx-auto w-full max-w-[640px]">
+        {/* upload-state branches below */}
         {uploadState === 'initial' && (
           <InitialState
             dragActive={dragActive}
@@ -249,8 +280,8 @@ export function KbUploadPage() {
         )}
 
         {uploadState === 'error' && <ErrorState message={errorMsg} onRetry={reset} />}
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
 
