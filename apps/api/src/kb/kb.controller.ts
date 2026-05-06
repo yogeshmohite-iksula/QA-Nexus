@@ -1,17 +1,19 @@
-// QA Nexus PM1 — KB chunk-search controller (M2 contract scaffold).
+// QA Nexus PM1 — KB chunk-search controller.
 //
-// Spec: Day-8 Step 4 — wire shape locked NOW so FE can implement F19
-// search box + F30 KB browser against a stable contract while BE still
-// returns demo `return_policy_v2.xlsx` fixtures.
+// Spec: Day-8 Step 4 (contract scaffold) + Day-11 TASK 2 (real pgvector
+// HNSW search via KbSearchService).
 //
 // Endpoints:
 //   POST /api/projects/:projectId/kb/search          (Admin/Lead/QAEng/Stake)
 //   GET  /api/projects/:projectId/kb/chunks/:chunkId (Admin/Lead/QAEng/Stake)
 //
-// STUB DISCLAIMER: every response carries `stubbed: true`. M2 swap
-// replaces controller body with EmbeddingService.embed(query) →
-// vector(384) HNSW search → optional LLMGateway re-rank, returning the
-// SAME wire shape with `stubbed: false`. FE banner can read this flag.
+// HISTORY:
+//   - Step 4 (PR #30): wired the contract returning fixture chunks
+//     scored by a keyword heuristic; `stubbed: true` on every response.
+//   - Day-11 TASK 2 (this PR): flipped to real pgvector(384) HNSW
+//     similarity search via KbSearchService. `stubbed: false` now.
+//     FE wire shape unchanged — Zod KbSearchResponse / ChunkDetailResponse
+//     identical pre/post swap; FE banner reads `stubbed` flag.
 
 import {
   Body,
@@ -20,127 +22,234 @@ import {
   NotFoundException,
   Param,
   Post,
+  Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import {
   Role,
   KbSearchRequest,
   type KbSearchResponse,
   type ChunkDetailResponse,
+  type ChunkDetail,
+  type ChunkSourceAttribution,
 } from '@qa-nexus/shared';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
-import { DEMO_CHUNKS, DEMO_CHUNK_BY_ID, toChunkDetail } from './kb.fixtures';
+import { AuthService } from '../auth/auth.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { KbSearchService, type ActorContext } from './kb-search.service';
+
+function reqHeaders(req: Request): Headers {
+  const h = new Headers();
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (Array.isArray(v)) v.forEach((vv) => h.append(k, vv));
+    else if (typeof v === 'string') h.set(k, v);
+  }
+  return h;
+}
 
 @Controller('api/projects/:projectId/kb')
 @UseGuards(RolesGuard)
 export class KbController {
+  constructor(
+    private readonly searcher: KbSearchService,
+    private readonly authService: AuthService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private async actorOf(req: Request): Promise<ActorContext> {
+    const session = await this.authService.resolveSession(reqHeaders(req));
+    if (!session) {
+      throw new UnauthorizedException(
+        'session disappeared between guard and handler',
+      );
+    }
+    return {
+      workspaceId: session.appUser.workspaceId,
+      actorId: session.appUser.id,
+      actorEmail: session.appUser.email,
+    };
+  }
+
   /**
-   * STUB. Returns the demo-fixture chunks scored by a trivial keyword
-   * heuristic so a query like "refund" surfaces the relevant chunks
-   * higher than a query like "shipping". Final M2 implementation
-   * replaces this with pgvector HNSW search.
+   * REAL pgvector(384) HNSW similarity search via KbSearchService.
+   * Wire shape unchanged from the Step-4 stub — FE Zod contract is
+   * stable. `stubbed: false` flips the FE demo banner off.
    *
-   * Sort + filter + cursor pagination wired with the production-shape
-   * semantics so the FE doesn't need to refactor at M2 swap time:
-   *   - sort=relevance        → preserves stub keyword-match ranking
-   *   - sort=recency          → reverse chunkIndex (most recent = highest idx)
-   *   - sort=source_file      → stable lexicographic by sourceFileName
-   *   - filters.minRelevanceScore → applied AFTER ranking
-   *   - filters.sourceFileIds → applied as set membership
-   *   - page.cursor + limit   → opaque base64(offset) for now (M2: real cursor)
+   * Sort + filter + cursor pagination behavior:
+   *   - sort=relevance        → cosine similarity DESC (default; HNSW order)
+   *   - sort=recency          → reverse chunkIndex (post-search re-sort)
+   *   - sort=source_file      → lexicographic by sourceFileName (post-search re-sort)
+   *   - filters.minRelevanceScore → KbSearchService applies pre-return
+   *   - filters.sourceFileIds → KbSearchService applies in WHERE clause
+   *   - page.cursor + limit   → Step-4 base64(offset) format preserved
+   *                              (M3 swap to (similarity, chunkId) tuple
+   *                              cursor when search hits >100k chunks)
+   *
+   * Workspace isolation: KbSearchService.search() JOIN-filters by
+   * `kb_documents.workspace_id = ctx.workspaceId` so cross-workspace
+   * chunks NEVER reach the response. No 404 path needed.
    */
   @Post('search')
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
   async search(
-    @Param('projectId') _projectId: string,
+    @Param('projectId') projectId: string,
     @Body() body: unknown,
+    @Req() req: Request,
   ): Promise<KbSearchResponse> {
     const t0 = Date.now();
     const input = KbSearchRequest.parse(body);
+    const ctx = await this.actorOf(req);
 
-    // Trivial keyword-overlap heuristic so the demo "feels real".
-    // Any token in the query that appears in the chunk text bumps the
-    // base relevance by +0.05; clamped to [0,1].
-    const queryTokens = input.query
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
-      .filter((t) => t.length >= 3);
+    const { chunks: hits, total } = await this.searcher.search(
+      {
+        projectId,
+        query: input.query,
+        limit: input.page.limit,
+        sourceFileIds: input.filters.sourceFileIds,
+        minRelevanceScore: input.filters.minRelevanceScore,
+      },
+      ctx,
+    );
 
-    let scored = DEMO_CHUNKS.map((c) => {
-      const text = c.chunkText.toLowerCase();
-      const hits = queryTokens.reduce(
-        (n, t) => (text.includes(t) ? n + 1 : n),
-        0,
-      );
-      const adjustedScore = Math.min(1, c.relevanceScore! + hits * 0.05);
-      return { ...c, relevanceScore: adjustedScore };
-    });
-
-    // Filters
-    const f = input.filters;
-    if (f.sourceFileIds && f.sourceFileIds.length > 0) {
-      const set = new Set(f.sourceFileIds);
-      scored = scored.filter((c) => set.has(c.sourceFileId));
-    }
-    if (f.minRelevanceScore !== undefined) {
-      scored = scored.filter(
-        (c) => (c.relevanceScore ?? 0) >= f.minRelevanceScore!,
+    // Apply post-search sort overrides. Default `relevance` is HNSW
+    // order (no-op); `recency` + `source_file` re-sort the K returned
+    // hits in-memory (cheap at K ≤ 100).
+    let sorted = hits;
+    if (input.sort === 'recency') {
+      sorted = [...hits].sort((a, b) => b.chunkIndex - a.chunkIndex);
+    } else if (input.sort === 'source_file') {
+      sorted = [...hits].sort((a, b) =>
+        a.sourceFileName.localeCompare(b.sourceFileName),
       );
     }
-    // templateKind filter: stub fixtures don't carry templateKind on
-    // the chunk side (it lives on KbDocument). M2 will join.
 
-    // Sort
-    if (input.sort === 'relevance') {
-      scored.sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
-    } else if (input.sort === 'recency') {
-      scored.sort((a, b) => b.chunkIndex - a.chunkIndex);
-    } else {
-      scored.sort((a, b) => a.sourceFileName.localeCompare(b.sourceFileName));
-    }
-
-    // Cursor pagination: cursor encodes the offset (real M2 will use
-    // (relevance, chunkId) tuple). limit is hard-bounded by Zod (1..100).
+    // Cursor pagination — preserved from Step-4 contract. The cursor
+    // encodes the offset into the sorted hits array. Real M3 swap will
+    // use a (similarity, chunkId) tuple cursor for stability across
+    // concurrent inserts.
     const { cursor, limit } = input.page;
     const offset = cursor
       ? Math.max(0, parseInt(Buffer.from(cursor, 'base64').toString(), 10) || 0)
       : 0;
-    const slice = scored.slice(offset, offset + limit);
+    const slice = sorted.slice(offset, offset + limit);
     const nextOffset = offset + limit;
     const nextCursor =
-      nextOffset < scored.length
+      nextOffset < sorted.length
         ? Buffer.from(String(nextOffset)).toString('base64')
         : null;
 
     return {
       ok: true,
       chunks: slice,
-      total: scored.length,
+      total,
       tookMs: Date.now() - t0,
       nextCursor,
-      stubbed: true,
+      stubbed: false,
     };
   }
 
   /**
-   * STUB. Detail endpoint resolves a chunkId to its full text +
-   * neighbour pointers. M2 swap reads from kb_chunks JOIN kb_documents.
+   * REAL chunk detail. Reads from `kb_chunks` JOIN `kb_documents` with
+   * workspace check enforced. Cross-workspace chunkId → 404 (no leak,
+   * no 403 — both leak existence). Same `stubbed: false` flip.
+   *
+   * Neighbour pointers (previous/next chunk in the same document by
+   * chunkIndex) are fetched in a second round-trip; cheap because
+   * `(documentId, chunkIndex)` is unique-indexed.
    */
   @Get('chunks/:chunkId')
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
   async detail(
-    @Param('projectId') _projectId: string,
+    @Param('projectId') projectId: string,
     @Param('chunkId') chunkId: string,
+    @Req() req: Request,
   ): Promise<ChunkDetailResponse> {
-    const c = DEMO_CHUNK_BY_ID.get(chunkId);
-    if (!c) {
+    const ctx = await this.actorOf(req);
+
+    const row = await this.prisma.kbChunk.findUnique({
+      where: { id: chunkId },
+      select: {
+        id: true,
+        documentId: true,
+        chunkText: true,
+        chunkIndex: true,
+        metadataJson: true,
+        document: {
+          select: { id: true, title: true, projectId: true },
+        },
+      },
+    });
+    if (!row) {
       throw new NotFoundException(`chunk ${chunkId} not found`);
     }
+
+    // Workspace + project isolation. Cross-workspace OR cross-project
+    // → 404 (existence leak avoided). Workspace check needs a second
+    // lookup since KbDocument.workspaceId isn't on the immediate row;
+    // we fetch the project to confirm both project + workspace match.
+    if (row.document.projectId !== projectId) {
+      throw new NotFoundException(`chunk ${chunkId} not found`);
+    }
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { workspaceId: true },
+    });
+    if (!project || project.workspaceId !== ctx.workspaceId) {
+      throw new NotFoundException(`chunk ${chunkId} not found`);
+    }
+
+    // Neighbour pointers — cheap thanks to (documentId, chunkIndex) unique idx.
+    const [prev, next] = await Promise.all([
+      this.prisma.kbChunk.findFirst({
+        where: {
+          documentId: row.documentId,
+          chunkIndex: { lt: row.chunkIndex },
+        },
+        orderBy: { chunkIndex: 'desc' },
+        select: { id: true },
+      }),
+      this.prisma.kbChunk.findFirst({
+        where: {
+          documentId: row.documentId,
+          chunkIndex: { gt: row.chunkIndex },
+        },
+        orderBy: { chunkIndex: 'asc' },
+        select: { id: true },
+      }),
+    ]);
+
+    const meta = (row.metadataJson ?? {}) as Record<string, unknown>;
+    const pageNo = typeof meta.pageNo === 'number' ? meta.pageNo : null;
+    const lineRange =
+      Array.isArray(meta.lineRange) &&
+      meta.lineRange.length === 2 &&
+      typeof meta.lineRange[0] === 'number' &&
+      typeof meta.lineRange[1] === 'number'
+        ? ([meta.lineRange[0], meta.lineRange[1]] as [number, number])
+        : ([0, 0] as [number, number]);
+    const source: ChunkSourceAttribution = { pageNo, lineRange };
+
+    const chunk: ChunkDetail = {
+      chunkId: row.id,
+      sourceFileId: row.documentId,
+      sourceFileName: row.document.title,
+      chunkText: row.chunkText,
+      chunkIndex: row.chunkIndex,
+      source,
+      relevanceScore: null, // detail endpoint never has a query → no score
+      preview: row.chunkText.slice(0, 240),
+      metadataJson: meta,
+      neighbourPreviousChunkId: prev?.id ?? null,
+      neighbourNextChunkId: next?.id ?? null,
+    };
+
     return {
       ok: true,
-      chunk: toChunkDetail(c),
-      stubbed: true,
+      chunk,
+      stubbed: false,
     };
   }
 }
