@@ -2,6 +2,33 @@
 
 ---
 
+## [2026-05-06] (ae) P2 — PRD/ERD/CLAUDE.md drift: embedding model spec says 1024-dim bge-large, code is 384-dim bge-small — `[m2-blocker]` (spec-only)
+
+**Symptom (Day-11 skill alignment audit):** `PM1_PRD v8.1` and `PM1_ERD v2.1` both contain a 2026-04-28 implementation note saying _"PM1 ships with `Xenova/bge-large-en-v1.5` (1024-dim, ONNX, Apache-2.0)"_. `CLAUDE.md` "Locked tech stack" section says the same. **However**, the live code in `apps/api/prisma/schema.prisma` declares `KbChunk.embedding` as `Unsupported("vector(384)")` per ADR-003 amendment + ADR-009 (Day-5 migration `0002_vector_384_dim.sql`). The active runtime model is `Xenova/bge-small-en-v1.5` to fit Render Free's 512 MB memory ceiling.
+
+**Severity:** P2 — code is correct (ADRs supersede), but specs are stale. New BE engineers reading PRD/ERD will be confused. M2 KB chunk-search PRs reference the spec for chunk dimension.
+
+**Fix path (~30 min):**
+
+1. Amend `PM1_PRD v8.1` 2026-04-28 implementation note: change "bge-large-en-v1.5 (1024-dim)" → "bge-small-en-v1.5 (384-dim) per ADR-003 amendment + ADR-009 (Day-5)"
+2. Amend `PM1_ERD v2.1` matching note in §1, §6, §8.1
+3. Amend `CLAUDE.md` "Locked tech stack" `Embeddings:` line: bge-large → bge-small, 1024-dim → 384-dim
+4. Add reference to ADR-009 in all 3 docs (currently only ADR-003 is cited)
+
+**Owner:** Yogesh (PRD/ERD spec authority) + MAIN (CLAUDE.md amendment).
+**Effort:** S (~30 min — search/replace across 3 docs).
+**Severity:** P2 — does not block M2 deployment; flagged here per "[m2-blocker]" tag for visibility before BE+1 ships KB endpoints citing spec dimensions.
+
+**Cross-references:**
+
+- `apps/api/prisma/schema.prisma` model `KbChunk` line: `embedding Unsupported("vector(384)")?`
+- `docs/architecture/adr-003-embedding-model.md` (original 1024-dim decision)
+- `docs/architecture/adr-009-*.md` (Day-5 amendment to 384-dim)
+- `apps/api/prisma/migrations/.../0002_vector_384_dim.sql`
+- `docs/audits/2026-05-06-skill-alignment-audit-day-11.md` §3.1
+
+---
+
 ## ~~[2026-05-05] (ab) P0 — F27 `/admin/users` BLOCKER: GET /api/users returns 404~~ ✅ RESOLVED
 
 **Resolved:** 2026-05-05 — PR `fix/users-controller-wiring` (Day-10 morning).
