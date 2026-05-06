@@ -29,16 +29,26 @@ costs ~45 min of rework + a fix PR. Cheaper to block at author time.
    — fires on Edit|Write to `apps/web/app/\(app\)/.*\.tsx` AND
    `apps/web/components/.*-page\.tsx`.
 2. Block when the file is the default-export entry for an `(app)/`
-   route AND neither imports `AdminShell` nor has a comment marker
-   `// no-shell:OK <reason>` on the export line.
-3. Settings wiring in `.claude/settings.json` — append next to
+   route AND ANY of the following are missing:
+   (a) imports `AdminShell` (or comment marker `// no-shell:OK <reason>`)
+   (b) **sidebar collapse toggle primitive** (per F15 v2 canonical) — desktop ≥ lg breakpoint
+   (c) **mobile hamburger primitive** (per F15 v2 canonical) — < lg breakpoint
+3. Detection heuristics for (b)+(c): grep the rendered shell output for
+   `data-shell-collapse` + `data-shell-hamburger` data attributes (FE+1
+   to add these attrs to AdminShell primitives so the hook can detect them
+   without parsing JSX deeply). Comment-marker bypass `// shell-primitives:OK <reason>`.
+4. Settings wiring in `.claude/settings.json` — append next to
    `enforce-rwd.sh` (P1.1 hook from 2026-04-27 audit).
-4. Self-test fixtures: synthetic Edit event JSON for (a) a fresh
+5. Self-test fixtures: synthetic Edit event JSON for (a) a fresh
    `(app)/foo/page.tsx` without `AdminShell` → exit 1, (b) a wrapped
-   page → exit 0, (c) a marker-bypassed page → exit 0.
+   page → exit 0, (c) a marker-bypassed page → exit 0, (d) AdminShell
+   present but collapse/hamburger primitives missing → exit 1, (e)
+   bypassed shell-primitives marker → exit 0.
 
-**Reference:** This PR (`fix/web-kb-routes-admin-shell-wrap`) +
-`apps/web/components/kb/kb-page.tsx` (canonical F15 wrap pattern).
+**Reference:** Hard Rule 14 (CLAUDE.md) — codified 2026-05-06 evening
+post-F15 HTML↔React port diff revealed missing collapse + hamburger
+primitives. Canonical: `PM1_UI_v2/Redesign Frame by claude design/F15
+Knowledge Base v2.html`.
 Sibling discipline-cascade item to `enforce-rwd.sh` (Rule 12).
 
 **Owner:** FE chat. Land alongside the next FE discipline batch.
