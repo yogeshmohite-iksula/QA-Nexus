@@ -26,11 +26,22 @@
 //   --since <ISO-8601>   only verify rows since this timestamp
 //   --quiet              suppress per-workspace progress output
 //   --json               emit machine-readable result on stdout
+//   --summary            ALSO print M2 audit-action coverage table
+//                        (row count + last-seen-at per known M2 action)
+//                        — used by docs/milestones/m2-close-report-template.md §5.2
 //
 // Exit codes:
 //   0 = chain OK (or no rows found)
 //   1 = chain broken (one or more rows fail HMAC check)
 //   2 = misconfiguration (missing env, can't reach DB, etc.)
+//
+// M2 close-prep extension (Day-11 TASK 6):
+//   The --summary flag emits a per-action coverage table covering
+//   every audit action introduced by M2 (KB chunking, embedding,
+//   orchestration, search, RAG answer, document delete). MAIN runs
+//   `pnpm verify:audit --summary` during the Sat 9 May M2 close
+//   ceremony to confirm every M2 endpoint actually wrote audit rows
+//   (zero rows on a critical action = sweep gap, not a feature gap).
 
 import { PrismaClient } from '@prisma/client';
 import { createHmac } from 'node:crypto';
@@ -61,6 +72,7 @@ interface CliFlags {
   since: Date | null;
   quiet: boolean;
   json: boolean;
+  summary: boolean;
 }
 
 function parseFlags(argv: string[]): CliFlags {
@@ -69,6 +81,7 @@ function parseFlags(argv: string[]): CliFlags {
     since: null,
     quiet: false,
     json: false,
+    summary: false,
   };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
@@ -86,6 +99,8 @@ function parseFlags(argv: string[]): CliFlags {
       flags.quiet = true;
     } else if (arg === '--json') {
       flags.json = true;
+    } else if (arg === '--summary') {
+      flags.summary = true;
     } else if (arg === '--help' || arg === '-h') {
       printUsage();
       process.exit(0);
@@ -111,6 +126,8 @@ function printUsage(): void {
       '  --since <ISO-8601>   only verify rows created at/after this timestamp',
       '  --quiet              suppress per-workspace progress output',
       '  --json               emit machine-readable result on stdout',
+      '  --summary            ALSO print M2 audit-action coverage table',
+      '                       (row count + last-seen-at per known M2 action)',
       '  --help               show this message',
       '',
       'Environment:',
@@ -295,6 +312,101 @@ function printResult(result: VerifyResult, flags: CliFlags): void {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// M2 close-prep coverage table (Day-11 TASK 6 extension).
+// Lists every audit action introduced across M2 endpoints. Zero rows
+// on a critical action during the M2 close ceremony = sweep gap, not a
+// feature gap — MAIN should chase the FE/QA loop before signing M2 off.
+//
+// Grouped by feature pillar so MAIN can read the table top-to-bottom
+// during ceremony and tick each pillar.
+// ─────────────────────────────────────────────────────────────────────
+
+interface ActionCoverage {
+  pillar: string;
+  action: string;
+  rowCount: number;
+  lastSeenAt: string | null; // ISO-8601, null = no rows ever
+  workspacesTouched: number;
+}
+
+const M2_ACTIONS: Array<{ pillar: string; action: string }> = [
+  // Step 5 — chunking service
+  { pillar: 'KB chunking', action: 'kb_chunks_generated' },
+  // Step 6 — embedding service
+  { pillar: 'KB embedding', action: 'kb_chunks_embedded' },
+  // Step 7 — upload-completion orchestrator
+  { pillar: 'Upload orchestrator', action: 'kb_document_orchestration_started' },
+  { pillar: 'Upload orchestrator', action: 'kb_document_orchestration_completed' },
+  { pillar: 'Upload orchestrator', action: 'kb_document_orchestration_failed' },
+  // Step 8 (Day-11 TASK 2) — chunk search
+  { pillar: 'KB search', action: 'kb_search_performed' },
+  { pillar: 'KB search', action: 'kb_search_failed' },
+  // Day-11 TASK 3 — RAG answer pipeline
+  { pillar: 'KB RAG answer', action: 'kb_answer_generated' },
+  { pillar: 'KB RAG answer', action: 'kb_answer_failed' },
+  // Day-11 TASK 4 — KB document CRUD
+  { pillar: 'KB document CRUD', action: 'kb_document_deleted' },
+  { pillar: 'KB document CRUD', action: 'kb_document_delete_failed' },
+];
+
+async function collectM2Coverage(prisma: PrismaClient, flags: CliFlags): Promise<ActionCoverage[]> {
+  const where = {
+    ...(flags.workspaceId ? { workspaceId: flags.workspaceId } : {}),
+    ...(flags.since ? { createdAt: { gte: flags.since } } : {}),
+  };
+
+  const out: ActionCoverage[] = [];
+  for (const { pillar, action } of M2_ACTIONS) {
+    const rows = await prisma.auditLog.findMany({
+      where: { ...where, action },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, workspaceId: true },
+    });
+    const wsSet = new Set(rows.map((r) => r.workspaceId));
+    out.push({
+      pillar,
+      action,
+      rowCount: rows.length,
+      lastSeenAt: rows[0]?.createdAt.toISOString() ?? null,
+      workspacesTouched: wsSet.size,
+    });
+  }
+  return out;
+}
+
+function printM2Coverage(coverage: ActionCoverage[], flags: CliFlags): void {
+  if (flags.json) {
+    process.stdout.write(JSON.stringify({ m2Coverage: coverage }, null, 2) + '\n');
+    return;
+  }
+
+  process.stderr.write('\n── M2 audit-action coverage ──\n');
+  process.stderr.write(
+    'pillar                   | action                              |  rows | workspaces | last seen\n',
+  );
+  process.stderr.write(
+    '-------------------------+-------------------------------------+-------+------------+--------------------------\n',
+  );
+  let gapCount = 0;
+  for (const c of coverage) {
+    const isGap = c.rowCount === 0;
+    if (isGap) gapCount += 1;
+    const rowLabel = isGap ? '   0!' : c.rowCount.toString().padStart(5);
+    const lastSeen = c.lastSeenAt ?? '— (never written)';
+    process.stderr.write(
+      `${c.pillar.padEnd(24)} | ${c.action.padEnd(35)} | ${rowLabel} | ${c.workspacesTouched.toString().padStart(10)} | ${lastSeen}\n`,
+    );
+  }
+  if (gapCount > 0) {
+    process.stderr.write(
+      `\n⚠ ${gapCount} M2 action(s) have ZERO rows — investigate before signing M2 off.\n`,
+    );
+  } else {
+    process.stderr.write('\n✓ Every M2 audit action has at least one row.\n');
+  }
+}
+
 async function main(): Promise<void> {
   const flags = parseFlags(process.argv);
 
@@ -313,6 +425,12 @@ async function main(): Promise<void> {
   try {
     const result = await verifyChain(prisma, secret, flags);
     printResult(result, flags);
+
+    if (flags.summary) {
+      const coverage = await collectM2Coverage(prisma, flags);
+      printM2Coverage(coverage, flags);
+    }
+
     process.exit(result.ok ? 0 : 1);
   } catch (err) {
     console.error('✗ verifier crashed:', err instanceof Error ? err.message : String(err));
