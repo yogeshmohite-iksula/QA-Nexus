@@ -253,3 +253,83 @@ export const FinalizeUploadResponse = z.object({
   firstChunkPreview: z.string(),
 });
 export type FinalizeUploadResponse = z.infer<typeof FinalizeUploadResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M2 Day-11 TASK 4 — Document CRUD endpoints (list / detail / delete).
+// ─────────────────────────────────────────────────────────────────────
+
+export const KbDocumentListQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type KbDocumentListQuery = z.infer<typeof KbDocumentListQuery>;
+
+export const KbDocumentDetailQuery = z.object({
+  /** Number of chunks to include inline (most-recent first by chunkIndex).
+   *  Default 50, capped at 100. For full pagination use the chunk-search
+   *  endpoint from TASK 2. */
+  chunkLimit: z.coerce.number().int().min(1).max(100).default(50),
+});
+export type KbDocumentDetailQuery = z.infer<typeof KbDocumentDetailQuery>;
+
+export const KbDocumentListItem = z.object({
+  id: Uuid,
+  /** null = workspace-scoped (PM2 path; PM1 always project-scoped). */
+  projectId: Uuid.nullable(),
+  title: NonEmpty,
+  templateKind: NonEmpty,
+  pinned: z.boolean(),
+  authorId: Uuid,
+  chunkCount: z.number().int().nonnegative(),
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+});
+export type KbDocumentListItem = z.infer<typeof KbDocumentListItem>;
+
+export const KbDocumentListResponse = z.object({
+  ok: z.literal(true),
+  documents: z.array(KbDocumentListItem),
+  pagination: z.object({
+    total: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+  }),
+});
+export type KbDocumentListResponse = z.infer<typeof KbDocumentListResponse>;
+
+export const KbDocumentChunkInline = z.object({
+  id: Uuid,
+  chunkIndex: z.number().int().nonnegative(),
+  chunkText: z.string(),
+  metadataJson: z.record(z.unknown()).default({}),
+});
+export type KbDocumentChunkInline = z.infer<typeof KbDocumentChunkInline>;
+
+export const KbDocumentDetailItem = KbDocumentListItem.extend({
+  /** Full markdown body (KbDocument.body_md). */
+  bodyMd: z.string(),
+  chunks: z.array(KbDocumentChunkInline),
+});
+export type KbDocumentDetailItem = z.infer<typeof KbDocumentDetailItem>;
+
+export const KbDocumentDetailResponse = z.object({
+  ok: z.literal(true),
+  document: KbDocumentDetailItem,
+});
+export type KbDocumentDetailResponse = z.infer<typeof KbDocumentDetailResponse>;
+
+export const KbDocumentDeleteResponse = z.object({
+  ok: z.literal(true),
+  documentId: Uuid,
+  chunkCountAtDelete: z.number().int().nonnegative(),
+  /** True iff the BE found an r2_key in the audit-log + attempted R2
+   *  delete. False when the doc was created without ever being
+   *  chunked (no kb_chunks_generated audit row). */
+  r2DeleteAttempted: z.boolean(),
+  /** True iff R2 delete succeeded. False when r2DeleteAttempted is
+   *  false (skipped) OR R2 reported success-with-warning (rare). On
+   *  R2 delete FAILURE the endpoint returns 500 instead of this
+   *  response; this field never carries a "failed" signal. */
+  r2DeleteSucceeded: z.boolean(),
+});
+export type KbDocumentDeleteResponse = z.infer<typeof KbDocumentDeleteResponse>;

@@ -30,14 +30,15 @@ import { KbEmbeddingService } from './embedding.service';
 import { UploadOrchestratorController } from './upload-orchestrator.controller';
 import { UploadOrchestratorService } from './upload-orchestrator.service';
 import { KbSearchService } from './kb-search.service';
+import { KbDocumentsController } from './kb-documents.controller';
+import { KbDocumentsService } from './kb-documents.service';
 import { AuthModule } from '../auth/auth.module';
 import { ChunkingModule } from '../chunking/chunking.module';
 import { StorageModule } from '../storage/r2.module';
 
-// Day-11 TASK 2: KbSearchService added — flips KbController.search()
-// from Step-4 fixture stub to real pgvector(384) HNSW search.
-// KbController.detail() also flips to real (kb_chunks JOIN kb_documents
-// with workspace check). `stubbed: false` flag now true on responses.
+// Day-11 TASK 2: KbSearchService — real pgvector flip for search/detail.
+// Day-11 TASK 4: KbDocumentsController + KbDocumentsService —
+//   list/detail/delete with cascade chunks + R2 file delete.
 
 @Module({
   imports: [AuthModule, ChunkingModule, StorageModule],
@@ -45,8 +46,19 @@ import { StorageModule } from '../storage/r2.module';
     KbController,
     KbEmbeddingController,
     UploadOrchestratorController,
+    KbDocumentsController,
   ],
-  providers: [KbEmbeddingService, UploadOrchestratorService, KbSearchService],
-  exports: [KbEmbeddingService, UploadOrchestratorService, KbSearchService],
+  providers: [
+    KbEmbeddingService,
+    UploadOrchestratorService,
+    KbSearchService,
+    KbDocumentsService,
+  ],
+  exports: [
+    KbEmbeddingService,
+    UploadOrchestratorService,
+    KbSearchService,
+    KbDocumentsService,
+  ],
 })
 export class KbModule {}
