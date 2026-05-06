@@ -1,6 +1,6 @@
-# QA Nexus PM1 — Render Blueprint (T011).
+# QA Nexus PM1 — Render Blueprint (T011 + Day-11 M2 staging).
 #
-# Source: docs/deploy/render-runbook.md.
+# Source: docs/deploy/render-runbook.md + docs/architecture/adr-011-m2-staging-deployment.md.
 #
 # This file is read by Render on Blueprint-based deploys. Yogesh's
 # initial deploy was UI-configured (not Blueprint), so the UI Build
@@ -14,8 +14,16 @@
 # pnpm 10's `onlyBuiltDependencies` whitelist works locally but Render's
 # `pnpm install --frozen-lockfile` somehow doesn't run sharp's
 # install script — `pnpm rebuild sharp` forces it explicitly.
+#
+# Day-11 M2 staging amendment: added `qa-nexus-api-staging` service
+# block. Preserves the original `qa-nexus-api` block (M0 service)
+# untouched. New staging service uses oregon region (closer to Neon
+# us-east2 than singapore) + bakes `prisma migrate deploy` into the
+# build command so M2 schema additions ship safely on every deploy.
+# See ADR-011 for full rationale + env-var manifest (28 vars).
 
 services:
+  # ─── M0 production service (unchanged from T011) ──────────────────
   - type: web
     name: qa-nexus-api
     runtime: node
@@ -38,3 +46,108 @@ services:
       # LLM_PRIMARY_PROVIDER intentionally NOT set here — per Day-4 noon
       # arch decision LLM keys come from F26 UI in M1, not env. The
       # gateway runs in deferred mode + /llm/* returns 501 until F26.
+
+  # ─── M2 staging service (Day-11, ADR-011) ─────────────────────────
+  # Yogesh: apply this Blueprint via Render dashboard → New + → Blueprint.
+  # 28 env vars total; the `sync: false` ones need manual fill via
+  # dashboard after Blueprint apply (Render does NOT pull secrets from
+  # Blueprint files — by design).
+  - type: web
+    name: qa-nexus-api-staging
+    runtime: node
+    plan: free
+    region: oregon # closer to Neon us-east2 than singapore (~80ms vs 200ms RTT)
+    branch: main
+    rootDir: .
+    # M2 build pipeline: install → rebuild sharp (Day-4 hotfix carries
+    # over) → build shared → build api → migrate Prisma. Migrations
+    # baked in so M2 KB schema additions ship on every deploy.
+    buildCommand: pnpm install --frozen-lockfile && pnpm rebuild sharp && pnpm --filter @qa-nexus/shared build && pnpm --filter @qa-nexus/api build && pnpm --filter @qa-nexus/api prisma:migrate:deploy
+    startCommand: pnpm --filter @qa-nexus/api start:prod
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # ─── Runtime mode + Node version pin ─────────────────────────
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20.18.0" # locks Render to Node >=20 per CLAUDE.md
+      - key: PORT
+        value: 3001
+
+      # ─── Postgres (Neon staging project) ─────────────────────────
+      # Pooled URL — used by runtime, ends in `-pooler.region.aws.neon.tech`,
+      # has `?pgbouncer=true&connection_limit=1` query string.
+      # Direct URL — used by `prisma migrate deploy` only, no `-pooler`.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+
+      # ─── BetterAuth (M1 T021 + ADR-007) ──────────────────────────
+      - key: BETTER_AUTH_SECRET
+        generateValue: true # Render auto-generates a 64-char hex on first deploy
+      - key: BETTER_AUTH_URL
+        value: https://qa-nexus-api-staging.onrender.com
+      - key: BETTER_AUTH_COOKIE_DOMAIN
+        # Leave UNSET on Render initially — auth.config.ts's localhost
+        # guard handles `*.onrender.com` correctly (HTTPS on, exact-domain
+        # cookie, no wildcard parent). Set to `.qanexus.iksula.com` only
+        # after the custom domain swap-in.
+        sync: false
+      - key: ADMIN_SEED_EMAIL
+        value: yogesh.mohite@iksula.com
+
+      # ─── LLM gateway (Groq primary + Gemini fallback) ────────────
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LLM_PRIMARY_PROVIDER
+        value: groq
+
+      # ─── Email transport (Gmail SMTP per ADR-008) ────────────────
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false" # STARTTLS on 587, NOT TLS-on-connect (which is 465)
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false # Gmail App Password
+      - key: SMTP_FROM_NAME
+        value: QA Nexus
+      - key: SMTP_FROM_EMAIL
+        value: yogesh.mohite@iksula.com
+      - key: SMTP_REPLY_TO
+        value: yogesh.mohite@iksula.com
+      - key: SMTP_BCC_EMAIL
+        value: yogesh.mohite@iksula.com
+
+      # ─── R2 storage (per ADR-005) ────────────────────────────────
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        value: qa-nexus-uploads-staging
+      - key: R2_ENDPOINT
+        sync: false # https://<account-id>.r2.cloudflarestorage.com
+      - key: R2_PUBLIC_URL
+        sync: false # custom domain or *.r2.dev fallback
+
+      # ─── Embedding model (per ADR-003 amendment) ─────────────────
+      - key: EMBEDDING_MODEL_ID
+        value: Xenova/bge-small-en-v1.5
+
+      # ─── OpenTelemetry (per docs/observability) ──────────────────
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false # Better Stack ingest URL
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        sync: false # Authorization=Bearer <token>
+      - key: OTEL_SERVICE_NAME
+        value: qa-nexus-api-staging
