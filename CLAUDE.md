@@ -126,6 +126,20 @@ Hook wiring: `.claude/settings.json`. Permission grants: `.claude/settings.local
 - Run the relevant validation gate after each task, report result before moving on.
 - **End-of-day status at 17:00 IST:** 5 sections per kickoff §5 (completed today, in flight, blockers, tomorrow, free-tier quota usage). **Canonical location: `docs/eod-reports/YYYY-MM-DD-day-N.md`** (filename convention + template in `docs/eod-reports/README.md`, established 2026-04-27 per audit P1.10). Commit + push every EOD as `docs(eod): post Day N EOD report`.
 
+## Token discipline (Day-11 — codified after M1 retro)
+
+Context Mode plugin (`mcp__plugin_context-mode_context-mode__*`) is the primary token-saver in PM1. M1 retro showed it was used 2× when ~5+ opportunities existed — single biggest leak in M1. These rules are binding for all future work:
+
+1. **Bash output > 20 lines → use `ctx_execute` or `ctx_execute_file`**, not Bash. Raw output floods context; ctx-tools keep raw data in the sandbox and return only the summary.
+2. **Multiple related Bash calls (gh, git, jest, pnpm, find) → use `ctx_batch_execute`** in a single round-trip. One call replaces 30+ individual tool invocations.
+3. **Web fetches → use `ctx_fetch_and_index`, never `WebFetch`**. WebFetch dumps the whole page into context; ctx_fetch indexes it for later FTS5 search.
+4. **Reading a file just to grep → use `ctx_index` then `ctx_search`**. Don't `Read` a 500-line file to find one symbol.
+5. **`Read` tool stays for files you'll Edit** (small, targeted, where Edit needs the surrounding context). This is the only legitimate use after Day-11.
+
+Soft-nudge hook `.claude/hooks/post-tool-use/nudge-context-mode.sh` prints to stderr when a Bash call exceeds 20 lines AND matches `gh`/`git`/`jest`/`pnpm`/`find`. The nudge does NOT block; the next session is expected to use the alternative.
+
+Reference: `docs/audits/2026-05-06-skill-alignment-audit-day-11.md` §4, `docs/lessons-learned/2026-05-05-m1-close-day-learnings.md` §7.
+
 ## Compact instructions
 
 When compacting this conversation, preserve: PM1 binding spec versions, the 8-user roster, locked stack details, hook config, current step state in M0 backlog, any acceptance gate that has already passed. Discard: exploration output, raw `claude mcp list` output (already indexed in audit.jsonl), verbose logs.
