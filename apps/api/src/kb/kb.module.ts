@@ -29,9 +29,15 @@ import { KbEmbeddingController } from './embedding.controller';
 import { KbEmbeddingService } from './embedding.service';
 import { UploadOrchestratorController } from './upload-orchestrator.controller';
 import { UploadOrchestratorService } from './upload-orchestrator.service';
+import { KbSearchService } from './kb-search.service';
 import { AuthModule } from '../auth/auth.module';
 import { ChunkingModule } from '../chunking/chunking.module';
 import { StorageModule } from '../storage/r2.module';
+
+// Day-11 TASK 2: KbSearchService added — flips KbController.search()
+// from Step-4 fixture stub to real pgvector(384) HNSW search.
+// KbController.detail() also flips to real (kb_chunks JOIN kb_documents
+// with workspace check). `stubbed: false` flag now true on responses.
 
 @Module({
   imports: [AuthModule, ChunkingModule, StorageModule],
@@ -40,7 +46,7 @@ import { StorageModule } from '../storage/r2.module';
     KbEmbeddingController,
     UploadOrchestratorController,
   ],
-  providers: [KbEmbeddingService, UploadOrchestratorService],
-  exports: [KbEmbeddingService, UploadOrchestratorService],
+  providers: [KbEmbeddingService, UploadOrchestratorService, KbSearchService],
+  exports: [KbEmbeddingService, UploadOrchestratorService, KbSearchService],
 })
 export class KbModule {}
