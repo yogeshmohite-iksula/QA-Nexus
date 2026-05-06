@@ -215,6 +215,7 @@ GbjqJTOBNkl3LRXj5nwH8NS5MaFwbGv/NXuPG5HgEmE=
 ## Cross-references
 
 - `docs/architecture/adr-004-render-deployment.md` — the ADR documenting WHY Render Free over alternatives
+- `docs/architecture/adr-011-m2-staging-deployment.md` — Day-11 amendment for M2 staging (see new section below)
 - `docs/deploy/r2-runbook.md` — sister runbook for T013 R2 storage
 - `docs/deploy/uptimerobot-runbook.md` — sister runbook for T015 keep-alive
 - `docs/deploy/resend-runbook.md` — sister runbook for T014 magic-link email
@@ -222,3 +223,137 @@ GbjqJTOBNkl3LRXj5nwH8NS5MaFwbGv/NXuPG5HgEmE=
 - `apps/api/src/main.ts` — NestJS bootstrap (binds `$PORT`)
 - `CLAUDE.md` § "Locked tech stack" — Render commitment
 - `PM1_ERD §M0_v8` — task T011 spec
+
+---
+
+## Day-11 amendment — M2 staging deployment (`qa-nexus-api-staging`)
+
+> Spec: ADR-011. Adds a SECOND Render service alongside `qa-nexus-api`
+> (M0 production). The original setup above stays authoritative for
+> the M0 service; everything below applies to the new staging service.
+
+### Why a second service
+
+M2 (Knowledge Base & RAG) ships features that need a real Postgres DB
+exercising pgvector HNSW indexes — local SQLite stubs are no longer
+sufficient. A dedicated staging environment lets us:
+
+- Validate magic-link sign-in end-to-end against `app.qanexus.iksula.com` ↔ `api.qanexus.iksula.com` cross-subdomain cookies (ADR-007)
+- Exercise the chunking → embedding → search → answer RAG pipeline against real pgvector(384) HNSW indexes
+- Run M2 acceptance gates Sat 9 May with `verify:audit` against a populated `audit_log`
+- Let FE+1 run Pattern B real BetterAuth wiring against a live API without local-DB friction
+
+### Step 1 — Create the Neon staging Postgres project
+
+1. Sign in to https://console.neon.tech.
+2. Click **New Project**.
+3. Name: `qa-nexus-staging`.
+4. Region: `AWS us-east-2 (Ohio)` — closest to Render `oregon` (~80 ms RTT vs ~200 ms from Singapore).
+5. Postgres version: `17` (latest stable).
+6. Click **Create**.
+7. Once provisioned, navigate to **SQL Editor** + run:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+   (Enables pgvector on the staging DB. The schema migrations also assert it's present, but creating it explicitly here means the first `prisma migrate deploy` doesn't fail.)
+8. Navigate to **Connection Details** + copy two strings:
+   - **Pooled connection string** — ends in `-pooler.us-east-2.aws.neon.tech`. **This is `DATABASE_URL`.** Append `?pgbouncer=true&connection_limit=1` to the URL if not already present (Prisma serverless requirement).
+   - **Direct connection string** — same hostname WITHOUT `-pooler`. **This is `DIRECT_URL`.** Used only by `prisma migrate deploy`.
+
+### Step 2 — Apply the Render Blueprint
+
+1. Make sure `render.yaml` at repo root has a service named `qa-nexus-api-staging` (it does; landed in this PR).
+2. In the Render dashboard, click **New +** → **Blueprint**.
+3. Connect to `yogeshmohite-iksula/QA-Nexus` (the GitHub authorization from MS0-T011 should still be active).
+4. Render auto-detects `render.yaml` + lists both services (`qa-nexus-api` + `qa-nexus-api-staging`). Make sure ONLY the staging service is checked for new creation; the M0 service is already running and shouldn't be redeployed via Blueprint.
+5. Click **Apply**.
+6. Render provisions `qa-nexus-api-staging`. The first build will fail (env vars not yet set) — that's expected, fill them in Step 3.
+
+### Step 3 — Fill the `sync: false` env vars (~10 min)
+
+In the Render dashboard for `qa-nexus-api-staging`:
+
+| Var                           | Value                                                                | Source                                     |
+| ----------------------------- | -------------------------------------------------------------------- | ------------------------------------------ |
+| `DATABASE_URL`                | Neon pooled URL from Step 1.7                                        | Neon                                       |
+| `DIRECT_URL`                  | Neon direct URL from Step 1.7                                        | Neon                                       |
+| `BETTER_AUTH_SECRET`          | (leave empty — Render auto-generates per `generateValue: true`)      | Render                                     |
+| `BETTER_AUTH_COOKIE_DOMAIN`   | (leave UNSET initially; set to `.qanexus.iksula.com` after DNS swap) | —                                          |
+| `GROQ_API_KEY`                | `gsk_...` from https://console.groq.com/keys                         | Groq                                       |
+| `GEMINI_API_KEY`              | `AIza...` from https://aistudio.google.com/app/apikey                | Gemini                                     |
+| `SMTP_USER`                   | Gmail account email                                                  | Gmail                                      |
+| `SMTP_PASSWORD`               | Gmail App Password (NOT account password)                            | Gmail Workspace → Security → App passwords |
+| `R2_ACCOUNT_ID`               | Cloudflare → R2 → API Tokens                                         | R2                                         |
+| `R2_ACCESS_KEY_ID`            | (token client ID)                                                    | R2                                         |
+| `R2_SECRET_ACCESS_KEY`        | (token client secret)                                                | R2                                         |
+| `R2_ENDPOINT`                 | `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`                   | derived                                    |
+| `R2_PUBLIC_URL`               | `https://uploads.qa-nexus.iksula.com` OR `*.r2.dev` fallback         | R2                                         |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Better Stack ingest URL                                              | Better Stack                               |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | `Authorization=Bearer <token>`                                       | Better Stack                               |
+
+All other env vars are pre-filled from the Blueprint (see `render.yaml`).
+
+### Step 4 — Manual redeploy
+
+After filling env vars, click **Manual Deploy → Deploy latest commit** in the Render dashboard. Build should succeed this time:
+
+- `pnpm install --frozen-lockfile` (~60 s)
+- `pnpm rebuild sharp` (~10 s)
+- `pnpm --filter @qa-nexus/shared build` (~5 s)
+- `pnpm --filter @qa-nexus/api build` (~30 s)
+- `pnpm --filter @qa-nexus/api prisma:migrate:deploy` (~15 s for first-time migration apply)
+- Total build: ~2 min
+- First boot: ~30 s (NestJS init + embedding model download)
+
+### Step 5 — Smoke test post-deploy
+
+```bash
+./scripts/smoke-test-render.sh
+# OR for a custom URL:
+./scripts/smoke-test-render.sh https://qa-nexus-api-staging.onrender.com
+```
+
+Validates 7 things in ~5 s:
+
+1. `/health` returns 200 + parseable JSON
+2. `/health.db.status === up` (Neon connection live)
+3. `/health.embedding.status` is `up` OR `deferred` (NOT `down`)
+4. LLM gateway path responds with non-5xx (501 deferred OK pre-F26)
+5. `POST /api/auth/sign-in/magic-link` is wired (non-5xx response)
+6. `/api/users` returns 401/403 (RBAC guard active)
+7. `/health` response time < 5 s (catches cold-start regressions)
+
+Exits non-zero on any failure — grep "FAIL" in output to see which checks fell over.
+
+### Step 6 — UptimeRobot keep-alive
+
+Add a SECOND UptimeRobot monitor alongside the M0 one:
+
+- **URL**: `https://qa-nexus-api-staging.onrender.com/health`
+- **Interval**: 5 min
+- **Window**: 04:30 – 16:30 UTC (= 10 AM – 10 PM IST)
+- **Alert contact**: same Slack webhook as the M0 monitor
+
+See `docs/deploy/uptimerobot-runbook.md` for the dashboard walk-through.
+
+### Step 7 — DNS swap-in (deferred to M3)
+
+Once `api.qanexus.iksula.com` DNS is configured (Cloudflare → DNS → CNAME → `qa-nexus-api-staging.onrender.com`), update the Render dashboard:
+
+- **Custom Domains** → **Add Custom Domain** → `api.qanexus.iksula.com`
+- Update env vars:
+  - `BETTER_AUTH_URL` = `https://api.qanexus.iksula.com`
+  - `BETTER_AUTH_COOKIE_DOMAIN` = `.qanexus.iksula.com` (per ADR-007)
+- Manual redeploy
+
+Cookie domain switch is non-trivial — verify cross-subdomain SSO works after the swap (`scripts/smoke-test-render.sh` doesn't catch this; needs a browser session test).
+
+### Acceptance gate
+
+Staging deploy is GREEN when:
+
+- [ ] `scripts/smoke-test-render.sh` exits 0 (all 7 checks pass)
+- [ ] First magic-link send to `yogesh.mohite@iksula.com` lands in inbox (NOT spam)
+- [ ] First sign-in triggers Day-0 admin auto-promote (audit row `day0_admin_seeded` present)
+- [ ] `pnpm --filter @qa-nexus/api verify:audit` passes against staging DB
+- [ ] UptimeRobot reports 100% uptime over a 1-hour test window
