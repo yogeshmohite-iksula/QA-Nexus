@@ -2,11 +2,23 @@
 """
 update-work-log.py — append a new work-session row to the master work-log Excel.
 
-Source of truth: docs/observability/QA_Nexus_Work_Log.xlsx (consolidated 2026-04-30 Day 4 EOD).
+Source of truth: docs/observability/QA_Nexus_Work_Log.xlsx (Kimi-redesigned "Professional"
+layout swapped in 2026-05-06 Day 11; backfilled with all 26 missing rows from the prior
+layout — see chore/work-log-professional-swap PR).
+
+Layout note (Day-11 swap):
+  - Rows 1-4 are banner/title/subtitle/blank
+  - Row 5 is the HEADER row
+  - Row 6+ is data
+  - Last row is GRAND TOTAL (with =SUM() formulas the script re-extends on insert)
+  - Column A is an empty gutter; data starts at column B
+  - "All Sessions" sheet has 9 columns of data (B-J) including a "Parallel Work (FE+BE)"
+    column populated by the parallel-work correlation hook (Day-11 TASK 6, deferred to Thu)
+
 This script:
   1. Validates input args + loads the workbook
-  2. Appends a row to "All Sessions (chronological)" sheet (and the per-phase sheet)
-  3. Re-computes the day-total row + grand-total formulas
+  2. Appends a row to "All Sessions" sheet (and the per-phase sheet)
+  3. Re-extends GRAND TOTAL =SUM() formulas to cover the new row
   4. Saves the workbook in-place (no separate output file — same spreadsheet stays canonical)
 
 Usage:
@@ -138,79 +150,141 @@ def validate(args: argparse.Namespace) -> None:
         sys.exit(3)
 
 
+# Day-11 swap: NEW layout has empty col A (gutter) — data starts at col B.
+# To convert from OLD (col 1=Date) to NEW (col 2=Date), we add COL_OFFSET to every column index.
+COL_OFFSET = 1
+
+
+def _find_grand_total_row(ws):
+    """Find the row containing 'GRAND TOTAL' in any column. Returns row index or None."""
+    for r in range(1, ws.max_row + 1):
+        for c in range(1, ws.max_column + 1):
+            v = ws.cell(row=r, column=c).value
+            if isinstance(v, str) and v.strip().upper() == "GRAND TOTAL":
+                return r
+    return None
+
+
+def _extend_sum_formulas(ws, header_row: int, gt_row_after_insert: int) -> int:
+    """Re-extend any =SUM(X#:Y#) formula on the GRAND TOTAL row to cover [header_row+1, gt_row-1].
+
+    Returns the count of formulas updated. Day-11 swap added this; OLD layout was Excel-recompute-only.
+    """
+    import re
+    pat = re.compile(r"=SUM\(([A-Z]+)\d+:([A-Z]+)\d+\)", re.IGNORECASE)
+    new_first = header_row + 1
+    new_last = gt_row_after_insert - 1
+    updates = 0
+    for c in range(1, ws.max_column + 1):
+        v = ws.cell(row=gt_row_after_insert, column=c).value
+        if isinstance(v, str) and v.upper().startswith("=SUM("):
+            m = pat.match(v)
+            if m:
+                a, b = m.group(1), m.group(2)
+                new = f"=SUM({a}{new_first}:{b}{new_last})"
+                if new != v:
+                    ws.cell(row=gt_row_after_insert, column=c).value = new
+                    updates += 1
+    return updates
+
+
 def append_to_phase_sheet(wb, args: argparse.Namespace) -> int:
-    """Append the row to the phase-specific sheet. Returns the new row index."""
+    """Append the row to the phase-specific sheet. Returns the new row index.
+
+    Day-11 layout: header at row 5; data starts row 6; GRAND TOTAL at end.
+    Phase sheet columns (col 2-8 since col 1 is empty gutter):
+      Date | Day | Timing | Hours | Files | Evidence/Theme | What I Did
+    """
     if args.phase not in wb.sheetnames:
         sys.stderr.write(f"ERROR: sheet '{args.phase}' missing from workbook\n")
         sys.exit(4)
     ws = wb[args.phase]
 
-    # Find GRAND TOTAL row if it exists (so we insert above it)
-    gt_row = None
-    for r in range(1, ws.max_row + 1):
-        if ws.cell(row=r, column=1).value == "GRAND TOTAL":
-            gt_row = r
-            break
+    gt_row = _find_grand_total_row(ws)
+    if gt_row is None:
+        sys.stderr.write(f"ERROR: GRAND TOTAL row not found in '{args.phase}'\n")
+        sys.exit(5)
 
-    target_row = gt_row if gt_row else (ws.max_row + 1)
-    if gt_row:
-        ws.insert_rows(gt_row)
+    target_row = gt_row
+    ws.insert_rows(gt_row)
+    new_gt_row = gt_row + 1
 
     timing = f"{args.start} – {args.end}"
-    ws.cell(row=target_row, column=1, value=datetime.strptime(args.date, "%Y-%m-%d")).number_format = "yyyy-mm-dd"
-    ws.cell(row=target_row, column=2, value=args.day)
-    ws.cell(row=target_row, column=3, value=timing)
-    ws.cell(row=target_row, column=4, value=args.hours).number_format = "0.00"
-    ws.cell(row=target_row, column=5, value=args.files)
-    ws.cell(row=target_row, column=6, value=args.theme)
-    ws.cell(row=target_row, column=7, value=args.what)
+    # cols B..H (2..8) — col offset +1 for gutter
+    ws.cell(row=target_row, column=1 + COL_OFFSET, value=datetime.strptime(args.date, "%Y-%m-%d")).number_format = "yyyy-mm-dd"
+    ws.cell(row=target_row, column=2 + COL_OFFSET, value=args.day)
+    ws.cell(row=target_row, column=3 + COL_OFFSET, value=timing)
+    ws.cell(row=target_row, column=4 + COL_OFFSET, value=args.hours).number_format = "0.00"
+    ws.cell(row=target_row, column=5 + COL_OFFSET, value=args.files)
+    ws.cell(row=target_row, column=6 + COL_OFFSET, value=args.theme)
+    ws.cell(row=target_row, column=7 + COL_OFFSET, value=args.what)
 
-    # Apply consistent styling
-    for c in range(1, 8):
+    # Apply consistent styling on cols B..H (skip col A gutter)
+    for c in range(1 + COL_OFFSET, 8 + COL_OFFSET):
         cell = ws.cell(row=target_row, column=c)
         cell.font = NORM_FONT
-        cell.alignment = CTR if c in (1, 2, 4, 5) else WRAP
+        cell.alignment = CTR if c in (1 + COL_OFFSET, 2 + COL_OFFSET, 4 + COL_OFFSET, 5 + COL_OFFSET) else WRAP
         cell.border = BR
 
     ws.row_dimensions[target_row].height = 64
+
+    # Header is at row 5 in NEW layout
+    _extend_sum_formulas(ws, header_row=5, gt_row_after_insert=new_gt_row)
+
     return target_row
 
 
 def append_to_chrono_sheet(wb, args: argparse.Namespace) -> int:
-    """Append the row to 'All Sessions (chronological)'. Returns the new row index."""
-    sheet_name = "All Sessions (chronological)"
+    """Append the row to 'All Sessions'. Returns the new row index.
+
+    Day-11 layout: sheet renamed from 'All Sessions (chronological)' → 'All Sessions'.
+    Header at row 5; data row 6+; GRAND TOTAL at end.
+    Columns (col 2-10 since col 1 is gutter):
+      Date | Day | Timing | Hours | Files | Phase | Evidence/Theme | What I Did | Parallel Work (FE+BE)
+    Parallel Work column (J) is populated by the correlation hook (Day-11 TASK 6) — left blank by this script.
+    """
+    sheet_name = "All Sessions"
     if sheet_name not in wb.sheetnames:
-        sys.stderr.write(f"ERROR: '{sheet_name}' sheet missing from workbook\n")
-        sys.exit(4)
+        # Fallback for any worktree that hasn't pulled the Day-11 swap yet
+        legacy = "All Sessions (chronological)"
+        if legacy in wb.sheetnames:
+            sheet_name = legacy
+        else:
+            sys.stderr.write(f"ERROR: neither 'All Sessions' nor '{legacy}' sheet found\n")
+            sys.exit(4)
     ws = wb[sheet_name]
 
-    gt_row = None
-    for r in range(1, ws.max_row + 1):
-        if ws.cell(row=r, column=1).value == "GRAND TOTAL":
-            gt_row = r
-            break
+    gt_row = _find_grand_total_row(ws)
+    if gt_row is None:
+        sys.stderr.write(f"ERROR: GRAND TOTAL row not found in '{sheet_name}'\n")
+        sys.exit(5)
 
-    target_row = gt_row if gt_row else (ws.max_row + 1)
-    if gt_row:
-        ws.insert_rows(gt_row)
+    target_row = gt_row
+    ws.insert_rows(gt_row)
+    new_gt_row = gt_row + 1
 
     timing = f"{args.start} – {args.end}"
-    ws.cell(row=target_row, column=1, value=datetime.strptime(args.date, "%Y-%m-%d")).number_format = "yyyy-mm-dd"
-    ws.cell(row=target_row, column=2, value=args.day)
-    ws.cell(row=target_row, column=3, value=timing)
-    ws.cell(row=target_row, column=4, value=args.hours).number_format = "0.00"
-    ws.cell(row=target_row, column=5, value=args.files)
-    ws.cell(row=target_row, column=6, value=args.phase)
-    ws.cell(row=target_row, column=7, value=args.theme)
-    ws.cell(row=target_row, column=8, value=args.what)
+    # cols B..I (2..9) — col offset +1 for gutter; col J left blank for correlation hook
+    ws.cell(row=target_row, column=1 + COL_OFFSET, value=datetime.strptime(args.date, "%Y-%m-%d")).number_format = "yyyy-mm-dd"
+    ws.cell(row=target_row, column=2 + COL_OFFSET, value=args.day)
+    ws.cell(row=target_row, column=3 + COL_OFFSET, value=timing)
+    ws.cell(row=target_row, column=4 + COL_OFFSET, value=args.hours).number_format = "0.00"
+    ws.cell(row=target_row, column=5 + COL_OFFSET, value=args.files)
+    ws.cell(row=target_row, column=6 + COL_OFFSET, value=args.phase)
+    ws.cell(row=target_row, column=7 + COL_OFFSET, value=args.theme)
+    ws.cell(row=target_row, column=8 + COL_OFFSET, value=args.what)
+    # col 9+1 = col 10 (J) "Parallel Work (FE+BE)" — left blank; populated by Day-11 TASK 6 hook later
 
-    for c in range(1, 9):
+    for c in range(1 + COL_OFFSET, 10 + COL_OFFSET):
         cell = ws.cell(row=target_row, column=c)
         cell.font = NORM_FONT
-        cell.alignment = CTR if c in (1, 2, 4, 5) else WRAP
+        cell.alignment = CTR if c in (1 + COL_OFFSET, 2 + COL_OFFSET, 4 + COL_OFFSET, 5 + COL_OFFSET) else WRAP
         cell.border = BR
 
     ws.row_dimensions[target_row].height = 64
+
+    _extend_sum_formulas(ws, header_row=5, gt_row_after_insert=new_gt_row)
+
     return target_row
 
 
@@ -224,7 +298,7 @@ def main() -> int:
     print(f"Appending row to phase sheet: '{args.phase}'")
     phase_row = append_to_phase_sheet(wb, args)
 
-    print(f"Appending row to chronological sheet: 'All Sessions (chronological)'")
+    print(f"Appending row to chronological sheet: 'All Sessions'")
     chrono_row = append_to_chrono_sheet(wb, args)
 
     print()
@@ -249,12 +323,8 @@ def main() -> int:
     print()
     print(f"✓ Saved {WORKBOOK_PATH}")
     print()
-    print("NOTE: this script does NOT auto-recompute Day-Total or GRAND-TOTAL formulas.")
-    print("      Excel re-evaluates them on open. If you've inserted a row INSIDE an existing")
-    print("      day's range (vs at the end), you may want to manually verify the day-total")
-    print("      formula range covers the new row. Default behavior inserts above GRAND TOTAL,")
-    print("      which means new entries land in their own implicit single-row 'day' for")
-    print("      manual cleanup later.")
+    print("NOTE (Day-11 layout): GRAND TOTAL =SUM(...) formulas auto-extended to cover the new row.")
+    print("      Excel still re-evaluates Day-Total subtotals on open if any are present in the sheet.")
     return 0
 
 
