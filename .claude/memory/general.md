@@ -85,3 +85,9 @@ AI-native QA management platform for **Iksula Services** — internal pilot on 2
 - GitHub Actions: 0 min / 2k mo limit ✓ (CI not yet wired — MS0-T005)
 - Neon, Render, Resend, R2, Grafana, Better Stack: not yet provisioned (Days 4–6)
 - **Total infra cost: $0/month confirmed.**
+
+## Compound learnings
+
+- **2026-05-06 (Day-11 TASK 3):** RAG citation drift is solved by making the citation MARKER identical to the input chunk HEADER — `[chunk: <UUID>]` appears in BOTH input chunk header AND output citation, so the model trivially mirrors it (no hallucinated `[chunk-1]` / `[1]` / `Source: doc.pdf p.3` variants). Pair this with a UUID-anchored regex parser (rejects `[chunk: 1]`/`[chunk: abc]`) + intersect cited IDs with retrieved set (catches model-hallucinated UUIDs). See ADR-012 §1+§2.
+- **2026-05-06 (Day-11 TASK 3):** When BE service composes ANOTHER BE service that already audits (e.g. `KbAnswerService` calls `KbSearchService.search()` which writes `kb_search_performed`), the wrapping service does NOT need to re-audit the search — workspace isolation + per-call audit row come for free. Wrapping service audits its OWN domain event (`kb_answer_generated`). Avoids audit duplication + keeps the chain readable.
+- **2026-05-06 (Day-11 TASK 2):** PII guard for search/RAG audit payloads is non-negotiable — search queries can leak business intent ("customer X return reason") + answers can leak source material. Audit payload carries query LENGTH + token COUNT + result COUNT + provider/tokens ONLY, NEVER the text. Pinned by negative `expect(payloadStr).not.toContain('sensitive'/'customer'/'$50000')` assertions.
