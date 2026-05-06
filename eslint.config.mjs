@@ -33,6 +33,11 @@ export default tseslint.config(
       '*.min.js',
       '**/next-env.d.ts',
       'node-compile-cache/**',
+      // Node.js helper scripts (Playwright sweeps, work-log scripts, etc.)
+      // — run outside the strict browser/Next config; they intentionally
+      // use CommonJS require() + console + process. Lint them with their
+      // own scoped config if desired, NOT under the workspace browser rules.
+      'scripts/**/*.{js,mjs,cjs}',
     ],
   },
 
