@@ -32,13 +32,22 @@ import { UploadOrchestratorService } from './upload-orchestrator.service';
 import { KbSearchService } from './kb-search.service';
 import { KbDocumentsController } from './kb-documents.controller';
 import { KbDocumentsService } from './kb-documents.service';
+import { KbAnswerController } from './kb-answer.controller';
+import { KbAnswerService } from './kb-answer.service';
 import { AuthModule } from '../auth/auth.module';
 import { ChunkingModule } from '../chunking/chunking.module';
 import { StorageModule } from '../storage/r2.module';
 
 // Day-11 TASK 2: KbSearchService — real pgvector flip for search/detail.
+// Day-11 TASK 3: KbAnswerService + KbAnswerController added — RAG
+//   question-answering pipeline (chunk-search → context build → LLM
+//   call → cited answer). See ADR-012 for prompt strategy.
 // Day-11 TASK 4: KbDocumentsController + KbDocumentsService —
 //   list/detail/delete with cascade chunks + R2 file delete.
+//
+// LLMGatewayModule is @Global so KbAnswerService can inject
+// LLMGatewayService directly without a re-import here. Same pattern
+// as EmbeddingModule already does.
 
 @Module({
   imports: [AuthModule, ChunkingModule, StorageModule],
@@ -47,18 +56,21 @@ import { StorageModule } from '../storage/r2.module';
     KbEmbeddingController,
     UploadOrchestratorController,
     KbDocumentsController,
+    KbAnswerController,
   ],
   providers: [
     KbEmbeddingService,
     UploadOrchestratorService,
     KbSearchService,
     KbDocumentsService,
+    KbAnswerService,
   ],
   exports: [
     KbEmbeddingService,
     UploadOrchestratorService,
     KbSearchService,
     KbDocumentsService,
+    KbAnswerService,
   ],
 })
 export class KbModule {}

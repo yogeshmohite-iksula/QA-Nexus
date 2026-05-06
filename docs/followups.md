@@ -47,6 +47,37 @@ Sibling discipline-cascade item to `enforce-rwd.sh` (Rule 12).
 
 ---
 
+## [2026-05-06] (af) P3 — M3 RAG quality eval methodology — DEFERRED to M3
+
+**Symptom (Day-11 TASK 3, ADR-012):** M2 KB RAG pipeline (PR forthcoming) ships with a heuristic confidence score (avg of cited chunk similarities) and no labeled question-answer test set to gate quality regressions. Today's "answer feels reasonable" is a manual eyeball check; over time as the system prompt evolves + the embedding model changes + Groq → Gemini fallback fires, we'll lose visibility into whether quality is improving or regressing.
+
+**Trigger to revisit:** any of the following.
+
+1. **Pilot QA team flags >2 wrong-answer incidents in a single week** — current threshold for "we need a quality measurement before we can fix this".
+2. **Embedding model swap** (e.g., Xenova ships Qwen3-Embedding-0.6B ONNX as ADR-003 anticipates; or M3 moves to bge-large after a Render upgrade) — need a regression-testable gate before flipping the env var.
+3. **System prompt iteration** — once we've tuned the prompt 2-3 times based on pilot feedback, we need a regression test.
+4. **Multi-tenant PM3** — if PM3 ships per-customer KB tuning, each tenant needs an isolated quality baseline.
+
+**Decision (M3 work, ~6-10 hr — only if any trigger above fires):**
+
+1. Curate a labeled test set of ~30 question-answer pairs against the Iksula `return_policy_v2.xlsx` corpus (canonical M2 demo file). Each row: `{question, expected_answer_key_phrases[], expected_cited_chunk_ids[], min_confidence}`.
+2. Build a `pnpm --filter @qa-nexus/api eval:rag` script that runs the pipeline against the test set + scores: (a) % of expected key phrases present in answer, (b) % of expected chunks actually cited, (c) avg confidence, (d) end-to-end latency.
+3. Wire into CI on a separate workflow (NOT pre-merge gate — too slow + quota-burning) — runs nightly + posts result to Slack.
+4. Hold each metric to a baseline; CI fails when a metric drops >5pp vs the previous green run.
+5. Update ADR-012 with a §"Quality eval methodology" section pointing at this followup's resolution.
+
+**Owner:** BE chat (folds into M3 quality work).
+**Effort:** L (6-10 hr — most time is curating the test set with QA team input, not building the script).
+**Severity:** P3 (no functional impact today; current pipeline is production-fit for M2 pilot scale).
+
+**Cross-references:**
+
+- `docs/architecture/adr-012-kb-rag-prompt-strategy.md` (the decision being eval-gated)
+- `apps/api/src/kb/kb-answer.service.ts` (system prompt + sampling defaults under test)
+- `docs/followups.md` `(l)` — sister M3 quality eval for embedding model swap
+
+---
+
 ## [2026-05-06] (ae) P2 — PRD/ERD/CLAUDE.md drift: embedding model spec says 1024-dim bge-large, code is 384-dim bge-small — `[m2-blocker]` (spec-only)
 
 **Symptom (Day-11 skill alignment audit):** `PM1_PRD v8.1` and `PM1_ERD v2.1` both contain a 2026-04-28 implementation note saying _"PM1 ships with `Xenova/bge-large-en-v1.5` (1024-dim, ONNX, Apache-2.0)"_. `CLAUDE.md` "Locked tech stack" section says the same. **However**, the live code in `apps/api/prisma/schema.prisma` declares `KbChunk.embedding` as `Unsupported("vector(384)")` per ADR-003 amendment + ADR-009 (Day-5 migration `0002_vector_384_dim.sql`). The active runtime model is `Xenova/bge-small-en-v1.5` to fit Render Free's 512 MB memory ceiling.

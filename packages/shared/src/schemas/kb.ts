@@ -333,3 +333,51 @@ export const KbDocumentDeleteResponse = z.object({
   r2DeleteSucceeded: z.boolean(),
 });
 export type KbDocumentDeleteResponse = z.infer<typeof KbDocumentDeleteResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M2 Day-11 TASK 3 — KB RAG question-answering endpoint contracts.
+// Spec: ADR-012 (prompt strategy + citation format).
+// ─────────────────────────────────────────────────────────────────────
+
+export const KbAnswerRequest = z.object({
+  /** Natural-language question. 1..2000 chars (a paragraph max). */
+  question: z.string().min(1).max(2000),
+  /** Top-K chunks to retrieve. Default 5; clamped to 10 in service. */
+  topK: z.number().int().min(1).max(10).default(5),
+});
+export type KbAnswerRequest = z.infer<typeof KbAnswerRequest>;
+
+/// Provider metadata returned alongside the answer. Null when the
+/// LLM was skipped (noContext short-circuit per ADR-012 §4).
+export const KbAnswerLlmMetadata = z.object({
+  providerName: z.string(),
+  modelUsed: z.string(),
+  tokensIn: z.number().int().nonnegative(),
+  tokensOut: z.number().int().nonnegative(),
+  latencyMs: z.number().int().nonnegative(),
+  fallbackUsed: z.boolean(),
+});
+export type KbAnswerLlmMetadata = z.infer<typeof KbAnswerLlmMetadata>;
+
+export const KbAnswerResponse = z.object({
+  ok: z.literal(true),
+  /** Generated answer text. When `noContext: true`, equals the
+   *  canonical "I don't have information…" string per ADR-012 §4. */
+  answer: z.string(),
+  /** Chunk IDs the model actually cited, intersected with the
+   *  retrieved set so hallucinated UUIDs are filtered out. */
+  sourceChunkIds: z.array(Uuid),
+  /** Average similarity of cited chunks; top-chunk similarity if no
+   *  citations; 0 if noContext. Range [0, 1]. FE displays as a
+   *  band: ≥0.75 high · 0.50-0.75 medium · <0.50 low. */
+  confidenceScore: z.number().min(0).max(1),
+  /** True when the search returned 0 chunks AND the LLM was skipped.
+   *  FE shows a "no info" notice (NOT a chat bubble) for this case. */
+  noContext: z.boolean(),
+  /** Total chunks retrieved by the upstream search (before citation
+   *  filtering). FE may render these as "consulted" cards. */
+  retrievedChunkCount: z.number().int().nonnegative(),
+  /** LLM provider metadata; null when noContext short-circuited. */
+  llmMetadata: KbAnswerLlmMetadata.nullable(),
+});
+export type KbAnswerResponse = z.infer<typeof KbAnswerResponse>;
