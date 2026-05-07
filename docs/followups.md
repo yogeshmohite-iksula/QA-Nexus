@@ -2,6 +2,38 @@
 
 ---
 
+## [2026-05-07] (am) P2 — `[m2-followup]` Hard Rule 14 retrofit: F08 Home + F09 Projects List
+
+**Symptom (Day-12 retrofit audit):** Two pre-Rule-14 frames render bespoke top-bar + left-rail chrome instead of the canonical `AdminShell` wrapper. Found by `docs/audits/2026-05-07-rule-14-retrofit-audit.md`:
+
+- **F08 Home** — `apps/web/app/home/page.tsx` → `apps/web/components/home/qa-engineer-home.tsx` does NOT import `AdminShell`.
+- **F09 Projects List** — `apps/web/app/projects/page.tsx` → `apps/web/components/projects/projects-list-page.tsx` does NOT import `AdminShell`.
+
+F27 + F28 already comply (wrap via `users-roles-page.tsx` + `settings-audit-page.tsx` respectively).
+
+**Severity:** P2 — works visually today, but breaks Rule 14 shell-parity contract. Collapse + hamburger primitives won't ship to these two routes until retrofitted.
+
+**Fix path (~60 min total, both frames in one PR):**
+
+1. Land FE+1 TASK 0 first (AdminShell v2 — adds `data-shell-collapse` + `data-shell-hamburger` data attrs + collapse toggle + hamburger primitives).
+2. **F08:** wrap `<QaEngineerHome>` body in `<AdminShell active='home'>`. Add `'home'` to the `AdminNavActive` union type. Remove bespoke top-bar + left-rail markup.
+3. **F09:** wrap `<ProjectsListPage>` body in `<AdminShell active='projects'>`. Add `'projects'` to the `AdminNavActive` union type. Remove bespoke chrome.
+4. Visual gate at 320 + 1440 px per Rule 13 amendment — both screenshots MUST show hamburger (320) + collapse toggle (1440).
+5. Commit on `fix/web-rule-14-retrofit-f08-f09`.
+
+**Owner:** FE chat. Land as Thu PM TASK 5 (after 3 flip PRs + AdminShell v2).
+
+**Tag:** `[m2-followup]`
+
+**Cross-references:**
+
+- `docs/audits/2026-05-07-rule-14-retrofit-audit.md` — full audit (this PR)
+- `CLAUDE.md` Hard Rule 14 (codified PR #64)
+- `PM1_UI_v2/Redesign Frame by claude design/F15 Knowledge Base v2.html` — canonical reference
+- Sibling `(ak)` — author-time hook to prevent future regressions
+
+---
+
 ## [2026-05-06] (ak) P2 — `[m2-followup]` author-time hook for missing `AdminShell` wrap on `/(app)/*` routes
 
 **Symptom (Day-11 visual gate):** F12 KB Upload (PR #52, already merged)
