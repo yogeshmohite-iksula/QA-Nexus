@@ -19,6 +19,7 @@ import { KbModule } from './kb/kb.module';
 import { LlmConfigModule } from './admin/llm-config/llm-config.module';
 import { ChunkingModule } from './chunking/chunking.module';
 import { TestCasesModule } from './test-cases/test-cases.module';
+import { RequirementsModule } from './requirements/requirements.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TestCasesModule } from './test-cases/test-cases.module';
     LlmConfigModule, // M1.5 Day-8 Step 3 — F26 Admin LLM-config tab endpoints
     ChunkingModule, // M2 Day-8 Step 5 — file → kb_chunks parser + persistence
     TestCasesModule, // M3 Day-12 TASK BE-02 — test cases CRUD skeleton (501 stubs)
+    RequirementsModule, // M3 Day-12 TASK BE-03 — requirements CRUD skeleton (501 stubs)
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)
     HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts
   ],
