@@ -255,6 +255,108 @@ export const FinalizeUploadResponse = z.object({
 export type FinalizeUploadResponse = z.infer<typeof FinalizeUploadResponse>;
 
 // ─────────────────────────────────────────────────────────────────────
+// M2 Day-12 (al) F12 upload-pipeline gap fix — POST upload-create.
+//
+// Closes the gap between the FE upload UX and the existing finalize-
+// upload pipeline: finalize-upload requires a KbDocument row + R2 key,
+// but no endpoint creates them. This endpoint:
+//   1. Validates input + RBAC + project membership
+//   2. INSERTs a KbDocument row (title=fileName, templateKind=fileType,
+//      authorId=actor) — `status='pending_upload'` is implicit (no
+//      kb_chunks rows yet; finalize-upload sets the chunk count)
+//   3. Generates the R2 key as `<projectId>/<documentId>/<filename>`
+//      via R2Service.presignedUpload(prefix=`${projectId}/${documentId}`)
+//   4. Returns { documentId, presignedUploadUrl, r2Key, expiresAt }
+//
+// FE flow:
+//   POST /api/projects/:projectId/kb/documents → { documentId, presignedUploadUrl, r2Key }
+//   PUT presignedUploadUrl with file bytes (direct from FE → R2)
+//   POST /api/admin/kb/finalize-upload { documentId, fileName, r2Key }
+// ─────────────────────────────────────────────────────────────────────
+
+/// Allowed source file types for the M2 upload pipeline. Mirrors
+/// `ChunkDocumentResponse.format` enum (the chunking service detects
+/// format from filename extension; this Zod enum pins the FE-facing
+/// vocabulary). `docx` + `md` are listed for FE UX completeness; the
+/// chunker normalises `.md` → 'txt' format and `.docx` → 'pdf'-style
+/// text path (deferred to M3 if real Word ingestion is needed).
+export const KbUploadFileType = z.enum(['pdf', 'docx', 'md', 'txt', 'xlsx', 'csv']);
+export type KbUploadFileType = z.infer<typeof KbUploadFileType>;
+
+/// Hard cap on a single upload — Render Free dyno has 512 MB heap;
+/// chunking buffers the whole file in memory; 50 MB leaves comfortable
+/// headroom for embedder + Postgres connection. ADR-009 §"R2 limits".
+export const KB_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+
+/// MIME type allowlist — keeps a malicious caller from claiming
+/// fileType='pdf' but sending an executable. Loose enough to allow
+/// well-known synonyms (e.g. application/x-pdf) but tight enough to
+/// reject `application/octet-stream` or `text/html`.
+export const KbUploadMimeType = z
+  .string()
+  .min(3)
+  .max(255)
+  .regex(/^[a-z]+\/[a-z0-9.+\-_]+$/i, 'invalid MIME type');
+
+export const CreateKbDocumentRequest = z
+  .object({
+    fileName: z.string().min(1).max(512),
+    /** Bytes — capped at KB_UPLOAD_MAX_BYTES (50 MB). */
+    fileSize: z.number().int().positive().max(KB_UPLOAD_MAX_BYTES),
+    mimeType: KbUploadMimeType,
+    fileType: KbUploadFileType,
+  })
+  /// Cross-field validation: mimeType should be plausibly compatible
+  /// with the declared fileType. Loose-match because browser MIME
+  /// inference varies (some send 'text/csv', some 'application/csv').
+  .refine((v) => mimeMatchesFileType(v.mimeType, v.fileType), {
+    message: 'mimeType does not match declared fileType',
+    path: ['mimeType'],
+  });
+export type CreateKbDocumentRequest = z.infer<typeof CreateKbDocumentRequest>;
+
+/// Minimal MIME ↔ fileType table. Service-side enforcement; FE may
+/// surface a friendlier error if the user tries to upload an
+/// unsupported file.
+function mimeMatchesFileType(mime: string, fileType: KbUploadFileType): boolean {
+  const m = mime.toLowerCase();
+  switch (fileType) {
+    case 'pdf':
+      return m === 'application/pdf' || m === 'application/x-pdf';
+    case 'docx':
+      return (
+        m === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        m === 'application/msword'
+      );
+    case 'xlsx':
+      return (
+        m === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        m === 'application/vnd.ms-excel'
+      );
+    case 'csv':
+      return m === 'text/csv' || m === 'application/csv';
+    case 'md':
+      return m === 'text/markdown' || m === 'text/plain' || m === 'text/x-markdown';
+    case 'txt':
+      return m === 'text/plain';
+    default:
+      return false;
+  }
+}
+
+export const CreateKbDocumentResponse = z.object({
+  ok: z.literal(true),
+  documentId: Uuid,
+  /** R2 PUT URL — FE uploads bytes here directly. */
+  presignedUploadUrl: z.string().url(),
+  /** Object key the caller passes to finalize-upload. */
+  r2Key: z.string().min(3).max(1024),
+  /** ISO datetime when the presigned URL expires. */
+  expiresAt: Timestamp,
+});
+export type CreateKbDocumentResponse = z.infer<typeof CreateKbDocumentResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
 // M2 Day-11 TASK 4 — Document CRUD endpoints (list / detail / delete).
 // ─────────────────────────────────────────────────────────────────────
 

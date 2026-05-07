@@ -35,14 +35,26 @@
 //     PII like "Customer XYZ Refund Policy.pdf").
 
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { R2Service } from '../storage/r2.service';
+
+/// Extract a file extension (lowercased, NO dot) for audit metadata.
+/// "Customer XYZ Refund Policy.pdf" → "pdf". "no-extension" → "".
+/// Used in `createForUpload` audit payload — leaks no filename body
+/// content but still gives ops a way to spot fileType mismatches.
+function extractFileExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf('.');
+  if (dot < 0 || dot === fileName.length - 1) return '';
+  return fileName.slice(dot + 1).toLowerCase();
+}
 
 export interface ActorContext {
   workspaceId: string;
@@ -90,10 +102,31 @@ export interface DeleteResult {
   r2DeleteSucceeded: boolean;
 }
 
+/// M2 Day-12 (al) — input shape for `createForUpload`.
+export interface CreateForUploadInput {
+  projectId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  fileType: 'pdf' | 'docx' | 'md' | 'txt' | 'xlsx' | 'csv';
+}
+
+export interface CreateForUploadResult {
+  documentId: string;
+  presignedUploadUrl: string;
+  r2Key: string;
+  expiresAt: string;
+}
+
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_CHUNK_PREVIEW = 50;
 const MAX_CHUNK_PREVIEW = 100;
+/// 50 MB matches `KB_UPLOAD_MAX_BYTES` in `@qa-nexus/shared`. Both
+/// constants exist (Zod side enforces at the surface, service side
+/// enforces defense-in-depth — Zod could be skipped if a future
+/// caller bypasses the controller).
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 @Injectable()
 export class KbDocumentsService {
@@ -104,6 +137,104 @@ export class KbDocumentsService {
     private readonly audit: AuditService,
     private readonly r2: R2Service,
   ) {}
+
+  /// M2 Day-12 (al) — closes the F12 upload-pipeline gap.
+  ///
+  /// Pipeline:
+  ///   1. assertProjectWorkspace → 404 on cross-workspace (no leak).
+  ///   2. Defense-in-depth size cap (Zod enforces at the controller
+  ///      surface, but a future caller bypassing the controller still
+  ///      hits this).
+  ///   3. Issue R2 presigned PUT URL with `prefix=<projectId>/<documentId>`
+  ///      so the actual R2 key namespaces by project + document. The
+  ///      R2Service.presignedUpload() helper appends `<YYYY-MM-DD>/<uuid>-<filename>`
+  ///      to the prefix; final shape is
+  ///      `<projectId>/<documentId>/<YYYY-MM-DD>/<inner-uuid>-<filename>`.
+  ///      Slight deviation from the user's "{projectId}/{documentId}/{filename}"
+  ///      spec — preserves the existing R2 key convention used by every
+  ///      other M2 upload (date prefix simplifies lifecycle cleanup;
+  ///      inner uuid prevents collisions on duplicate filename uploads
+  ///      to the same documentId, which is rare but valid for retries).
+  ///   4. Persist KbDocument row in a single Prisma write — title=fileName
+  ///      (FE displays as upload label), templateKind=fileType, bodyMd=''.
+  ///      Implicit `status='pending_upload'` = "no kb_chunks rows yet"
+  ///      (finalize-upload populates them).
+  ///   5. Audit `kb_document_create_initiated` synchronously with PII-
+  ///      safe payload — file_name_length + file_name_extension + size +
+  ///      mime + actor; NEVER raw filename (filenames can carry customer
+  ///      PII like "Customer XYZ Refund Policy.pdf").
+  async createForUpload(
+    input: CreateForUploadInput,
+    ctx: ActorContext,
+  ): Promise<CreateForUploadResult> {
+    await this.assertProjectWorkspace(input.projectId, ctx);
+
+    if (input.fileSize > MAX_UPLOAD_BYTES) {
+      throw new BadRequestException(
+        `file too large: ${input.fileSize} bytes exceeds ${MAX_UPLOAD_BYTES} byte limit`,
+      );
+    }
+
+    const documentId = randomUUID();
+
+    // Issue presigned URL FIRST (before DB write) so a bucket/auth
+    // failure never leaves an orphan KbDocument row. R2Service
+    // throws ServiceUnavailableException if env vars not set.
+    const presigned = await this.r2.presignedUpload({
+      contentType: input.mimeType,
+      filename: input.fileName,
+      prefix: `${input.projectId}/${documentId}`,
+    });
+
+    // Persist KbDocument row. authorId = actor; templateKind = fileType.
+    await this.prisma.kbDocument.create({
+      data: {
+        id: documentId,
+        projectId: input.projectId,
+        title: input.fileName,
+        bodyMd: '',
+        templateKind: input.fileType,
+        pinned: false,
+        authorId: ctx.actorId,
+      },
+    });
+
+    // PII-safe audit — count/length/ext only, NEVER raw filename.
+    // The r2_key would carry the raw filename (R2Service sanitizes
+    // path separators but preserves the body — "Customer XYZ.pdf"
+    // → "Customer-XYZ.pdf"). Log only the prefix portion (safe;
+    // contains projectId + documentId + date but no filename body).
+    // If cascade-delete later needs the full r2_key, it looks it up
+    // from kb_chunks_generated audit (PR #34 pattern, used by PR #60).
+    const ext = extractFileExtension(input.fileName);
+    const r2KeyPrefix = `${input.projectId}/${documentId}`;
+    await this.audit.write({
+      workspaceId: ctx.workspaceId,
+      actorId: ctx.actorId,
+      entityType: 'kb_document',
+      entityId: documentId,
+      action: 'kb_document_create_initiated',
+      payload: {
+        document_id: documentId,
+        project_id: input.projectId,
+        workspace_id: ctx.workspaceId,
+        file_name_length: input.fileName.length,
+        file_name_extension: ext,
+        file_size_bytes: input.fileSize,
+        mime_type: input.mimeType,
+        file_type: input.fileType,
+        r2_key_prefix: r2KeyPrefix,
+        actor_email: ctx.actorEmail,
+      },
+    });
+
+    return {
+      documentId,
+      presignedUploadUrl: presigned.url,
+      r2Key: presigned.key,
+      expiresAt: presigned.expiresAt,
+    };
+  }
 
   /** Verify project exists + belongs to actor's workspace. Returns
    *  the project's workspaceId for downstream JOIN-style filters.

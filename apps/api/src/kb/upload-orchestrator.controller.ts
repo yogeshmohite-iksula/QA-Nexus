@@ -65,8 +65,13 @@ export class UploadOrchestratorController {
     };
   }
 
+  /// RBAC widened M2 Day-12 (al) — Admin/Lead/QAEngineer match the
+  /// new POST /api/projects/:projectId/kb/documents endpoint, so a
+  /// QAEng who creates an upload can also finalize it. Workspace
+  /// isolation is enforced inside UploadOrchestratorService via the
+  /// project-membership chain (cross-workspace docId → 404).
   @Post('finalize-upload')
-  @Roles(Role.Admin)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
   async finalizeUpload(@Body() body: unknown, @Req() req: Request) {
     const input = FinalizeUploadRequest.parse(body);
     const ctx = await this.actorOf(req);
