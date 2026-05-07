@@ -12,14 +12,32 @@
 // for KB nav rail + top utility bar. Page no longer renders its own
 // project header (the shell does).
 //
-// Pattern A: stub upload (setInterval progress). Pattern B lands Thu 7 May.
-// Anti-drift: ZERO axios / fetch / useMutation here.
+// Day-12 TASK 1 RESUME (M2 close): Pattern A stub (setInterval) replaced
+// with the real 3-step flow against BE+1's PR #78 + the existing
+// finalize-upload from PR #40:
+//
+//   1. POST /api/projects/:projectId/kb/documents
+//        → { documentId, presignedUploadUrl, r2Key }
+//   2. PUT presignedUploadUrl with file bytes
+//   3. POST /api/admin/kb/finalize-upload (sync; chunks + embeds)
+//
+// `chunkCount > 0` from finalize signals success — no polling needed
+// since finalize is sync (~3-5 s). Pattern A `console.info` deferred
+// markers removed.
 
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronRight, CheckCircle2, FileText, Loader2, UploadCloud, XCircle } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import {
+  canonicalMimeForFileType,
+  createKbDocument,
+  fileTypeFromExt,
+  finalizeKbUpload,
+  putToR2,
+} from '@/lib/api/kb-upload-api';
+import { useProjectList } from '@/lib/contexts/ProjectContext';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -90,17 +108,29 @@ function KbUploadPageContent() {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Resolve the active project's UUID from the project list. F12 is
+  // mounted at /kb/upload (workspace-scoped), but BE endpoints are
+  // project-scoped. Anchored to RET (Iksula Returns) to match the
+  // AdminShell's projectKeyLower="ret" prop. PM2 will replace this
+  // lookup with a real workspace route.
+  const projects = useProjectList();
+  const projectId = useMemo(
+    () => projects.find((p) => p.key.toLowerCase() === 'ret')?.id ?? null,
+    [projects],
+  );
+
   const [uploadState, setUploadState] = useState<UploadState>('initial');
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
   const [progress, setProgress] = useState(0); // 0–100
+  const [progressLabel, setProgressLabel] = useState('Preparing…');
   const [errorMsg, setErrorMsg] = useState('');
   const [dragActive, setDragActive] = useState(false);
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Track in-flight upload so unmount can abort the network leg. */
+  const uploadAbortRef = useRef<AbortController | null>(null);
 
-  // Clear stub interval on unmount
   useEffect(
     () => () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      uploadAbortRef.current?.abort();
     },
     [],
   );
@@ -165,44 +195,76 @@ function KbUploadPageContent() {
   }
 
   // ---------------------------------------------------------------------------
-  // Upload (Pattern A stub)
+  // Upload (Pattern B — real BE pipeline, 3 sequential steps)
+  //   1. POST /api/projects/:projectId/kb/documents → presigned URL
+  //   2. PUT bytes → R2
+  //   3. POST /api/admin/kb/finalize-upload (sync; returns chunkCount)
   // ---------------------------------------------------------------------------
 
-  function startUpload() {
+  async function startUpload() {
     if (!selectedFile) return;
+    if (!projectId) {
+      setErrorMsg('No active project. Select a project from the top bar before uploading.');
+      setUploadState('error');
+      return;
+    }
 
-    // Pattern A deferred marker — Pattern B replaces this entire block with
-    // POST /api/kb/upload-init → PUT R2 → POST /api/kb/finalize-upload
-    console.info('pattern-a:deferred:kb:upload', {
-      fileName: selectedFile.name,
-      size: selectedFile.bytes,
-    });
+    const fileType = fileTypeFromExt(selectedFile.name);
+    if (!fileType) {
+      setErrorMsg(
+        `"${selectedFile.name}" extension is not supported by the BE. Accepted: .pdf .docx .md .txt .xlsx .csv.`,
+      );
+      setUploadState('error');
+      return;
+    }
+
+    const mimeType = canonicalMimeForFileType(fileType, selectedFile.raw.type);
 
     setProgress(0);
+    setProgressLabel('Creating document…');
     setUploadState('uploading');
 
-    // Stub progress: linearly 0→90 in 1.8 s, then jump to 100 + success.
-    let pct = 0;
-    progressIntervalRef.current = setInterval(() => {
-      pct += 5;
-      if (pct >= 90) {
-        clearInterval(progressIntervalRef.current!);
-        progressIntervalRef.current = null;
-        setProgress(100);
-        setTimeout(() => setUploadState('success'), 300);
-      } else {
-        setProgress(pct);
-      }
-    }, 100);
+    try {
+      // STEP 1 — create kb_document row + get presigned URL
+      const createRes = await createKbDocument(projectId, {
+        fileName: selectedFile.name,
+        fileSize: selectedFile.bytes,
+        mimeType,
+        fileType,
+      });
+      setProgress(25);
+
+      // STEP 2 — PUT bytes to R2
+      setProgressLabel('Uploading to R2…');
+      await putToR2(createRes.presignedUploadUrl, selectedFile.raw, mimeType);
+      setProgress(60);
+
+      // STEP 3 — finalize: BE chunks + embeds (sync, ~3-5 s)
+      setProgressLabel('Indexing chunks + embedding…');
+      const finalizeRes = await finalizeKbUpload({
+        documentId: createRes.documentId,
+        fileName: selectedFile.name,
+        r2Key: createRes.r2Key,
+      });
+      setProgress(100);
+      setProgressLabel(
+        `Indexed ${finalizeRes.chunkCount} chunks · ${finalizeRes.embeddedCount} embedded`,
+      );
+      // Tiny visual settle, then success state
+      setTimeout(() => setUploadState('success'), 250);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Upload failed. Please try again.';
+      setErrorMsg(msg);
+      setUploadState('error');
+    }
   }
 
   function reset() {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
+    uploadAbortRef.current?.abort();
+    uploadAbortRef.current = null;
     setSelectedFile(null);
     setProgress(0);
+    setProgressLabel('Preparing…');
     setErrorMsg('');
     setUploadState('initial');
   }
@@ -272,7 +334,7 @@ function KbUploadPageContent() {
         )}
 
         {uploadState === 'uploading' && selectedFile && (
-          <UploadingState file={selectedFile} progress={progress} />
+          <UploadingState file={selectedFile} progress={progress} progressLabel={progressLabel} />
         )}
 
         {uploadState === 'success' && selectedFile && (
@@ -489,7 +551,15 @@ function SelectedState({
 
 // ── Uploading ──
 
-function UploadingState({ file, progress }: { file: SelectedFile; progress: number }) {
+function UploadingState({
+  file,
+  progress,
+  progressLabel,
+}: {
+  file: SelectedFile;
+  progress: number;
+  progressLabel: string;
+}) {
   return (
     <div className="flex flex-col items-center gap-6 text-center">
       <span
@@ -516,7 +586,7 @@ function UploadingState({ file, progress }: { file: SelectedFile; progress: numb
         className="w-full max-w-[360px]"
       >
         <div className="mb-1.5 flex justify-between font-mono text-[11px] text-[var(--text-tertiary)]">
-          <span>Uploading to R2</span>
+          <span className="truncate">{progressLabel}</span>
           <span>{progress}%</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--overlay)]">
