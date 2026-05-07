@@ -328,6 +328,13 @@ function tc(overrides: {
     confidenceScore,
     aiProvenanceJson:
       status === 'ai_draft' ? { agent: 'test-author', model: 'gpt-oss-120b' } : null,
+    // M3 TASK BE-01 — AI provenance fields. Demo seed defaults to the
+    // step-format manual path so existing fixtures keep their shape.
+    format: 'step',
+    gherkin: null,
+    generatedByAgent: null,
+    sourceChunkIds: null,
+    rationale: null,
     createdBy: assignee.id,
     createdAt: T_2D_AGO,
     updatedAt: T_YESTERDAY,
