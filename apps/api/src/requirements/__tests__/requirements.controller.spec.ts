@@ -51,7 +51,7 @@ function makeProjectController() {
       },
     }),
   };
-   
+
   const ctrl = new RequirementsProjectScopedController(service, auth as any);
   return { ctrl, service };
 }
@@ -68,7 +68,7 @@ function makeReqController() {
       },
     }),
   };
-   
+
   const ctrl = new RequirementsReqScopedController(service, auth as any);
   return { ctrl, service };
 }
@@ -149,7 +149,6 @@ describe('[@M3-BE-03] Requirements skeleton — 501 surface + RBAC + Zod', () =>
     /// `qa-nexus:rbac:roles` = ROLES_KEY constant from
     /// auth/rbac/roles.decorator.ts.
     function rolesOn(target: object, method: string): unknown {
-       
       return Reflect.getMetadata(
         'qa-nexus:rbac:roles',
         (target as any)[method],
