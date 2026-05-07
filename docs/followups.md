@@ -2,6 +2,72 @@
 
 ---
 
+## [2026-05-07] (al) P0 — `[m2-blocker]` BE missing `POST /api/projects/:projectId/kb/documents` to create `KbDocument` row before `finalize-upload`
+
+**Discovered:** Day-12 morning while wiring F12 Pattern A→B flip. Day-12
+brief described a 4-step BE flow:
+
+1. `POST /api/kb/upload-init` (presigned URL)
+2. `PUT` to R2
+3. `POST /api/kb/finalize-upload` (already shipped in PR #40)
+4. `GET /api/kb/documents/:id?fields=status` (poll until ready/failed)
+
+**Reality of BE main branch:**
+
+- Step 1 endpoint is actually `POST /storage/presigned-upload` (no
+  `/api/kb` prefix; signed by `r2.service.ts` per ADR-005). Path
+  rename only — works once FE knows the right URL.
+- Step 3 `finalize-upload` requires a pre-existing `KbDocument.id`
+  to be passed in. `FinalizeUploadRequest = { documentId: Uuid, fileName, r2Key }`.
+- **No FE-callable endpoint creates a `KbDocument` row.** The KB
+  documents controller (`apps/api/src/kb/kb-documents.controller.ts`)
+  only has `@Get()`, `@Get(':docId')`, `@Delete(':docId')`. There is no
+  `@Post()` route — confirmed via grep on BE main.
+- Step 4: `KbDocumentListItem` Zod schema has no `status` field (only
+  `chunkCount`). Polling cannot use `?fields=status` because the field
+  doesn't exist. UI can use `chunkCount > 0` as a proxy for "ready",
+  but there's no signal for "failed".
+
+**Severity:** **P0 — `[m2-blocker]`**. F12 Pattern B flip cannot complete
+end-to-end without a way to create the `KbDocument` row.
+
+**Mitigation chosen Day-12:** Skip TASK 1 (F12 flip) for today; F12
+remains in Pattern A state (functional stub). TASK 2 (F13) and TASK 3
+(F15) proceed normally — both only consume read-only endpoints (GET
+list, DELETE, POST search, POST answer) which are all shipped on main.
+
+**Fix path (BE+1, ~2 hr):**
+
+1. Add `@Post()` route to `apps/api/src/kb/kb-documents.controller.ts`:
+   ```
+   POST /api/projects/:projectId/kb/documents
+   Body: { title: string, templateKind: 'pdf'|'docx'|'md'|'txt', r2Key?: string }
+   Response: { ok, document: KbDocumentListItem }
+   Roles: Admin, Lead
+   ```
+2. Add `status: 'processing' | 'ready' | 'failed'` enum to
+   `KbDocumentListItem` Zod schema in `packages/shared/src/schemas/kb.ts`.
+3. Wire `finalize-upload` to set `status: 'ready'` on success and
+   `status: 'failed'` on error.
+4. FE follow-up PR (post BE+1 land): wire F12 to call create →
+   presigned-upload → R2 PUT → finalize-upload, and poll
+   `GET /api/projects/:projectId/kb/documents/:docId` for status.
+
+**Reference files (BE):**
+
+- `apps/api/src/kb/kb-documents.controller.ts` (only GET/DELETE today)
+- `apps/api/src/kb/upload-orchestrator.controller.ts` (finalize-upload)
+- `apps/api/src/storage/storage.controller.ts` (presigned-upload)
+- `packages/shared/src/schemas/kb.ts` (Zod schema needs `status` enum)
+
+**Owner:** BE+1. Ping in BE chat for ETA. M2 close ceremony will
+defer F12 flip to next milestone or Fri AM if BE+1 ships before EOD
+Thu.
+
+**Tag:** `[m2-blocker]`
+
+---
+
 ## [2026-05-06] (ak) P2 — `[m2-followup]` author-time hook for missing `AdminShell` wrap on `/(app)/*` routes
 
 **Symptom (Day-11 visual gate):** F12 KB Upload (PR #52, already merged)
