@@ -1,85 +1,143 @@
-// F15 Knowledge Base — chunk-search API client scaffolding (Pattern A).
+// F15 Knowledge Base — REAL BE-wired API client (Pattern B).
 //
-// Day-8 BE-gated: BE M2 chunk-search controller landed via PR #30 at
-// SHA fe46d75. The wire shape (`KbSearchRequest`/`KbSearchResponse`/
-// `Chunk`/`ChunkDetail`) is LOCKED in `packages/shared/src/schemas/kb.ts`
-// — the BE controller currently returns 8 hardcoded fixtures from
-// `return_policy_v2.xlsx`, but the response shape will not change when
-// M2 swaps the stub for real pgvector HNSW search + LLMGateway re-rank.
+// Day-12 TASK 3 (M2 close). Connection-pause from `kb-page.connection-pause.md`
+// closed: stub fetchers replaced with real `fetch()` calls. The wire shapes
+// (`KbSearchRequest`/`KbSearchResponse`/`Chunk`/`ChunkDetail`/`KbAnswerRequest`/
+// `KbAnswerResponse`) are LOCKED in `packages/shared/src/schemas/kb.ts`.
 //
-// PAUSE points are explicitly marked with `// PAUSE — wait BE+1 …`
-// comments. Today's call is intentionally NOT made — this scaffold
-// flips to live in 30 min by replacing the stub fetcher body with a
-// real `fetch()`. See `kb-page.connection-pause.md` for the exact
-// swap-in recipe.
+// Endpoints:
+//   - POST /api/projects/:projectId/kb/search        (BE+1 PR #53)
+//   - POST /api/projects/:projectId/kb/answer        (BE+1 PR #57, RAG)
+//   - GET  /api/projects/:projectId/kb/chunks/:chunkId
+//
+// FE absolute-URL discipline: `NEXT_PUBLIC_API_BASE_URL` prefix matches
+// the pattern in `users-api.ts`, `kb-imports-api.ts`, and `auth/client.ts`.
+// Local dev defaults to http://localhost:3001; prod is the Render URL set
+// in Cloudflare Pages env vars.
 
 import {
   type Chunk,
   type ChunkDetail,
   type ChunkDetailResponse,
+  type KbAnswerRequest,
+  type KbAnswerResponse,
   type KbSearchRequest,
   type KbSearchResponse,
+  KbAnswerRequest as KbAnswerRequestSchema,
+  KbAnswerResponse as KbAnswerResponseSchema,
   KbSearchRequest as KbSearchRequestSchema,
   KbSearchResponse as KbSearchResponseSchema,
   ChunkDetailResponse as ChunkDetailResponseSchema,
 } from '@qa-nexus/shared';
 
-export type { Chunk, ChunkDetail, ChunkDetailResponse, KbSearchRequest, KbSearchResponse };
+export type {
+  Chunk,
+  ChunkDetail,
+  ChunkDetailResponse,
+  KbAnswerRequest,
+  KbAnswerResponse,
+  KbSearchRequest,
+  KbSearchResponse,
+};
 
-export { KbSearchRequestSchema, KbSearchResponseSchema, ChunkDetailResponseSchema };
+export {
+  KbAnswerRequestSchema,
+  KbAnswerResponseSchema,
+  KbSearchRequestSchema,
+  KbSearchResponseSchema,
+  ChunkDetailResponseSchema,
+};
+
+const API_BASE = (
+  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001') as string
+).replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
-// Fetchers — currently STUBS returning seed data that mirrors the BE
-// fixture set. Real fetch swaps in at the connection point.
+// Fetchers (Pattern B — real BE)
 // ---------------------------------------------------------------------------
 
-/** Stub fetcher — returns the 8-chunk seed list as a Promise so the
- *  TanStack Query hook can call `await fetcher(req)` without changing
- *  shape when the real fetch swaps in.
- *
- *  PAUSE — wait BE+1 confirmation that KB endpoints are wired beyond
- *  stub responses. Currently PR #30 returns hardcoded fixtures only.
- *  Once the M2 swap lands (pgvector HNSW + optional LLM re-rank), this
- *  body becomes:
- *
- *      const res = await fetch(
- *        `/api/projects/${projectId}/kb/search`,
- *        { method: 'POST', credentials: 'include',
- *          headers: { 'content-type': 'application/json' },
- *          body: JSON.stringify(req) }
- *      );
- *      if (!res.ok) throw new Error(`HTTP ${res.status}`);
- *      const json = await res.json();
- *      return KbSearchResponseSchema.parse(json);
- *
- *  No call site needs to change. The hook + the F15 page consume the
- *  parsed shape, not the raw response.
- */
+/** POST /api/projects/:projectId/kb/search — chunk-search backed by
+ *  pgvector HNSW + optional LLMGateway re-rank. Cookie session; cross-
+ *  workspace requests get 401/403. */
 export async function fetchKbSearch(
-  _projectId: string,
+  projectId: string,
   req: KbSearchRequest,
 ): Promise<KbSearchResponse> {
-  KbSearchRequestSchema.parse(req); // validate input shape
-  // Lazy-import the seed so prod bundles drop the stub via tree-shaking
-  // once the real fetch lands.
-  const { stubKbSearchResponse, applyClientFilters } = await import('./kb-stub-data');
-  // Mimic a brief network round-trip so loading-state UI renders during
-  // dev. M2 will replace this latency.
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  // Apply the request's filters / sort / page client-side against the
-  // stub set so the FE can verify behaviour even before BE wires up.
-  const filtered = applyClientFilters(stubKbSearchResponse, req);
-  return KbSearchResponseSchema.parse(filtered);
+  KbSearchRequestSchema.parse(req); // validate input shape pre-flight
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/kb/search`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let msg = `POST /api/projects/${projectId}/kb/search → HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body.message === 'string') msg = body.message;
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new Error(msg);
+  }
+  const json = await res.json();
+  return KbSearchResponseSchema.parse(json);
 }
 
-/** Stub chunk-detail fetcher. PAUSE — replace with
- *  `GET /api/projects/:projectId/kb/chunks/:chunkId` once BE+1 ships
- *  the real reads. */
+/** GET /api/projects/:projectId/kb/chunks/:chunkId — single chunk
+ *  detail (full text + neighbouring context). */
 export async function fetchKbChunkDetail(
-  _projectId: string,
+  projectId: string,
   chunkId: string,
 ): Promise<ChunkDetailResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  const { stubChunkDetail } = await import('./kb-stub-data');
-  return ChunkDetailResponseSchema.parse(stubChunkDetail(chunkId));
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/kb/chunks/${chunkId}`, {
+    credentials: 'include',
+    headers: { accept: 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error(`GET /api/projects/${projectId}/kb/chunks/${chunkId} → HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  return ChunkDetailResponseSchema.parse(json);
+}
+
+/** POST /api/projects/:projectId/kb/answer — RAG answer generation.
+ *  Retrieves top-K chunks via the search service, prompts the LLM
+ *  gateway with chunk-header citation markers, parses the model's
+ *  cited UUIDs, and intersects them with the retrieved set. ADR-012
+ *  details the citation discipline.
+ *
+ *  When the upstream search returns 0 chunks the BE short-circuits
+ *  the LLM and returns `noContext: true` + the canonical "I don't
+ *  have information…" string in `answer`. The FE renders that as a
+ *  notice, not a chat bubble. */
+export async function fetchKbAnswer(
+  projectId: string,
+  req: KbAnswerRequest,
+): Promise<KbAnswerResponse> {
+  KbAnswerRequestSchema.parse(req);
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/kb/answer`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    let msg = `POST /api/projects/${projectId}/kb/answer → HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body.message === 'string') msg = body.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+  const json = await res.json();
+  return KbAnswerResponseSchema.parse(json);
 }

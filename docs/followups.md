@@ -2,6 +2,65 @@
 
 ---
 
+## [2026-05-07] (an) P1 — `[m2-followup]` F15 KB RAG answer-UI surface not yet built
+
+**Discovered:** Day-12 TASK 3 mid-flight. The Day-12 brief listed
+`answer-with-citations@1440` as a required visual-gate screenshot,
+implying F15 should expose the `/api/projects/:projectId/kb/answer`
+RAG endpoint via UI. The current F15 React port (built in M1) only
+renders search-results + chunk-detail; there is no question input,
+answer panel, citation chips, or noContext fallback notice.
+
+**What shipped on Day-12 (this PR):**
+
+- `apps/web/lib/api/kb-api.ts`: `fetchKbAnswer(projectId, req)` +
+  `KbAnswerRequestSchema` / `KbAnswerResponseSchema` re-exports.
+  The data layer is fully wired Pattern B.
+- The FE component layer does NOT consume `fetchKbAnswer` yet — no
+  hook, no UI surface.
+
+**What's NOT shipped:**
+
+- `useKbAnswer(projectId, question)` TanStack mutation hook
+- "Ask a question" input + Ask button on F15
+- Answer panel showing the generated text
+- Citation chips linked to retrieved chunks (intersect with
+  `sourceChunkIds`)
+- Confidence band UI (≥0.75 high · 0.50–0.75 medium · <0.50 low)
+- `noContext` fallback notice (canonical "I don't have information…"
+  rendered as a notice, not a chat bubble per ADR-012 §4)
+
+**Severity:** **P1 — `[m2-followup]`**. Search Pattern B is shipped
+
+- visually validated; only the answer surface remains. M2 close
+  ceremony can proceed with F15 marked "search Pattern B + answer-UI
+  deferred".
+
+**Fix path (~2 hr, FE-only):**
+
+1. New hook `apps/web/lib/hooks/use-kb-answer.ts` — TanStack
+   `useMutation`, calls `fetchKbAnswer`.
+2. New component `apps/web/components/kb/kb-answer-panel.tsx`:
+   - Question textarea (1..2000 chars per Zod)
+   - "Ask" button (TEAL system CTA; the answer canvas itself sits
+     on `var(--secondary)` 12% — canonical violet AI surface)
+   - Citation chips rendered from `sourceChunkIds` → click scrolls
+     to chunk in the left panel
+   - Confidence band per ADR-012
+   - `noContext === true` → notice card (NOT a chat bubble)
+3. Wire panel into F15 page (tab toggle: "Search" | "Ask", or
+   stacked below the search bar).
+4. Capture `answer-with-citations@1440` screenshot.
+
+**Reference:** ADR-012 §1+§2 + §4 · BE+1 PR #57 · compound-learning
+"chunk-header citation pattern" (2026-05-06).
+
+**Owner:** FE chat. Land Fri 8 May or post-M2 ceremony.
+
+**Tag:** `[m2-followup]`
+
+---
+
 ## [2026-05-07] (am) P2 — `[m2-followup]` Hard Rule 14 retrofit: F08 Home + F09 Projects List
 
 **Symptom (Day-12 retrofit audit):** Two pre-Rule-14 frames render bespoke top-bar + left-rail chrome instead of the canonical `AdminShell` wrapper. Found by `docs/audits/2026-05-07-rule-14-retrofit-audit.md`:
