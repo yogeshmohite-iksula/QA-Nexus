@@ -91,6 +91,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/stop/log-token-savings.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop/log-session-summary.sh"
           }
         ]
       }
