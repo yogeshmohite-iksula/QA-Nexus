@@ -16,11 +16,13 @@
 // leak existence per the established M2 isolation pattern).
 
 import {
+  Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
+  Post,
   Query,
   Req,
   UnauthorizedException,
@@ -31,9 +33,11 @@ import {
   Role,
   KbDocumentListQuery,
   KbDocumentDetailQuery,
+  CreateKbDocumentRequest,
   type KbDocumentListResponse,
   type KbDocumentDetailResponse,
   type KbDocumentDeleteResponse,
+  type CreateKbDocumentResponse,
 } from '@qa-nexus/shared';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
@@ -68,6 +72,40 @@ export class KbDocumentsController {
       workspaceId: session.appUser.workspaceId,
       actorId: session.appUser.id,
       actorEmail: session.appUser.email,
+    };
+  }
+
+  /// M2 Day-12 (al) — closes F12 upload-pipeline gap.
+  /// Creates a KbDocument row + issues a presigned R2 PUT URL so
+  /// the FE can upload bytes directly (no Render dyno traversal).
+  /// FE then calls finalize-upload with { documentId, fileName, r2Key }
+  /// to trigger chunking + embedding.
+  @Post()
+  @HttpCode(201) // explicit 201 — new resource created
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
+  async create(
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ): Promise<CreateKbDocumentResponse> {
+    const input = CreateKbDocumentRequest.parse(body);
+    const ctx = await this.actorOf(req);
+    const result = await this.docs.createForUpload(
+      {
+        projectId,
+        fileName: input.fileName,
+        fileSize: input.fileSize,
+        mimeType: input.mimeType,
+        fileType: input.fileType,
+      },
+      ctx,
+    );
+    return {
+      ok: true,
+      documentId: result.documentId,
+      presignedUploadUrl: result.presignedUploadUrl,
+      r2Key: result.r2Key,
+      expiresAt: result.expiresAt,
     };
   }
 
