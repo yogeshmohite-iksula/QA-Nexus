@@ -5,24 +5,33 @@
 //   TEAL var(--primary)   = system CTAs (Upload new, primary buttons)
 //   GREEN var(--pass)     = "Ready" status badge
 //   AMBER var(--warn)     = "Processing" status badge
-//   RED var(--fail)       = "Failed" status badge + Delete confirm CTA
+//   RED var(--fail)       = Delete confirm CTA (no failed status path
+//                           in the BE schema — KbDocumentListItem has
+//                           no `status` field; gap tracked in (al)
+//                           [m2-blocker])
 //   VIOLET var(--secondary) = NOT used here (no AI surface in F13)
 //
 // Shell wrap: AdminShell with active="knowledge-base" + projectKeyLower="ret"
 // (Iksula Returns anchor). Matches F15 KB pattern — page no longer renders
 // its own project header (the shell does).
 //
-// Pattern A markers (3 deferred):
-//   pattern-a:deferred:kb:imports:view   { docId }
-//   pattern-a:deferred:kb:imports:delete { docId }
-//   pattern-a:deferred:kb:imports:retry  { docId }
-//
-// Anti-drift: ZERO axios / fetch / useMutation here.
+// Day-12 Pattern A→B flip (M2 close, TASK 2):
+//   - Stub rows replaced by useQuery → GET /api/projects/:projectId/kb/documents
+//   - Delete confirm fires useMutation → DELETE :docId, then invalidates
+//     the list query (optimistic-free; refetch after 200)
+//   - View + retry remain UI-only (no BE endpoints today): view is a
+//     no-op stub for the title button; retry button removed since
+//     KbDocumentListItem has no `status: failed` to gate on. The whole
+//     retry path lands once (al) ships the status enum.
+//   - chunkCount > 0 = "ready" (green); chunkCount = 0 = "processing"
+//     (amber). No "failed" until (al).
 
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   AlertCircle,
   CheckCircle2,
@@ -31,94 +40,80 @@ import {
   FileText,
   Film,
   Loader2,
-  RefreshCw,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { deleteKbImport, fetchKbImports, type KbDocumentListItem } from '@/lib/api/kb-imports-api';
+import { useProjectList } from '@/lib/contexts/ProjectContext';
 
 // ---------------------------------------------------------------------------
-// Stub data (Pattern A) — verbatim from Day-11 brief
+// Types — derived from BE wire schema (KbDocumentListItem). The original
+// Pattern A interface used local fields like `bytes`/`uploadedBy` that
+// don't exist on the BE response; we map what we have and show "—" for
+// the rest. When (al) [m2-blocker] lands a richer schema we'll backfill.
 // ---------------------------------------------------------------------------
 
-type ImportStatus = 'ready' | 'processing' | 'failed';
+type ImportStatus = 'ready' | 'processing';
 
 interface ImportRow {
   id: string;
+  /** From BE `title` (= filename per our convention). */
   fileName: string;
+  /** Derived from `templateKind` ("pdf" → ".pdf"). */
   ext: string;
-  bytes: number;
-  uploadedBy: string;
+  /** From BE `chunkCount`. */
+  chunks: number;
+  /** From BE `createdAt`, formatted relative. */
   uploadedAtRelative: string;
+  /** Derived: chunkCount > 0 → ready, else processing. No "failed" path
+   *  until BE adds a status enum (tracked in followup (al)). */
   status: ImportStatus;
-  /** number of indexed chunks; null while processing/failed */
-  chunks: number | null;
 }
-
-const STUB_ROWS: ImportRow[] = [
-  {
-    id: 'kbi_001',
-    fileName: 'return_policy_v2.xlsx',
-    ext: '.xlsx',
-    bytes: 248_320,
-    uploadedBy: 'Akshay Panchal',
-    uploadedAtRelative: '2 hr ago',
-    status: 'ready',
-    chunks: 12,
-  },
-  {
-    id: 'kbi_002',
-    fileName: 'legacy_refund_test_cases.csv',
-    ext: '.csv',
-    bytes: 91_404,
-    uploadedBy: 'Yogesh Mohite',
-    uploadedAtRelative: '1 hr ago',
-    status: 'processing',
-    chunks: null,
-  },
-  {
-    id: 'kbi_003',
-    fileName: 'customer_return_flow_recording.mp4',
-    ext: '.mp4',
-    bytes: 47_104_000,
-    uploadedBy: 'Kishor Kadam',
-    uploadedAtRelative: '30 min ago',
-    status: 'failed',
-    chunks: null,
-  },
-  {
-    id: 'kbi_004',
-    fileName: 'rfp_template_v3.docx',
-    ext: '.docx',
-    bytes: 521_312,
-    uploadedBy: 'Nadim Siddiqui',
-    uploadedAtRelative: '1 day ago',
-    status: 'ready',
-    chunks: 8,
-  },
-  {
-    id: 'kbi_005',
-    fileName: 'compliance_checklist.pdf',
-    ext: '.pdf',
-    bytes: 2_404_864,
-    uploadedBy: 'Akshay Panchal',
-    uploadedAtRelative: '3 days ago',
-    status: 'ready',
-    chunks: 22,
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(kb >= 100 ? 0 : 1)} KB`;
-  const mb = kb / 1024;
-  return `${mb.toFixed(mb >= 100 ? 0 : 1)} MB`;
+/** Map BE KbDocumentListItem → UI ImportRow. */
+function mapItemToRow(item: KbDocumentListItem): ImportRow {
+  const ext = templateKindToExt(item.templateKind);
+  return {
+    id: item.id,
+    fileName: item.title,
+    ext,
+    chunks: item.chunkCount,
+    uploadedAtRelative: relativeFromIso(item.createdAt),
+    status: item.chunkCount > 0 ? 'ready' : 'processing',
+  };
+}
+
+/** Convert BE templateKind ("pdf", "docx", "md", "txt", "xlsx", "csv")
+ *  to a leading-dot extension for our type-icon + type-label render. */
+function templateKindToExt(kind: string): string {
+  const lower = kind.toLowerCase();
+  // Recognise our whitelist first; otherwise pass through prefixed.
+  if (['pdf', 'docx', 'md', 'txt', 'xlsx', 'csv', 'mp4'].includes(lower)) {
+    return `.${lower}`;
+  }
+  return lower.startsWith('.') ? lower : `.${lower}`;
+}
+
+/** Render an ISO-8601 timestamp as a coarse relative ("2 hr ago",
+ *  "1 day ago", "just now"). Locale-agnostic for now; switch to
+ *  Intl.RelativeTimeFormat in a later polish pass. */
+function relativeFromIso(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '—';
+  const deltaSec = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (deltaSec < 60) return 'just now';
+  const min = Math.round(deltaSec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} hr ago`;
+  const days = Math.round(hr / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
 }
 
 function fileTypeLabel(ext: string): string {
@@ -182,24 +177,13 @@ function StatusBadge({ status }: { status: ImportStatus }) {
       </span>
     );
   }
-  if (status === 'processing') {
-    return (
-      <span
-        className="inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[0.04em]"
-        style={{ background: 'rgba(251,191,36,0.12)', color: 'var(--warn)' }}
-      >
-        <Loader2 size={12} aria-hidden="true" className="animate-spin" />
-        Processing
-      </span>
-    );
-  }
   return (
     <span
       className="inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[0.04em]"
-      style={{ background: 'rgba(248,113,113,0.12)', color: 'var(--fail)' }}
+      style={{ background: 'rgba(251,191,36,0.12)', color: 'var(--warn)' }}
     >
-      <AlertCircle size={12} aria-hidden="true" />
-      Failed
+      <Loader2 size={12} aria-hidden="true" className="animate-spin" />
+      Processing
     </span>
   );
 }
@@ -219,8 +203,55 @@ export function KbImportsPage() {
 }
 
 function KbImportsPageContent() {
-  const [rows] = useState<ImportRow[]>(STUB_ROWS);
+  // Resolve the active project ID. F13 is mounted at /kb/imports
+  // (workspace-scoped route), but BE endpoints are project-scoped.
+  // Anchor to RET (Iksula Returns) to match the AdminShell's
+  // projectKeyLower="ret" prop. When PM2 ships a real workspace
+  // route this lookup goes away.
+  const projects = useProjectList();
+  const projectId = useMemo(
+    () => projects.find((p) => p.key.toLowerCase() === 'ret')?.id ?? null,
+    [projects],
+  );
+
+  const queryClient = useQueryClient();
+
+  // GET list — TanStack Query keyed on [kb-imports, projectId].
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['kb-imports', projectId],
+    queryFn: () => {
+      if (!projectId) throw new Error('No active project');
+      return fetchKbImports(projectId);
+    },
+    enabled: projectId !== null,
+    refetchOnWindowFocus: false,
+  });
+
+  // DELETE mutation — invalidates the list query on success.
+  const deleteMutation = useMutation({
+    mutationFn: (docId: string) => {
+      if (!projectId) throw new Error('No active project');
+      return deleteKbImport(projectId, docId);
+    },
+    onSuccess: () => {
+      toast.success('Document deleted', {
+        description: 'The document and its indexed chunks were removed.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['kb-imports', projectId] });
+    },
+    onError: (e: unknown) => {
+      toast.error('Failed to delete document', {
+        description: e instanceof Error ? e.message : 'Please try again.',
+      });
+    },
+  });
+
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const rows: ImportRow[] = useMemo(() => {
+    if (!data) return [];
+    return data.documents.map(mapItemToRow);
+  }, [data]);
 
   const counts = useMemo(() => {
     return rows.reduce(
@@ -229,20 +260,23 @@ function KbImportsPageContent() {
         acc.total++;
         return acc;
       },
-      { ready: 0, processing: 0, failed: 0, total: 0 } as Record<string, number>,
+      { ready: 0, processing: 0, total: 0 } as Record<string, number>,
     );
   }, [rows]);
 
   const onView = useCallback((docId: string) => {
-    console.info('pattern-a:deferred:kb:imports:view', { docId });
+    // No detail-view route ships in M2. Wire to /kb/imports/<id>
+    // when a detail route lands. For now this is a no-op marker.
+    console.info('view-deferred:kb:imports', { docId });
   }, []);
-  const onRetry = useCallback((docId: string) => {
-    console.info('pattern-a:deferred:kb:imports:retry', { docId });
-  }, []);
-  const onConfirmDelete = useCallback((docId: string) => {
-    console.info('pattern-a:deferred:kb:imports:delete', { docId });
-    setConfirmDeleteId(null);
-  }, []);
+
+  const onConfirmDelete = useCallback(
+    (docId: string) => {
+      deleteMutation.mutate(docId);
+      setConfirmDeleteId(null);
+    },
+    [deleteMutation],
+  );
 
   const pendingDeleteRow = rows.find((r) => r.id === confirmDeleteId) ?? null;
 
@@ -305,196 +339,221 @@ function KbImportsPageContent() {
         <div className="mb-6 grid grid-cols-3 gap-3 sm:gap-4">
           <StatCard label="Total" value={counts.total} accent="var(--text-primary)" />
           <StatCard label="Ready" value={counts.ready} accent="var(--pass)" />
-          <StatCard
-            label="Processing"
-            value={counts.processing}
-            accent="var(--warn)"
-            extra={counts.failed > 0 ? `${counts.failed} failed` : undefined}
-            extraColor="var(--fail)"
-          />
+          <StatCard label="Processing" value={counts.processing} accent="var(--warn)" />
         </div>
 
-        {/* ── Table (desktop) ── */}
-        <div
-          className="hidden overflow-hidden rounded-lg border md:block"
-          style={{
-            borderColor: 'var(--border-subtle)',
-            background: 'var(--base)',
-          }}
-        >
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr
-                className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]"
-                style={{ background: 'var(--overlay)' }}
-              >
-                <th className="px-4 py-3 font-semibold">File</th>
-                <th className="px-4 py-3 font-semibold">Size</th>
-                <th className="px-4 py-3 font-semibold">Uploaded by</th>
-                <th className="px-4 py-3 font-semibold">Uploaded</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Chunks</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr
-                  key={row.id}
-                  className="border-t text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--overlay)]"
-                  style={{
-                    borderColor: 'var(--border-subtle)',
-                    background: i % 2 === 0 ? 'transparent' : 'var(--raised)',
-                  }}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <FileIcon ext={row.ext} />
-                      <div className="flex min-w-0 flex-col">
-                        <button
-                          type="button"
-                          onClick={() => onView(row.id)}
-                          className="truncate text-left text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-                          style={{
-                            fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-                          }}
-                        >
-                          {row.fileName}
-                        </button>
-                        <span className="text-[11px] uppercase tracking-[0.04em] text-[var(--text-tertiary)]">
-                          {fileTypeLabel(row.ext)}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td
-                    className="px-4 py-3 text-[var(--text-secondary)]"
-                    style={{
-                      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {formatBytes(row.bytes)}
-                  </td>
-                  <td className="px-4 py-3">{row.uploadedBy}</td>
-                  <td
-                    className="px-4 py-3 text-[var(--text-tertiary)]"
-                    style={{
-                      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {row.uploadedAtRelative}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={row.status} />
-                  </td>
-                  <td
-                    className="px-4 py-3 text-[var(--text-secondary)]"
-                    style={{
-                      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {row.chunks ?? '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      {row.status === 'failed' && (
-                        <button
-                          type="button"
-                          onClick={() => onRetry(row.id)}
-                          aria-label={`Retry import for ${row.fileName}`}
-                          className="inline-flex h-8 min-h-[32px] items-center gap-1 rounded-md border px-2 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-                          style={{
-                            borderColor: 'var(--border-subtle)',
-                            color: 'var(--warn)',
-                          }}
-                        >
-                          <RefreshCw size={12} aria-hidden="true" />
-                          <span>Retry</span>
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(row.id)}
-                        aria-label={`Delete ${row.fileName}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--overlay)] hover:text-[var(--fail)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-                      >
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* ── Loading / error / empty states ── */}
+        {isLoading && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-lg border p-8 text-center text-[13px] text-[var(--text-secondary)]"
+            style={{ borderColor: 'var(--border-subtle)', background: 'var(--base)' }}
+          >
+            <Loader2
+              size={20}
+              aria-hidden="true"
+              className="mx-auto mb-2 animate-spin text-[var(--text-tertiary)]"
+            />
+            Loading imports…
+          </div>
+        )}
 
-        {/* ── Cards (mobile) ── */}
-        <ul className="flex flex-col gap-3 md:hidden">
-          {rows.map((row) => (
-            <li
-              key={row.id}
-              className="rounded-lg border p-4"
-              style={{
-                borderColor: 'var(--border-subtle)',
-                background: 'var(--base)',
-              }}
+        {isError && (
+          <div
+            role="alert"
+            className="rounded-lg border p-6 text-[13px]"
+            style={{
+              borderColor: 'var(--border-subtle)',
+              background: 'var(--base)',
+              color: 'var(--fail)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} aria-hidden="true" />
+              <span className="font-semibold">Could not load imports</span>
+            </div>
+            <p className="mt-2 text-[var(--text-secondary)]">
+              {error instanceof Error
+                ? error.message
+                : 'Something went wrong fetching the document list.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="mt-3 inline-flex h-8 items-center rounded-md border px-3 text-[12px] font-medium"
+              style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}
             >
-              <div className="flex items-start gap-3">
-                <FileIcon ext={row.ext} />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <button
-                    type="button"
-                    onClick={() => onView(row.id)}
-                    className="truncate text-left text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--primary)]"
-                    style={{
-                      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-                    }}
-                  >
-                    {row.fileName}
-                  </button>
-                  <div
-                    className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--text-tertiary)]"
-                    style={{
-                      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    <span>{fileTypeLabel(row.ext)}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{formatBytes(row.bytes)}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{row.chunks !== null ? `${row.chunks} chunks` : '—'}</span>
-                  </div>
-                </div>
-                <StatusBadge status={row.status} />
-              </div>
+              Try again
+            </button>
+          </div>
+        )}
 
-              <div
-                className="mt-3 flex items-center justify-between border-t pt-3 text-[11px] text-[var(--text-tertiary)]"
-                style={{ borderColor: 'var(--border-subtle)' }}
-              >
-                <span>
-                  {row.uploadedBy} &middot; {row.uploadedAtRelative}
-                </span>
-                <div className="flex items-center gap-1">
-                  {row.status === 'failed' && (
-                    <button
-                      type="button"
-                      onClick={() => onRetry(row.id)}
-                      aria-label={`Retry import for ${row.fileName}`}
-                      className="inline-flex h-8 min-h-[44px] items-center gap-1 rounded-md border px-2.5 text-[12px] font-medium"
+        {!isLoading && !isError && rows.length === 0 && (
+          <div
+            className="rounded-lg border p-10 text-center"
+            style={{ borderColor: 'var(--border-subtle)', background: 'var(--base)' }}
+          >
+            <FileText
+              size={28}
+              aria-hidden="true"
+              className="mx-auto mb-3 text-[var(--text-tertiary)]"
+            />
+            <h3 className="font-display text-[16px] font-semibold text-[var(--text-primary)]">
+              No imports yet
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-[13px] leading-[18px] text-[var(--text-tertiary)]">
+              Documents you upload to the project knowledge base will appear here. Indexed content
+              powers A1 suggestions, A2 dedup, and A4 RCA evidence retrieval.
+            </p>
+            <Link
+              href="/kb/upload"
+              className="mt-4 inline-flex h-9 min-h-[44px] items-center gap-1.5 rounded-md px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:min-h-0"
+              style={{ background: 'var(--primary)', color: 'var(--primary-ink)' }}
+            >
+              <Upload size={14} aria-hidden="true" />
+              <span>Upload your first document</span>
+            </Link>
+          </div>
+        )}
+
+        {/* ── Table (desktop) — only when we have rows ── */}
+        {rows.length > 0 && (
+          <div
+            className="hidden overflow-hidden rounded-lg border md:block"
+            style={{
+              borderColor: 'var(--border-subtle)',
+              background: 'var(--base)',
+            }}
+          >
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr
+                  className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]"
+                  style={{ background: 'var(--overlay)' }}
+                >
+                  <th className="px-4 py-3 font-semibold">File</th>
+                  <th className="px-4 py-3 font-semibold">Uploaded</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Chunks</th>
+                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr
+                    key={row.id}
+                    className="border-t text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--overlay)]"
+                    style={{
+                      borderColor: 'var(--border-subtle)',
+                      background: i % 2 === 0 ? 'transparent' : 'var(--raised)',
+                    }}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <FileIcon ext={row.ext} />
+                        <div className="flex min-w-0 flex-col">
+                          <button
+                            type="button"
+                            onClick={() => onView(row.id)}
+                            className="truncate text-left text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+                            style={{
+                              fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+                            }}
+                          >
+                            {row.fileName}
+                          </button>
+                          <span className="text-[11px] uppercase tracking-[0.04em] text-[var(--text-tertiary)]">
+                            {fileTypeLabel(row.ext)}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      className="px-4 py-3 text-[var(--text-tertiary)]"
                       style={{
-                        borderColor: 'var(--border-subtle)',
-                        color: 'var(--warn)',
+                        fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+                        fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      <RefreshCw size={12} aria-hidden="true" />
-                      Retry
+                      {row.uploadedAtRelative}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td
+                      className="px-4 py-3 text-[var(--text-secondary)]"
+                      style={{
+                        fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {row.chunks ?? '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(row.id)}
+                          aria-label={`Delete ${row.fileName}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--overlay)] hover:text-[var(--fail)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Cards (mobile) — only when we have rows ── */}
+        {rows.length > 0 && (
+          <ul className="flex flex-col gap-3 md:hidden">
+            {rows.map((row) => (
+              <li
+                key={row.id}
+                className="rounded-lg border p-4"
+                style={{
+                  borderColor: 'var(--border-subtle)',
+                  background: 'var(--base)',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <FileIcon ext={row.ext} />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <button
+                      type="button"
+                      onClick={() => onView(row.id)}
+                      className="truncate text-left text-[13px] font-semibold text-[var(--text-primary)] hover:text-[var(--primary)]"
+                      style={{
+                        fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+                      }}
+                    >
+                      {row.fileName}
                     </button>
-                  )}
+                    <div
+                      className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--text-tertiary)]"
+                      style={{
+                        fontFamily: 'var(--font-jetbrains-mono), ui-monospace, monospace',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      <span>{fileTypeLabel(row.ext)}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{`${row.chunks} chunks`}</span>
+                    </div>
+                  </div>
+                  <StatusBadge status={row.status} />
+                </div>
+
+                <div
+                  className="mt-3 flex items-center justify-between border-t pt-3 text-[11px] text-[var(--text-tertiary)]"
+                  style={{ borderColor: 'var(--border-subtle)' }}
+                >
+                  <span>{row.uploadedAtRelative}</span>
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteId(row.id)}
@@ -504,10 +563,10 @@ function KbImportsPageContent() {
                     <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </main>
 
       {/* ── Delete confirm modal ── */}
