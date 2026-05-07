@@ -53,7 +53,7 @@ function makeProjectController() {
       },
     }),
   };
-   
+
   const ctrl = new TestCasesProjectScopedController(service, auth as any);
   return { ctrl, service, auth };
 }
@@ -70,7 +70,7 @@ function makeCaseController() {
       },
     }),
   };
-   
+
   const ctrl = new TestCasesCaseScopedController(service, auth as any);
   return { ctrl, service, auth };
 }
@@ -168,7 +168,6 @@ describe('[@M3-BE-02] TestCases skeleton — 501 surface + RBAC + Zod', () => {
     /// `qa-nexus:rbac:roles` is the metadata key set by the `@Roles(...)`
     /// decorator (see auth/rbac/roles.decorator.ts → ROLES_KEY).
     function rolesOn(target: object, method: string): unknown {
-       
       return Reflect.getMetadata(
         'qa-nexus:rbac:roles',
         (target as any)[method],
