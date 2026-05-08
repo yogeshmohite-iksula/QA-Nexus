@@ -1,7 +1,7 @@
 // QA Nexus PM1 — TestCasesController.
 //
-// Spec: M3 TASK BE-02 (Day-12). Skeleton — all 5 endpoints return
-// 501 NOT IMPLEMENTED via the service. Real CRUD lands Day-13.
+// Spec: M3 Day-13 TASK 1. Real CRUD implementation replacing the
+// 501 stubs from M3-BE-02 PR #75.
 //
 // Endpoints + RBAC matrix (per Milestone_M3_Test_Cases_AI_v2.md §RBAC):
 //   POST   /api/projects/:projectId/test-cases  — Admin/Lead/QAEngineer
@@ -10,23 +10,23 @@
 //   PATCH  /api/test-cases/:caseId              — Admin/Lead/QAEngineer
 //   DELETE /api/test-cases/:caseId              — Admin/Lead/QAEngineer
 //
-// Stakeholder = read-only across the entire surface (matches the
-// existing KbDocumentsController list/detail-vs-delete split). Day-13
-// real implementation may further constrain UPDATE/DELETE to the
-// case's project members, but the @Roles guard scaffold below is the
-// minimum surface area MAIN's M2-CLOSE-GATE sweep already covers.
+//   POST   /api/test-cases/:caseId/links            — link to requirement (TASK 2)
+//   DELETE /api/test-cases/:caseId/links/:reqId     — unlink (TASK 2)
 //
-// Path-shape note: the GET/PATCH/DELETE on `:caseId` (no projectId in
+// Stakeholder = read-only across the entire surface (matches the
+// existing KbDocumentsController list/detail-vs-delete split).
+//
+// Path-shape note: GET/PATCH/DELETE on `:caseId` (no projectId in
 // the path) follows the v2 plan §"Endpoints" verbatim. Workspace
 // isolation is enforced inside the service via JOIN-then-WHERE on
-// Project.workspaceId (mirrors KbDocumentsService.detail). The 404
-// path is intentional — leak-free.
+// Project.workspaceId. Cross-workspace caseId → 404 (no leak).
 
 import {
   Body,
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -40,6 +40,15 @@ import {
   Role,
   CreateTestCaseInput,
   UpdateTestCaseInput,
+  TestCaseListQuery,
+  CreateTestCaseLinkInput,
+  type TestCaseListResponse,
+  type TestCaseDetailResponse,
+  type TestCaseCreateResponse,
+  type TestCaseUpdateResponse,
+  type TestCaseDeleteResponse,
+  type TestCaseLinkResponse,
+  type TestCaseUnlinkResponse,
 } from '@qa-nexus/shared';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
@@ -54,14 +63,6 @@ function reqHeaders(req: Request): Headers {
   }
   return h;
 }
-
-/// Minimal list-query Zod surface for the skeleton. Day-13 will swap
-/// for a richer filter shape (priority, status, format, hasLinks, q).
-import { z } from 'zod';
-const TestCaseListQuery = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-});
 
 /**
  * Project-scoped surface (POST + LIST). Workspace check enforced by
@@ -91,36 +92,46 @@ export class TestCasesProjectScopedController {
   }
 
   @Post()
+  @HttpCode(201)
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
   async create(
-    @Param('projectId') _projectId: string,
+    @Param('projectId') projectId: string,
     @Body() body: unknown,
     @Req() req: Request,
-  ): Promise<never> {
-    // Zod-validate at the surface so 400s show up before the 501.
-    // Day-13 will pass the parsed input into the service call.
-    CreateTestCaseInput.parse(body);
-    await this.actorOf(req);
-    return this.testCases.create();
+  ): Promise<TestCaseCreateResponse> {
+    const input = CreateTestCaseInput.parse(body);
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    const testCase = await this.testCases.create(projectId, input, ctx);
+    return { ok: true, testCase };
   }
 
   @Get()
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
   async list(
-    @Param('projectId') _projectId: string,
+    @Param('projectId') projectId: string,
     @Query() query: unknown,
     @Req() req: Request,
-  ): Promise<never> {
-    TestCaseListQuery.parse(query ?? {});
-    await this.actorOf(req);
-    return this.testCases.list();
+  ): Promise<TestCaseListResponse> {
+    const q = TestCaseListQuery.parse(query ?? {});
+    const ctx = await this.actorOf(req);
+    const result = await this.testCases.list(projectId, q, ctx);
+    return {
+      ok: true,
+      testCases: result.testCases,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      },
+    };
   }
 }
 
 /**
- * Case-scoped surface (GET / PATCH / DELETE on a single case ID).
- * Workspace check delegated to the service; cross-workspace caseId
- * → 404.
+ * Case-scoped surface (GET / PATCH / DELETE on a single case ID +
+ * RTM link/unlink). Workspace check delegated to the service;
+ * cross-workspace caseId → 404.
  */
 @Controller('api/test-cases')
 @UseGuards(RolesGuard)
@@ -148,32 +159,86 @@ export class TestCasesCaseScopedController {
   @Get(':caseId')
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
   async detail(
-    @Param('caseId') _caseId: string,
+    @Param('caseId') caseId: string,
     @Req() req: Request,
-  ): Promise<never> {
-    await this.actorOf(req);
-    return this.testCases.detail();
+  ): Promise<TestCaseDetailResponse> {
+    const ctx = await this.actorOf(req);
+    const testCase = await this.testCases.detail(caseId, ctx);
+    return { ok: true, testCase };
   }
 
   @Patch(':caseId')
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
   async update(
-    @Param('caseId') _caseId: string,
+    @Param('caseId') caseId: string,
     @Body() body: unknown,
     @Req() req: Request,
-  ): Promise<never> {
-    UpdateTestCaseInput.parse(body);
-    await this.actorOf(req);
-    return this.testCases.update();
+  ): Promise<TestCaseUpdateResponse> {
+    const input = UpdateTestCaseInput.parse(body);
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    const testCase = await this.testCases.update(caseId, input, ctx);
+    return { ok: true, testCase };
   }
 
+  /// SOFT delete via status='archived' (TestCase row stays). Run
+  /// results + defect references stay valid; queries should filter
+  /// out archived rows.
   @Delete(':caseId')
+  @HttpCode(200) // explicit 200 (not 204) so we can return the archive flag
   @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
   async remove(
-    @Param('caseId') _caseId: string,
+    @Param('caseId') caseId: string,
     @Req() req: Request,
-  ): Promise<never> {
-    await this.actorOf(req);
-    return this.testCases.remove();
+  ): Promise<TestCaseDeleteResponse> {
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    const result = await this.testCases.archive(caseId, ctx);
+    return { ok: true, testCaseId: result.testCaseId, archived: true };
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // RTM linking — TASK 2 endpoints. Live here (case-scoped) because
+  // both link and unlink operate from the test case side. The
+  // /api/requirements/:reqId/test-cases coverage view is on
+  // RequirementsController.
+  // ────────────────────────────────────────────────────────────────
+
+  @Post(':caseId/links')
+  @HttpCode(201)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
+  async link(
+    @Param('caseId') caseId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ): Promise<TestCaseLinkResponse> {
+    const input = CreateTestCaseLinkInput.parse(body);
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    const result = await this.testCases.linkRequirement(
+      caseId,
+      input.requirementId,
+      ctx,
+    );
+    return {
+      ok: true,
+      testCaseId: caseId,
+      requirementId: input.requirementId,
+      outcome: result.outcome,
+    };
+  }
+
+  @Delete(':caseId/links/:reqId')
+  @HttpCode(200)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
+  async unlink(
+    @Param('caseId') caseId: string,
+    @Param('reqId') reqId: string,
+    @Req() req: Request,
+  ): Promise<TestCaseUnlinkResponse> {
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    await this.testCases.unlinkRequirement(caseId, reqId, ctx);
+    return { ok: true, testCaseId: caseId, requirementId: reqId };
   }
 }

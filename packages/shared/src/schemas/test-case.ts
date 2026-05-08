@@ -153,3 +153,193 @@ export const TestCaseGenerationRunSchema = z.object({
   createdAt: Timestamp,
 });
 export type TestCaseGenerationRun = z.infer<typeof TestCaseGenerationRunSchema>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M3 Day-13 TASK 1 — Test case CRUD response + filter shapes.
+// Real implementation replaces the M3-BE-02 501 stubs.
+// ─────────────────────────────────────────────────────────────────────
+
+/// `GET /api/projects/:projectId/test-cases` filter surface per
+/// Milestone_M3_Test_Cases_AI_v2.md §"List + Filter UI". All filters
+/// are optional; combining them ANDs the conditions. `q` is a
+/// case-insensitive substring match on title (Postgres `ILIKE`).
+export const TestCaseListQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  /// CSV per v2 plan §"Filters" (e.g., `?priority=P0,P1`). Coerced
+  /// from string to array at parse time.
+  priority: z
+    .string()
+    .optional()
+    .transform((s) =>
+      s
+        ? s
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean)
+        : undefined,
+    ),
+  status: z
+    .string()
+    .optional()
+    .transform((s) =>
+      s
+        ? s
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean)
+        : undefined,
+    ),
+  format: TestCaseFormat.optional(),
+  /// `?hasLinks=true` filters to cases that have at least one
+  /// TestCaseLink row. `?hasLinks=false` filters to cases with zero
+  /// links. Omit for no filter.
+  hasLinks: z
+    .union([z.literal('true'), z.literal('false')])
+    .optional()
+    .transform((s) => (s === 'true' ? true : s === 'false' ? false : undefined)),
+  /// Free-text title search (case-insensitive ILIKE substring).
+  q: z.string().min(1).max(200).optional(),
+});
+export type TestCaseListQuery = z.infer<typeof TestCaseListQuery>;
+
+export const TestCaseListItem = z.object({
+  id: Uuid,
+  projectId: Uuid,
+  key: z.string(),
+  title: NonEmpty,
+  priority: Priority,
+  status: TestCaseStatus,
+  format: TestCaseFormat,
+  generatedByAgent: GeneratedByAgent.nullable(),
+  confidenceScore: z.number().min(0).max(1).nullable(),
+  /// Number of linked requirements — derived via Prisma `_count`.
+  linkCount: z.number().int().nonnegative(),
+  createdBy: Uuid,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+});
+export type TestCaseListItem = z.infer<typeof TestCaseListItem>;
+
+export const TestCaseListResponse = z.object({
+  ok: z.literal(true),
+  testCases: z.array(TestCaseListItem),
+  pagination: z.object({
+    total: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+  }),
+});
+export type TestCaseListResponse = z.infer<typeof TestCaseListResponse>;
+
+/// Linked requirement summary (for detail endpoint). Just the
+/// minimum FE needs to render an RTM coverage row.
+export const LinkedRequirementSummary = z.object({
+  requirementId: Uuid,
+  key: z.string(),
+  title: NonEmpty,
+  priority: Priority,
+  status: z.string(), // RequirementStatus enum value (string-mapped from Prisma)
+});
+export type LinkedRequirementSummary = z.infer<typeof LinkedRequirementSummary>;
+
+/// Suite membership summary (for detail endpoint).
+export const SuiteMembershipSummary = z.object({
+  suiteId: Uuid,
+  name: NonEmpty,
+});
+export type SuiteMembershipSummary = z.infer<typeof SuiteMembershipSummary>;
+
+export const TestCaseDetailItem = TestCaseListItem.extend({
+  preconditions: z.string(),
+  stepsJson: z.array(TestStepSchema),
+  expectedResult: z.string(),
+  /// `format='gherkin'` cases only. Null otherwise.
+  gherkin: z.string().nullable(),
+  /// kb_chunk UUIDs that grounded the AI generation — populated only
+  /// for Composer/Curator output. Null for manual cases.
+  sourceChunkIds: z.array(Uuid).nullable(),
+  rationale: z.string().nullable(),
+  aiProvenanceJson: z.record(z.unknown()).nullable(),
+  links: z.array(LinkedRequirementSummary),
+  suiteMemberships: z.array(SuiteMembershipSummary),
+});
+export type TestCaseDetailItem = z.infer<typeof TestCaseDetailItem>;
+
+export const TestCaseDetailResponse = z.object({
+  ok: z.literal(true),
+  testCase: TestCaseDetailItem,
+});
+export type TestCaseDetailResponse = z.infer<typeof TestCaseDetailResponse>;
+
+export const TestCaseCreateResponse = z.object({
+  ok: z.literal(true),
+  testCase: TestCaseDetailItem,
+});
+export type TestCaseCreateResponse = z.infer<typeof TestCaseCreateResponse>;
+
+export const TestCaseUpdateResponse = z.object({
+  ok: z.literal(true),
+  testCase: TestCaseDetailItem,
+});
+export type TestCaseUpdateResponse = z.infer<typeof TestCaseUpdateResponse>;
+
+/// DELETE = soft-delete via `status='archived'` per task spec. The
+/// row stays in TB-007 so historical run results / defect references
+/// remain valid; queries should filter by `status != 'archived'`.
+export const TestCaseDeleteResponse = z.object({
+  ok: z.literal(true),
+  testCaseId: Uuid,
+  archived: z.literal(true),
+});
+export type TestCaseDeleteResponse = z.infer<typeof TestCaseDeleteResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M3 Day-13 TASK 2 — RTM linking endpoints.
+//   POST   /api/test-cases/:caseId/links            (link to requirement)
+//   DELETE /api/test-cases/:caseId/links/:reqId     (unlink)
+//   GET    /api/requirements/:reqId/test-cases      (RTM coverage view)
+// ─────────────────────────────────────────────────────────────────────
+
+export const CreateTestCaseLinkInput = z.object({
+  requirementId: Uuid,
+});
+export type CreateTestCaseLinkInput = z.infer<typeof CreateTestCaseLinkInput>;
+
+export const TestCaseLinkResponse = z.object({
+  ok: z.literal(true),
+  testCaseId: Uuid,
+  requirementId: Uuid,
+  /// `created` = first-time link; `existed` = idempotent re-link
+  /// (link already present). Both are 200/201 — the caller can
+  /// retry safely without polluting the audit chain.
+  outcome: z.enum(['created', 'existed']),
+});
+export type TestCaseLinkResponse = z.infer<typeof TestCaseLinkResponse>;
+
+export const TestCaseUnlinkResponse = z.object({
+  ok: z.literal(true),
+  testCaseId: Uuid,
+  requirementId: Uuid,
+});
+export type TestCaseUnlinkResponse = z.infer<typeof TestCaseUnlinkResponse>;
+
+/// `GET /api/requirements/:reqId/test-cases` — RTM coverage from
+/// the requirement perspective (counterpart to TestCaseDetailItem.links).
+export const RequirementCoverageItem = z.object({
+  testCaseId: Uuid,
+  key: z.string(),
+  title: NonEmpty,
+  priority: Priority,
+  status: TestCaseStatus,
+  format: TestCaseFormat,
+});
+export type RequirementCoverageItem = z.infer<typeof RequirementCoverageItem>;
+
+export const RequirementCoverageResponse = z.object({
+  ok: z.literal(true),
+  requirementId: Uuid,
+  coverage: z.array(RequirementCoverageItem),
+  total: z.number().int().nonnegative(),
+});
+export type RequirementCoverageResponse = z.infer<typeof RequirementCoverageResponse>;
