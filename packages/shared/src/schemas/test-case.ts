@@ -426,3 +426,100 @@ export const ComposerGenerateResponse = z.object({
   stubbed: z.boolean(),
 });
 export type ComposerGenerateResponse = z.infer<typeof ComposerGenerateResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M3 Day-13 TASK BE-3 — Curator (A2 / Duplicate Detection) endpoint.
+//
+//   POST /api/projects/:projectId/test-cases/:tcId/duplicates
+//
+// Pattern A scaffold: returns canned similarity scores. Day-16 swaps
+// the service body to call pgvector cosine search against the
+// project's existing test_case embeddings. Wire shape locked NOW so
+// FE+1's F14m2 Curator ⓘ near-dup banner can implement against a
+// stable contract.
+//
+// Threshold canon (per CLAUDE.md + ADR-014 lands Day-15):
+//   ≥ 0.95 → 'block' (true duplicate; FE blocks save with explanation)
+//   ≥ 0.85 → 'flag'  (near-duplicate warning; FE shows banner with
+//                     "similar to TC-RET-001 — review before saving")
+//   < 0.85 → not surfaced (below threshold; matches dropped from the
+//                          response so FE doesn't render noise)
+// ─────────────────────────────────────────────────────────────────────
+
+/// Verdict for the OVERALL check, derived from the highest match.
+/// 'clear' = no matches above thresholdFlag; safe to save.
+/// 'flag'  = at least one match in [thresholdFlag, thresholdBlock).
+/// 'block' = at least one match >= thresholdBlock.
+export const CuratorVerdict = z.enum(['clear', 'flag', 'block']);
+export type CuratorVerdict = z.infer<typeof CuratorVerdict>;
+
+/// Per-match verdict — 'flag' for [thresholdFlag, thresholdBlock),
+/// 'block' for >= thresholdBlock. (Below-flag matches are dropped.)
+export const CuratorMatchVerdict = z.enum(['flag', 'block']);
+export type CuratorMatchVerdict = z.infer<typeof CuratorMatchVerdict>;
+
+/// Hard caps + defaults from CLAUDE.md canon. Tests pin these exact
+/// values; ADR-014 Day-15 may revise once we have pilot data.
+export const CURATOR_THRESHOLD_FLAG_DEFAULT = 0.85;
+export const CURATOR_THRESHOLD_BLOCK_DEFAULT = 0.95;
+export const CURATOR_TOP_K_DEFAULT = 5;
+export const CURATOR_TOP_K_MAX = 20;
+
+export const CuratorCheckRequest = z
+  .object({
+    /// Lower bound for surfacing matches (default 0.85). Below this
+    /// score, matches are dropped from the response.
+    thresholdFlag: z.number().min(0).max(1).default(CURATOR_THRESHOLD_FLAG_DEFAULT),
+    /// Lower bound for 'block' verdict (default 0.95). MUST be >
+    /// thresholdFlag or `.refine()` fails.
+    thresholdBlock: z.number().min(0).max(1).default(CURATOR_THRESHOLD_BLOCK_DEFAULT),
+    /// Max matches to return (default 5, capped at 20).
+    topK: z.number().int().min(1).max(CURATOR_TOP_K_MAX).default(CURATOR_TOP_K_DEFAULT),
+  })
+  .refine((v) => v.thresholdBlock > v.thresholdFlag, {
+    message: 'thresholdBlock must be greater than thresholdFlag',
+    path: ['thresholdBlock'],
+  });
+export type CuratorCheckRequest = z.infer<typeof CuratorCheckRequest>;
+
+export const CuratorMatch = z.object({
+  candidateCaseId: Uuid,
+  candidateCaseKey: z.string(),
+  candidateCaseTitle: NonEmpty,
+  /// Cosine similarity in [0, 1].
+  similarity: z.number().min(0).max(1),
+  verdict: CuratorMatchVerdict,
+});
+export type CuratorMatch = z.infer<typeof CuratorMatch>;
+
+export const CuratorCheckResponse = z.object({
+  ok: z.literal(true),
+  testCaseId: Uuid,
+  /// Overall verdict derived from the highest-scoring match.
+  /// 'clear' when matches[] is empty.
+  verdict: CuratorVerdict,
+  /// Highest similarity in matches[]. 0 when matches[] is empty.
+  highestSimilarity: z.number().min(0).max(1),
+  /// Matches above thresholdFlag, sorted by similarity DESC.
+  /// Capped at topK.
+  matches: z.array(CuratorMatch),
+  /// Thresholds used for this call (echoes request defaults so the
+  /// FE can render "n/k cases above 0.85" copy without reasserting).
+  thresholds: z.object({
+    flag: z.number().min(0).max(1),
+    block: z.number().min(0).max(1),
+  }),
+  /// Search metadata. Pattern A returns synthetic values; Day-16's
+  /// real pgvector query populates from actual SQL execution.
+  searchMetadata: z.object({
+    /// Number of test cases scanned (whole project minus the source).
+    candidatesScanned: z.number().int().nonnegative(),
+    /// Wall-clock duration of the similarity search.
+    durationMs: z.number().int().nonnegative(),
+  }),
+  /// True until Day-16 swaps the service body for the real pgvector
+  /// HNSW cosine search. FE shows a "demo data" banner when this is
+  /// true (mirrors KbSearchResponse.stubbed pattern from M2 Step 4).
+  stubbed: z.boolean(),
+});
+export type CuratorCheckResponse = z.infer<typeof CuratorCheckResponse>;

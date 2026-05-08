@@ -1,6 +1,7 @@
 // QA Nexus PM1 — TestCasesModule.
 // Spec: M3 Day-13. Real CRUD shipped in PR #85; Composer scaffold
-// added in TASK BE-1.
+// added in TASK BE-1 (PR #93). Curator scaffold added in TASK BE-3
+// (this branch).
 //
 // Module imports:
 //   - AuthModule: RolesGuard needs AuthService for session resolution.
@@ -15,6 +16,8 @@ import {
 import { TestCasesService } from './test-cases.service';
 import { ComposerService } from './composer.service';
 import { ComposerController } from './composer.controller';
+import { CuratorService } from './curator.service';
+import { CuratorController } from './curator.controller';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
@@ -23,8 +26,9 @@ import { AuthModule } from '../auth/auth.module';
     TestCasesProjectScopedController,
     TestCasesCaseScopedController,
     ComposerController, // M3 Day-13 TASK BE-1 — Composer scaffold (Pattern A)
+    CuratorController, // M3 Day-13 TASK BE-3 — Curator scaffold (Pattern A)
   ],
-  providers: [TestCasesService, ComposerService],
-  exports: [TestCasesService, ComposerService],
+  providers: [TestCasesService, ComposerService, CuratorService],
+  exports: [TestCasesService, ComposerService, CuratorService],
 })
 export class TestCasesModule {}
