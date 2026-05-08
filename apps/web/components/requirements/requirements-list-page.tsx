@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { AgentName } from '@/components/ui/agent-name';
+import { ConvertToJiraModal } from './convert-to-jira-modal';
 import { EditRequirementModal } from './edit-requirement-modal';
 import { LinkTestCaseModal } from './link-test-case-modal';
 
@@ -277,6 +278,7 @@ function RequirementsListContent() {
   const searchParams = useSearchParams();
   const editMode = searchParams?.get('edit') ?? null;
   const linkRequirementId = searchParams?.get('link') ?? null;
+  const jiraRequirementId = searchParams?.get('jira') ?? null;
 
   const openNewRequirement = useCallback(() => {
     console.info('pattern-a:deferred:requirements:new');
@@ -304,6 +306,18 @@ function RequirementsListContent() {
   );
 
   const closeLinkModal = useCallback(() => {
+    router.replace('/requirements');
+  }, [router]);
+
+  const openConvertToJira = useCallback(
+    (id: string) => {
+      console.info('pattern-a:deferred:requirements:row:convert-jira', { id });
+      router.push(`/requirements?jira=${id}`);
+    },
+    [router],
+  );
+
+  const closeJiraModal = useCallback(() => {
     router.replace('/requirements');
   }, [router]);
 
@@ -454,7 +468,16 @@ function RequirementsListContent() {
       />
 
       {/* Bulk action bar — appears when selection > 0 */}
-      {selectedIds.size > 0 && <BulkActionBar count={selectedIds.size} onClear={clearSelection} />}
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          count={selectedIds.size}
+          onClear={clearSelection}
+          onConvertJira={() => {
+            const first = Array.from(selectedIds)[0];
+            if (first) openConvertToJira(first);
+          }}
+        />
+      )}
 
       {/* Desktop table (≥ md) */}
       <div
@@ -499,6 +522,10 @@ function RequirementsListContent() {
       <LinkTestCaseModal
         requirementId={editMode === null ? linkRequirementId : null}
         onClose={closeLinkModal}
+      />
+      <ConvertToJiraModal
+        requirementId={editMode === null && linkRequirementId === null ? jiraRequirementId : null}
+        onClose={closeJiraModal}
       />
     </main>
   );
@@ -734,7 +761,15 @@ function Divider() {
 // BulkActionBar
 // ---------------------------------------------------------------------------
 
-function BulkActionBar({ count, onClear }: { count: number; onClear: () => void }) {
+function BulkActionBar({
+  count,
+  onClear,
+  onConvertJira,
+}: {
+  count: number;
+  onClear: () => void;
+  onConvertJira: () => void;
+}) {
   return (
     <section
       role="region"
@@ -774,9 +809,10 @@ function BulkActionBar({ count, onClear }: { count: number; onClear: () => void 
         </button>
         <button
           type="button"
-          onClick={() =>
-            console.info('pattern-a:deferred:requirements:bulk:convert-jira', { count })
-          }
+          onClick={() => {
+            console.info('pattern-a:deferred:requirements:bulk:convert-jira', { count });
+            onConvertJira();
+          }}
           className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-transparent px-3 text-[12.5px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
           style={{ borderColor: 'var(--border-subtle)' }}
         >
