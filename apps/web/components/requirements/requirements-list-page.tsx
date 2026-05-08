@@ -20,7 +20,8 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   Calendar,
@@ -37,6 +38,7 @@ import {
 } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { AgentName } from '@/components/ui/agent-name';
+import { EditRequirementModal } from './edit-requirement-modal';
 
 // ---------------------------------------------------------------------------
 // Types — local view models for the Pattern A scaffold. Shape mirrors
@@ -246,9 +248,15 @@ function coverageBarColor(c: Coverage): string {
 // ---------------------------------------------------------------------------
 
 export function RequirementsListPage() {
+  // Next 15 + output: 'export' bails the static prerender if
+  // `useSearchParams()` is called outside a <Suspense> boundary.
+  // The compound learning from Day-9 (F06 Sign In) — wrap content
+  // in Suspense at the route segment.
   return (
     <AdminShell active="requirements">
-      <RequirementsListContent />
+      <Suspense fallback={null}>
+        <RequirementsListContent />
+      </Suspense>
     </AdminShell>
   );
 }
@@ -260,6 +268,30 @@ function RequirementsListContent() {
   const [priorityFilter, setPriorityFilter] = useState<Set<Priority>>(new Set());
   const [statusFilter, setStatusFilter] = useState<Set<Status>>(new Set());
   const [coverageFilter, setCoverageFilter] = useState<'all' | 'gap' | 'empty'>('all');
+
+  // F14m1 modal trigger via URL search-param. Deep-linkable + plays
+  // nicely with browser back-button. `?edit=new` → new requirement;
+  // `?edit=RET-247` → edit row.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editMode = searchParams?.get('edit') ?? null;
+
+  const openNewRequirement = useCallback(() => {
+    console.info('pattern-a:deferred:requirements:new');
+    router.push('/requirements?edit=new');
+  }, [router]);
+
+  const openEditRequirement = useCallback(
+    (id: string) => {
+      console.info('pattern-a:deferred:requirements:row:edit', { id });
+      router.push(`/requirements?edit=${id}`);
+    },
+    [router],
+  );
+
+  const closeEditModal = useCallback(() => {
+    router.replace('/requirements');
+  }, [router]);
 
   useEffect(() => {
     console.info('pattern-a:deferred:requirements:load', {
@@ -382,7 +414,7 @@ function RequirementsListContent() {
           </button>
           <button
             type="button"
-            onClick={() => console.info('pattern-a:deferred:requirements:new')}
+            onClick={openNewRequirement}
             className="inline-flex h-9 min-h-[44px] items-center gap-1.5 rounded-md px-3 text-[13px] font-semibold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:min-h-0"
             style={{ background: 'var(--primary)', color: 'var(--primary-ink)' }}
           >
@@ -424,6 +456,7 @@ function RequirementsListContent() {
           allSelected={allSelected}
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
+          onEditRow={openEditRequirement}
         />
         <PaginationFooter total={142} from={1} to={filteredRows.length} />
       </div>
@@ -436,10 +469,14 @@ function RequirementsListContent() {
             row={row}
             selected={selectedIds.has(row.id)}
             onToggle={() => toggleRow(row.id)}
+            onEdit={() => openEditRequirement(row.id)}
           />
         ))}
         <PaginationFooter total={142} from={1} to={filteredRows.length} />
       </ul>
+
+      {/* F14m1 Edit Requirement Modal — opens via ?edit=<id|new> */}
+      <EditRequirementModal mode={editMode} onClose={closeEditModal} />
     </main>
   );
 }
@@ -745,12 +782,14 @@ function RequirementsTable({
   allSelected,
   onToggleRow,
   onToggleAll,
+  onEditRow,
 }: {
   rows: Requirement[];
   selectedIds: Set<string>;
   allSelected: boolean;
   onToggleRow: (id: string) => void;
   onToggleAll: () => void;
+  onEditRow: (id: string) => void;
 }) {
   return (
     <table className="w-full border-collapse text-left">
@@ -864,9 +903,7 @@ function RequirementsTable({
                   <RowAction
                     label={`Edit ${row.id}`}
                     icon={Pencil}
-                    onClick={() =>
-                      console.info('pattern-a:deferred:requirements:row:edit', { id: row.id })
-                    }
+                    onClick={() => onEditRow(row.id)}
                   />
                   <RowAction
                     label={`More actions for ${row.id}`}
@@ -967,10 +1004,12 @@ function RequirementCard({
   row,
   selected,
   onToggle,
+  onEdit,
 }: {
   row: Requirement;
   selected: boolean;
   onToggle: () => void;
+  onEdit: () => void;
 }) {
   const pri = priorityTone(row.priority);
   const stat = statusTone(row.status);
@@ -1021,11 +1060,7 @@ function RequirementCard({
               console.info('pattern-a:deferred:requirements:row:generate', { id: row.id })
             }
           />
-          <RowAction
-            label={`Edit ${row.id}`}
-            icon={Pencil}
-            onClick={() => console.info('pattern-a:deferred:requirements:row:edit', { id: row.id })}
-          />
+          <RowAction label={`Edit ${row.id}`} icon={Pencil} onClick={onEdit} />
         </div>
       </div>
     </li>
