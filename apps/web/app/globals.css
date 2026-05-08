@@ -115,3 +115,39 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   SYS-17 — global custom scrollbar (Hard Rule 14, Day-13 TASK 0)
+   Source: F15 v2.html lines 50-64.
+   Applied to all scrollable surfaces — NO browser-default scrollbars
+   visible anywhere in the app. Spec:
+     - 8 px width on desktop / 6 px on touch
+     - thumb: --border-strong (default) → --secondary (hover)
+     - track: transparent
+     - scrollbar-width: thin (Firefox)
+   ============================================================ */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+  transition: background 180ms ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+@media (pointer: coarse) {
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+}
