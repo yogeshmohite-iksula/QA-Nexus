@@ -39,6 +39,7 @@ import {
 import { AdminShell } from '@/components/admin/admin-shell';
 import { AgentName } from '@/components/ui/agent-name';
 import { EditRequirementModal } from './edit-requirement-modal';
+import { LinkTestCaseModal } from './link-test-case-modal';
 
 // ---------------------------------------------------------------------------
 // Types — local view models for the Pattern A scaffold. Shape mirrors
@@ -275,6 +276,7 @@ function RequirementsListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editMode = searchParams?.get('edit') ?? null;
+  const linkRequirementId = searchParams?.get('link') ?? null;
 
   const openNewRequirement = useCallback(() => {
     console.info('pattern-a:deferred:requirements:new');
@@ -290,6 +292,18 @@ function RequirementsListContent() {
   );
 
   const closeEditModal = useCallback(() => {
+    router.replace('/requirements');
+  }, [router]);
+
+  const openLinkTestCases = useCallback(
+    (id: string) => {
+      console.info('pattern-a:deferred:requirements:row:link-tests', { id });
+      router.push(`/requirements?link=${id}`);
+    },
+    [router],
+  );
+
+  const closeLinkModal = useCallback(() => {
     router.replace('/requirements');
   }, [router]);
 
@@ -457,6 +471,7 @@ function RequirementsListContent() {
           onToggleRow={toggleRow}
           onToggleAll={toggleAll}
           onEditRow={openEditRequirement}
+          onLinkTestCases={openLinkTestCases}
         />
         <PaginationFooter total={142} from={1} to={filteredRows.length} />
       </div>
@@ -475,8 +490,16 @@ function RequirementsListContent() {
         <PaginationFooter total={142} from={1} to={filteredRows.length} />
       </ul>
 
-      {/* F14m1 Edit Requirement Modal — opens via ?edit=<id|new> */}
+      {/* F14m1 Edit Requirement Modal — opens via ?edit=<id|new>.
+          F14m2 Link Test Case Modal — opens via ?link=<id>. The two
+          modals are mutually exclusive (?edit takes precedence per
+          spec — if both params present, the link modal won't render
+          because we close on edit-modal mount). */}
       <EditRequirementModal mode={editMode} onClose={closeEditModal} />
+      <LinkTestCaseModal
+        requirementId={editMode === null ? linkRequirementId : null}
+        onClose={closeLinkModal}
+      />
     </main>
   );
 }
@@ -783,6 +806,7 @@ function RequirementsTable({
   onToggleRow,
   onToggleAll,
   onEditRow,
+  onLinkTestCases,
 }: {
   rows: Requirement[];
   selectedIds: Set<string>;
@@ -790,6 +814,7 @@ function RequirementsTable({
   onToggleRow: (id: string) => void;
   onToggleAll: () => void;
   onEditRow: (id: string) => void;
+  onLinkTestCases: (id: string) => void;
 }) {
   return (
     <table className="w-full border-collapse text-left">
@@ -906,11 +931,9 @@ function RequirementsTable({
                     onClick={() => onEditRow(row.id)}
                   />
                   <RowAction
-                    label={`More actions for ${row.id}`}
+                    label={`Link test cases to ${row.id}`}
                     icon={MoreHorizontal}
-                    onClick={() =>
-                      console.info('pattern-a:deferred:requirements:row:more', { id: row.id })
-                    }
+                    onClick={() => onLinkTestCases(row.id)}
                   />
                 </div>
               </td>
