@@ -167,7 +167,6 @@ function makeService(opts: MockOpts = {}) {
     write: jest.fn().mockResolvedValue({ id: 'audit-1', thisHash: 'h' }),
   };
 
-   
   const svc = new TestCasesService(prisma as any, audit as any);
   return { svc, prisma, audit, txMock };
 }
