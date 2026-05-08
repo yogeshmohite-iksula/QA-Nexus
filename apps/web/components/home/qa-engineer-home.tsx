@@ -14,8 +14,7 @@
 import { useEffect } from 'react';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
 import { useActiveProject } from '@/lib/contexts/ProjectContext';
-import { HomeShell } from './home-shell';
-import { LeftRail } from './left-rail';
+import { AdminShell } from '@/components/admin/admin-shell';
 import { OutcomeBoard } from './outcome-board';
 import { Queue } from './queue';
 import { RightRail } from './right-rail';
@@ -44,23 +43,22 @@ export function QaEngineerHome() {
   }
 
   return (
-    <HomeShell>
-      <div className="flex flex-1">
-        <LeftRail />
-        <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
-          {/* Main content column */}
-          <main className="flex min-w-0 flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:gap-10">
-            <Hero />
-            <OutcomeBoard onRoute={logRoute} />
-            <Queue onRoute={logRoute} />
-          </main>
-          {/* Right rail (becomes a stacked section below queue on < xl) */}
-          <div className="px-4 pb-8 sm:px-6 lg:px-8 xl:p-0">
-            <RightRail onRoute={logRoute} />
-          </div>
+    <AdminShell active="home">
+      {/* AdminShell owns the top bar + left rail (Hard Rule 14). The
+          page is responsible only for its content area. F08's right
+          rail stacks below main content on < xl per the original
+          mobile-first layout. */}
+      <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
+        <main className="flex min-w-0 flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:gap-10">
+          <Hero />
+          <OutcomeBoard onRoute={logRoute} />
+          <Queue onRoute={logRoute} />
+        </main>
+        <div className="px-4 pb-8 sm:px-6 lg:px-8 xl:p-0">
+          <RightRail onRoute={logRoute} />
         </div>
       </div>
-    </HomeShell>
+    </AdminShell>
   );
 }
 
