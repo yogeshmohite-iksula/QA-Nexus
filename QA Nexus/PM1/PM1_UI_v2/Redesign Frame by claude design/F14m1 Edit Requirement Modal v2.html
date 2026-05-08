@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Edit Requirement</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;
+  -webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::selection{background:rgba(167,139,250,0.4);color:var(--t1)}
+input,textarea,select{font-family:inherit;color:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+
+/* Backdrop */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);
+  display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+
+/* Modal card */
+.modal{width:100%;max-width:720px;max-height:90vh;background:var(--base);border:1px solid var(--border);
+  border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden}
+@media (max-width:640px){.modal{max-width:100%;max-height:100vh;border-radius:0;border:none}}
+
+/* Header */
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;flex:none}
+.modal-head-body{flex:1;min-width:0}
+.eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--secondary);font-weight:700;margin-bottom:4px}
+.modal-title{font-family:'DM Sans';font-size:20px;line-height:26px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+.modal-sub{font-size:12px;color:var(--t3);margin-top:4px}
+.close-btn{width:32px;height:32px;border-radius:6px;background:var(--raised);border:1px solid var(--border);color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
+.close-btn:hover{background:var(--overlay);color:var(--t1)}
+
+/* Body */
+.modal-body{padding:18px 22px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:18px}
+
+/* Form fields */
+.field{display:flex;flex-direction:column;gap:6px}
+.field-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono';font-weight:600}
+.field-required{color:var(--fail)}
+.input,.textarea,.select{width:100%;background:var(--canvas);border:1px solid var(--border);border-radius:7px;padding:10px 12px;
+  color:var(--t1);font-size:13px;line-height:18px;outline:none;transition:border-color 150ms,box-shadow 150ms}
+.input:focus,.textarea:focus,.select:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(45,212,191,0.15)}
+.input::placeholder,.textarea::placeholder{color:var(--t4)}
+.textarea{resize:vertical;min-height:80px;font-family:inherit;line-height:20px}
+.input-help{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* Field row 2-col */
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.field-row{grid-template-columns:1fr}}
+
+/* Acceptance criteria list */
+.ac-list{display:flex;flex-direction:column;gap:8px}
+.ac-item{display:flex;align-items:flex-start;gap:8px;padding:9px 12px;background:var(--canvas);border:1px solid var(--border);border-radius:7px}
+.ac-item .num{font-family:'JetBrains Mono';font-size:11px;color:var(--t3);min-width:18px;font-weight:600;padding-top:1px}
+.ac-item input{flex:1;background:transparent;border:none;color:var(--t1);font-size:13px;line-height:20px;outline:none}
+.ac-item .ai-badge{display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 6px;border-radius:3px;
+  font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+  background:var(--ai-soft);color:var(--secondary);border:1px solid var(--ai-line);flex:none}
+.ac-item .remove{width:22px;height:22px;border-radius:5px;background:none;border:none;color:var(--t4);cursor:pointer;flex:none;
+  display:inline-flex;align-items:center;justify-content:center}
+.ac-item .remove:hover{background:var(--fail-soft);color:var(--fail)}
+.ac-add{display:inline-flex;align-items:center;gap:6px;background:none;border:1px dashed var(--border);padding:8px 12px;
+  border-radius:7px;color:var(--t3);font-size:12px;cursor:pointer;align-self:flex-start;font-family:inherit}
+.ac-add:hover{border-color:var(--primary-line);color:var(--primary);background:var(--primary-soft)}
+
+/* AI assist banner — Composer ⓘ */
+.ai-assist{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--ai-soft);border:1px solid var(--ai-line);
+  border-radius:8px;color:var(--t1)}
+.ai-assist .ai-icon{width:32px;height:32px;border-radius:8px;background:rgba(167,139,250,0.18);border:1px solid var(--ai-line);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--secondary);flex:none}
+.ai-assist .ai-body{flex:1;min-width:0}
+.ai-assist .ai-title{font-size:13px;font-weight:600;color:var(--t1);display:inline-flex;align-items:center;gap:4px}
+.ai-assist .agent-name{color:var(--secondary);font-weight:700}
+.ai-assist .info-i{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:999px;
+  background:rgba(167,139,250,0.18);color:var(--secondary);font-size:9px;font-weight:700;cursor:help}
+.ai-assist .ai-sub{font-size:11.5px;color:var(--t3);margin-top:2px}
+.ai-assist .ai-cta{padding:7px 12px;background:var(--secondary);color:#1A0B3D;border-radius:6px;font-size:12px;font-weight:700;
+  border:none;cursor:pointer;flex:none;display:inline-flex;align-items:center;gap:5px}
+.ai-assist .ai-cta:hover{background:#9272F0}
+.ai-assist .ai-cta:disabled{opacity:0.6;cursor:wait}
+
+/* Footer */
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex:none;
+  background:var(--base)}
+.foot-info{font-size:11px;color:var(--t3);flex:1;font-family:'JetBrains Mono'}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border-radius:6px;
+  font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer;font-family:inherit}
+.btn:hover{background:var(--raised);color:var(--t1)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+.btn-primary:hover{background:#26B8A4;border-color:#26B8A4}
+</style>
+</head>
+<body>
+
+<div class="backdrop" id="backdrop">
+  <div class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <header class="modal-head">
+      <div class="modal-head-body">
+        <div class="eyebrow">Edit Requirement · RET-247</div>
+        <h2 class="modal-title display" id="modal-title">Refund window for digital goods</h2>
+        <div class="modal-sub mono">Sprint 42 · last updated 2 days ago by Akshay P.</div>
+      </div>
+      <button class="close-btn" id="close-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-body">
+
+      <!-- Title -->
+      <div class="field">
+        <label class="field-label">Title <span class="field-required">*</span></label>
+        <input class="input" type="text" value="Refund window for digital goods extends to 30 days on partial-download failure">
+      </div>
+
+      <!-- Description -->
+      <div class="field">
+        <label class="field-label">Description</label>
+        <textarea class="textarea" rows="4">When a customer's digital purchase is interrupted mid-download or the file is corrupt, the standard 14-day refund window must auto-extend to 30 days from purchase date. The support agent must attach the failed-download log when issuing the refund.</textarea>
+      </div>
+
+      <!-- AI assist banner — POLISH ADDITION -->
+      <div class="ai-assist">
+        <div class="ai-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1v3M8 12v3M3 8h-2M15 8h-2M4.5 4.5l-1.5-1.5M13 13l-1.5-1.5M4.5 11.5l-1.5 1.5M13 3l-1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="ai-body">
+          <div class="ai-title">
+            Auto-suggest acceptance criteria with
+            <span class="agent-name">Composer</span>
+            <span class="info-i" title="Test Case Generator agent">i</span>
+          </div>
+          <div class="ai-sub">Reads the title + description above + your project KB, drafts 3-5 testable ACs you can accept, edit, or dismiss.</div>
+        </div>
+        <button class="ai-cta" id="ai-suggest-btn">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Suggest 5 ACs
+        </button>
+      </div>
+
+      <!-- Acceptance criteria -->
+      <div class="field">
+        <label class="field-label">Acceptance criteria</label>
+        <div class="ac-list">
+          <div class="ac-item">
+            <span class="num">1.</span>
+            <input type="text" value="Refund window for digital goods is 14 days from delivery confirmation by default">
+            <button class="remove" aria-label="Remove"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="ac-item">
+            <span class="num">2.</span>
+            <input type="text" value="On partial-download failure or corrupt file, refund window auto-extends to 30 days">
+            <button class="remove" aria-label="Remove"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="ac-item">
+            <span class="num">3.</span>
+            <input type="text" value="Support agent must attach the failed-download log (x-iksula-dl-trace) when issuing extended refund">
+            <span class="ai-badge">Composer</span>
+            <button class="remove" aria-label="Remove"><svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+        <button class="ac-add">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Add criterion
+        </button>
+      </div>
+
+      <!-- Priority + Status -->
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Priority</label>
+          <select class="select">
+            <option>P0 — Critical</option>
+            <option selected>P1 — High</option>
+            <option>P2 — Medium</option>
+            <option>P3 — Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Status</label>
+          <select class="select">
+            <option>Draft</option>
+            <option selected>In review</option>
+            <option>Approved</option>
+            <option>Archived</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Sprint + Source -->
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Sprint</label>
+          <select class="select">
+            <option selected>Sprint 42 (active)</option>
+            <option>Sprint 43 (next)</option>
+            <option>Backlog</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Source</label>
+          <input class="input" type="text" value="Jira · RET-247" readonly>
+          <div class="input-help">Auto-synced from Jira every 15 min</div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="modal-foot">
+      <span class="foot-info">⌘+Enter to save · Esc to cancel</span>
+      <button class="btn" id="cancel-btn">Cancel</button>
+      <button class="btn btn-primary">Save changes</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+  // ESC + backdrop close
+  const backdrop = document.getElementById('backdrop');
+  const closeBtn = document.getElementById('close-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const aiBtn = document.getElementById('ai-suggest-btn');
+
+  function close() {
+    console.info('pattern-a:deferred:f14m1:close');
+    // Real impl: dispatch onClose() prop
+  }
+
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+
+  // Pattern A — Composer suggest stub
+  aiBtn.addEventListener('click', () => {
+    console.info('pattern-a:deferred:f14m1:composer-suggest-acs', { requirementId: 'RET-247' });
+    aiBtn.disabled = true;
+    aiBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="1s" repeatCount="indefinite"/></circle></svg> Composer thinking…';
+    setTimeout(() => {
+      aiBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> 3 new ACs';
+      aiBtn.disabled = false;
+    }, 1800);
+  });
+</script>
+</body>
+</html>

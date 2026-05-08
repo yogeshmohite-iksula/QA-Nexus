@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Link Test Cases</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;min-height:100vh;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.display{font-family:"DM Sans","Inter";letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+input{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{width:100%;max-width:760px;max-height:90vh;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden}
+@media (max-width:640px){.modal{max-width:100%;max-height:100vh;border-radius:0;border:none}}
+
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;flex:none}
+.modal-head-body{flex:1;min-width:0}
+.eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--info);font-weight:700;margin-bottom:4px}
+.modal-title{font-family:'DM Sans';font-size:20px;line-height:26px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+.modal-sub{font-size:12px;color:var(--t3);margin-top:4px}
+.close-btn{width:32px;height:32px;border-radius:6px;background:var(--raised);border:1px solid var(--border);color:var(--t3);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
+.close-btn:hover{background:var(--overlay);color:var(--t1)}
+
+/* Curator hint banner — POLISH ADDITION */
+.curator-hint{margin:14px 22px 0;padding:11px 14px;background:var(--ai-soft);border:1px solid var(--ai-line);border-radius:8px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--t1)}
+.curator-hint .ci{width:24px;height:24px;border-radius:6px;background:rgba(167,139,250,0.18);border:1px solid var(--ai-line);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.curator-hint .ci svg{width:13px;height:13px}
+.curator-hint .text{flex:1;line-height:18px}
+.curator-hint .agent-name{color:var(--secondary);font-weight:700}
+.curator-hint .info-i{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:999px;background:rgba(167,139,250,0.18);color:var(--secondary);font-size:9px;font-weight:700;cursor:help;margin-left:2px}
+.curator-hint .pill-link{color:var(--secondary);font-weight:600;text-decoration:underline;cursor:pointer}
+.curator-hint .show-suggested{padding:6px 10px;background:var(--secondary);color:#1A0B3D;border-radius:5px;font-size:11px;font-weight:700;border:none;flex:none}
+
+.modal-body{padding:14px 22px 12px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;overflow:hidden}
+
+.search-row{display:flex;gap:8px;flex:none}
+.search-input{flex:1;height:38px;background:var(--canvas);border:1px solid var(--border);border-radius:7px;padding:0 12px;display:flex;align-items:center;gap:8px}
+.search-input svg{color:var(--t3);flex:none}
+.search-input input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:13px}
+.search-input input::placeholder{color:var(--t4)}
+.filter-btn{height:38px;padding:0 12px;border-radius:7px;background:var(--raised);border:1px solid var(--border);color:var(--t2);font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+
+.case-list{flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--canvas);min-height:280px}
+.case-list::-webkit-scrollbar{width:6px}
+
+.case-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 150ms}
+.case-row:hover{background:var(--raised)}
+.case-row.selected{background:rgba(167,139,250,0.06)}
+.case-row.suggested{background:rgba(167,139,250,0.04);border-left:3px solid var(--secondary)}
+.case-row:last-child{border-bottom:0}
+
+.case-check{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--border-strong);background:var(--canvas);cursor:pointer;flex:none;position:relative;appearance:none;-webkit-appearance:none}
+.case-check:checked{background:var(--secondary);border-color:var(--secondary)}
+.case-check:checked::after{content:"";position:absolute;left:3px;top:0;width:5px;height:9px;border:solid #1A0B3D;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+.case-body{flex:1;min-width:0}
+.case-id{font-family:'JetBrains Mono';font-size:11px;color:var(--primary);font-weight:600;line-height:1.2}
+.case-title{font-size:13px;color:var(--t1);font-weight:500;line-height:18px;margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
+.case-meta{display:flex;align-items:center;gap:10px;margin-top:4px}
+.case-meta .pill{font-family:'JetBrains Mono';font-size:9.5px;color:var(--t3);background:var(--overlay);border:1px solid var(--border);padding:1px 6px;border-radius:3px;letter-spacing:0.04em;text-transform:uppercase;font-weight:600}
+.case-meta .pill.violet{color:var(--secondary);background:rgba(167,139,250,0.1);border-color:var(--ai-line)}
+.case-meta .meta-text{font-size:10.5px;color:var(--t4)}
+.case-meta .suggested-tag{font-size:9.5px;color:var(--secondary);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;font-family:'JetBrains Mono'}
+
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex:none;background:var(--base)}
+.foot-info{font-size:11px;color:var(--t3);flex:1;font-family:'JetBrains Mono'}
+.foot-info .selected-count{color:var(--secondary);font-weight:700}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+.btn:hover{background:var(--raised);color:var(--t1)}
+.btn-primary{background:var(--secondary);border-color:var(--secondary);color:#1A0B3D;font-weight:700}
+.btn-primary:hover{background:#9272F0;border-color:#9272F0}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop">
+  <div class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <header class="modal-head">
+      <div class="modal-head-body">
+        <div class="eyebrow">Link test cases · RET-247</div>
+        <h2 class="modal-title display" id="modal-title">Link existing test cases to this requirement</h2>
+        <div class="modal-sub mono">Iksula Returns · 1,284 cases available</div>
+      </div>
+      <button class="close-btn" id="close-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <!-- Curator hint banner — POLISH ADDITION -->
+    <div class="curator-hint">
+      <div class="ci">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7l2-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="text">
+        <span class="agent-name">Curator</span><span class="info-i" title="Duplicate Detection agent">i</span>
+        found <strong>4 test cases</strong> already linked to similar requirements (RET-248, RET-251) — you may want to consider these first.
+      </div>
+      <button class="show-suggested" id="show-suggested-btn">Show 4 suggested</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="search-row">
+        <div class="search-input">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" placeholder="Search by ID, title, or step text…">
+        </div>
+        <button class="filter-btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Filter
+        </button>
+      </div>
+
+      <div class="case-list">
+        <div class="case-row suggested">
+          <input type="checkbox" class="case-check" checked>
+          <div class="case-body">
+            <span class="case-id">TC-RET-0341</span>
+            <div class="case-title">Refund request within 14-day window succeeds for digital good</div>
+            <div class="case-meta">
+              <span class="pill">P1</span>
+              <span class="pill violet">Composer</span>
+              <span class="suggested-tag">Curator suggested</span>
+              <span class="meta-text">linked to RET-248</span>
+            </div>
+          </div>
+        </div>
+        <div class="case-row suggested">
+          <input type="checkbox" class="case-check" checked>
+          <div class="case-body">
+            <span class="case-id">TC-RET-0342</span>
+            <div class="case-title">Refund retries up to 3× on payment-gateway failure with exponential backoff</div>
+            <div class="case-meta">
+              <span class="pill">P0</span>
+              <span class="pill violet">Composer</span>
+              <span class="suggested-tag">Curator suggested</span>
+              <span class="meta-text">linked to RET-248</span>
+            </div>
+          </div>
+        </div>
+        <div class="case-row suggested">
+          <input type="checkbox" class="case-check">
+          <div class="case-body">
+            <span class="case-id">TC-RET-0455</span>
+            <div class="case-title">Holiday calendar exceptions: refund window pauses for Indian Stock Exchange holidays</div>
+            <div class="case-meta">
+              <span class="pill">P2</span>
+              <span class="pill violet">Composer</span>
+              <span class="suggested-tag">Curator suggested</span>
+              <span class="meta-text">linked to RET-251</span>
+            </div>
+          </div>
+        </div>
+        <div class="case-row suggested">
+          <input type="checkbox" class="case-check">
+          <div class="case-body">
+            <span class="case-id">TC-RET-0512</span>
+            <div class="case-title">PM walkthrough: payment reversal edge cases (HDFC + SBI UPI rails)</div>
+            <div class="case-meta">
+              <span class="pill">P1</span>
+              <span class="suggested-tag">Curator suggested</span>
+              <span class="meta-text">linked to RET-248</span>
+            </div>
+          </div>
+        </div>
+        <div class="case-row">
+          <input type="checkbox" class="case-check">
+          <div class="case-body">
+            <span class="case-id">TC-RET-0523</span>
+            <div class="case-title">Customer initiates refund via /api/refunds with delivery_confirmed_at validation</div>
+            <div class="case-meta">
+              <span class="pill">P2</span>
+              <span class="meta-text">created 3 days ago by Akshay P.</span>
+            </div>
+          </div>
+        </div>
+        <div class="case-row">
+          <input type="checkbox" class="case-check">
+          <div class="case-body">
+            <span class="case-id">TC-RET-0541</span>
+            <div class="case-title">Refund window calculation accounts for delivery_confirmed_at timezone</div>
+            <div class="case-meta">
+              <span class="pill">P3</span>
+              <span class="meta-text">created 1 week ago by Yogesh M.</span>
+            </div>
+          </div>
+        </div>
+        <div class="case-row">
+          <input type="checkbox" class="case-check">
+          <div class="case-body">
+            <span class="case-id">TC-RET-0567</span>
+            <div class="case-title">Refund eligibility extends to 30 days when failed-download log present</div>
+            <div class="case-meta">
+              <span class="pill">P1</span>
+              <span class="pill violet">Composer</span>
+              <span class="meta-text">created 2h ago by Composer</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="modal-foot">
+      <span class="foot-info"><span class="selected-count">2</span> selected · 4 Curator-suggested · 7 visible</span>
+      <button class="btn" id="cancel-btn">Cancel</button>
+      <button class="btn btn-primary">Link 2 cases</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const backdrop = document.getElementById('backdrop');
+  const closeBtn = document.getElementById('close-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const showSuggested = document.getElementById('show-suggested-btn');
+  function close(){ console.info('pattern-a:deferred:f14m2:close'); }
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  showSuggested.addEventListener('click', () => {
+    console.info('pattern-a:deferred:f14m2:curator-show-suggested', { requirementId: 'RET-247' });
+  });
+</script>
+</body>
+</html>

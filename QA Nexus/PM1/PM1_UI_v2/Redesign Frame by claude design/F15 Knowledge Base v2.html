@@ -125,9 +125,7 @@ input,textarea{font-family:inherit;color:inherit}
 @media (max-width:767px){.user-pill .name{display:none}}
 
 /* ───────── Left rail ───────── */
-.rail{display:none;background:var(--base);border-right:1px solid var(--border);
-  flex-direction:column;padding:8px 8px 14px;overflow-y:auto;overflow-x:hidden;
-  height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}
+.rail{display:none;background:var(--base);border-right:1px solid var(--border);flex-direction:column;padding:0;overflow:hidden;height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}
 @media (min-width:1024px){.rail{display:flex}}
 .rail.mobile-open{display:flex;position:fixed;top:var(--topbar-h);left:0;bottom:0;width:280px;z-index:50;
   height:calc(100vh - var(--topbar-h));box-shadow:0 0 0 9999px rgba(0,0,0,0.5)}
@@ -135,9 +133,16 @@ input,textarea{font-family:inherit;color:inherit}
 /* Rail collapse toggle — Linear/Notion pattern.
    Expanded: full-width "← COLLAPSE" text button (44px hit zone).
    Collapsed: 44×44 icon-only with panel-expand glyph + 10px padding all sides. */
+/* Single-scrollbar middle area — entire nav scrolls as one (per Demo Collapsible Nav Sections) */
+.rail-content{flex:1;min-height:0;overflow-y:auto;padding:0 8px 8px}
+.rail-content::-webkit-scrollbar{width:6px}
+.rail-content::-webkit-scrollbar-track{background:transparent}
+.rail-content::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+.rail-content::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+
 .rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
   color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
-  margin:6px 0 8px;flex:none;border:1px solid transparent;width:100%;cursor:pointer;background:none}
+  margin:14px 8px 8px;flex:none;border:1px solid transparent;cursor:pointer;background:none}
 .rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
 .rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--t3)}
 .rail-toggle:hover .rt-icon{color:var(--t1)}
@@ -147,10 +152,31 @@ input,textarea{font-family:inherit;color:inherit}
 [data-rail="collapsed"] .rail-toggle .rt-label{display:none}
 [data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}
 
-.nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);
-  padding:14px 12px 6px;font-weight:600;font-family:'JetBrains Mono';white-space:nowrap;overflow:hidden}
-[data-rail="collapsed"] .nav-section{visibility:hidden;height:8px;padding:6px 0 0;
-  border-top:1px solid var(--border);margin:6px 8px 0;font-size:0}
+/* Section header — clickable, with chevron + underline divider (per Demo Collapsible Nav Sections) */
+.nav-section{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 10px;
+  cursor:pointer;user-select:none;transition:background 150ms;position:relative;
+  border-bottom:1px solid var(--border);margin:0 4px 6px}
+.nav-section:hover{background:rgba(255,255,255,0.02)}
+.nav-section .sec-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);
+  font-weight:600;font-family:'JetBrains Mono'}
+.nav-section .sec-chevron{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--t3);transition:transform 220ms cubic-bezier(.4,0,.2,1);flex:none}
+.nav-section:hover .sec-chevron{color:var(--t1)}
+.nav-section .sec-chevron svg{width:12px;height:12px}
+.nav-section.collapsed .sec-chevron{transform:rotate(-90deg)}
+
+/* Items list (collapsible body) — large max-height so multi-item sections never overlap */
+.nav-items{display:flex;flex-direction:column;gap:0;
+  max-height:2000px;overflow:hidden;
+  transition:max-height 280ms cubic-bezier(.4,0,.2,1),opacity 200ms ease,padding 220ms ease,margin 220ms ease}
+.nav-items.collapsed{max-height:0;opacity:0;pointer-events:none;padding:0;margin:0}
+
+/* Collapsed-rail (240→64px) compatibility — hide chevron + label, keep underline as visual divider */
+[data-rail="collapsed"] .nav-section{padding:10px 0 8px;margin:6px 4px 4px;cursor:default;
+  justify-content:center;border-bottom:1px solid var(--border)}
+[data-rail="collapsed"] .nav-section .sec-label,
+[data-rail="collapsed"] .nav-section .sec-chevron{display:none}
+[data-rail="collapsed"] .nav-items{max-height:none !important;opacity:1 !important;pointer-events:auto !important;padding:0 !important;margin:0 !important}
 
 .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
   font-size:13px;line-height:18px;min-height:36px;position:relative;white-space:nowrap;text-decoration:none}
@@ -181,7 +207,7 @@ input,textarea{font-family:inherit;color:inherit}
 .nav-pill.lead{background:var(--ai-soft);color:var(--secondary);border-color:var(--ai-line)}
 
 /* Collapsed state — hide all but icon, center, show tooltips on hover */
-[data-rail="collapsed"] .rail{padding:8px 6px 14px}
+[data-rail="collapsed"] .rail-content{padding:0 4px 8px}
 [data-rail="collapsed"] .nav-item{justify-content:center;padding:6px;gap:0}
 [data-rail="collapsed"] .nav-item > :not(.nav-icon){display:none}
 [data-rail="collapsed"] .nav-item.active::before{display:none}
@@ -624,28 +650,48 @@ input,textarea{font-family:inherit;color:inherit}
       <span class="rt-label">Collapse</span>
     </button>
 
+    <div class="rail-content">
+
     <a class="nav-item" data-tone="home" data-label="Home" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 7L8 2.5 13.5 7V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7z"/></svg></span><span class="nav-label">Home</span></a>
 
-    <div class="nav-section">Plan</div>
-    <a class="nav-item" data-tone="info" data-label="Requirements" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg></span><span class="nav-label">Requirements</span><span class="nav-count">142</span></a>
-    <a class="nav-item" data-tone="primary" data-label="Test Plans &amp; Cycles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v3M11 2v3" stroke-linecap="round"/></svg></span><span class="nav-label">Test Plans &amp; Cycles</span></a>
-    <a class="nav-item" data-tone="pass" data-label="Test Cases" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3z"/><path d="M6 8l1.5 1.5L11 6" stroke-linecap="round"/></svg></span><span class="nav-label">Test Cases</span><span class="nav-count">1,284</span></a>
+    <div class="nav-section" data-section="plan"><span class="sec-label">Plan</span><span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <div class="nav-items" data-section-body="plan">
+      <a class="nav-item" data-tone="info" data-label="Requirements" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg></span><span class="nav-label">Requirements</span><span class="nav-count">142</span></a>
+      <a class="nav-item" data-tone="primary" data-label="Test Plans &amp; Cycles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v3M11 2v3" stroke-linecap="round"/></svg></span><span class="nav-label">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item" data-tone="pass" data-label="Test Cases" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3z"/><path d="M6 8l1.5 1.5L11 6" stroke-linecap="round"/></svg></span><span class="nav-label">Test Cases</span><span class="nav-count">1,284</span></a>
+    </div>
 
-    <div class="nav-section">Author</div>
-    <a class="nav-item" data-tone="warn" data-label="Test Suites" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H9zM9 9h4v4H9z"/></svg></span><span class="nav-label">Test Suites</span></a>
-    <a class="nav-item active" data-tone="secondary" data-label="Knowledge Base" href="#" aria-current="page"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2.5h10v11l-5-2-5 2v-11z"/></svg></span><span class="nav-label">Knowledge Base</span><span class="nav-count">1.2K chunks</span></a>
-    <a class="nav-item disabled" data-label="Automation Studio" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l3 3 7-7" stroke-linecap="round"/></svg></span><span class="nav-label">Automation Studio</span><span class="nav-pill">v1.5</span></a>
-    <a class="nav-item disabled" data-label="Data &amp; Mocks" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4"/></svg></span><span class="nav-label">Data &amp; Mocks</span><span class="nav-pill">v1.5</span></a>
+    <div class="nav-section" data-section="author"><span class="sec-label">Author</span><span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <div class="nav-items" data-section-body="author">
+      <a class="nav-item" data-tone="warn" data-label="Test Suites" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H9zM9 9h4v4H9z"/></svg></span><span class="nav-label">Test Suites</span><span class="nav-count">18</span></a>
+      <a class="nav-item active" data-tone="secondary" data-label="Knowledge Base" href="#" data-kb="1" aria-current="page"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2.5h10v11l-5-2-5 2v-11z"/></svg></span><span class="nav-label">Knowledge Base</span><span class="nav-count">1.2K <span style="color:var(--t4);font-weight:400">chunks</span></span></a>
+      <a class="nav-item disabled" data-label="Automation Studio" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l3 3 7-7" stroke-linecap="round"/></svg></span><span class="nav-label">Automation Studio</span><span class="nav-pill">v1.5</span></a>
+      <a class="nav-item disabled" data-label="Data &amp; Mocks" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4"/></svg></span><span class="nav-label">Data &amp; Mocks</span><span class="nav-pill">v1.5</span></a>
+    </div>
 
-    <div class="nav-section">Run</div>
-    <a class="nav-item" data-tone="primary" data-label="Runs &amp; Sessions" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l8 5-8 5V3z"/></svg></span><span class="nav-label">Runs &amp; Sessions</span><span class="nav-count">3</span></a>
-    <a class="nav-item" data-tone="info" data-label="Environments" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="12" height="8" rx="1"/><path d="M5 8h6" stroke-linecap="round"/></svg></span><span class="nav-label">Environments</span></a>
+    <div class="nav-section" data-section="run"><span class="sec-label">Run</span><span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <div class="nav-items" data-section-body="run">
+      <a class="nav-item" data-tone="primary" data-label="Runs &amp; Sessions" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l8 5-8 5V3z"/></svg></span><span class="nav-label">Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+      <a class="nav-item" data-tone="info" data-label="Environments" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="12" height="8" rx="1"/><path d="M5 8h6" stroke-linecap="round"/></svg></span><span class="nav-label">Environments</span></a>
+    </div>
 
-    <div class="nav-section">Analyse</div>
-    <a class="nav-item" data-tone="info" data-label="Run Results" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke-linecap="round"/></svg></span><span class="nav-label">Run Results</span></a>
-    <a class="nav-item" data-tone="fail" data-label="Defects / Failures" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 7v3M8 12h.01" stroke-linecap="round"/></svg></span><span class="nav-label">Defects / Failures</span><span class="nav-count" style="color:var(--fail)">14</span></a>
-    <a class="nav-item" data-tone="warn" data-label="Reports" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="10" height="10" rx="1"/><path d="M6 10V7M8 10V5M10 10V8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+    <div class="nav-section" data-section="analyse"><span class="sec-label">Analyse</span><span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <div class="nav-items" data-section-body="analyse">
+      <a class="nav-item" data-tone="info" data-label="Run Results" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke-linecap="round"/></svg></span><span class="nav-label">Run Results</span></a>
+      <a class="nav-item" data-tone="secondary" data-label="Executive Dashboard" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="3" rx="1"/><rect x="9" y="7" width="5" height="7" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/></svg></span><span class="nav-label">Executive Dashboard</span></a>
+      <a class="nav-item" data-tone="fail" data-label="Defects / Failures" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 7v3M8 12h.01" stroke-linecap="round"/></svg></span><span class="nav-label">Defects / Failures</span><span class="nav-count" style="color:var(--fail)">14</span></a>
+      <a class="nav-item" data-tone="warn" data-label="Reports" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="10" height="10" rx="1"/><path d="M6 10V7M8 10V5M10 10V8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+    </div>
 
+    <div class="nav-section" data-section="govern"><span class="sec-label">Govern</span><span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <div class="nav-items" data-section-body="govern">
+      <a class="nav-item" data-tone="secondary" data-label="Agents" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2l1.4 3.5L13 7l-3.6 1.5L8 12l-1.4-3.5L3 7l3.6-1.5z"/></svg></span><span class="nav-label">Agents</span></a>
+      <a class="nav-item" data-tone="info" data-label="Integrations" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 14v-3M6 4V2M10 4V2M4 8.5V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 1-2.5 2.5h-3A2.5 2.5 0 0 1 4 8.5z"/></svg></span><span class="nav-label">Integrations</span></a>
+      <a class="nav-item" data-tone="primary" data-label="Users &amp; Roles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 13v-1.3A2.7 2.7 0 0 0 8.3 9H4.7A2.7 2.7 0 0 0 2 11.7V13"/><circle cx="6.5" cy="5" r="2.5"/></svg></span><span class="nav-label">Users &amp; Roles</span></a>
+      <a class="nav-item" data-tone="home" data-label="Settings &amp; Audit" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2"/><path d="M12.7 9.7a1.1 1.1 0 0 0 .22 1.21l.04.04a1.33 1.33 0 1 1-1.88 1.88l-.04-.04a1.1 1.1 0 0 0-1.21-.22 1.1 1.1 0 0 0-.66 1V14a1.33 1.33 0 1 1-2.66 0v-.06a1.1 1.1 0 0 0-.66-1 1.1 1.1 0 0 0-1.21.22l-.04.04a1.33 1.33 0 1 1-1.88-1.88l.04-.04a1.1 1.1 0 0 0 .22-1.21 1.1 1.1 0 0 0-1-.66H2A1.33 1.33 0 1 1 2 6.66h.06a1.1 1.1 0 0 0 1-.66 1.1 1.1 0 0 0-.22-1.21l-.04-.04a1.33 1.33 0 1 1 1.88-1.88l.04.04a1.1 1.1 0 0 0 1.21.22h0a1.1 1.1 0 0 0 .66-1V2a1.33 1.33 0 1 1 2.66 0v.06a1.1 1.1 0 0 0 .66 1 1.1 1.1 0 0 0 1.21-.22l.04-.04a1.33 1.33 0 1 1 1.88 1.88l-.04.04a1.1 1.1 0 0 0-.22 1.21h0a1.1 1.1 0 0 0 1 .66H14A1.33 1.33 0 1 1 14 9.34h-.06a1.1 1.1 0 0 0-1 .66z"/></svg></span><span class="nav-label">Settings &amp; Audit</span></a>
+    </div>
+
+    </div><!-- end .rail-content -->
     <div class="rail-foot">
       <span class="av">KP</span>
       <div class="who"><div class="n">Kishor P.</div><div class="r">QA_ENGINEER</div></div>
@@ -1836,6 +1882,39 @@ document.getElementById('railToggle').addEventListener('click', () => {
     setState(app.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
   });
 })();
+
+/* ─── Section collapse/expand (per Demo Collapsible Nav Sections — DO NOT MODIFY LOGIC) ─── */
+(function(){
+  var STORAGE_PREFIX = 'qa-nexus.shell.section-';
+  var sections = document.querySelectorAll('.nav-section[data-section]');
+  if (!sections.length) return;
+
+  var activeItem = document.querySelector('.nav-item.active');
+  var activeBody = activeItem ? activeItem.closest('.nav-items[data-section-body]') : null;
+  var activeSectionName = activeBody ? activeBody.getAttribute('data-section-body') : null;
+
+  sections.forEach(function(section){
+    var name = section.getAttribute('data-section');
+    var body = document.querySelector('[data-section-body="' + name + '"]');
+    if (!body) return;
+    var storageKey = STORAGE_PREFIX + name + '-collapsed';
+
+    var saved = false;
+    try { saved = localStorage.getItem(storageKey) === 'true'; } catch(e) {}
+
+    if (saved && name !== activeSectionName) {
+      section.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+
+    section.addEventListener('click', function(){
+      var isCollapsed = section.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+      try { localStorage.setItem(storageKey, isCollapsed); } catch(e) {}
+    });
+  });
+})();
+
 
 /* ─────────  Suggestion chips → search  ───────── */
 document.getElementById('suggest').addEventListener('click', e => {

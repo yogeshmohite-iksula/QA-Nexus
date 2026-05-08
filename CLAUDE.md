@@ -19,14 +19,16 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 1. **$0/month cost gate is binding.** Any decision that would force a paid component requires Yogesh's explicit written approval first. Even $5/mo upgrades require an ADR and sign-off.
 2. **Free / OSI-approved OSS only.** Hosted services may be used if they have a free tier matching pilot scale (Groq, Gemini, Cloudflare, Neon, Render, Resend, Grafana Cloud, UptimeRobot, GitHub Actions).
-3. **Never modify the 41 locked HTML frames** spanning **3 folders** in `QA Nexus/PM1/PM1_UI_v2/`:
-   - `frame  html view/` (17 frames, TWO spaces in folder name)
-   - `frames - claude code build (PM1 v2.6-v2.8)/` (20 frames)
-   - `Redesign Frame by claude design/` (4 v2 frames: F15, F16a, F16b, F16c — supersede the v1 originals removed from `frames - claude code build/` on 2026-05-03 per Claude Design Phase 1 audit findings)
+3. **Never modify the 46 locked HTML frames** spanning **3 folders** in `QA Nexus/PM1/PM1_UI_v2/`:
+   - `frame  html view/` (16 frames, TWO spaces in folder name — F22 v1 removed 2026-05-08, superseded by F22 v2)
+   - `frames - claude code build (PM1 v2.6-v2.8)/` (16 frames — F18/F19/F20/F21 v1 removed 2026-05-08, superseded by v2 redesigns in `Redesign Frame by claude design/`)
+   - `Redesign Frame by claude design/` (14 v2 frames: F14, F14m1, F14m2, F14m3, F15, F16a, F16b, F16c, F18, F18m1, F19, F20, F21, F22 — these are the canonical references for all M3+M4 page ports per Hard Rule 15)
 
-   Plus 3 supporting reference files in `Redesign Frame by claude design/`: `F15 Mobile Breakpoints.html`, `primitives-playground.html`, `2026-05-03-phase-3-drift-retrofit-memo.html`. These are NOT in the 41 count — they are binding patterns + retrofit guidance.
+   Plus 4 supporting reference files in `Redesign Frame by claude design/`: `F15 Mobile Breakpoints.html`, `primitives-playground.html`, `2026-05-03-phase-3-drift-retrofit-memo.html`, `_Demo Collapsible Nav Sections.html`. These are NOT in the 46 count — they are binding patterns + retrofit guidance.
 
-   Translate them to React components in `apps/web/src/app/**` instead. Reference with `// Implements F06 Sign In · see PM1_UI_v2/frame  html view/F06 Sign In.html` or `// Implements F15 KB · see PM1_UI_v2/Redesign Frame by claude design/F15 Knowledge Base v2.html`.
+   **v2-supersedes-v1 policy (codified 2026-05-08, "Path B"):** When Claude Design ships a v2 redesign for a frame that has a v1 original, the v1 file is deleted in the same PR that adds the v2. Rationale: maintaining stale v1s alongside v2s confuses FE+1 about which is canonical (Hard Rule 15 source-of-truth conflict). Frames retained in `frame  html view/` and `frames - claude code build/` are those without v2 redesigns. Once a frame is redesigned to v2, its v1 must be removed in the same commit.
+
+   Translate them to React components in `apps/web/src/app/**` instead. Reference with `// Implements F06 Sign In · see PM1_UI_v2/frame  html view/F06 Sign In.html` or `// Implements F14 Requirements · see PM1_UI_v2/Redesign Frame by claude design/F14 Requirements v2.html`.
 
 4. **Never add Material Design 3 tokens, tertiary colors, or extend `tailwind.config.ts`** beyond the locked palette. The `enforce-design-tokens.sh` PreToolUse hook will block. Respect its decision.
 5. **Never add anything on the ban list:** FastAPI, Ollama, Gemma 4 self-host, Redis, Valkey, BullMQ, ioredis, Neo4j, Graphiti, Keycloak, Vault, pgvectorscale, LangSmith, langchain, MUI, Chakra UI, Mantine, Material Design 3 tokens, daisyui, material-tailwind. The `enforce-pm1-stack.sh` PreToolUse hook will block.
@@ -38,13 +40,96 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 11. **When in doubt, ask Yogesh — never guess.** Confirm before any non-trivial architectural decision.
 12. **Full responsive web design (RWD) on every ported frame.** The 41 locked HTML frames in `PM1_UI_v2/` are **design references at 1600×1024 canvas size — NOT mandated widths**. Every React port MUST be: (a) mobile-first — base styles target ~320 px (iPhone SE), progressively enhance via Tailwind breakpoints `sm: 640 / md: 768 / lg: 1024 / xl: 1280 / 2xl: 1536`; (b) NO fixed pixel widths on layout containers (no `w-[1600px]`, no `w-[800px]`) — use `w-full`, `max-w-*`, `flex-1`, grid; (c) component max-widths only where semantically correct (forms ≤ 480 px, reading content ≤ 768 px); (d) tap targets ≥ 44 × 44 px (WCAG 2.5.5); (e) NO horizontal scroll at any viewport ≥ 320 px wide — test at 320 / 768 / 1024 / 1440 / 1920 minimum before commit; (f) typography scales appropriately across breakpoints; (g) modals (Stage 1120×860, Edit 960×720, Picker 720×640, Confirm 480×360 per `01_SYSTEM.md`) become full-screen Drawer sheets on mobile, render at declared sizes on desktop. Backed by `PM1_PRD §10 NFR-001` ("acceptable responsiveness for daily use") + `PM1_PRD §10.2` ("responsive for mobile browsers") + `01_SYSTEM.md §4.4` ("Canvas 1600×1024 desktop **primary**" — explicitly leaves room for non-desktop). Enforced by `enforce-rwd.sh` PreToolUse hook (MS0-T034).
 13. **User visual confirmation gate before local commit.** For every newly developed/refactored screen, post the local URL (`http://localhost:3000/<route>`) to Yogesh + screenshots at 320 px and 1440 px, and wait for explicit "looks good, commit" approval BEFORE running `git commit`. Established 2026-04-26 after F06 + F06b + RWD iterations where automated checks passed but real-screen rendering revealed slider overflow + browser-extension hydration noise + cramped form spacing that automation missed.
-14. **App shell parity is mandatory on every authenticated screen.** Established 2026-05-06 (Day-11 evening) after F15 HTML ↔ React port diff revealed missing collapse + hamburger primitives in the (app) layout. Binding requirements:
-    - **Canonical reference:** `PM1_UI_v2/Redesign Frame by claude design/F15 Knowledge Base v2.html` — the AppShell + sidebar collapse + hamburger pattern there is the source of truth for ALL authenticated routes (anything under `apps/web/src/app/(app)/**`, `(workspace)/**`, `(admin)/**`).
-    - **Every authenticated `page.tsx` MUST be wrapped** in `AdminShell` (or the role-equivalent shell) — naked pages without shell are rejected at visual gate (Rule 13 extension).
-    - **Sidebar primitives mandatory**: collapse toggle (desktop) + hamburger (mobile < 1024 px) — both must be present and functional. Missing either is a Rule 14 violation.
-    - **Cross-references:** F15 v2 canonical · followup `(ak)` (PreToolUse hook `enforce-app-shell.sh` — fail-fast on missing AdminShell wrap or missing collapse/hamburger primitives in any `apps/web/src/app/(app)/**/page.tsx` — tracked for M2 hardening).
-    - **Visual gate impact (Rule 13 amendment):** screenshots at 320 px MUST show the hamburger; screenshots at 1440 px MUST show the collapse toggle. Either missing → visual gate FAIL even if everything else passes. No exceptions.
-    - **Policy stack:** Rule 3 (locked frames) → Rule 12 (RWD) → Rule 13 (visual gate) → **Rule 14 (shell parity)**. Each tightens the previous; Rule 14 is the layer that catches issues even green CI + clean RWD + perfect screenshots can miss.
+14. **App shell parity is mandatory on every authenticated screen.** Established 2026-05-06 (Day-11 evening) after F15 HTML ↔ React port diff revealed missing collapse + hamburger primitives in the (app) layout. **Refined 2026-05-07** to lock scrollbar + nav-icon + utility-bar pattern across all current and future frames + Claude Design redesigns.
+
+    **WHEN shell IS required** (and MUST match F15 v2.html exactly):
+    - Every authenticated page route at `apps/web/src/app/(app)/**/page.tsx`
+    - Includes: F08 Home, F09 Projects List, F12/F13/F15 KB family, F14 Requirements, F16a/b/c Test Cases, F18 Test Suites, F19 Run Console, F20 Run Results, F21 Defects Hub, F23 Reports Studio, F25 Executive Dashboard, F26 Agents, F27 Users & Roles, F28 Settings & Audit
+
+    **WHEN shell is NOT required** (explicitly excluded):
+    - Auth flow pages: `(auth)/sign-in`, `(auth)/verify`, `(auth)/onboarding/**`, `(auth)/set-password`, `(auth)/reset-password`
+    - Modal components (Dialog / Sheet / Drawer) — overlay parent route which already has shell
+    - Marketing / landing / public pages (none in PM1 scope)
+
+    **When required, shell MUST include (LOCKED design — DO NOT alter):**
+    - **Canonical reference:** `PM1_UI_v2/Redesign Frame by claude design/F15 Knowledge Base v2.html` (lines 50-200). Also `F14 Requirements v2.html` as second canonical exemplar.
+    - **Custom scrollbar (SYS-17):** F15 v2 lines 50-64. `::-webkit-scrollbar` 8px desktop / 6px touch · `--border-strong` thumb · `--secondary` on hover · transparent track. `scrollbar-width:thin` for Firefox. Applied globally to all scrollable surfaces.
+    - **Left rail:** 240px expanded / 64px collapsed via toggle button (44px hit zone, persists `qa-nexus.shell.rail-collapsed`). Nav items use 24×24 colored icon chips with `data-tone` attribute (home / primary / secondary / info / warn / pass / fail). Each icon chip's color matches function — see F15 v2 lines 163-198.
+    - **Mobile hamburger menu** in top bar (visible <1024px, opens drawer overlay slide-from-left, body scroll lock, ESC + backdrop-tap close).
+    - **Top utility bar:** brand mark (gradient logo + QA Nexus wordmark) + project switcher pill (`Iksula Returns · main` with gradient `IR` dot) + global search omnibox (`Search everything…` + `⌘K` kbd hint) + plus icon + bell icon (with notification pip) + crosshair/grid icon + `Operate / Review / Prove` mode toggle + user pill (avatar + name).
+    - **Section headings** in left rail (5 sections): PLAN / AUTHOR / RUN / ANALYSE / GOVERN — uppercase, JetBrains Mono 10px, `--t3` color, letter-spacing 0.1em.
+    - **Section collapse-on-click** (NEW 2026-05-08): each section header is a clickable row with a chevron icon (▼ default, rotates -90° to ▶ when collapsed). Click toggles the section body (smooth max-height + opacity transition, ~280ms cubic-bezier). Underline divider (1px `--border`) sits BELOW the entire section header row (full width with 4px left/right margin). Persist per-section state to localStorage key `qa-nexus.shell.section-{name}-collapsed`. Each section is independent — collapsing one doesn't affect others. Reference: `Demo - Collapsible Nav Sections.html`.
+    - **Single rail scrollbar** (NEW 2026-05-08): the rail has 3 zones — fixed top (rail-toggle button) + scrollable middle (`.rail-content` wrapping Home + all 5 sections) + fixed bottom (rail-foot user identity). Only ONE scrollbar appears when the middle area exceeds viewport height (6px width, `--border-strong` thumb, `--secondary` on hover). NEVER per-section scrollbars — section bodies use `max-height: 2000px` (large enough to never truncate).
+    - **GOVERN section** (5th — added 2026-05-07): Agents · Integrations · Users & Roles · Settings & Audit. ANALYSE section gains **Executive Dashboard** (F25) between Run Results and Defects/Failures. Total nav items: 20.
+    - **Dark/light toggle** (NEW): sun icon button in top utility bar between crosshair icon and Operate/Review/Prove mode toggle. Pattern A stub for now; real implementation post-M4.
+
+    **Forbidden (rejection triggers at visual gate):**
+    - Page-level navigation duplication (no `<header>` re-implementing top bar)
+    - Missing collapse or hamburger primitives
+    - Altering shell design tokens, layout, or behavior in any individual page port
+    - Static text headers that duplicate project switcher info
+    - Custom scrollbar overrides (must inherit SYS-17 globals)
+    - Altering nav-icon chip pattern or `data-tone` color matrix
+    - **Collapse toggle arrow design** — MUST be the canonical left-arrow icon from F15 v2.html. Chevrons, double-chevrons, or any other glyph variant = visual gate FAIL.
+    - **Collapse functionality** — MUST be wired (click toggles 240px ↔ 64px, persists `qa-nexus.shell.rail-collapsed` to localStorage, arrow flips via `[data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}`). Static toggle button without behavior = visual gate FAIL.
+    - **Nav-item menu icons** — MUST be exactly the 13 icons used in F15 v2.html (Home / Requirements / Test Plans & Cycles / Test Cases / Test Suites / Knowledge Base / Automation Studio / Data & Mocks / Runs & Sessions / Environments / Run Results / Defects / Reports). Different SVG choice for any item = visual gate FAIL. Icon size locked to 14×14 inside 24×24 colored chip.
+
+    **Applies to:**
+    - All NEW M3+ page ports (Day-13 onward)
+    - Existing M1+M2 ports — **retrofit if missing** (followup (am) F08 + F09 retrofit + AdminShell nav-icon polish TASK 0.5)
+    - **All future Claude Design redesign briefs** — redesign work alters page CONTENT only, NEVER the shell. The redesign brief MUST explicitly state "shell unchanged from F15 v2.html canonical." Any redesign that touches shell tokens/layout is rejected.
+
+    **Visual gate impact (Rule 13 extension):**
+    - Screenshots at 320 px MUST show the hamburger; screenshots at 1440 px MUST show the collapse toggle. Either missing → visual gate FAIL.
+    - Custom scrollbar must be visible on any scrollable surface (table, drawer, content area). Default browser scrollbar visible → visual gate FAIL.
+    - Nav-icon colored chip with correct `data-tone` per item — wrong color or plain icons → visual gate FAIL.
+    - Top utility bar elements (project switcher pill + search + mode toggle + user pill) all visible at 1024px+ → missing any → visual gate FAIL.
+
+    **Cross-references:** F15 v2 canonical · F14 Requirements v2 second canonical · followup `(ak)` (PreToolUse hook `enforce-app-shell.sh` — fail-fast on missing AdminShell wrap, missing collapse/hamburger primitives, OR missing nav-icon `data-tone` matrix in `apps/web/src/app/(app)/**/page.tsx` — tracked for M3 hardening) · followup `(am)` (F08 + F09 retrofit, FE+1 Fri AM TASK 5.5).
+
+    **Policy stack:** Rule 3 (locked frames) → Rule 12 (RWD) → Rule 13 (visual gate) → **Rule 14 (shell parity + scrollbar + utility-bar canon)**. Each tightens the previous; Rule 14 is the layer that catches issues even green CI + clean RWD + perfect screenshots can miss.
+
+15. **FE agents must port from the v2 HTML frames in `PM1_UI_v2/Redesign Frame by claude design/`; design changes require Yogesh approval.** Established 2026-05-08 after the full v2 redesign cycle (12 frames + canonical demo + design rules) shipped. Binding requirements:
+
+    **Source of truth for all React ports:**
+    - `PM1_UI_v2/Redesign Frame by claude design/` — the LOCKED v2 HTML reference for every authenticated page in PM1
+    - Inventory (12 frames + 1 canonical demo + 5 modals): F14 v2 · F14m1/m2/m3 v2 · F15 v2 (canonical shell) · F16a/b/c v2 · F18 v2 · F18m1 v2 · F19 v2 · F20 v2 · F21 v2 · F22 v2 · `_Demo Collapsible Nav Sections.html` (binding pattern)
+    - Each v2 file is the spec — tokens, layout, components, transitions, agent naming canon, collapsible nav sections, single rail scrollbar, Hard Rule 14 shell — all locked.
+
+    **FE+1 React port requirements:**
+    - Match the v2 HTML pixel-faithfully (within tolerance for React-component idioms — props, state, hooks)
+    - Reuse the F15 v2 token block via the existing Tailwind theme + design tokens already wired in `apps/web`
+    - Wrap every `(app)/**/page.tsx` in `AdminShell` (Hard Rule 14) — collapsible sections + single rail scrollbar inherit automatically
+    - Composer ⓘ / Curator ⓘ / Sherlock ⓘ named-agent display via the `<AgentName code={...} />` component (single source of truth)
+    - **Full RWD per Hard Rule 12** is mandatory — mobile-first, breakpoints 320/480/768/1024/1280/1440, no horizontal scroll at any viewport ≥320px, tap targets ≥44×44px
+
+    **When the v2 HTML doesn't fit the data model:**
+    - FE+1 STOPS implementation
+    - Posts a clear note: "Frame F-XX v2 has design issue at [specific area] — [describe blocker]. Need redesign."
+    - Yogesh either approves a small inline tweak OR commissions a fresh redesign from Claude Design
+    - FE+1 does NOT improvise design decisions on the spot
+
+    **When a frame doesn't exist for a needed page:**
+    - FE+1 STOPS and asks Yogesh: "No v2 frame for [page-X]. Provide design or commission from Claude Design?"
+    - Yogesh either provides existing reference OR triggers a Claude Design build
+    - FE+1 does NOT build from imagination
+
+    **Visual gate enforcement (Rule 13 amendment):**
+    - At visual gate, screenshots are compared against the source v2 HTML side-by-side
+    - Material differences in layout, color, typography, spacing, or interaction patterns = visual gate FAIL
+    - "Material" defined as: anything a user could notice in 5 seconds of inspection
+    - Approved deviations: minor pixel-level differences from rendering engine variance (browser font-smoothing, sub-pixel rounding) — these are acceptable
+
+    **Forbidden:**
+    - Inventing layouts that aren't in the v2 HTML
+    - Substituting tokens (using a different color, font, spacing than what's in v2)
+    - Skipping responsive breakpoints to "ship faster"
+    - Modifying agent naming pattern (must use `<AgentName code={...} />`)
+    - Renaming sections / nav items / data-tones from the canon
+
+    **Cross-references:** Rule 12 (RWD) · Rule 13 (visual gate) · Rule 14 (shell parity) · `_DESIGN_RULES.md` (Claude Design's binding rules) · all 12 v2 frames in `PM1_UI_v2/Redesign Frame by claude design/`.
+
+    **Policy stack:** Rule 3 (locked frames) → Rule 12 (RWD) → Rule 13 (visual gate) → Rule 14 (shell parity) → **Rule 15 (v2 HTML frames as port source-of-truth)**. Together these guarantee every React port matches the design system; each rule catches a different class of drift.
 
 ## Locked tech stack (PM1)
 
