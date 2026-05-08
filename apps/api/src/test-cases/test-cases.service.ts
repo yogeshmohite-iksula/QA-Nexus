@@ -676,4 +676,220 @@ export class TestCasesService {
       );
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────
+  // BULK OPERATIONS — TASK BE-2 surface (used by F14m2 modal +
+  // F14 list-page bulk-archive checkbox flow).
+  //
+  // Pattern: per-row outcome arrays (linked / archived) + per-row
+  // failure arrays so the FE can render success/failure UX without
+  // a second round-trip. Mixed-project IDs return per-row
+  // 'cross_project' in `failed` rather than failing the whole call.
+  // ─────────────────────────────────────────────────────────────────
+
+  /// Bulk-link N test cases to a single requirement. Idempotent —
+  /// re-linking returns outcome='existed' without writing duplicate
+  /// rows or audit entries. Cross-project / cross-workspace test
+  /// cases land in `failed[]` with a typed reason.
+  async bulkLink(
+    projectId: string,
+    requirementId: string,
+    testCaseIds: string[],
+    ctx: ActorContext,
+  ): Promise<{
+    requirementId: string;
+    linked: Array<{ testCaseId: string; outcome: 'created' | 'existed' }>;
+    failed: Array<{
+      testCaseId: string;
+      reason: 'not_found' | 'cross_project' | 'cross_workspace';
+    }>;
+  }> {
+    await this.assertProjectWorkspace(projectId, ctx);
+
+    // Verify the requirement is in this project (one shared check
+    // for the whole batch — cheap).
+    const req = await this.prisma.requirement.findUnique({
+      where: { id: requirementId },
+      select: { projectId: true, key: true },
+    });
+    if (!req || req.projectId !== projectId) {
+      throw new NotFoundException(
+        `requirement ${requirementId} not found in this project`,
+      );
+    }
+
+    // Resolve all test cases in one query (avoids N round-trips).
+    const cases = await this.prisma.testCase.findMany({
+      where: { id: { in: testCaseIds } },
+      select: {
+        id: true,
+        projectId: true,
+        key: true,
+        project: { select: { workspaceId: true } },
+      },
+    });
+    const caseMap = new Map(cases.map((c) => [c.id, c]));
+
+    // Pull existing links in one query so we can split created vs existed.
+    const existingLinks = await this.prisma.testCaseLink.findMany({
+      where: {
+        requirementId,
+        testCaseId: { in: testCaseIds },
+      },
+      select: { testCaseId: true },
+    });
+    const existingLinkSet = new Set(existingLinks.map((l) => l.testCaseId));
+
+    const linked: Array<{
+      testCaseId: string;
+      outcome: 'created' | 'existed';
+    }> = [];
+    const failed: Array<{
+      testCaseId: string;
+      reason: 'not_found' | 'cross_project' | 'cross_workspace';
+    }> = [];
+    const toCreate: Array<{ testCaseId: string; requirementId: string }> = [];
+
+    for (const id of testCaseIds) {
+      const tc = caseMap.get(id);
+      if (!tc) {
+        failed.push({ testCaseId: id, reason: 'not_found' });
+        continue;
+      }
+      if (tc.project.workspaceId !== ctx.workspaceId) {
+        failed.push({ testCaseId: id, reason: 'cross_workspace' });
+        continue;
+      }
+      if (tc.projectId !== projectId) {
+        failed.push({ testCaseId: id, reason: 'cross_project' });
+        continue;
+      }
+      if (existingLinkSet.has(id)) {
+        linked.push({ testCaseId: id, outcome: 'existed' });
+        continue;
+      }
+      toCreate.push({ testCaseId: id, requirementId });
+      linked.push({ testCaseId: id, outcome: 'created' });
+    }
+
+    if (toCreate.length > 0) {
+      await this.prisma.testCaseLink.createMany({
+        data: toCreate,
+        skipDuplicates: true,
+      });
+    }
+
+    // ONE audit row for the whole batch (chain stays compact under
+    // bulk loads + payload remains PII-safe with counts/keys).
+    await this.audit.write({
+      workspaceId: ctx.workspaceId,
+      actorId: ctx.actorId,
+      entityType: 'test_case_link',
+      entityId: requirementId,
+      action: 'test_cases_bulk_linked',
+      payload: {
+        project_id: projectId,
+        requirement_id: requirementId,
+        workspace_id: ctx.workspaceId,
+        requirement_key: req.key,
+        // PII guard: case_keys (UUID-like, safe) + counts only.
+        // NEVER titles. Keys cap the payload at ~40 chars × 50 = 2KB.
+        case_keys_linked: linked
+          .filter((l) => l.outcome === 'created')
+          .map((l) => caseMap.get(l.testCaseId)?.key ?? 'unknown'),
+        case_keys_existed: linked
+          .filter((l) => l.outcome === 'existed')
+          .map((l) => caseMap.get(l.testCaseId)?.key ?? 'unknown'),
+        requested_count: testCaseIds.length,
+        created_count: linked.filter((l) => l.outcome === 'created').length,
+        existed_count: linked.filter((l) => l.outcome === 'existed').length,
+        failed_count: failed.length,
+        actor_email: ctx.actorEmail,
+      },
+    });
+
+    return { requirementId, linked, failed };
+  }
+
+  /// Bulk soft-delete N test cases (status='deprecated'). Same per-
+  /// row outcome / failure shape as bulkLink. Mixed-project IDs land
+  /// in `failed[]`. Already-archived cases re-archive idempotently
+  /// (status flip is a no-op; row counted in `archived[]`).
+  async bulkArchive(
+    projectId: string,
+    testCaseIds: string[],
+    ctx: ActorContext,
+  ): Promise<{
+    archived: Array<{ testCaseId: string }>;
+    failed: Array<{
+      testCaseId: string;
+      reason: 'not_found' | 'cross_project' | 'cross_workspace';
+    }>;
+  }> {
+    await this.assertProjectWorkspace(projectId, ctx);
+
+    const cases = await this.prisma.testCase.findMany({
+      where: { id: { in: testCaseIds } },
+      select: {
+        id: true,
+        projectId: true,
+        key: true,
+        project: { select: { workspaceId: true } },
+      },
+    });
+    const caseMap = new Map(cases.map((c) => [c.id, c]));
+
+    const archived: Array<{ testCaseId: string }> = [];
+    const failed: Array<{
+      testCaseId: string;
+      reason: 'not_found' | 'cross_project' | 'cross_workspace';
+    }> = [];
+    const toArchive: string[] = [];
+
+    for (const id of testCaseIds) {
+      const tc = caseMap.get(id);
+      if (!tc) {
+        failed.push({ testCaseId: id, reason: 'not_found' });
+        continue;
+      }
+      if (tc.project.workspaceId !== ctx.workspaceId) {
+        failed.push({ testCaseId: id, reason: 'cross_workspace' });
+        continue;
+      }
+      if (tc.projectId !== projectId) {
+        failed.push({ testCaseId: id, reason: 'cross_project' });
+        continue;
+      }
+      toArchive.push(id);
+      archived.push({ testCaseId: id });
+    }
+
+    if (toArchive.length > 0) {
+      await this.prisma.testCase.updateMany({
+        where: { id: { in: toArchive } },
+        data: { status: 'deprecated' },
+      });
+    }
+
+    await this.audit.write({
+      workspaceId: ctx.workspaceId,
+      actorId: ctx.actorId,
+      entityType: 'test_case',
+      entityId: null,
+      action: 'test_cases_bulk_archived',
+      payload: {
+        project_id: projectId,
+        workspace_id: ctx.workspaceId,
+        case_keys_archived: archived.map(
+          (a) => caseMap.get(a.testCaseId)?.key ?? 'unknown',
+        ),
+        requested_count: testCaseIds.length,
+        archived_count: archived.length,
+        failed_count: failed.length,
+        actor_email: ctx.actorEmail,
+      },
+    });
+
+    return { archived, failed };
+  }
 }
