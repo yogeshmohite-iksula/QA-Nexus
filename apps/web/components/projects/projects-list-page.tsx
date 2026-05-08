@@ -15,8 +15,7 @@ import { useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
 import { useProjectList } from '@/lib/contexts/ProjectContext';
-import { ProjectsShell } from './projects-shell';
-import { LeftRail } from './left-rail';
+import { AdminShell } from '@/components/admin/admin-shell';
 import { CreateProjectModal } from './create-project-modal';
 import { ARCHIVED_COUNT, joinProjectsWithFixtures, type ProjectListRow } from './data';
 
@@ -70,21 +69,16 @@ export function ProjectsListPage() {
   }
 
   return (
-    <ProjectsShell>
-      <div className="flex flex-1">
-        <LeftRail />
-        <main className="flex min-w-0 flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:gap-10 lg:px-8">
-          <Hero projects={allRows} onCreateProject={openCreateModal} />
-          <FilterBar />
-          {pinnedProjects.length > 0 && (
-            <PinnedSection projects={pinnedProjects} onOpen={logRoute} />
-          )}
-          <AllProjectsSection projects={allProjects} onOpen={logRoute} />
-          <ArchivedSection count={ARCHIVED_COUNT} />
-        </main>
-      </div>
+    <AdminShell active="projects">
+      <main className="flex min-w-0 flex-1 flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:gap-10 lg:px-8">
+        <Hero projects={allRows} onCreateProject={openCreateModal} />
+        <FilterBar />
+        {pinnedProjects.length > 0 && <PinnedSection projects={pinnedProjects} onOpen={logRoute} />}
+        <AllProjectsSection projects={allProjects} onOpen={logRoute} />
+        <ArchivedSection count={ARCHIVED_COUNT} />
+      </main>
       {showCreateModal && <CreateProjectModal onClose={closeCreateModal} />}
-    </ProjectsShell>
+    </AdminShell>
   );
 }
 
