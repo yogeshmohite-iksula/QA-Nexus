@@ -1,19 +1,28 @@
 // QA Nexus PM1 — RequirementsModule.
-// Spec: M3 TASK BE-03 (Day-12) skeleton. Real CRUD lands Day-14.
+// Spec: M3 Day-13 TASK 2 — real CRUD + RTM coverage view.
+// Replaces the M3-BE-03 skeleton wiring from PR #77.
+//
+// Module imports:
+//   - AuthModule: RolesGuard needs AuthService for session resolution.
+//   - TestCasesModule: RequirementsCoverageController depends on
+//     TestCasesService.coverageForRequirement(). TestCasesModule
+//     exports TestCasesService.
+//   - PrismaModule + AuditModule are @Global at AppModule level.
 
 import { Module } from '@nestjs/common';
 import {
   RequirementsProjectScopedController,
-  RequirementsReqScopedController,
+  RequirementsCoverageController,
 } from './requirements.controller';
 import { RequirementsService } from './requirements.service';
 import { AuthModule } from '../auth/auth.module';
+import { TestCasesModule } from '../test-cases/test-cases.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, TestCasesModule],
   controllers: [
     RequirementsProjectScopedController,
-    RequirementsReqScopedController,
+    RequirementsCoverageController,
   ],
   providers: [RequirementsService],
   exports: [RequirementsService],
