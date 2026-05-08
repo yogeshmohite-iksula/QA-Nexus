@@ -35,3 +35,10 @@ pnpm-lock.yaml
 *.min.js
 *.min.css
 *.bundle.js
+
+# ───── Untracked scratch (Day-13 (aq)) ─────
+# One-shot PR body scratch files written for `gh pr create --body-file`.
+# Created at repo root, never committed (caller passes them straight
+# through to the GitHub API). Ignoring keeps them from tripping the
+# pre-push prettier gate.
+pr-*-body.md
