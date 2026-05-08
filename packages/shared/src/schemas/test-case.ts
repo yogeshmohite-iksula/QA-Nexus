@@ -343,3 +343,86 @@ export const RequirementCoverageResponse = z.object({
   total: z.number().int().nonnegative(),
 });
 export type RequirementCoverageResponse = z.infer<typeof RequirementCoverageResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M3 Day-13 TASK BE-1 — Composer (A1 / Test Case Generator) endpoint.
+//
+//   POST /api/projects/:projectId/requirements/:reqId/test-cases/generate
+//
+// Pattern A scaffold: returns 5 canned-but-realistic test cases for any
+// requirement. Day-15 swaps the service body to call Groq
+// openai/gpt-oss-120b with response_format=json_schema. Wire shape is
+// LOCKED so FE+1's F16a Composer modal can implement against a stable
+// contract.
+//
+// IMPORTANT: this endpoint does NOT insert TestCase rows. It returns
+// proposed cases for the user to review in F16a + accept individually
+// (each accepted case is then POSTed to /api/projects/:projectId/test-cases
+// with format='gherkin' or 'step' + generatedByAgent='composer' +
+// sourceChunkIds[] + rationale). A TestCaseGenerationRun row IS written
+// (TB-022) so audit + analytics can correlate generation runs with the
+// cases they produced.
+// ─────────────────────────────────────────────────────────────────────
+
+export const ComposerGenerateRequest = z.object({
+  /// How many test cases to generate. Capped at 10 to keep the FE
+  /// review modal manageable + Groq RPD usage in check.
+  count: z.number().int().min(1).max(10).default(5),
+  /// Optional output format. 'auto' lets Composer decide based on the
+  /// requirement's domain (e.g., gherkin for behavior-driven flows,
+  /// step for granular UI verification). Day-15 service body honors
+  /// this; today's Pattern A scaffold always emits step format.
+  format: z.enum(['auto', 'step', 'gherkin']).default('auto'),
+});
+export type ComposerGenerateRequest = z.infer<typeof ComposerGenerateRequest>;
+
+/// Proposed (not-yet-persisted) test case from Composer. Same field
+/// names as `CreateTestCaseInput` so the FE can post each one back
+/// with minimal massaging once the user accepts in F16a.
+export const ComposerGeneratedCase = z.object({
+  /// Server-generated suggested key (FE may rename before POST).
+  /// Format: `TC-<projectKey>-<NNN>` where NNN is a stable digest of
+  /// (requirementId + index). FE re-derives if the project's keyspace
+  /// has shifted between proposal + accept.
+  key: z.string().min(2).max(40),
+  title: NonEmpty,
+  preconditions: z.string(),
+  stepsJson: z.array(TestStepSchema),
+  expectedResult: z.string(),
+  priority: Priority,
+  format: TestCaseFormat,
+  /// Set when format='gherkin'. Null for step format.
+  gherkin: z.string().nullable(),
+  /// LLM-rendered "why this case" — surfaced in F16a review UI under
+  /// each proposed case. Free-form prose; no PII guard at this layer
+  /// because it's user-facing review copy.
+  rationale: z.string(),
+  /// kb_chunk UUIDs that grounded this proposal. Empty when Composer
+  /// ran without RAG context (free-form prompt mode).
+  sourceChunkIds: z.array(Uuid),
+});
+export type ComposerGeneratedCase = z.infer<typeof ComposerGeneratedCase>;
+
+export const ComposerGenerateResponse = z.object({
+  ok: z.literal(true),
+  /// FK target for `TestCase.generationRunId` once the FE accepts +
+  /// POSTs each case (deferred — current TB-022 schema doesn't yet
+  /// have that FK; M3.5 follow-up).
+  runId: Uuid,
+  /// Proposed test cases. Caller iterates + POSTs each one.
+  cases: z.array(ComposerGeneratedCase),
+  /// Provider metadata (mirrors KbAnswerLlmMetadata from M2 PR #57).
+  llmMetadata: z.object({
+    providerName: z.string(),
+    modelUsed: z.string(),
+    tokensIn: z.number().int().nonnegative(),
+    tokensOut: z.number().int().nonnegative(),
+    latencyMs: z.number().int().nonnegative(),
+    fallbackUsed: z.boolean(),
+  }),
+  /// True until Day-15 swaps the service body for the real Groq call.
+  /// FE shows a "demo data" banner when this is true (mirrors M2 Step-4
+  /// `stubbed: true` pattern from KbSearchResponse).
+  stubbed: z.boolean(),
+});
+export type ComposerGenerateResponse = z.infer<typeof ComposerGenerateResponse>;
