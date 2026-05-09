@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Collapsible Nav Sections Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;min-height:100vh;
+  -webkit-font-smoothing:antialiased;display:flex}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+
+/* ────── Left rail (LOCKED design from F15 v2 canonical) ────── */
+.rail{width:240px;background:var(--base);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;height:100vh;flex:none;overflow:hidden}
+
+/* Rail collapse toggle (top of rail) — sticky/fixed area */
+.rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+  color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
+  margin:14px 8px 8px;flex:none;border:1px solid transparent;cursor:pointer;background:none}
+.rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
+.rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.rail-toggle .rt-label{flex:1;text-align:left;text-transform:uppercase}
+
+/* ── Scrollable middle area — ENTIRE nav scrolls as one ── */
+.rail-content{flex:1;min-height:0;overflow-y:auto;padding:0 8px 8px;
+  /* Single scrollbar for the whole nav. Per-section scrollbars NEVER. */}
+.rail-content::-webkit-scrollbar{width:6px}
+.rail-content::-webkit-scrollbar-track{background:transparent}
+.rail-content::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+.rail-content::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+
+/* ── Section header — underline divider BELOW the entire row ── */
+.nav-section{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 10px;cursor:pointer;
+  user-select:none;transition:background 150ms;position:relative;
+  border-bottom:1px solid var(--border);margin:0 4px 6px}
+.nav-section:hover{background:rgba(255,255,255,0.02)}
+.nav-section .sec-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);
+  font-weight:600;font-family:'JetBrains Mono'}
+.nav-section .sec-chevron{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--t3);transition:transform 220ms cubic-bezier(.4,0,.2,1);flex:none}
+.nav-section:hover .sec-chevron{color:var(--t1)}
+.nav-section .sec-chevron svg{width:12px;height:12px}
+
+/* Items list (collapsible body) — large max-height so multi-item sections never overlap */
+.nav-items{display:flex;flex-direction:column;gap:0;
+  max-height:2000px;overflow:hidden;
+  transition:max-height 280ms cubic-bezier(.4,0,.2,1),opacity 200ms ease,padding 220ms ease,margin 220ms ease}
+.nav-items.collapsed{max-height:0;opacity:0;pointer-events:none;padding:0;margin:0}
+
+/* When section collapsed, rotate chevron */
+.nav-section.collapsed .sec-chevron{transform:rotate(-90deg)}
+
+/* Single nav item */
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
+  font-size:13px;line-height:18px;min-height:36px;position:relative;text-decoration:none;
+  white-space:nowrap;cursor:pointer}
+.nav-item:hover{background:var(--raised);color:var(--t1)}
+.nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;
+  background:var(--secondary);border-radius:0 2px 2px 0}
+.nav-item.disabled{color:var(--t4);opacity:0.55;cursor:not-allowed}
+
+.nav-icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;background:var(--raised);border:1px solid var(--border);color:var(--t3);transition:all 180ms ease}
+.nav-icon svg{width:14px;height:14px}
+.nav-item:hover .nav-icon{transform:scale(1.05)}
+.nav-item.active .nav-icon{box-shadow:0 0 0 1px currentColor inset}
+.nav-item[data-tone="home"]      .nav-icon{background:var(--raised);border-color:var(--border-strong);color:var(--t1)}
+.nav-item[data-tone="primary"]   .nav-icon{background:var(--primary-soft);border-color:var(--primary-line);color:var(--primary)}
+.nav-item[data-tone="secondary"] .nav-icon{background:var(--ai-soft);border-color:var(--ai-line);color:var(--ai-accent)}
+.nav-item[data-tone="info"]      .nav-icon{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+.nav-item[data-tone="warn"]      .nav-icon{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.nav-item[data-tone="pass"]      .nav-icon{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+.nav-item[data-tone="fail"]      .nav-icon{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+
+.nav-count{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+.nav-item.active .nav-count{color:var(--secondary)}
+.nav-pill{margin-left:auto;font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;
+  padding:2px 6px;border-radius:3px;background:var(--raised);color:var(--t4);border:1px solid var(--border)}
+
+.rail-foot{margin-top:auto;border-top:1px solid var(--border);padding:12px 10px;display:flex;align-items:center;gap:10px}
+.rail-foot .av{width:28px;height:28px;border-radius:999px;flex:none;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#0B0F17;font-weight:700;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+.rail-foot .who{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.rail-foot .who .name{font-size:13px;color:var(--t1);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-foot .who .role{font-size:10px;color:var(--t3);font-family:'JetBrains Mono';letter-spacing:0.06em}
+
+/* ────── Demo content area ────── */
+.main{flex:1;padding:32px;overflow-y:auto}
+.main h1{font-family:'DM Sans';font-size:22px;color:var(--t1);margin:0 0 8px}
+.main p{color:var(--t3);font-size:13px;margin:0 0 20px;max-width:600px;line-height:20px}
+.demo-card{background:var(--base);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px}
+.demo-card h2{font-family:'DM Sans';font-size:14px;color:var(--t1);margin:0 0 8px}
+.demo-card p{font-size:12.5px;line-height:18px;margin:0}
+.demo-card kbd{display:inline-block;padding:2px 7px;border:1px solid var(--border);border-radius:4px;
+  background:var(--raised);font-family:'JetBrains Mono';font-size:11px;color:var(--t2)}
+.tip-box{background:var(--ai-soft);border:1px solid var(--ai-line);border-radius:8px;padding:12px 14px;
+  display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--t1);line-height:18px;margin-top:14px}
+.tip-box .tip-icon{width:24px;height:24px;border-radius:6px;background:rgba(167,139,250,0.18);
+  border:1px solid var(--ai-line);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;flex:none}
+</style>
+</head>
+<body>
+
+<!-- ─── LEFT RAIL with collapsible sections ─── -->
+<nav class="rail">
+
+  <!-- Rail collapse toggle (top — same as F15 v2) -->
+  <button class="rail-toggle">
+    <span class="rt-icon">
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M14 8H2M2 8l4-4M2 8l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <span class="rt-label">Collapse</span>
+  </button>
+
+  <!-- Scrollable middle area — entire nav scrolls as one unit -->
+  <div class="rail-content">
+
+  <!-- Home (always visible, no section) -->
+  <a class="nav-item" data-tone="home" href="#">
+    <span class="nav-icon">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V11z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </span>
+    <span>Home</span>
+  </a>
+
+  <!-- ── PLAN section ── -->
+  <div class="nav-section" data-section="plan">
+    <span class="sec-label">Plan</span>
+    <span class="sec-chevron">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
+  <div class="nav-items" data-section-body="plan">
+    <a class="nav-item" data-tone="info" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Requirements</span>
+      <span class="nav-count">142</span>
+    </a>
+    <a class="nav-item" data-tone="primary" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 9h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Test Plans &amp; Cycles</span>
+    </a>
+    <a class="nav-item" data-tone="pass" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span>Test Cases</span>
+      <span class="nav-count">1,284</span>
+    </a>
+  </div>
+
+  <!-- ── AUTHOR section ── -->
+  <div class="nav-section" data-section="author">
+    <span class="sec-label">Author</span>
+    <span class="sec-chevron">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
+  <div class="nav-items" data-section-body="author">
+    <a class="nav-item" data-tone="warn" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Test Suites</span>
+      <span class="nav-count">18</span>
+    </a>
+    <a class="nav-item active" data-tone="secondary" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h12a2 2 0 0 1 2 2v15l-7-3-7 3V6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span>Knowledge Base</span>
+      <span class="nav-count mono">1.2K</span>
+    </a>
+    <a class="nav-item disabled" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Automation Studio</span>
+      <span class="nav-pill">v1.5</span>
+    </a>
+    <a class="nav-item disabled" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" stroke="currentColor" stroke-width="1.8"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Data &amp; Mocks</span>
+      <span class="nav-pill">v1.5</span>
+    </a>
+  </div>
+
+  <!-- ── RUN section ── -->
+  <div class="nav-section" data-section="run">
+    <span class="sec-label">Run</span>
+    <span class="sec-chevron">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
+  <div class="nav-items" data-section-body="run">
+    <a class="nav-item" data-tone="primary" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 4l13 8-13 8V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span>Runs &amp; Sessions</span>
+      <span class="nav-count">3</span>
+    </a>
+    <a class="nav-item" data-tone="info" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="5" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="18" height="5" rx="1" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Environments</span>
+    </a>
+  </div>
+
+  <!-- ── ANALYSE section ── -->
+  <div class="nav-section" data-section="analyse">
+    <span class="sec-label">Analyse</span>
+    <span class="sec-chevron">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
+  <div class="nav-items" data-section-body="analyse">
+    <a class="nav-item" data-tone="info" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Run Results</span>
+    </a>
+    <!-- F25 Executive Dashboard — NEW addition -->
+    <a class="nav-item" data-tone="secondary" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="3" width="8" height="5" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="10" width="8" height="11" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Executive Dashboard</span>
+    </a>
+    <a class="nav-item" data-tone="fail" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 21h20L12 2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></span>
+      <span>Defects / Failures</span>
+      <span class="nav-count" style="color:var(--fail)">14</span>
+    </a>
+    <a class="nav-item" data-tone="warn" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 16V12M12 16V8M16 16v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Reports</span>
+    </a>
+  </div>
+
+  <!-- ── GOVERN section ── -->
+  <div class="nav-section" data-section="govern">
+    <span class="sec-label">Govern</span>
+    <span class="sec-chevron">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </div>
+  <div class="nav-items" data-section-body="govern">
+    <a class="nav-item" data-tone="secondary" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Agents</span>
+    </a>
+    <a class="nav-item" data-tone="primary" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 17H5a4 4 0 0 1 0-8h4M15 7h4a4 4 0 0 1 0 8h-4M9 13h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Integrations</span>
+    </a>
+    <a class="nav-item" data-tone="info" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M2 21c0-3.3 3-6 7-6s7 2.7 7 6M14 21c0-2.5 1.8-4 4-4s4 1.5 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Users &amp; Roles</span>
+    </a>
+    <a class="nav-item" data-tone="home" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Settings &amp; Audit</span>
+    </a>
+  </div>
+
+  </div><!-- end .rail-content -->
+
+  <!-- Rail-foot user identity -->
+  <div class="rail-foot">
+    <span class="av">YM</span>
+    <div class="who">
+      <span class="name">Yogesh Mohite</span>
+      <span class="role">Sr QA · Admin</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── Demo main area ─── -->
+<main class="main">
+  <h1>Collapsible Nav Sections — Demo</h1>
+  <p>Click any section heading (PLAN / AUTHOR / RUN / ANALYSE / GOVERN) to collapse or expand its menu items. Default state: all sections expanded. State persists to localStorage.</p>
+
+  <div class="demo-card">
+    <h2>How it works</h2>
+    <p>
+      Each section has a <kbd>▼</kbd> chevron icon on the right side of the section name.
+      <br><br>
+      <strong>Click section heading</strong> → items collapse, chevron rotates to <kbd>▶</kbd> (pointing right). Click again to expand.
+      <br><br>
+      <strong>Underline divider</strong> appears below the section label (the thin line stretching to the right of "PLAN", "AUTHOR", etc.).
+    </p>
+  </div>
+
+  <div class="demo-card">
+    <h2>Try it</h2>
+    <p>
+      Click each section in the rail (PLAN, AUTHOR, RUN, ANALYSE, GOVERN). Watch the smooth max-height + opacity transition. Refresh the page — your collapsed/expanded state persists per-section.
+    </p>
+  </div>
+
+  <div class="tip-box">
+    <span class="tip-icon">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 4v5M8 11.5v0.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span>
+      <strong>NEW:</strong> Executive Dashboard added to ANALYSE section (F25 — "Prove" mode primary surface for stakeholders/leadership).
+      <br><br>
+      Total items: <strong>20</strong> (1 Home + 3 PLAN + 4 AUTHOR + 2 RUN + 4 ANALYSE + 4 GOVERN + 2 base = 20).
+    </span>
+  </div>
+
+  <div class="demo-card">
+    <h2>If you like this pattern, we add it to Hard Rule 14</h2>
+    <p>
+      Codify "section headers are click-to-collapse" as part of the canonical shell. Then F18, F19, F20, F21, F22, M5+M6 frames all inherit this UX automatically via AdminShell.
+      <br><br>
+      Persistence key per section: <kbd>qa-nexus.shell.section-{name}-collapsed</kbd>
+    </p>
+  </div>
+</main>
+
+<script>
+  // ─── Section collapse/expand behavior ───
+  const STORAGE_PREFIX = 'qa-nexus.shell.section-';
+
+  document.querySelectorAll('.nav-section').forEach(section => {
+    const sectionName = section.getAttribute('data-section');
+    const body = document.querySelector(`[data-section-body="${sectionName}"]`);
+    const storageKey = STORAGE_PREFIX + sectionName + '-collapsed';
+
+    // Restore state from localStorage
+    try {
+      if (localStorage.getItem(storageKey) === 'true') {
+        section.classList.add('collapsed');
+        body.classList.add('collapsed');
+      }
+    } catch(e) {}
+
+    // Toggle on click
+    section.addEventListener('click', () => {
+      const isCollapsed = section.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+      try {
+        localStorage.setItem(storageKey, isCollapsed);
+      } catch(e) {}
+    });
+  });
+</script>
+</body>
+</html>

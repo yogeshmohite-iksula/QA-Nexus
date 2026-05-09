@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Edit Test Suite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;min-height:100vh;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.display{font-family:"DM Sans","Inter";letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+input,textarea{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{width:100%;max-width:840px;max-height:92vh;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden}
+@media (max-width:640px){.modal{max-width:100%;max-height:100vh;border-radius:0;border:none}}
+
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;flex:none}
+.modal-head-body{flex:1;min-width:0}
+.eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--warn);font-weight:700;margin-bottom:4px}
+.modal-title{font-family:'DM Sans';font-size:20px;line-height:26px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+.modal-sub{font-size:12px;color:var(--t3);margin-top:4px}
+.close-btn{width:32px;height:32px;border-radius:6px;background:var(--raised);border:1px solid var(--border);color:var(--t3);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
+.close-btn:hover{background:var(--overlay);color:var(--t1)}
+
+/* AI assist banner — Composer recommendations */
+.composer-banner{margin:14px 22px 0;padding:11px 14px;background:var(--ai-soft);border:1px solid var(--ai-line);border-radius:8px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--t1)}
+.composer-banner .ai-icon{width:24px;height:24px;border-radius:6px;background:rgba(167,139,250,0.18);border:1px solid var(--ai-line);color:var(--secondary);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.composer-banner .ai-icon svg{width:13px;height:13px}
+.composer-banner .text{flex:1;line-height:18px}
+.composer-banner .agent-name{color:var(--secondary);font-weight:700}
+.composer-banner .info-i{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:999px;background:rgba(167,139,250,0.18);color:var(--secondary);font-size:9px;font-weight:700;cursor:help;margin-left:2px}
+.composer-banner .ai-cta{padding:6px 10px;background:var(--secondary);color:#1A0B3D;border-radius:5px;font-size:11px;font-weight:700;border:none;flex:none}
+
+/* Tabs */
+.tabs{display:flex;align-items:center;gap:2px;padding:0 22px;border-bottom:1px solid var(--border);flex:none;background:var(--base)}
+.tab{padding:12px 14px;font-size:12.5px;color:var(--t3);font-weight:500;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:6px;position:relative}
+.tab:hover{color:var(--t1)}
+.tab.active{color:var(--t1);border-bottom-color:var(--warn);font-weight:600}
+.tab .count{font-family:'JetBrains Mono';font-size:10px;color:var(--t3);background:var(--overlay);padding:1px 6px;border-radius:3px}
+.tab.active .count{color:var(--warn);background:var(--warn-soft)}
+
+.modal-body{padding:14px 22px;flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.modal-body > .field-row,
+.modal-body > .field,
+.modal-body > .search-row{flex:none}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.field-row{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px}
+.field-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono';font-weight:600}
+.input,.textarea,.select{width:100%;background:var(--canvas);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--t1);font-size:13px;line-height:18px;outline:none}
+.input:focus,.textarea:focus,.select:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(45,212,191,0.15)}
+.textarea{resize:vertical;min-height:64px;font-family:inherit;line-height:20px}
+
+/* Member list */
+.search-row{display:flex;gap:8px}
+.search-input{flex:1;height:34px;background:var(--canvas);border:1px solid var(--border);border-radius:6px;padding:0 12px;display:flex;align-items:center;gap:8px}
+.search-input svg{color:var(--t3);flex:none}
+.search-input input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:12.5px}
+.search-input input::placeholder{color:var(--t4)}
+.add-btn{height:34px;padding:0 14px;border-radius:6px;background:var(--primary);color:var(--primary-ink);font-size:12px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+
+.member-list{border:1px solid var(--border);border-radius:8px;background:var(--canvas);overflow-y:auto;flex:1;min-height:240px}
+.member-list::-webkit-scrollbar{width:8px}
+.member-list::-webkit-scrollbar-track{background:transparent}
+.member-list::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+.member-list::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+.member-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:grab;transition:background 150ms;position:relative}
+.member-row:last-child{border-bottom:0}
+.member-row:hover{background:var(--raised)}
+.member-row.curator-warn{background:rgba(251,191,36,0.04);box-shadow:inset 3px 0 0 0 var(--warn)}
+
+.drag-handle{width:14px;height:14px;color:var(--t4);cursor:grab;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.member-num{font-family:'JetBrains Mono';font-size:11px;color:var(--t3);font-weight:600;min-width:22px;flex:none}
+.member-body{flex:1;min-width:0}
+.member-id{font-family:'JetBrains Mono';font-size:11px;color:var(--primary);font-weight:600;line-height:1.2}
+.member-title{font-size:13px;color:var(--t1);font-weight:500;line-height:18px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.member-meta{display:flex;align-items:center;gap:8px;margin-top:3px}
+.pill{font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;padding:1px 6px;border-radius:3px;line-height:1;display:inline-flex;align-items:center;gap:3px}
+.pill-violet{color:var(--secondary);background:var(--ai-soft);border:1px solid var(--ai-line)}
+.pill-pass{color:var(--pass);background:var(--pass-soft);border:1px solid var(--pass-line)}
+.pill-warn{color:var(--warn);background:var(--warn-soft);border:1px solid var(--warn-line)}
+.member-meta .meta-text{font-size:10.5px;color:var(--t4)}
+
+.curator-flag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--warn);font-weight:600}
+.curator-flag .info-i{display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:999px;background:var(--ai-soft);color:var(--secondary);font-size:8px;font-weight:700;cursor:help}
+
+.member-actions{display:flex;gap:4px;flex:none}
+.member-actions button{width:26px;height:26px;border-radius:5px;background:none;border:none;color:var(--t4);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.member-actions button:hover{background:var(--overlay);color:var(--t1)}
+.member-actions button.remove:hover{background:var(--fail-soft);color:var(--fail)}
+
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex:none;background:var(--base)}
+.foot-info{font-size:11px;color:var(--t3);flex:1;font-family:'JetBrains Mono'}
+.foot-info .num{color:var(--t1);font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+.btn:hover{background:var(--raised);color:var(--t1)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+.btn-primary:hover{background:#26B8A4}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop">
+  <div class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <header class="modal-head">
+      <div class="modal-head-body">
+        <div class="eyebrow">Edit Suite · TS-RET-006</div>
+        <h2 class="modal-title display" id="modal-title">Returns Core</h2>
+        <div class="modal-sub mono">87 cases · 60 automated · 27 manual · last run 1d ago</div>
+      </div>
+      <button class="close-btn" id="close-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <!-- Composer recommendations banner — POLISH ADDITION -->
+    <div class="composer-banner">
+      <div class="ai-icon">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2M4.5 4.5l-1.5-1.5M13 13l-1.5-1.5M4.5 11.5l-1.5 1.5M13 3l-1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+      </div>
+      <div class="text">
+        <span class="agent-name">Composer</span><span class="info-i" title="Test Case Generator agent">i</span>
+        suggests <strong>6 more cases</strong> for this suite based on its name "Returns Core" + the 8 linked requirements (RET-247, RET-248, RET-251 …).
+      </div>
+      <button class="ai-cta" id="ai-suggest-btn">Show suggestions</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active">Members <span class="count">87</span></button>
+      <button class="tab">Settings</button>
+      <button class="tab">Run history <span class="count">14</span></button>
+      <button class="tab">Coverage</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Suite name + description -->
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Suite name</label>
+          <input class="input" type="text" value="Returns Core">
+        </div>
+        <div class="field">
+          <label class="field-label">Owner</label>
+          <select class="select">
+            <option selected>Ravi K. (QA Engineer)</option>
+            <option>Akshay P. (QA Lead)</option>
+            <option>Yogesh M. (Sr QA)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Description</label>
+        <textarea class="textarea" rows="2">Core returns + refund flows: digital + physical goods, partial refunds, gift-card splits, holiday calendar exceptions, RMA approval matrix.</textarea>
+      </div>
+
+      <!-- Search + Add -->
+      <div class="search-row">
+        <div class="search-input">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" placeholder="Filter members by ID, title, or step text…">
+        </div>
+        <button class="add-btn">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Add cases
+        </button>
+      </div>
+
+      <!-- Member list -->
+      <div class="member-list">
+        <div class="member-row">
+          <span class="drag-handle"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="10" cy="4" r="1" fill="currentColor"/><circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg></span>
+          <span class="member-num">1.</span>
+          <div class="member-body">
+            <span class="member-id">TC-RET-0341</span>
+            <div class="member-title">Refund request within 14-day window succeeds for digital good</div>
+            <div class="member-meta">
+              <span class="pill pill-pass">P0</span>
+              <span class="pill pill-violet">Composer</span>
+              <span class="meta-text">last passed 1d ago · runs in 2 other suites</span>
+            </div>
+          </div>
+          <div class="member-actions">
+            <button title="View"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="remove" title="Remove from suite"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+
+        <!-- Curator warning row — POLISH ADDITION -->
+        <div class="member-row curator-warn">
+          <span class="drag-handle"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="10" cy="4" r="1" fill="currentColor"/><circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg></span>
+          <span class="member-num">2.</span>
+          <div class="member-body">
+            <span class="member-id">TC-RET-0342</span>
+            <div class="member-title">Refund retries up to 3× on payment-gateway failure with exponential backoff</div>
+            <div class="member-meta">
+              <span class="pill pill-warn">P0</span>
+              <span class="pill pill-violet">Composer</span>
+              <span class="curator-flag">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 1l7 13H1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r="0.7" fill="currentColor"/></svg>
+                Curator<span class="info-i" title="Duplicate Detection agent">i</span> · already in 3 other suites (Payments, Cart, Refund &amp; Exchanges)
+              </span>
+            </div>
+          </div>
+          <div class="member-actions">
+            <button title="View"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="remove" title="Remove from suite"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+
+        <div class="member-row">
+          <span class="drag-handle"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="10" cy="4" r="1" fill="currentColor"/><circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg></span>
+          <span class="member-num">3.</span>
+          <div class="member-body">
+            <span class="member-id">TC-RET-0343</span>
+            <div class="member-title">Partial refund of mixed cart returns gift-card portion to customer wallet</div>
+            <div class="member-meta">
+              <span class="pill pill-warn">P1</span>
+              <span class="pill pill-violet">Composer</span>
+              <span class="meta-text">last passed 2d ago</span>
+            </div>
+          </div>
+          <div class="member-actions">
+            <button title="View"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="remove" title="Remove from suite"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+
+        <div class="member-row">
+          <span class="drag-handle"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="10" cy="4" r="1" fill="currentColor"/><circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg></span>
+          <span class="member-num">4.</span>
+          <div class="member-body">
+            <span class="member-id">TC-RET-0455</span>
+            <div class="member-title">Holiday calendar exceptions: refund window pauses for Indian Stock Exchange holidays</div>
+            <div class="member-meta">
+              <span class="pill pill-warn">P2</span>
+              <span class="pill pill-violet">Composer</span>
+              <span class="meta-text">last passed 3d ago</span>
+            </div>
+          </div>
+          <div class="member-actions">
+            <button title="View"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="remove" title="Remove from suite"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+
+        <div class="member-row">
+          <span class="drag-handle"><svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="10" cy="4" r="1" fill="currentColor"/><circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/><circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg></span>
+          <span class="member-num">5.</span>
+          <div class="member-body">
+            <span class="member-id">TC-RET-0512</span>
+            <div class="member-title">PM walkthrough: payment reversal edge cases (HDFC + SBI UPI rails)</div>
+            <div class="member-meta">
+              <span class="pill pill-warn">P1</span>
+              <span class="meta-text">last passed 4d ago · 1 flaky run in 30d</span>
+            </div>
+          </div>
+          <div class="member-actions">
+            <button title="View"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg></button>
+            <button class="remove" title="Remove from suite"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="modal-foot">
+      <span class="foot-info"><span class="num">87</span> members · <span class="num">5</span> visible · drag to reorder · 1 flagged by Curator</span>
+      <button class="btn" id="cancel-btn">Cancel</button>
+      <button class="btn btn-primary">Save suite</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const backdrop = document.getElementById('backdrop');
+  const closeBtn = document.getElementById('close-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const aiBtn = document.getElementById('ai-suggest-btn');
+  function close(){ console.info('pattern-a:deferred:f18m1:close'); }
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  aiBtn.addEventListener('click', () => {
+    console.info('pattern-a:deferred:f18m1:composer-suggest', { suiteId: 'TS-RET-006' });
+  });
+</script>
+</body>
+</html>

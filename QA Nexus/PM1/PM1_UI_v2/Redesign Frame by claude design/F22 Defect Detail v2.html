@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — DEF-RET-2104 · Refund webhook timeout</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  F22 Defect Detail v2 — single-defect drill-down (DEF-RET-2104)
+  ────────────────────────────────────────────────────────────────
+  Built per PM1_UI_v2/_DESIGN_RULES.md (Hard Rule 14 shell parity,
+  Hard Rule 15 named-agent UI). Shell + collapse JS lifted verbatim
+  from F21 Defects Hub v2.html. Page content: Sherlock 5-layer RCA
+  breakdown, evidence gallery, Curator similar-defects panel,
+  Sherlock-attributed Suggested Fix, discussion w/ Jira two-way sync,
+  sticky right rail with case linkage + metadata.
+  Active rail: Defects / Failures (red 14, ANALYSE auto-expanded).
+  Mode toggle: Review. Demo data: Iksula Returns canon.
+  Agents named (Sherlock/Curator/Composer) with hover ⓘ tooltips.
+-->
+<style>
+/* =====================================================================
+   F20 Run Results v2 — tokens (verbatim with F19 v2)
+   ===================================================================== */
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --secondary-ink:#2E1065; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+  --rail-w:240px; --topbar-h:56px; --tap:44px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::selection{background:rgba(167,139,250,0.4);color:var(--t1)}
+input,textarea{font-family:inherit;color:inherit}
+
+/* SYS-17 scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+::-webkit-scrollbar-corner{background:transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+@media (hover:none) and (pointer:coarse){
+  ::-webkit-scrollbar{width:6px;height:6px}
+}
+
+/* ───────── App shell (lifted verbatim from F19 v2) ───────── */
+.app{min-height:100vh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr}
+@media (min-width:1024px){
+  .app{grid-template-columns:var(--rail-w) 1fr;grid-template-rows:1fr;
+       transition:grid-template-columns 220ms cubic-bezier(.4,0,.2,1)}
+}
+.app[data-rail="collapsed"]{--rail-w:64px}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:40;height:var(--topbar-h);
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:var(--base);border-bottom:1px solid var(--border)}
+@media (min-width:1024px){
+  .topbar{grid-column:1 / -1;padding:0 16px;gap:12px}
+}
+.brand{display:inline-flex;align-items:center;gap:8px}
+.brand-mark{width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;
+  font-family:'DM Sans';font-weight:700;font-size:14px}
+.brand-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1)}
+@media (max-width:1023px){.brand-word{display:none}}
+
+.menu-btn{width:var(--tap);height:var(--tap);border-radius:8px;background:none;border:0;color:var(--t2);
+  display:inline-flex;align-items:center;justify-content:center}
+.menu-btn:hover{background:var(--raised);color:var(--t1)}
+@media (min-width:1024px){.menu-btn{display:none}}
+
+.proj-pill{display:none;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:6px;
+  background:var(--raised);border:1px solid var(--border);color:var(--t1);font-size:13px;font-weight:500}
+.proj-pill .dot{width:18px;height:18px;border-radius:4px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;font-size:9px;font-weight:700}
+.proj-pill .meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px}
+@media (min-width:768px){.proj-pill{display:inline-flex}}
+
+.global-search{flex:1;min-width:0;height:36px;border-radius:6px;background:var(--raised);
+  border:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--t3);font-size:13px}
+.global-search .kbd{margin-left:auto;font-family:'JetBrains Mono';font-size:10.5px;
+  border:1px solid var(--border);background:var(--base);color:var(--t3);padding:1px 5px;border-radius:4px}
+@media (max-width:767px){.global-search .label,.global-search .kbd{display:none}}
+
+.icon-btn{width:var(--tap);height:var(--tap);border-radius:6px;background:none;border:0;color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;position:relative}
+.icon-btn:hover{background:var(--raised);color:var(--t1)}
+.icon-btn .pip{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:999px;background:var(--secondary)}
+@media (min-width:1024px){.icon-btn{width:36px;height:36px}}
+
+.mode-toggle{display:none;height:32px;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px}
+.mode-toggle button{height:26px;padding:0 10px;border-radius:4px;background:none;border:0;color:var(--t3);
+  font-size:11px;font-weight:500;font-family:inherit}
+.mode-toggle button.on{background:var(--overlay);color:var(--t1);font-weight:600}
+@media (min-width:1024px){.mode-toggle{display:inline-flex}}
+
+.user-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:3px 10px 3px 3px;
+  border-radius:999px;background:var(--raised);border:1px solid var(--border)}
+.user-av{width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#0B0F17;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.user-pill .name{font-size:12.5px;color:var(--t1);font-weight:500}
+@media (max-width:767px){.user-pill .name{display:none}}
+
+/* Left rail */
+.rail{display:none;background:var(--base);border-right:1px solid var(--border);
+  flex-direction:column;padding:0;overflow:hidden;
+  height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}
+@media (min-width:1024px){.rail{display:flex}}
+.rail.mobile-open{display:flex;position:fixed;top:var(--topbar-h);left:0;bottom:0;width:280px;z-index:50;
+  height:calc(100vh - var(--topbar-h));box-shadow:0 0 0 9999px rgba(0,0,0,0.5)}
+
+/* Single-scrollbar middle area — entire nav scrolls as one (per Demo Collapsible Nav Sections) */
+.rail-content{flex:1;min-height:0;overflow-y:auto;padding:0 8px 8px}
+.rail-content::-webkit-scrollbar{width:6px}
+.rail-content::-webkit-scrollbar-track{background:transparent}
+.rail-content::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+.rail-content::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+
+.rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+  color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
+  margin:14px 8px 8px;flex:none;border:1px solid transparent;cursor:pointer;background:none}
+.rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
+.rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--t3)}
+.rail-toggle:hover .rt-icon{color:var(--t1)}
+.rail-toggle .rt-icon svg{width:16px;height:16px;transition:transform 220ms cubic-bezier(.4,0,.2,1)}
+.rail-toggle .rt-label{flex:1;text-align:left;text-transform:uppercase;white-space:nowrap}
+[data-rail="collapsed"] .rail-toggle{width:44px;height:44px;min-height:44px;padding:10px;justify-content:center;margin:6px auto 10px}
+[data-rail="collapsed"] .rail-toggle .rt-label{display:none}
+[data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}
+
+/* Section header — clickable, with chevron + underline divider (per Demo Collapsible Nav Sections) */
+.nav-section{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 10px;
+  cursor:pointer;user-select:none;transition:background 150ms;position:relative;
+  border-bottom:1px solid var(--border);margin:0 4px 6px}
+.nav-section:hover{background:rgba(255,255,255,0.02)}
+.nav-section .sec-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t2);
+  font-weight:700;font-family:'JetBrains Mono'}
+.nav-section .sec-chevron{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--t3);transition:transform 220ms cubic-bezier(.4,0,.2,1);flex:none}
+.nav-section:hover .sec-chevron{color:var(--t1)}
+.nav-section .sec-chevron svg{width:12px;height:12px}
+.nav-section.collapsed .sec-chevron{transform:rotate(-90deg)}
+
+/* Items list (collapsible body) — large max-height so multi-item sections never overlap */
+.nav-items{display:flex;flex-direction:column;gap:0;
+  max-height:2000px;overflow:hidden;
+  transition:max-height 280ms cubic-bezier(.4,0,.2,1),opacity 200ms ease,padding 220ms ease,margin 220ms ease}
+.nav-items.collapsed{max-height:0;opacity:0;pointer-events:none;padding:0;margin:0}
+
+/* Collapsed-rail (240→64px) compatibility — hide chevron + label, keep underline as visual divider */
+[data-rail="collapsed"] .nav-section{padding:10px 0 8px;margin:6px 4px 4px;cursor:default;
+  justify-content:center;border-bottom:1px solid var(--border)}
+[data-rail="collapsed"] .nav-section .sec-label,
+[data-rail="collapsed"] .nav-section .sec-chevron{display:none}
+[data-rail="collapsed"] .nav-items{max-height:none !important;opacity:1 !important;pointer-events:auto !important;padding:0 !important;margin:0 !important}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
+  font-size:13px;line-height:18px;min-height:36px;position:relative;white-space:nowrap;text-decoration:none}
+.nav-item:hover{background:var(--raised);color:var(--t1)}
+.nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;
+  background:var(--secondary);border-radius:0 2px 2px 0}
+.nav-item.disabled{color:var(--t4);opacity:0.55;cursor:not-allowed}
+
+.nav-icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;background:var(--raised);border:1px solid var(--border);color:var(--t3);transition:all 180ms ease}
+.nav-icon svg{width:14px;height:14px}
+.nav-item:hover .nav-icon{transform:scale(1.05)}
+.nav-item.active .nav-icon{box-shadow:0 0 0 1px currentColor inset}
+.nav-item[data-tone="home"]      .nav-icon{background:var(--raised);border-color:var(--border-strong);color:var(--t1)}
+.nav-item[data-tone="primary"]   .nav-icon{background:var(--primary-soft);border-color:var(--primary-line);color:var(--primary)}
+.nav-item[data-tone="secondary"] .nav-icon{background:var(--ai-soft);border-color:var(--ai-line);color:var(--ai-accent)}
+.nav-item[data-tone="info"]      .nav-icon{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+.nav-item[data-tone="warn"]      .nav-icon{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.nav-item[data-tone="pass"]      .nav-icon{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+.nav-item[data-tone="fail"]      .nav-icon{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+
+.nav-count{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+.nav-item.active .nav-count{color:var(--secondary)}
+.nav-pill{margin-left:auto;font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;
+  padding:2px 6px;border-radius:3px;background:var(--raised);color:var(--t4);border:1px solid var(--border)}
+
+[data-rail="collapsed"] .rail-content{padding:0 4px 8px}
+[data-rail="collapsed"] .nav-item{justify-content:center;padding:6px;gap:0}
+[data-rail="collapsed"] .nav-item > :not(.nav-icon){display:none}
+[data-rail="collapsed"] .nav-item.active::before{display:none}
+[data-rail="collapsed"] .nav-item.active .nav-icon{box-shadow:0 0 0 1.5px var(--secondary),0 0 0 4px var(--ai-soft)}
+[data-rail="collapsed"] .nav-item::after{content:attr(data-label);position:absolute;left:calc(100% + 12px);top:50%;
+  transform:translateY(-50%) translateX(-4px);background:var(--overlay);color:var(--t1);
+  font-size:12px;font-weight:500;padding:6px 10px;border-radius:6px;border:1px solid var(--border-strong);
+  white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 140ms,transform 140ms;
+  z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.4);font-family:'Inter'}
+[data-rail="collapsed"] .nav-item:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+[data-rail="collapsed"] .rail-foot{padding:12px 4px;justify-content:center}
+[data-rail="collapsed"] .rail-foot .who,
+[data-rail="collapsed"] .rail-foot > svg{display:none}
+
+.rail-foot{margin-top:auto;border-top:1px solid var(--border);padding:12px 10px;display:flex;align-items:center;gap:10px}
+.rail-foot .av{width:28px;height:28px;border-radius:999px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));color:#0B0F17;font-size:11px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center}
+.rail-foot .who{flex:1;min-width:0}
+.rail-foot .who .n{font-size:12.5px;font-weight:600;color:var(--t1)}
+.rail-foot .who .r{font-family:'JetBrains Mono';font-size:9.5px;color:var(--secondary);letter-spacing:0.05em;font-weight:600}
+
+/* ═════════════════════════════════════════════════════════════════════
+   F22 PAGE — Defect detail (RCA + evidence + similar + discussion + rail)
+   ═════════════════════════════════════════════════════════════════════ */
+.main{min-width:0;display:flex;flex-direction:column;flex:1;overflow:hidden}
+.def-shell{display:grid;grid-template-columns:1fr;flex:1;min-height:0;overflow:hidden}
+@media (min-width:1024px){.def-shell{grid-template-columns:minmax(0,1fr) 360px}}
+@media (min-width:1440px){.def-shell{grid-template-columns:minmax(0,1fr) 400px}}
+
+.def-center{min-width:0;overflow-y:auto;padding:18px 14px 60px}
+@media (min-width:480px){.def-center{padding:20px 18px 60px}}
+@media (min-width:768px){.def-center{padding:24px 24px 80px}}
+@media (min-width:1024px){.def-center{padding:24px 28px 80px}}
+
+.def-rail{background:var(--base);border-top:1px solid var(--border);padding:16px 14px 24px;
+  overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (min-width:480px){.def-rail{padding:18px}}
+@media (min-width:1024px){.def-rail{border-top:0;border-left:1px solid var(--border);padding:20px;
+  height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}}
+
+.ms{font-family:"Material Symbols Outlined";font-weight:400;font-size:18px;line-height:1;
+  display:inline-block;vertical-align:middle;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20}
+
+.crumb{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11.5px;color:var(--t3);min-width:0}
+.crumb a{color:var(--t3);text-decoration:none}.crumb a:hover{color:var(--t2)}
+.crumb .sep{color:var(--t4)}.crumb .id{color:var(--t1);font-family:'JetBrains Mono';font-weight:500}
+
+.title-row{margin-top:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.title-block{flex:1;min-width:240px}
+.tr-meta{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono';font-size:11px;color:var(--t3);flex-wrap:wrap}
+.tr-meta .id{color:var(--t1);font-weight:500;font-size:13px}
+.tr-meta .age{color:var(--t4)}
+.tr-title{margin:6px 0 0;font-family:'DM Sans';font-size:18px;line-height:24px;font-weight:600;color:var(--t1);letter-spacing:-0.01em;text-wrap:pretty}
+@media (min-width:768px){.tr-title{font-size:22px;line-height:28px}}
+.tr-sub{margin:8px 0 0;font-size:13px;line-height:20px;color:var(--t2);max-width:780px}
+.tr-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;min-height:24px;padding:0 8px;border-radius:5px;
+  font-size:11px;font-weight:500;font-family:'Inter';border:1px solid var(--border);color:var(--t2);background:transparent;line-height:1;white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:999px;flex:none}
+.chip.ok{background:var(--pass-soft);color:var(--pass);border-color:var(--pass-line)}.chip.ok .dot{background:var(--pass)}
+.chip.warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}.chip.warn .dot{background:var(--warn)}
+.chip.bad{background:var(--fail-soft);color:var(--fail);border-color:var(--fail-line)}.chip.bad .dot{background:var(--fail)}
+.chip.info{background:var(--info-soft);color:var(--info);border-color:var(--info-line)}.chip.info .dot{background:var(--info)}
+.chip.ai{background:var(--ai-soft);color:var(--secondary);border-color:var(--ai-line)}.chip.ai .dot{background:var(--secondary)}
+.chip.teal{background:var(--primary-soft);color:var(--primary);border-color:var(--primary-line)}.chip.teal .dot{background:var(--primary)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;min-height:32px;padding:0 11px;border-radius:6px;
+  font-size:12px;font-weight:500;font-family:inherit;border:1px solid var(--border);color:var(--t1);
+  background:transparent;cursor:pointer;line-height:1;white-space:nowrap}
+.btn:hover{background:var(--raised);border-color:var(--border-strong)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+.btn-primary:hover{background:rgba(45,212,191,0.92);border-color:rgba(45,212,191,0.92);box-shadow:0 0 22px -4px rgba(45,212,191,0.5)}
+.btn-ai{color:var(--secondary);border-color:var(--ai-line);background:transparent}
+.btn-ai:hover{background:var(--ai-soft)}
+.btn-icon{width:32px;padding:0;justify-content:center}
+.btn-sm{height:28px;font-size:11.5px;padding:0 9px;min-height:28px}
+@media (hover:none) and (pointer:coarse){.btn{min-height:44px;padding-top:8px;padding-bottom:8px;height:auto}.btn-icon{width:44px;height:44px;padding:0}}
+
+.meta-row{margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:11.5px;color:var(--t3);line-height:18px}
+.meta-row .lbl{color:var(--t4)}.meta-row b{color:var(--t1);font-weight:500}.meta-row .sep{color:var(--t4)}
+.meta-row .av{width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono';font-size:9px;font-weight:600;color:#0B0F17;flex:none}
+.meta-row a{color:var(--info);text-decoration:none}.meta-row a:hover{text-decoration:underline}
+
+.section{margin-top:24px}.section .sec-head{margin:0 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sec-title{font-family:'DM Sans';font-size:15px;font-weight:600;color:var(--t1);letter-spacing:-0.01em;margin:0;line-height:22px}
+@media (min-width:768px){.sec-title{font-size:16px}}
+.sec-head .meta{font-size:11px;color:var(--t3)}
+
+/* Sherlock/Curator/Composer agent name + ⓘ tooltip */
+.agent-name{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--secondary);font-family:'DM Sans';line-height:1.2;letter-spacing:-0.01em}
+.agent-info{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;border-radius:999px;color:var(--secondary);background:var(--ai-soft);
+  border:1px solid var(--ai-line);font-size:9px;font-weight:700;cursor:help;font-family:'Inter';font-style:italic;flex:none;vertical-align:middle}
+.agent-info::before{content:"i"}
+.agent-info::after{content:attr(data-tip);position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-4px);
+  background:var(--overlay);color:var(--t1);font-size:11px;font-weight:500;font-style:normal;font-family:'Inter';
+  padding:7px 10px;border-radius:6px;border:1px solid var(--border-strong);
+  pointer-events:none;opacity:0;transition:opacity 160ms,transform 160ms;
+  z-index:50;box-shadow:0 6px 18px rgba(0,0,0,0.4);width:max-content;max-width:240px;line-height:16px;white-space:normal;text-align:center}
+.agent-info:hover::after,.agent-info:focus::after{opacity:1;transform:translateX(-50%) translateY(0)}
+.agent-info:hover,.agent-info:focus{color:var(--t1);background:var(--secondary);border-color:var(--secondary);outline:none}
+
+.sh-summary{position:relative;margin-top:14px;padding:16px 18px 14px 22px;border-radius:10px;background:rgba(167,139,250,0.06);border:1px solid var(--ai-line)}
+.sh-summary::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary);border-radius:3px 0 0 3px}
+.sh-summary .lbl{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.sh-summary .lbl .tag{font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary)}
+.sh-summary .lbl .ts{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t4)}
+.sh-summary p{margin:0 0 6px;font-size:13px;line-height:20px;color:var(--t1)}
+.sh-summary p+p{color:var(--t2)}
+.sh-summary .mono{color:var(--t1);background:var(--raised);padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono';font-size:11.5px}
+.sh-summary .ev-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(167,139,250,0.18)}
+.sh-summary .ev-row .ms{color:var(--secondary)}
+
+.conf-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.conf-pill{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:5px;
+  background:var(--ai-soft);border:1px solid var(--ai-line);color:var(--secondary);font-family:'JetBrains Mono';font-size:11px;font-weight:600;flex:none}
+.conf-bar{display:flex;align-items:center;height:8px;border-radius:4px;overflow:hidden;background:var(--raised);
+  flex:1 1 200px;min-width:160px;max-width:420px;border:1px solid var(--border)}
+.conf-bar .seg{height:100%}
+.conf-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3)}
+.conf-legend .seg{display:inline-flex;align-items:center;gap:5px}
+.conf-legend .seg .swatch{width:8px;height:8px;border-radius:2px;flex:none}
+.conf-legend .seg b{color:var(--t1);font-weight:600}
+
+.rca-cards{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.rca-card{position:relative;background:var(--base);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.rca-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;z-index:1}
+.rca-card.high::before{background:var(--pass)}.rca-card.med::before{background:var(--warn)}.rca-card.low::before{background:var(--fail)}
+.rca-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:12px 14px 12px 18px;cursor:pointer;border-bottom:1px solid var(--border);min-height:48px;user-select:none}
+.layer-num{font-family:'JetBrains Mono';font-size:10.5px;font-weight:700;letter-spacing:0.08em;color:var(--t3);
+  background:var(--raised);padding:3px 8px;border-radius:4px;border:1px solid var(--border);line-height:14px;flex:none}
+.rca-head .ms-icon{color:var(--t3);flex:none}
+.rca-head h4{font-family:'DM Sans';font-size:14px;font-weight:600;color:var(--t1);margin:0;line-height:20px;letter-spacing:-0.01em;flex:none}
+.rca-head .meta{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
+.rca-head .toggle{color:var(--t3);transition:transform 220ms cubic-bezier(.4,0,.2,1);margin-left:auto;flex:none}
+.rca-card.collapsed .rca-head{border-bottom-color:transparent}
+.rca-card.collapsed .toggle{transform:rotate(-90deg)}
+.rca-body{display:grid;grid-template-columns:1fr;gap:14px;padding:14px 18px 16px;
+  max-height:1600px;opacity:1;transition:max-height 320ms cubic-bezier(.4,0,.2,1),opacity 200ms,padding 220ms}
+@media (min-width:768px){.rca-body{grid-template-columns:minmax(0,2fr) minmax(0,1fr);padding:16px 18px 18px;gap:16px}}
+.rca-card.collapsed .rca-body{max-height:0;opacity:0;padding-top:0;padding-bottom:0;overflow:hidden}
+
+.kv{display:grid;grid-template-columns:140px 1fr;gap:5px 14px;font-size:11.5px;line-height:18px;margin:0;min-width:0}
+@media (min-width:480px){.kv{grid-template-columns:170px 1fr}}
+@media (max-width:479px){.kv{grid-template-columns:1fr;gap:1px}.kv dd{margin-bottom:6px}}
+.kv dt{color:var(--t3);font-family:'JetBrains Mono'}
+.kv dd{color:var(--t1);font-family:'JetBrains Mono';margin:0;word-break:break-word}
+
+pre.stack{margin:0;background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:14px 14px 14px 16px;
+  font-family:'JetBrains Mono';font-size:11.5px;line-height:19px;color:var(--t2);overflow-x:auto;white-space:pre;-webkit-overflow-scrolling:touch}
+pre.stack .hl{background:rgba(167,139,250,0.16);color:var(--t1);padding:1px 4px;border-radius:3px;border-left:2px solid var(--secondary);margin-left:-6px;padding-left:4px;display:inline-block}
+pre.stack .err{color:var(--fail)}
+pre.stack .note{color:var(--secondary);font-style:italic}
+
+.sh-side{position:relative;background:rgba(167,139,250,0.05);border:1px solid var(--ai-line);border-radius:8px;padding:11px 12px 12px 16px;min-width:0}
+.sh-side::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary);border-radius:3px 0 0 3px}
+.sh-side .tag{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary);margin-bottom:6px;flex-wrap:wrap}
+.sh-side .tag .agent-name{font-family:'DM Sans';font-size:9.5px;letter-spacing:0.08em}
+.sh-side p{margin:0;font-size:12px;line-height:18px;color:var(--t1)}
+.sh-side p .mono{font-family:'JetBrains Mono';color:var(--t1);background:var(--canvas);padding:1px 4px;border-radius:3px;font-size:11px}
+
+.fix-banner{position:relative;margin-top:18px;padding:18px 20px 18px 26px;border-radius:10px;
+  background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(45,212,191,0.04));border:1px solid var(--ai-line)}
+.fix-banner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary);border-radius:3px 0 0 3px}
+.fix-banner .lbl{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.fix-banner .lbl .tag{font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--secondary);display:inline-flex;align-items:center;gap:5px}
+.fix-banner h4{font-family:'DM Sans';font-size:14px;font-weight:600;color:var(--t1);margin:0 0 6px;line-height:20px;text-wrap:pretty}
+@media (min-width:768px){.fix-banner h4{font-size:15px;line-height:22px}}
+.fix-banner p{margin:0;font-size:12.5px;line-height:19px;color:var(--t2)}
+.fix-banner .actions{display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+
+.tabs{display:flex;align-items:center;border-bottom:1px solid var(--border);overflow-x:auto;gap:0;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{height:0}
+.dtab{padding:8px 12px;color:var(--t3);font-size:12px;font-weight:500;font-family:inherit;border:0;background:none;
+  border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;line-height:18px;
+  cursor:pointer;white-space:nowrap;flex:none;min-height:44px}
+.dtab:hover{color:var(--t2)}.dtab.on{color:var(--t1);border-bottom-color:var(--primary)}
+.dtab .n{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t4)}
+.dtab.on .n{color:var(--primary)}
+
+.ev-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}
+@media (min-width:640px){.ev-grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1280px){.ev-grid{grid-template-columns:repeat(3,1fr)}}
+.ev-card{background:var(--base);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.ev-card .ph{height:160px;background:linear-gradient(135deg,#1A2233,#0F151F);position:relative;overflow:hidden}
+.ev-card .ph .label{position:absolute;top:8px;right:8px}
+.ev-card .ft{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-family:'JetBrains Mono';font-size:10.5px;color:var(--t3);min-height:32px}
+
+.cur-panel{position:relative;margin-top:24px;padding:16px 18px 16px 22px;border-radius:10px;background:rgba(167,139,250,0.04);border:1px solid var(--ai-line)}
+.cur-panel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--secondary);border-radius:3px 0 0 3px}
+.cur-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.cur-row{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;padding:10px 12px;
+  background:var(--base);border:1px solid var(--border);border-radius:8px}
+@media (min-width:768px){.cur-row{grid-template-columns:auto auto auto 1fr auto;gap:10px}}
+.cur-row .pct{font-family:'JetBrains Mono';font-size:11px;font-weight:600;height:22px;padding:0 7px;border-radius:4px;
+  background:var(--ai-soft);border:1px solid var(--ai-line);color:var(--secondary);display:inline-flex;align-items:center;flex:none}
+.cur-row .id{font-family:'JetBrains Mono';font-size:11.5px;color:var(--t2);flex:none}
+.cur-row .text{font-size:12.5px;color:var(--t1);min-width:0;line-height:18px;grid-column:1 / -1}
+@media (min-width:768px){.cur-row .text{grid-column:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.cur-row .acts{display:flex;gap:6px;flex-wrap:wrap;grid-column:1 / -1}
+@media (min-width:768px){.cur-row .acts{grid-column:auto;justify-content:flex-end;flex-wrap:nowrap}}
+
+.disc-list{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.disc-card{background:var(--base);border:1px solid var(--border);border-radius:10px;padding:13px 14px}
+.disc-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.disc-head .av{width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono';font-size:11px;font-weight:600;color:#0B0F17;flex:none}
+.disc-head .nm{font-size:13px;font-weight:600;color:var(--t1)}
+.disc-head .ts{font-family:'JetBrains Mono';font-size:10.5px;color:var(--t4)}
+.disc-head .src{margin-left:auto}
+.disc-card p{margin:8px 0 0;font-size:12.5px;line-height:19px;color:var(--t2);text-wrap:pretty}
+.disc-card.lead{border-color:var(--primary-line)}
+
+.rail-card{background:var(--canvas);border:1px solid var(--border);border-radius:10px;padding:14px}
+.rail-card h5{margin:0 0 10px;font-family:'DM Sans';font-size:11px;font-weight:700;letter-spacing:0.08em;
+  text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:6px}
+.rail-card .kv{grid-template-columns:auto 1fr;font-size:11px}
+.rail-card .kv dt{font-size:11px}
+.rail-card .kv dd{font-size:11.5px;line-height:18px}
+.rail-card .kv dd a{color:var(--info)}
+
+.layer-mini{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;font-size:11px;line-height:16px}
+.layer-mini .layer-num{width:28px;text-align:center;padding:2px 0;font-size:9.5px}
+.layer-mini .nm{color:var(--t1);grid-column:2}
+.layer-mini .pct{font-family:'JetBrains Mono';font-weight:600;font-size:10.5px;grid-column:3}
+.layer-mini .bar{grid-column:1 / -1;height:4px;border-radius:2px;background:var(--raised);overflow:hidden;border:1px solid var(--border);margin-top:-2px}
+.layer-mini .bar i{display:block;height:100%;border-radius:2px}
+.layer-mini .bar.high i{background:var(--pass)}
+.layer-mini .bar.med i{background:var(--warn)}
+.layer-mini .bar.low i{background:var(--fail)}
+
+.act-list{display:flex;flex-direction:column;gap:0;margin-top:6px}
+.act-row{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border)}
+.act-row:last-child{border-bottom:0}
+.act-row .dot{width:8px;height:8px;border-radius:999px;background:var(--border-strong);margin-top:4px;justify-self:center;flex:none}
+.act-row .dot.ai{background:var(--secondary)}.act-row .dot.ok{background:var(--pass)}.act-row .dot.now{background:var(--primary)}.act-row .dot.warn{background:var(--warn)}
+.act-row .body{font-size:11.5px;line-height:16px;color:var(--t2);min-width:0;text-wrap:pretty}
+.act-row .body b{color:var(--t1);font-weight:600}
+.act-row .body .ts{font-family:'JetBrains Mono';font-size:10px;color:var(--t4);display:block;margin-top:2px}
+.act-row .body .mono{font-family:'JetBrains Mono';font-size:10.5px}
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOP BAR (verbatim from F19 v2) -->
+  <header class="topbar" role="banner">
+    <button class="menu-btn" id="railToggle" aria-label="Open navigation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <div class="brand"><span class="brand-mark">Q</span><span class="brand-word">QA Nexus</span></div>
+    <button class="proj-pill" type="button">
+      <span class="dot">IR</span><span>Iksula Returns</span><span class="meta">· main</span>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <div class="global-search" role="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span class="label">Search everything…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+    <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v3L3 11h10l-1-2V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.5"/></svg><span class="pip"></span></button>
+    <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <div class="mode-toggle" role="tablist">
+      <button role="tab">Operate</button>
+      <button class="on" role="tab" aria-selected="true">Review</button>
+      <button role="tab">Prove</button>
+    </div>
+    <div class="user-pill"><span class="user-av">YM</span><span class="name">Yogesh M.</span></div>
+  </header>
+
+  <!-- LEFT RAIL (verbatim from F19 v2; active = Run Results under ANALYSE) -->
+  <aside class="rail" id="rail" aria-label="Primary navigation">
+    <button class="rail-toggle" id="railCollapseToggle" type="button" aria-label="Collapse navigation" title="Collapse">
+      <span class="rt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>
+      <span class="rt-label">Collapse</span>
+    </button>
+
+    <div class="rail-content">
+
+    <a class="nav-item" data-tone="home" data-label="Home" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 7L8 2.5 13.5 7V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7z"/></svg></span><span class="nav-label">Home</span></a>
+
+    <div class="nav-section" data-section="plan">
+      <span class="sec-label">Plan</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="plan">
+      <a class="nav-item" data-tone="info" data-label="Requirements" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg></span><span class="nav-label">Requirements</span><span class="nav-count">142</span></a>
+      <a class="nav-item" data-tone="primary" data-label="Test Plans &amp; Cycles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v3M11 2v3" stroke-linecap="round"/></svg></span><span class="nav-label">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item" data-tone="pass" data-label="Test Cases" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3z"/><path d="M6 8l1.5 1.5L11 6" stroke-linecap="round"/></svg></span><span class="nav-label">Test Cases</span><span class="nav-count">1,284</span></a>
+    </div>
+
+    <div class="nav-section" data-section="author">
+      <span class="sec-label">Author</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="author">
+      <a class="nav-item" data-tone="warn" data-label="Test Suites" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H9zM9 9h4v4H9z"/></svg></span><span class="nav-label">Test Suites</span><span class="nav-count">18</span></a>
+      <a class="nav-item" data-tone="secondary" data-label="Knowledge Base" href="#" data-kb="1"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2.5h10v11l-5-2-5 2v-11z"/></svg></span><span class="nav-label">Knowledge Base</span><span class="nav-count">1.2K <span style="color:var(--t4);font-weight:400">chunks</span></span></a>
+      <a class="nav-item disabled" data-label="Automation Studio" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l3 3 7-7" stroke-linecap="round"/></svg></span><span class="nav-label">Automation Studio</span><span class="nav-pill">v1.5</span></a>
+      <a class="nav-item disabled" data-label="Data &amp; Mocks" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4"/></svg></span><span class="nav-label">Data &amp; Mocks</span><span class="nav-pill">v1.5</span></a>
+    </div>
+
+    <div class="nav-section" data-section="run">
+      <span class="sec-label">Run</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="run">
+      <a class="nav-item" data-tone="primary" data-label="Runs &amp; Sessions" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l8 5-8 5V3z"/></svg></span><span class="nav-label">Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+      <a class="nav-item" data-tone="info" data-label="Environments" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="12" height="8" rx="1"/><path d="M5 8h6" stroke-linecap="round"/></svg></span><span class="nav-label">Environments</span></a>
+    </div>
+
+    <div class="nav-section" data-section="analyse">
+      <span class="sec-label">Analyse</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="analyse">
+      <a class="nav-item" data-tone="info" data-label="Run Results" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke-linecap="round"/></svg></span><span class="nav-label">Run Results</span></a>
+      <a class="nav-item" data-tone="secondary" data-label="Executive Dashboard" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="3" rx="1"/><rect x="9" y="7" width="5" height="7" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/></svg></span><span class="nav-label">Executive Dashboard</span></a>
+      <a class="nav-item active" data-tone="fail" data-label="Defects / Failures" href="#" aria-current="page"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 7v3M8 12h.01" stroke-linecap="round"/></svg></span><span class="nav-label">Defects / Failures</span><span class="nav-count" style="color:var(--fail)">14</span></a>
+      <a class="nav-item" data-tone="warn" data-label="Reports" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="10" height="10" rx="1"/><path d="M6 10V7M8 10V5M10 10V8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+    </div>
+
+    <div class="nav-section" data-section="govern">
+      <span class="sec-label">Govern</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="govern">
+      <a class="nav-item" data-tone="secondary" data-label="Agents" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2l1.4 3.5L13 7l-3.6 1.5L8 12l-1.4-3.5L3 7l3.6-1.5z"/></svg></span><span class="nav-label">Agents</span></a>
+      <a class="nav-item" data-tone="info" data-label="Integrations" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 14v-3M6 4V2M10 4V2M4 8.5V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 1-2.5 2.5h-3A2.5 2.5 0 0 1 4 8.5z"/></svg></span><span class="nav-label">Integrations</span></a>
+      <a class="nav-item" data-tone="primary" data-label="Users &amp; Roles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 13v-1.3A2.7 2.7 0 0 0 8.3 9H4.7A2.7 2.7 0 0 0 2 11.7V13"/><circle cx="6.5" cy="5" r="2.5"/></svg></span><span class="nav-label">Users &amp; Roles</span></a>
+      <a class="nav-item" data-tone="home" data-label="Settings &amp; Audit" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2"/><path d="M12.7 9.7a1.1 1.1 0 0 0 .22 1.21l.04.04a1.33 1.33 0 1 1-1.88 1.88l-.04-.04a1.1 1.1 0 0 0-1.21-.22 1.1 1.1 0 0 0-.66 1V14a1.33 1.33 0 1 1-2.66 0v-.06a1.1 1.1 0 0 0-.66-1 1.1 1.1 0 0 0-1.21.22l-.04.04a1.33 1.33 0 1 1-1.88-1.88l.04-.04a1.1 1.1 0 0 0 .22-1.21 1.1 1.1 0 0 0-1-.66H2A1.33 1.33 0 1 1 2 6.66h.06a1.1 1.1 0 0 0 1-.66 1.1 1.1 0 0 0-.22-1.21l-.04-.04a1.33 1.33 0 1 1 1.88-1.88l.04.04a1.1 1.1 0 0 0 1.21.22h0a1.1 1.1 0 0 0 .66-1V2a1.33 1.33 0 1 1 2.66 0v.06a1.1 1.1 0 0 0 .66 1 1.1 1.1 0 0 0 1.21-.22l.04-.04a1.33 1.33 0 1 1 1.88 1.88l-.04.04a1.1 1.1 0 0 0-.22 1.21h0a1.1 1.1 0 0 0 1 .66H14A1.33 1.33 0 1 1 14 9.34h-.06a1.1 1.1 0 0 0-1 .66z"/></svg></span><span class="nav-label">Settings &amp; Audit</span></a>
+    </div>
+
+    </div><!-- end .rail-content -->
+
+    <div class="rail-foot">    <div class="rail-foot">
+      <span class="av">YM</span>
+      <div class="who"><div class="n">Yogesh Mohite</div><div class="r">SR_QA · ADMIN</div></div>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--t3)"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </div>
+  </aside>
+
+  <!-- MAIN: defects hub -->
+  <section class="main">
+    <div class="def-shell">
+
+      <!-- ════════════ CENTER PANE ════════════ -->
+      <div class="def-center">
+
+        <nav class="crumb" aria-label="Breadcrumb">
+          <a href="#">Defects</a><span class="sep">/</span>
+          <a href="#">Refunds</a><span class="sep">/</span>
+          <span class="id">DEF-RET-2104</span>
+        </nav>
+
+        <div class="title-row">
+          <div class="title-block">
+            <div class="tr-meta">
+              <span class="id">DEF-RET-2104</span><span class="age">·</span>
+              <span class="age">filed 4h ago · age 04:18:32</span>
+            </div>
+            <h1 class="tr-title">Refund &gt; ₹10K stuck on PROCESSING — webhook timeout on payments-svc when partner-bank gateway exceeds 30s SLA</h1>
+            <p class="tr-sub">P0 incident. Five customer-affecting refunds stalled in <span style="font-family:'JetBrains Mono';color:var(--t1)">PROCESSING</span> state for &gt;6 hours. Why is the partner-bank callback not flushing through, and what restores the SLA?</p>
+          </div>
+          <div class="tr-actions">
+            <span class="chip bad"><span class="dot"></span>P0</span>
+            <span class="chip warn"><span class="dot"></span>In progress</span>
+            <span class="chip info"><span class="ms" style="font-size:13px">sync</span>Jira <b style="color:var(--t1);font-weight:600;margin-left:2px">RET-3392</b></span>
+            <button class="btn btn-ai"><span class="ms" style="font-size:14px">edit</span>Edit</button>
+            <button class="btn btn-icon" aria-label="More actions"><span class="ms" style="font-size:16px">more_horiz</span></button>
+          </div>
+        </div>
+
+        <div class="meta-row">
+          <span><span class="lbl">Assigned to</span> <span class="av" style="background:#FBBF24">SP</span> <b>Suresh P.</b></span>
+          <span class="sep">·</span>
+          <span><span class="lbl">Reported by</span> <span class="av" style="background:#60A5FA">PA</span> <b>Priya A.</b></span>
+          <span class="sep">·</span>
+          <span><span class="lbl">From run</span> <a href="#" style="font-family:'JetBrains Mono'">RUN-RET-2026-04-25-002</a></span>
+          <span class="sep">·</span>
+          <span><span class="lbl">Test case</span> <a href="#" style="font-family:'JetBrains Mono'">TC-RET-1043</a></span>
+        </div>
+
+        <!-- ═══════ Sherlock RCA ═══════ -->
+        <section class="section" style="margin-top:22px">
+          <div class="sec-head">
+            <h2 class="sec-title"><span class="agent-name">Sherlock <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span></span> · Root Cause Analysis</h2>
+            <span class="chip ai"><span class="dot"></span>Service-layer regression · 94%</span>
+            <button class="btn btn-sm" style="margin-left:auto">Override <span class="ms" style="font-size:12px">expand_more</span></button>
+            <button class="btn btn-sm"><span class="ms" style="font-size:12px">refresh</span>Re-run</button>
+          </div>
+
+          <div class="conf-row">
+            <span class="conf-pill">94% confidence</span>
+            <div class="conf-bar" aria-label="Layer breakdown" role="img">
+              <span class="seg" style="width:14%;background:var(--info)"></span>
+              <span class="seg" style="width:78%;background:var(--secondary)"></span>
+              <span class="seg" style="width:6%;background:var(--warn)"></span>
+              <span class="seg" style="width:2%;background:var(--t4)"></span>
+            </div>
+            <div class="conf-legend">
+              <span class="seg"><span class="swatch" style="background:var(--info)"></span>Network <b>14%</b></span>
+              <span class="seg"><span class="swatch" style="background:var(--secondary)"></span>Service <b>78%</b></span>
+              <span class="seg"><span class="swatch" style="background:var(--warn)"></span>Data <b>6%</b></span>
+              <span class="seg"><span class="swatch" style="background:var(--t4)"></span>UI <b>2%</b></span>
+            </div>
+          </div>
+
+          <div class="sh-summary">
+            <div class="lbl">
+              <span class="tag">Sherlock · summary hypothesis</span>
+              <span class="ts">· generated 18m ago</span>
+            </div>
+            <p>The partner-bank gateway is exceeding its 30s SLA on refunds &gt;₹10K, and <span class="mono">payments-svc::PartnerCallbackController</span> times out at <span class="mono">5000ms</span> waiting for a callback. The webhook ack never reaches our queue, so the refund row is stuck in <span class="mono">PROCESSING</span> until manual intervention.</p>
+            <p>Seen on <span class="mono" style="color:var(--t1)">5 of last 12</span> refunds &gt;₹10K (CITI-IN gateway). <span class="mono" style="color:var(--pass)">0 of 47</span> on smaller refunds. SLA breach started after partner-bank pushed config change at <span class="mono">2026-04-25 03:14 IST</span>.</p>
+            <div class="ev-row">
+              <span class="ms" style="font-size:14px">attach_file</span>
+              <span class="chip" style="height:22px;font-size:10.5px">5 affected refunds</span>
+              <span class="chip" style="height:22px;font-size:10.5px">3 stack traces</span>
+              <span class="chip" style="height:22px;font-size:10.5px;font-family:'JetBrains Mono'">RefundService.ts:241</span>
+              <span class="chip" style="height:22px;font-size:10.5px;font-family:'JetBrains Mono'">PartnerCallbackController.kt</span>
+              <button class="btn btn-sm btn-ai" style="margin-left:auto">Show evidence <span class="ms" style="font-size:12px">arrow_forward</span></button>
+            </div>
+          </div>
+
+          <div class="rca-cards">
+            <!-- L1 Stack -->
+            <div class="rca-card high">
+              <div class="rca-head" data-rca-toggle>
+                <span class="layer-num">01</span>
+                <span class="ms ms-icon" style="font-size:16px">terminal</span>
+                <h4>Stack</h4>
+                <span class="meta"><span class="chip ok" style="height:22px;font-size:10.5px"><span class="dot"></span>92% · HIGH</span> <span style="color:var(--t3)">3 traces · variant A (5×)</span></span>
+                <span class="ms toggle">expand_less</span>
+              </div>
+              <div class="rca-body">
+                <pre class="stack"><span class="err">TimeoutException:</span> webhook handler ack expected within 5000ms, got no response
+  at <span class="hl">RefundService.ts:241:18</span>  <span class="note">← Sherlock root-cause candidate</span>
+  at PartnerCallbackController.handleAck (PartnerCallbackController.kt:88)
+  at WebhookDispatcher.dispatch (WebhookDispatcher.kt:34)
+  at PaymentsSvc.processRefund (PaymentsSvc.kt:412)
+  at scheduler.tick (Scheduler.kt:117)</pre>
+                <div class="sh-side">
+                  <div class="tag"><span class="agent-name" style="font-size:9.5px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> hypothesis</div>
+                  <p>The 5-second timeout in <span class="mono">RefundService.ts:241</span> is too tight for refunds &gt;₹10K. Partner-bank averages 28s on these; our handler ack times out before the bank's webhook is dispatched.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2 Environment -->
+            <div class="rca-card high">
+              <div class="rca-head" data-rca-toggle>
+                <span class="layer-num">02</span>
+                <span class="ms ms-icon" style="font-size:16px">public</span>
+                <h4>Environment</h4>
+                <span class="meta"><span class="chip ok" style="height:22px;font-size:10.5px"><span class="dot"></span>85% · HIGH</span> <span style="color:var(--t3)">gateway + region + latency</span></span>
+                <span class="ms toggle">expand_less</span>
+              </div>
+              <div class="rca-body">
+                <dl class="kv">
+                  <dt>partner_bank</dt><dd>CITI-IN refund gateway v3.4 <span style="color:var(--warn)">⚠ config push 03:14 IST</span></dd>
+                  <dt>region</dt><dd>ap-south-1 (Mumbai) · payments-svc-blue</dd>
+                  <dt>callback_p95</dt><dd><span style="color:var(--t1)">28,420ms</span> <span style="color:var(--fail)">⚠ 5.6× baseline (5,080ms)</span></dd>
+                  <dt>amount_filter</dt><dd>&gt; ₹10,000 (5 of 5 affected)</dd>
+                  <dt>queue_depth</dt><dd>refund-pending: <span style="color:var(--warn)">142 rows</span> (baseline 8)</dd>
+                  <dt>cluster</dt><dd>payments-svc-blue · 4 replicas · k8s-prod-mum</dd>
+                </dl>
+                <div class="sh-side">
+                  <div class="tag"><span class="agent-name" style="font-size:9.5px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> finding</div>
+                  <p>CITI-IN's config change at 03:14 IST tripled refund-callback latency. Our 5s handler timeout was sized for the old SLA. Gateway-internal change, not ours — but our timeout sizing is brittle.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- L3 Config -->
+            <div class="rca-card med">
+              <div class="rca-head" data-rca-toggle>
+                <span class="layer-num">03</span>
+                <span class="ms ms-icon" style="font-size:16px">tune</span>
+                <h4>Config</h4>
+                <span class="meta"><span class="chip warn" style="height:22px;font-size:10.5px"><span class="dot"></span>62% · MEDIUM</span> <span style="color:var(--t3)">timeouts + flags</span></span>
+                <span class="ms toggle">expand_less</span>
+              </div>
+              <div class="rca-body">
+                <dl class="kv">
+                  <dt>refund.handler_timeout_ms</dt><dd><span style="color:var(--t1)">5000</span> <span style="color:var(--warn)">← undersized; partner SLA is 30,000ms</span></dd>
+                  <dt>refund.retry_strategy</dt><dd>exponential · max 3 · base 1000ms</dd>
+                  <dt>flag.partner_callback_async</dt><dd><span style="color:var(--fail)">false</span> <span style="color:var(--warn)">← sync mode amplifies the timeout problem</span></dd>
+                  <dt>flag.refund_circuit_breaker</dt><dd>true · trip threshold 50%</dd>
+                  <dt>env.PAYMENTS_PARTNER_BANK</dt><dd>CITI-IN</dd>
+                </dl>
+                <div class="sh-side">
+                  <div class="tag"><span class="agent-name" style="font-size:9.5px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> recommendation</div>
+                  <p>Bump <span class="mono">handler_timeout_ms</span> to 35,000 to cover partner SLA + 5s buffer, and flip <span class="mono">partner_callback_async</span> on — async mode survives gateway slowness without blocking the queue.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- L4 Code -->
+            <div class="rca-card med">
+              <div class="rca-head" data-rca-toggle>
+                <span class="layer-num">04</span>
+                <span class="ms ms-icon" style="font-size:16px">code</span>
+                <h4>Code</h4>
+                <span class="meta"><span class="chip warn" style="height:22px;font-size:10.5px"><span class="dot"></span>54% · MEDIUM</span> <span style="color:var(--t3)">2 commits · lines 220–260</span></span>
+                <span class="ms toggle">expand_less</span>
+              </div>
+              <div class="rca-body">
+                <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;background:var(--raised);border:1px solid var(--border);flex-wrap:wrap">
+                    <span style="width:7px;height:7px;border-radius:999px;background:var(--warn);flex:none"></span>
+                    <span style="font-family:'JetBrains Mono';font-size:11.5px;color:var(--t2)">7c2e1f9</span>
+                    <span class="av" style="background:#FBBF24;width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-size:8.5px;color:#0B0F17;font-weight:600;flex:none">SP</span>
+                    <span style="font-size:12px;color:var(--t1)">Suresh P.</span>
+                    <span style="font-family:'JetBrains Mono';font-size:11px;color:var(--t4)">· 2026-04-22</span>
+                    <span style="font-size:12px;color:var(--t2);flex:1;min-width:120px">"Tighten refund handler timeout to 5s for SLA"</span>
+                    <span class="chip info" style="height:20px;font-size:10.5px;font-family:'JetBrains Mono'">PR #2104</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:6px;background:var(--raised);border:1px solid var(--border);flex-wrap:wrap">
+                    <span style="width:7px;height:7px;border-radius:999px;background:var(--t4);flex:none"></span>
+                    <span style="font-family:'JetBrains Mono';font-size:11.5px;color:var(--t2)">3a91b04</span>
+                    <span class="av" style="background:#60A5FA;width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-size:8.5px;color:#0B0F17;font-weight:600;flex:none">DR</span>
+                    <span style="font-size:12px;color:var(--t1)">Deepak R.</span>
+                    <span style="font-family:'JetBrains Mono';font-size:11px;color:var(--t4)">· 2026-04-19</span>
+                    <span style="font-size:12px;color:var(--t2);flex:1;min-width:120px">"Refactor PartnerCallbackController for new gateway"</span>
+                    <span class="chip info" style="height:20px;font-size:10.5px;font-family:'JetBrains Mono'">PR #2087</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--t3);display:flex;align-items:center;gap:6px;margin-top:2px">
+                    <span class="ms" style="font-size:13px">highlight</span>
+                    Affected lines · <span style="font-family:'JetBrains Mono';color:var(--t2)">RefundService.ts</span> · <span style="font-family:'JetBrains Mono';color:var(--t2)">220–260</span>
+                  </div>
+                </div>
+                <div class="sh-side">
+                  <div class="tag"><span class="agent-name" style="font-size:9.5px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> hypothesis</div>
+                  <p><span class="mono">PR #2104</span> tightened the handler timeout for SLA reasons but didn't account for partner-bank's 30s ceiling on large refunds. Suggest revert + parameterize by amount.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- L5 Data -->
+            <div class="rca-card low">
+              <div class="rca-head" data-rca-toggle>
+                <span class="layer-num">05</span>
+                <span class="ms ms-icon" style="font-size:16px">database</span>
+                <h4>Data</h4>
+                <span class="meta"><span class="chip bad" style="height:22px;font-size:10.5px"><span class="dot"></span>32% · LOW</span> <span class="chip" style="height:22px;font-size:10.5px;color:var(--fail);border-color:var(--fail-line);background:var(--fail-soft)"><span class="ms" style="font-size:11px">flag</span>HITL required</span></span>
+                <span class="ms toggle">expand_less</span>
+              </div>
+              <div class="rca-body">
+                <dl class="kv">
+                  <dt>affected_refunds</dt><dd>5 rows · all amounts &gt; ₹10,000 · CITI-IN gateway</dd>
+                  <dt>cumulative_value</dt><dd>₹68,420 (avg ₹13,684)</dd>
+                  <dt>oldest_stuck_age</dt><dd><span style="color:var(--warn)">06:14:22</span> · refund_id <span class="mono">REF-9821</span></dd>
+                  <dt>data_anomalies</dt><dd><span style="color:var(--pass)">none detected</span> · row contents valid</dd>
+                </dl>
+                <div class="sh-side">
+                  <div class="tag"><span class="agent-name" style="font-size:9.5px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> note</div>
+                  <p>Data layer is clean — no malformed payloads or schema drift. Included for completeness. HITL flag set because customer money is in flight; an operator must validate state before any restart.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Suggested fix -->
+          <div class="fix-banner">
+            <div class="lbl">
+              <span class="tag"><span class="agent-name" style="font-size:9.5px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> · suggested fix</span>
+            </div>
+            <h4>Bump <span style="font-family:'JetBrains Mono';color:var(--t1);background:var(--raised);padding:1px 6px;border-radius:3px;font-size:13px">refund.handler_timeout_ms</span> from 5,000 → 35,000 and enable async partner callback</h4>
+            <p>Two-line config change. Aligns timeout with partner-bank's 30s SLA + 5s buffer; async mode prevents the queue from blocking on slow gateways. <a style="color:var(--secondary);font-weight:600;text-decoration:none" href="#">View patch</a> · <a style="color:var(--secondary);font-weight:600;text-decoration:none" href="#">Linked TC-RET-1043</a> exercises the new path.</p>
+            <div class="actions">
+              <button class="btn btn-primary"><span class="ms" style="font-size:14px">play_arrow</span>Apply &amp; re-run TC-RET-1043</button>
+              <button class="btn btn-ai">View patch diff</button>
+              <button class="btn btn-sm" style="color:var(--t3)">Dismiss</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════ Evidence ═══════ -->
+        <section class="section">
+          <div class="sec-head">
+            <h2 class="sec-title">Evidence</h2>
+            <span class="meta">captured automatically · <span style="font-family:'JetBrains Mono'">RUN-RET-2026-04-25-002</span></span>
+            <button class="btn btn-sm" style="margin-left:auto">Download all <span class="ms" style="font-size:12px">download</span></button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button class="dtab on" role="tab"><span class="ms" style="font-size:14px">terminal</span>Console <span class="n">142</span></button>
+            <button class="dtab" role="tab"><span class="ms" style="font-size:14px">image</span>Screenshots <span class="n">3</span></button>
+            <button class="dtab" role="tab"><span class="ms" style="font-size:14px">lan</span>HAR network <span class="n">88</span></button>
+            <button class="dtab" role="tab"><span class="ms" style="font-size:14px">computer</span>Env</button>
+            <button class="dtab" role="tab"><span class="ms" style="font-size:14px">history</span>Activity</button>
+            <button class="dtab" role="tab"><span class="ms" style="font-size:14px">forum</span>Comments <span class="n">3</span></button>
+          </div>
+          <div class="ev-grid">
+            <div class="ev-card">
+              <div class="ph">
+                <div style="position:absolute;left:14px;top:14px;right:14px;bottom:14px;background:#0B0F17;border:1px solid #2A3347;border-radius:4px;font-family:'JetBrains Mono';color:#8A94A6;font-size:9px;padding:8px;line-height:13px;overflow:hidden">
+                  <div style="color:#F87171">[ERR] 04:18:32 RefundService.ts:241</div>
+                  <div>TimeoutException: webhook handler ack…</div>
+                  <div>  expected within 5000ms, got no response</div>
+                  <div style="color:#FBBF24">[WARN] 04:18:33 PartnerCallback…</div>
+                  <div>  retry 1/3 · backoff 1000ms</div>
+                  <div style="color:#F87171">[ERR] 04:18:38 retry exhausted</div>
+                </div>
+                <span class="chip bad label"><span class="dot"></span>5× timeout</span>
+              </div>
+              <div class="ft"><span>refund-handler.log · trace REF-9821</span><span class="ms" style="font-size:14px">open_in_full</span></div>
+            </div>
+            <div class="ev-card">
+              <div class="ph">
+                <svg viewBox="0 0 320 160" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+                  <defs><linearGradient id="g1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#F87171" stop-opacity="0.4"/><stop offset="1" stop-color="#F87171" stop-opacity="0"/></linearGradient></defs>
+                  <path d="M10 130 L60 110 L100 100 L140 88 L180 60 L220 30 L260 28 L310 25 L310 150 L10 150 Z" fill="url(#g1)"/>
+                  <path d="M10 130 L60 110 L100 100 L140 88 L180 60 L220 30 L260 28 L310 25" stroke="#F87171" stroke-width="1.5" fill="none"/>
+                  <line x1="180" y1="20" x2="180" y2="150" stroke="#FBBF24" stroke-width="1" stroke-dasharray="3 3"/>
+                  <text x="184" y="34" fill="#FBBF24" font-family="JetBrains Mono" font-size="8">03:14 config push</text>
+                </svg>
+                <span class="chip warn label"><span class="dot"></span>p95 spike 5.6×</span>
+              </div>
+              <div class="ft"><span>partner_callback latency · 24h</span><span class="ms" style="font-size:14px">open_in_full</span></div>
+            </div>
+            <div class="ev-card">
+              <div class="ph">
+                <div style="position:absolute;inset:14px;background:#0B0F17;border:1px dashed #2A3347;border-radius:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#64748B;font-family:'JetBrains Mono';font-size:10px;text-align:center;line-height:16px">
+                  <div style="color:#A78BFA;font-size:11px;margin-bottom:6px">refund-pending queue</div>
+                  <div style="font-size:18px;color:#FBBF24">142 rows</div>
+                  <div style="margin-top:4px">baseline 8 · since 03:14 IST</div>
+                </div>
+                <span class="chip warn label"><span class="dot"></span>queue backlog</span>
+              </div>
+              <div class="ft"><span>refund-pending.dump · 04:18 UTC</span><span class="ms" style="font-size:14px">open_in_full</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════ Curator ═══════ -->
+        <section class="cur-panel">
+          <div class="sec-head">
+            <h2 class="sec-title"><span class="agent-name">Curator <span class="agent-info" data-tip="Duplicate Detection agent" tabindex="0"></span></span> · Similar defects detected</h2>
+            <span class="meta">semantic similarity · last 90 days</span>
+            <button class="btn btn-sm" style="margin-left:auto">Tune threshold <span class="ms" style="font-size:12px">tune</span></button>
+          </div>
+          <div class="cur-list">
+            <div class="cur-row">
+              <span class="pct">92%</span>
+              <span class="id">DEF-RET-1842</span>
+              <span class="chip ok" style="height:22px;font-size:10.5px"><span class="dot"></span>Closed 2026-02-08</span>
+              <span class="text">Older webhook timeout on refund &gt; ₹5K — resolved by raising <span style="font-family:'JetBrains Mono'">handler_timeout_ms</span> 3s → 5s in <span style="font-family:'JetBrains Mono'">PR #1721</span></span>
+              <div class="acts">
+                <button class="btn btn-sm">View original</button>
+                <button class="btn btn-sm btn-ai">Link as related</button>
+                <button class="btn btn-sm" style="color:var(--t3)">Not a dup</button>
+              </div>
+            </div>
+            <div class="cur-row">
+              <span class="pct" style="opacity:0.85">79%</span>
+              <span class="id">DEF-RET-1979</span>
+              <span class="chip warn" style="height:22px;font-size:10.5px"><span class="dot"></span>In QA</span>
+              <span class="text">Refund stuck PROCESSING on retry path — owner Deepak R., currently in test on staging</span>
+              <div class="acts">
+                <button class="btn btn-sm">View</button>
+                <button class="btn btn-sm" style="color:var(--t3)">Not a dup</button>
+              </div>
+            </div>
+            <div class="cur-row">
+              <span class="pct" style="opacity:0.7">71%</span>
+              <span class="id">DEF-RET-2031</span>
+              <span class="chip info" style="height:22px;font-size:10.5px"><span class="dot"></span>Open</span>
+              <span class="text">Long-running PG callback in load-balancer — adjacent symptom (LB-side, not handler)</span>
+              <div class="acts">
+                <button class="btn btn-sm">View</button>
+                <button class="btn btn-sm" style="color:var(--t3)">Not a dup</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════ Discussion ═══════ -->
+        <section class="section">
+          <div class="sec-head">
+            <h2 class="sec-title">Discussion</h2>
+            <span class="meta">3 comments · two-way Jira sync · <span style="font-family:'JetBrains Mono';color:var(--t2)">RET-3392</span></span>
+            <span class="chip info" style="height:22px;margin-left:auto;font-size:10.5px"><span class="ms" style="font-size:12px">sync</span>Jira ✓ 2m ago</span>
+          </div>
+          <div class="disc-list">
+            <div class="disc-card">
+              <div class="disc-head">
+                <span class="av" style="background:#60A5FA">PA</span>
+                <span class="nm">Priya A.</span>
+                <span class="ts">· 4h ago · 04:22 UTC</span>
+                <span class="chip teal src" style="height:22px;font-size:10.5px"><span class="ms" style="font-size:12px">science</span>QA Nexus</span>
+              </div>
+              <p>Caught by nightly. Five refunds stuck in PROCESSING — all &gt; ₹10K, all CITI-IN gateway. Customer money is in flight; treating as P0. Pinging Suresh.</p>
+            </div>
+            <div class="disc-card">
+              <div class="disc-head">
+                <span class="av" style="background:#FBBF24">SP</span>
+                <span class="nm">Suresh P.</span>
+                <span class="ts">· 3h ago · 05:14 UTC</span>
+                <span class="chip info src" style="height:22px;font-size:10.5px"><span class="ms" style="font-size:12px">open_in_new</span>Jira</span>
+              </div>
+              <p>Owning. <span class="agent-name" style="font-size:13px">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span>'s read tracks with what I see in <span style="font-family:'JetBrains Mono'">PR #2104</span> — I tightened the handler timeout to 5s for SLA reasons but didn't anticipate CITI-IN's gateway change. Reverting to 30s with an amount-based ceiling on a branch.</p>
+            </div>
+            <div class="disc-card lead">
+              <div class="disc-head">
+                <span class="av" style="background:linear-gradient(135deg,#2DD4BF,#A78BFA)">YM</span>
+                <span class="nm">Yogesh M</span>
+                <span class="ts">· 1h ago · 07:08 UTC</span>
+                <span class="chip ai src" style="height:22px;font-size:10.5px;font-weight:600">QA LEAD</span>
+              </div>
+              <p>Tagging this <span class="chip bad" style="height:18px;font-size:10px;padding:0 5px;vertical-align:baseline">regression</span> against Sprint 14. Block release until Suresh's fix lands and <span style="font-family:'JetBrains Mono';color:var(--info)">TC-RET-1043</span> goes green on staging. <span class="agent-name" style="font-size:13px">Composer <span class="agent-info" data-tip="Test Case Generator agent" tabindex="0"></span></span> already drafted a regression case for amount-based timeouts — auto-attached.</p>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /.def-center -->
+
+      <!-- ════════════ RIGHT RAIL ════════════ -->
+      <aside class="def-rail" aria-label="Defect metadata">
+
+        <div class="rail-card">
+          <h5>Defect</h5>
+          <dl class="kv">
+            <dt>id</dt><dd style="color:var(--t1)">DEF-RET-2104</dd>
+            <dt>priority</dt><dd><span class="chip bad" style="height:20px;font-size:10.5px;padding:0 6px"><span class="dot"></span>P0</span></dd>
+            <dt>status</dt><dd><span class="chip warn" style="height:20px;font-size:10.5px;padding:0 6px"><span class="dot"></span>In progress</span></dd>
+            <dt>severity</dt><dd>customer-money-in-flight</dd>
+            <dt>filed</dt><dd>2026-04-25 04:22 UTC · auto</dd>
+            <dt>age</dt><dd><span style="color:var(--warn)">04:18:32</span></dd>
+          </dl>
+        </div>
+
+        <div class="rail-card">
+          <h5>People</h5>
+          <dl class="kv">
+            <dt>assigned</dt><dd style="display:flex;align-items:center;gap:6px;font-family:inherit"><span style="width:18px;height:18px;background:#FBBF24;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-size:9px;font-weight:600;color:#0B0F17;flex:none">SP</span> Suresh P.</dd>
+            <dt>reported</dt><dd style="display:flex;align-items:center;gap:6px;font-family:inherit"><span style="width:18px;height:18px;background:#60A5FA;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono';font-size:9px;font-weight:600;color:#0B0F17;flex:none">PA</span> Priya A.</dd>
+            <dt>watching</dt><dd style="font-family:inherit;color:var(--t2)">Yogesh M, Deepak R, +3</dd>
+          </dl>
+        </div>
+
+        <div class="rail-card">
+          <h5>Linkage</h5>
+          <dl class="kv">
+            <dt>source run</dt><dd><a href="#">RUN-RET-2026-04-25-002</a></dd>
+            <dt>test case</dt><dd><a href="#">TC-RET-1043</a></dd>
+            <dt>jira</dt><dd><a href="#">RET-3392</a> <span style="color:var(--pass);font-size:10px;font-family:'JetBrains Mono'">✓ synced</span></dd>
+            <dt>component</dt><dd style="font-size:10.5px">payments-svc::PartnerCallbackController</dd>
+            <dt>release</dt><dd>Sprint 14 · v3.4.2</dd>
+          </dl>
+        </div>
+
+        <div class="rail-card">
+          <h5><span class="agent-name" style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> · layer scores</h5>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+            <div class="layer-mini"><span class="layer-num">01</span><span class="nm">Stack</span><span class="pct" style="color:var(--pass)">92%</span><span class="bar high"><i style="width:92%"></i></span></div>
+            <div class="layer-mini"><span class="layer-num">02</span><span class="nm">Environment</span><span class="pct" style="color:var(--pass)">85%</span><span class="bar high"><i style="width:85%"></i></span></div>
+            <div class="layer-mini"><span class="layer-num">03</span><span class="nm">Config</span><span class="pct" style="color:var(--warn)">62%</span><span class="bar med"><i style="width:62%"></i></span></div>
+            <div class="layer-mini"><span class="layer-num">04</span><span class="nm">Code</span><span class="pct" style="color:var(--warn)">54%</span><span class="bar med"><i style="width:54%"></i></span></div>
+            <div class="layer-mini"><span class="layer-num">05</span><span class="nm">Data</span><span class="pct" style="color:var(--fail)">32%</span><span class="bar low"><i style="width:32%"></i></span></div>
+          </div>
+        </div>
+
+        <div class="rail-card">
+          <h5>Recent activity</h5>
+          <div class="act-list">
+            <div class="act-row"><span class="dot warn"></span><div class="body"><b>Yogesh M</b> tagged <i>regression</i>, blocked release<span class="ts">1h ago</span></div></div>
+            <div class="act-row"><span class="dot ai"></span><div class="body"><b>Composer</b> drafted regression test <span class="mono" style="color:var(--info)">TC-RET-1044</span><span class="ts">1h ago</span></div></div>
+            <div class="act-row"><span class="dot now"></span><div class="body"><b>Suresh P.</b> opened branch <span class="mono">fix/refund-timeout-amount-aware</span><span class="ts">2h ago</span></div></div>
+            <div class="act-row"><span class="dot ai"></span><div class="body"><b>Sherlock</b> raised classification 87% → 94% after L2 evidence<span class="ts">2h ago</span></div></div>
+            <div class="act-row"><span class="dot"></span><div class="body"><b>Priya A.</b> assigned to Suresh P.<span class="ts">3h ago</span></div></div>
+            <div class="act-row"><span class="dot ai"></span><div class="body"><b>Curator</b> flagged 3 similar defects (92 / 79 / 71%)<span class="ts">3h ago</span></div></div>
+            <div class="act-row"><span class="dot ok"></span><div class="body"><b>Jira RET-3392</b> created &amp; cross-linked<span class="ts">4h ago</span></div></div>
+            <div class="act-row"><span class="dot ai"></span><div class="body"><b>Sherlock</b> filed defect from <span class="mono" style="color:var(--info)">RUN-RET-2026-04-25-002</span><span class="ts">4h ago</span></div></div>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+  </section><!-- /main -->
+
+</div><!-- /app -->
+
+<script>
+/* ─── Rail collapse + persistence (key: f21.rail) ─── */
+(function(){
+  var app = document.getElementById('app');
+  var btn = document.getElementById('railCollapseToggle');
+  if(!app || !btn) return;
+  try{
+    if(localStorage.getItem('f21.rail') === 'collapsed') app.dataset.rail = 'collapsed';
+  }catch(e){}
+  function setState(state){
+    if(state === 'collapsed') app.dataset.rail = 'collapsed';
+    else delete app.dataset.rail;
+    try{ localStorage.setItem('f21.rail', state); }catch(e){}
+    btn.setAttribute('aria-label', state === 'collapsed' ? 'Expand navigation' : 'Collapse navigation');
+    btn.title = state === 'collapsed' ? 'Expand' : 'Collapse';
+  }
+  btn.addEventListener('click', function(){
+    setState(app.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
+  });
+  document.addEventListener('keydown', function(e){
+    if((e.metaKey || e.ctrlKey) && (e.key === 'j' || e.key === 'J')){
+      e.preventDefault();
+      setState(app.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
+    }
+  });
+})();
+
+/* ─── Section collapse/expand (per Demo Collapsible Nav Sections — DO NOT MODIFY LOGIC) ─── */
+(function(){
+  var STORAGE_PREFIX = 'qa-nexus.shell.section-';
+  var sections = document.querySelectorAll('.nav-section[data-section]');
+  if (!sections.length) return;
+
+  // Identify the section that contains the active nav-item.
+  var activeItem = document.querySelector('.nav-item.active');
+  var activeBody = activeItem ? activeItem.closest('.nav-items[data-section-body]') : null;
+  var activeSectionName = activeBody ? activeBody.getAttribute('data-section-body') : null;
+
+  sections.forEach(function(section){
+    var name = section.getAttribute('data-section');
+    var body = document.querySelector('[data-section-body="' + name + '"]');
+    if (!body) return;
+    var storageKey = STORAGE_PREFIX + name + '-collapsed';
+
+    // Restore saved state
+    var saved = false;
+    try { saved = localStorage.getItem(storageKey) === 'true'; } catch(e) {}
+
+    // Override: section containing the active item must always render expanded.
+    // Don't write back — preserve user's preference for next visit.
+    if (saved && name !== activeSectionName) {
+      section.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+
+    section.addEventListener('click', function(){
+      var isCollapsed = section.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+      try { localStorage.setItem(storageKey, isCollapsed); } catch(e) {}
+    });
+  });
+})();
+
+/* ─── Mobile rail toggle (hamburger) ─── */
+(function(){
+  var rail = document.getElementById('rail');
+  var menuBtn = document.getElementById('railToggle');
+  if(!rail || !menuBtn) return;
+  menuBtn.addEventListener('click', function(){
+    rail.classList.toggle('mobile-open');
+  });
+  document.addEventListener('click', function(e){
+    if(!rail.classList.contains('mobile-open')) return;
+    if(rail.contains(e.target) || menuBtn.contains(e.target)) return;
+    rail.classList.remove('mobile-open');
+  });
+})();
+
+/* ─── Suite group expand/collapse ─── */
+(function(){
+  document.querySelectorAll('.suite-head').forEach(function(head){
+    head.addEventListener('click', function(){
+      var suite = head.parentElement;
+      suite.classList.toggle('collapsed');
+      head.setAttribute('aria-expanded', suite.classList.contains('collapsed') ? 'false' : 'true');
+    });
+  });
+})();
+
+/* ─── Cluster expand toggle (visual only) ─── */
+(function(){
+  document.querySelectorAll('.cl-expand').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var cluster = btn.closest('.cluster');
+      if(!cluster) return;
+      cluster.classList.toggle('expanded');
+      btn.setAttribute('aria-expanded', cluster.classList.contains('expanded') ? 'true' : 'false');
+    });
+  });
+})();
+
+/* ─── Case row selection (updates evidence rail context) ─── */
+(function(){
+  var rows = document.querySelectorAll('.case-row');
+  var contextName = document.querySelector('.ev-context .name');
+  rows.forEach(function(row){
+    row.addEventListener('click', function(){
+      rows.forEach(function(r){ r.classList.remove('selected'); r.removeAttribute('aria-current'); });
+      row.classList.add('selected');
+      row.setAttribute('aria-current','true');
+      if(contextName){
+        contextName.textContent = row.dataset.case || '—';
+      }
+    });
+  });
+})();
+
+/* ─── Filter + sort (visual toggle only) ─── */
+(function(){
+  var filters = document.querySelectorAll('.rb-filters button');
+  filters.forEach(function(b){
+    b.addEventListener('click', function(){
+      filters.forEach(function(x){ x.classList.remove('on'); x.setAttribute('aria-selected','false'); });
+      b.classList.add('on'); b.setAttribute('aria-selected','true');
+    });
+  });
+})();
+
+
+/* ─── F22 RCA card collapse ─── */
+(function(){
+  document.querySelectorAll('[data-rca-toggle]').forEach(function(h){
+    h.addEventListener('click', function(){
+      h.parentElement.classList.toggle('collapsed');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

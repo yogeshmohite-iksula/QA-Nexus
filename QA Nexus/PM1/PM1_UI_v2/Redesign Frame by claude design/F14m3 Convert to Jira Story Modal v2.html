@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Convert to Jira Story</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --jira-blue:#0052CC;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;min-height:100vh;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.display{font-family:"DM Sans","Inter";letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+input,textarea,select{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{width:100%;max-width:680px;max-height:92vh;background:var(--base);border:1px solid var(--border);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden}
+@media (max-width:640px){.modal{max-width:100%;max-height:100vh;border-radius:0;border:none}}
+
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;flex:none}
+.modal-head-body{flex:1;min-width:0}
+.eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#4FC3F7;font-weight:700;margin-bottom:4px;display:inline-flex;align-items:center;gap:6px}
+.eyebrow .jira-mark{width:14px;height:14px;border-radius:3px;background:var(--jira-blue);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700}
+.modal-title{font-family:'DM Sans';font-size:20px;line-height:26px;font-weight:700;color:var(--t1);margin:0;letter-spacing:-0.01em}
+.modal-sub{font-size:12px;color:var(--t3);margin-top:4px}
+.close-btn{width:32px;height:32px;border-radius:6px;background:var(--raised);border:1px solid var(--border);color:var(--t3);display:inline-flex;align-items:center;justify-content:center;flex:none;cursor:pointer}
+.close-btn:hover{background:var(--overlay);color:var(--t1)}
+
+/* Source requirement banner */
+.source-banner{margin:14px 22px 0;padding:10px 14px;background:var(--canvas);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:10px;font-size:12px}
+.source-banner .src-icon{width:24px;height:24px;border-radius:6px;background:var(--info-soft);border:1px solid var(--info-line);color:var(--info);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.source-banner .src-icon svg{width:13px;height:13px}
+.source-banner .src-body{flex:1;min-width:0}
+.source-banner .src-id{color:var(--secondary);font-family:'JetBrains Mono';font-weight:600;font-size:11px}
+.source-banner .src-title{color:var(--t1);font-weight:500;font-size:13px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.modal-body{padding:14px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0}
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono';font-weight:600;display:flex;align-items:center;justify-content:space-between}
+.field-required{color:var(--fail);margin-left:2px}
+.input,.textarea,.select{width:100%;background:var(--canvas);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--t1);font-size:13px;line-height:18px;outline:none;transition:border-color 150ms,box-shadow 150ms}
+.input:focus,.textarea:focus,.select:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(45,212,191,0.15)}
+.input::placeholder,.textarea::placeholder{color:var(--t4)}
+.textarea{resize:vertical;min-height:100px;font-family:inherit;line-height:20px}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.field-row{grid-template-columns:1fr}}
+
+/* Composer auto-draft chip on description label */
+.composer-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:var(--ai-soft);border:1px solid var(--ai-line);border-radius:5px;color:var(--secondary);font-size:10.5px;font-weight:700;cursor:pointer;text-transform:none;letter-spacing:0;font-family:inherit}
+.composer-chip:hover{background:rgba(167,139,250,0.18)}
+.composer-chip:disabled{opacity:0.6;cursor:wait}
+.composer-chip svg{width:11px;height:11px}
+.composer-chip .info-i{display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:999px;background:rgba(167,139,250,0.25);color:var(--secondary);font-size:8px;font-weight:700}
+
+.draft-success-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--pass-soft,rgba(52,211,153,0.14));border:1px solid rgba(52,211,153,0.34);border-radius:4px;color:var(--pass,#34D399);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;font-family:'JetBrains Mono'}
+
+/* Labels chips */
+.label-chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;background:var(--canvas);border:1px solid var(--border);border-radius:7px;min-height:42px;align-items:center}
+.label-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:var(--overlay);border:1px solid var(--border-strong);border-radius:4px;color:var(--t2);font-size:11.5px;font-weight:500}
+.label-chip .x{cursor:pointer;color:var(--t4);width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center}
+.label-chip .x:hover{color:var(--fail)}
+.label-input{flex:1;min-width:80px;background:none;border:none;outline:none;color:var(--t1);font-size:12px}
+
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex:none;background:var(--base)}
+.foot-info{font-size:11px;color:var(--t3);flex:1;font-family:'JetBrains Mono';display:flex;align-items:center;gap:6px}
+.foot-info .conn-dot{width:6px;height:6px;border-radius:999px;background:var(--pass)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;border-radius:6px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer}
+.btn:hover{background:var(--raised);color:var(--t1)}
+.btn-jira{background:var(--jira-blue);border-color:var(--jira-blue);color:#fff;font-weight:600}
+.btn-jira:hover{background:#0747A6;border-color:#0747A6}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop">
+  <div class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <header class="modal-head">
+      <div class="modal-head-body">
+        <div class="eyebrow"><span class="jira-mark">J</span> Convert to Jira story</div>
+        <h2 class="modal-title display" id="modal-title">Create Jira story from requirement</h2>
+        <div class="modal-sub mono">iksula.atlassian.net · OAuth 3LO connected</div>
+      </div>
+      <button class="close-btn" id="close-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <!-- Source requirement banner -->
+    <div class="source-banner">
+      <div class="src-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8"/></svg>
+      </div>
+      <div class="src-body">
+        <span class="src-id">RET-247 → Jira</span>
+        <div class="src-title">Refund window for digital goods extends to 30 days on partial-download failure</div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Project + Issue Type -->
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Jira project <span class="field-required">*</span></label>
+          <select class="select">
+            <option selected>RET — Iksula Returns</option>
+            <option>CART — Iksula Commerce</option>
+            <option>PAY — Iksula Payments</option>
+            <option>AUTH — Iksula Mobile App</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Issue type <span class="field-required">*</span></label>
+          <select class="select">
+            <option selected>Story</option>
+            <option>Task</option>
+            <option>Bug</option>
+            <option>Epic</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="field">
+        <label class="field-label">Summary <span class="field-required">*</span></label>
+        <input class="input" type="text" value="Refund window for digital goods extends to 30 days on partial-download failure">
+      </div>
+
+      <!-- Description with Composer auto-draft -->
+      <div class="field">
+        <label class="field-label">
+          <span>Description</span>
+          <button class="composer-chip" id="ai-draft-btn">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+            Auto-draft with Composer<span class="info-i" title="Test Case Generator agent">i</span>
+          </button>
+        </label>
+        <textarea class="textarea" rows="6">## Context
+When a customer's digital purchase is interrupted mid-download or the file is corrupt, the standard 14-day refund window must auto-extend to 30 days from purchase date.
+
+## Acceptance criteria
+- Refund window for digital goods is 14 days from delivery confirmation by default
+- On partial-download failure or corrupt file, refund window auto-extends to 30 days
+- Support agent must attach the failed-download log (x-iksula-dl-trace) when issuing extended refund
+
+## Linked test cases
+- TC-RET-0341, TC-RET-0342, TC-RET-0567 (3 cases · 92% confidence avg)
+
+## Source
+QA Nexus requirement: RET-247 · Iksula Returns · Sprint 42</textarea>
+      </div>
+
+      <!-- Priority + Sprint -->
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Priority</label>
+          <select class="select">
+            <option>Highest</option>
+            <option selected>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Target sprint</label>
+          <select class="select">
+            <option selected>Sprint 42 (active)</option>
+            <option>Sprint 43</option>
+            <option>Backlog</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Labels -->
+      <div class="field">
+        <label class="field-label">Labels</label>
+        <div class="label-chips">
+          <span class="label-chip">qa-nexus<span class="x"><svg viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></span>
+          <span class="label-chip">refund-flow<span class="x"><svg viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></span>
+          <span class="label-chip">digital-goods<span class="x"><svg viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></span>
+          <input class="label-input" type="text" placeholder="Add label…">
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="modal-foot">
+      <span class="foot-info"><span class="conn-dot"></span>Jira connection healthy · last sync 2 min ago</span>
+      <button class="btn" id="cancel-btn">Cancel</button>
+      <button class="btn btn-jira">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Create Jira story
+      </button>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const backdrop = document.getElementById('backdrop');
+  const closeBtn = document.getElementById('close-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const aiBtn = document.getElementById('ai-draft-btn');
+  function close(){ console.info('pattern-a:deferred:f14m3:close'); }
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+  aiBtn.addEventListener('click', () => {
+    console.info('pattern-a:deferred:f14m3:composer-draft', { requirementId: 'RET-247' });
+    aiBtn.disabled = true;
+    aiBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="1s" repeatCount="indefinite"/></circle></svg> Composer thinking…';
+    setTimeout(() => {
+      aiBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="none"><path d="M2 8l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Re-draft';
+      aiBtn.disabled = false;
+    }, 1800);
+  });
+</script>
+</body>
+</html>

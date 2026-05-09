@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Requirements · Iksula Returns</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   F14 Requirements v2 — RTM authoring + AI-assisted generation surface
+   Tokens: ONLY from 01_SYSTEM.md
+   Shell: F15 v2.html canonical (left rail collapse + mobile hamburger
+          + scrollbar SYS-17 + utility bar with project switcher)
+   Mobile-first; breakpoints 480 / 768 / 1024 / 1440
+   ===================================================================== */
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+  --rail-w:240px; --topbar-h:56px; --tap:44px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-ai:14px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::selection{background:rgba(167,139,250,0.4);color:var(--t1)}
+input,textarea{font-family:inherit;color:inherit}
+
+/* ─── Custom scrollbar — SYS-17 (LOCKED — same as F15 v2.html lines 50-64) ─── */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+::-webkit-scrollbar-corner{background:transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+@media (hover:none) and (pointer:coarse){
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong)}
+}
+
+/* ───── App shell (rail collapsible — dynamic --rail-w) — LOCKED from F15 v2 ───── */
+.app{min-height:100vh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr}
+@media (min-width:1024px){
+  .app{grid-template-columns:var(--rail-w) 1fr;grid-template-rows:1fr;
+       transition:grid-template-columns 220ms cubic-bezier(.4,0,.2,1)}
+}
+.app[data-rail="collapsed"]{--rail-w:64px}
+
+/* ───────── Top utility bar — LOCKED from F15 v2 ───────── */
+.topbar{position:sticky;top:0;z-index:40;height:var(--topbar-h);
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:var(--base);border-bottom:1px solid var(--border)}
+@media (min-width:1024px){.topbar{grid-column:1 / -1;padding:0 16px;gap:12px}}
+.brand{display:inline-flex;align-items:center;gap:8px}
+.brand-mark{width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;
+  font-family:'DM Sans';font-weight:700;font-size:14px}
+.brand-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1)}
+@media (max-width:1023px){.brand-word{display:none}}
+.menu-btn{width:var(--tap);height:var(--tap);border-radius:8px;background:none;border:0;color:var(--t2);
+  display:inline-flex;align-items:center;justify-content:center}
+.menu-btn:hover{background:var(--raised);color:var(--t1)}
+@media (min-width:1024px){.menu-btn{display:none}}
+.proj-pill{display:none;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:6px;
+  background:var(--raised);border:1px solid var(--border);color:var(--t1);font-size:13px;font-weight:500}
+.proj-pill .dot{width:18px;height:18px;border-radius:4px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;font-size:9px;font-weight:700}
+.proj-pill .meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px}
+@media (min-width:768px){.proj-pill{display:inline-flex}}
+.global-search{flex:1;min-width:0;height:36px;border-radius:6px;background:var(--raised);
+  border:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--t3);font-size:13px}
+.global-search .kbd{margin-left:auto;font-family:'JetBrains Mono';font-size:10.5px;
+  border:1px solid var(--border);background:var(--base);color:var(--t3);padding:1px 5px;border-radius:4px}
+@media (max-width:767px){.global-search .label,.global-search .kbd{display:none}}
+.icon-btn{width:var(--tap);height:var(--tap);border-radius:6px;background:none;border:0;color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;position:relative}
+.icon-btn:hover{background:var(--raised);color:var(--t1)}
+.icon-btn .pip{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:999px;background:var(--secondary)}
+@media (min-width:1024px){.icon-btn{width:36px;height:36px}}
+.mode-toggle{display:none;height:32px;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px}
+.mode-toggle button{height:26px;padding:0 10px;border-radius:4px;background:none;border:0;color:var(--t3);
+  font-size:11px;font-weight:500;font-family:inherit}
+.mode-toggle button.on{background:var(--overlay);color:var(--t1);font-weight:600}
+@media (min-width:1024px){.mode-toggle{display:inline-flex}}
+.user-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:3px 10px 3px 3px;
+  border-radius:999px;background:var(--raised);border:1px solid var(--border)}
+.user-av{width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#0B0F17;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.user-pill .name{font-size:12.5px;color:var(--t1);font-weight:500}
+@media (max-width:767px){.user-pill .name{display:none}}
+
+/* ───────── Left rail — LOCKED from F15 v2 ───────── */
+.rail{display:none;background:var(--base);border-right:1px solid var(--border);
+  flex-direction:column;padding:8px 8px 14px;overflow-y:auto;overflow-x:hidden;
+  height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}
+@media (min-width:1024px){.rail{display:flex}}
+.rail.mobile-open{display:flex;position:fixed;top:var(--topbar-h);left:0;bottom:0;width:280px;z-index:50;
+  height:calc(100vh - var(--topbar-h));box-shadow:0 0 0 9999px rgba(0,0,0,0.5)}
+.rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+  color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
+  margin:6px 0 8px;flex:none;border:1px solid transparent;width:100%;cursor:pointer;background:none}
+.rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
+.rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--t3)}
+.rail-toggle:hover .rt-icon{color:var(--t1)}
+.rail-toggle .rt-icon svg{width:16px;height:16px;transition:transform 220ms cubic-bezier(.4,0,.2,1)}
+.rail-toggle .rt-label{flex:1;text-align:left;text-transform:uppercase;white-space:nowrap}
+[data-rail="collapsed"] .rail-toggle{width:44px;height:44px;min-height:44px;padding:10px;justify-content:center;margin:6px auto 10px}
+[data-rail="collapsed"] .rail-toggle .rt-label{display:none}
+[data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}
+.nav-section{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);
+  padding:14px 12px 6px;font-weight:600;font-family:'JetBrains Mono';white-space:nowrap;overflow:hidden}
+[data-rail="collapsed"] .nav-section{visibility:hidden;height:8px;padding:6px 0 0;
+  border-top:1px solid var(--border);margin:6px 8px 0;font-size:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
+  font-size:13px;line-height:18px;min-height:36px;position:relative;white-space:nowrap;text-decoration:none}
+.nav-item:hover{background:var(--raised);color:var(--t1)}
+.nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;
+  background:var(--secondary);border-radius:0 2px 2px 0}
+.nav-item.disabled{color:var(--t4);opacity:0.55;cursor:not-allowed}
+.nav-icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;background:var(--raised);border:1px solid var(--border);color:var(--t3);transition:all 180ms ease}
+.nav-icon svg{width:14px;height:14px}
+.nav-item:hover .nav-icon{transform:scale(1.05)}
+.nav-item.active .nav-icon{box-shadow:0 0 0 1px currentColor inset}
+.nav-item[data-tone="home"]      .nav-icon{background:var(--raised);border-color:var(--border-strong);color:var(--t1)}
+.nav-item[data-tone="primary"]   .nav-icon{background:var(--primary-soft);border-color:var(--primary-line);color:var(--primary)}
+.nav-item[data-tone="secondary"] .nav-icon{background:var(--ai-soft);border-color:var(--ai-line);color:var(--ai-accent)}
+.nav-item[data-tone="info"]      .nav-icon{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+.nav-item[data-tone="warn"]      .nav-icon{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.nav-item[data-tone="pass"]      .nav-icon{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+.nav-item[data-tone="fail"]      .nav-icon{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+.nav-count{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+.nav-item.active .nav-count{color:var(--secondary)}
+.nav-pill{margin-left:auto;font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;
+  padding:2px 6px;border-radius:3px;background:var(--raised);color:var(--t4);border:1px solid var(--border)}
+[data-rail="collapsed"] .rail{padding:8px 6px 14px}
+[data-rail="collapsed"] .nav-item{justify-content:center;padding:6px;gap:0}
+[data-rail="collapsed"] .nav-item > :not(.nav-icon){display:none}
+[data-rail="collapsed"] .nav-item.active::before{display:none}
+[data-rail="collapsed"] .nav-item.active .nav-icon{box-shadow:0 0 0 1.5px var(--secondary),0 0 0 4px var(--ai-soft)}
+.rail-foot{margin-top:auto;border-top:1px solid var(--border);padding:12px 10px;display:flex;align-items:center;gap:10px;min-width:0}
+.rail-foot .av{width:28px;height:28px;border-radius:999px;flex:none;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#0B0F17;font-weight:700;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+.rail-foot .who{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.rail-foot .who .name{font-size:13px;color:var(--t1);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-foot .who .role{font-size:10px;color:var(--t3);font-family:'JetBrains Mono';letter-spacing:0.06em}
+[data-rail="collapsed"] .rail-foot{padding:12px 4px;justify-content:center}
+[data-rail="collapsed"] .rail-foot .who,[data-rail="collapsed"] .rail-foot > svg{display:none}
+
+/* ───────── F14 page content ───────── */
+.main{padding:20px 16px 64px;overflow-x:hidden}
+@media (min-width:1024px){.main{padding:24px 28px 64px}}
+.crumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);margin-bottom:16px;flex-wrap:wrap}
+.crumb a{color:var(--t3)}
+.crumb a:hover{color:var(--t1)}
+.crumb .sep{color:var(--t4)}
+.crumb .now{color:var(--t1);font-weight:500}
+
+.page-head{display:flex;flex-direction:column;gap:14px;margin-bottom:18px}
+@media (min-width:768px){.page-head{flex-direction:row;align-items:flex-end;justify-content:space-between}}
+.page-head h1{font-family:'DM Sans';font-size:26px;line-height:32px;font-weight:700;color:var(--t1);margin:0 0 4px;letter-spacing:-0.02em}
+.page-head p{font-size:13px;color:var(--t3);margin:0;max-width:640px}
+.page-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:36px;padding:0 14px;border-radius:6px;font-size:13px;font-weight:500;
+  border:1px solid var(--border);color:var(--t2);background:transparent;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--raised);color:var(--t1)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink);font-weight:600}
+.btn-primary:hover{background:#26B8A4;border-color:#26B8A4;color:var(--primary-ink)}
+.btn-ai{background:var(--ai-soft);border-color:var(--ai-line);color:var(--secondary);font-weight:600}
+.btn-ai:hover{background:rgba(167,139,250,0.18)}
+.btn-ai svg{color:var(--secondary)}
+
+/* Sprint chip */
+.sprint-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.sprint-chip{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:6px;
+  background:var(--ai-soft);border:1px solid var(--ai-line);color:var(--secondary);font-size:12px;font-weight:600}
+.sprint-chip .dot{width:6px;height:6px;border-radius:999px;background:var(--secondary);animation:pulse 1.6s ease-in-out infinite}
+.sprint-chip .meta{color:var(--t2);font-family:'JetBrains Mono';font-size:11px;font-weight:500}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.sprint-meta{display:inline-flex;gap:14px;font-size:12px;color:var(--t3);align-items:center}
+.sprint-meta .sm-num{color:var(--t1);font-weight:600;font-family:'JetBrains Mono';font-variant-numeric:tabular-nums}
+
+/* Filter row */
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;background:var(--base);
+  border:1px solid var(--border);border-radius:8px;margin-bottom:16px}
+.filter-grp{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.filter-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono'}
+.chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:999px;
+  font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--raised);color:var(--t2);cursor:pointer;white-space:nowrap}
+.chip:hover{background:var(--overlay);color:var(--t1)}
+.chip.on{background:var(--ai-soft);border-color:var(--ai-line);color:var(--secondary);font-weight:600}
+.chip.tone-fail.on{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+.chip.tone-warn.on{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.chip.tone-info.on{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+.chip.tone-pass.on{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+.search-mini{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:6px;
+  background:var(--raised);border:1px solid var(--border);color:var(--t3);font-size:12px;flex:1;min-width:200px;max-width:320px}
+.search-mini input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:12px;min-width:0}
+.search-mini input::placeholder{color:var(--t3)}
+
+/* Bulk action bar (visible on selection) */
+.bulk-bar{display:none;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--ai-soft);
+  border:1px solid var(--ai-line);border-radius:8px;margin-bottom:12px;color:var(--secondary);font-size:13px;font-weight:500}
+.bulk-bar.show{display:flex}
+.bulk-bar .actions{display:flex;gap:8px}
+
+/* Requirements table — desktop */
+.req-table-wrap{background:var(--base);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.req-table{width:100%;border-collapse:collapse;display:none}
+@media (min-width:1024px){.req-table{display:table}}
+.req-table thead th{text-align:left;padding:12px 14px;font-size:11px;font-weight:600;color:var(--t3);
+  background:var(--base);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono';white-space:nowrap}
+.req-table tbody td{padding:14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--t2);vertical-align:top}
+.req-table tbody tr:last-child td{border-bottom:0}
+.req-table tbody tr:hover{background:var(--raised)}
+.req-table tbody tr.selected{background:rgba(167,139,250,0.06)}
+.req-id{font-family:'JetBrains Mono';font-size:12px;color:var(--secondary);font-weight:600;letter-spacing:0.02em}
+.req-title{color:var(--t1);font-weight:500;line-height:20px;display:block;margin-bottom:4px}
+.req-desc{color:var(--t3);font-size:12px;line-height:18px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.req-source{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--t3);font-family:'JetBrains Mono';margin-top:6px}
+.req-source .dot{width:5px;height:5px;border-radius:999px;background:var(--info)}
+.req-source.jira .dot{background:var(--secondary)}
+.prio{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:4px;
+  font-size:10.5px;font-weight:700;font-family:'JetBrains Mono';letter-spacing:0.08em;text-transform:uppercase}
+.prio-p0{background:var(--fail-soft);color:var(--fail);border:1px solid var(--fail-line)}
+.prio-p1{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn-line)}
+.prio-p2{background:var(--info-soft);color:var(--info);border:1px solid var(--info-line)}
+.prio-p3{background:var(--raised);color:var(--t3);border:1px solid var(--border)}
+.status-chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;
+  font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--raised);color:var(--t2)}
+.status-chip.s-approved{background:var(--pass-soft);color:var(--pass);border-color:var(--pass-line)}
+.status-chip.s-review{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+.status-chip.s-draft{background:var(--info-soft);color:var(--info);border-color:var(--info-line)}
+.status-chip.s-archived{background:var(--raised);color:var(--t4);border-color:var(--border)}
+/* RTM coverage bar */
+.rtm-cov{display:flex;flex-direction:column;gap:5px;min-width:140px}
+.rtm-cov .nums{font-family:'JetBrains Mono';font-size:11.5px;color:var(--t1);font-variant-numeric:tabular-nums}
+.rtm-cov .nums .of{color:var(--t3)}
+.rtm-cov .bar{height:5px;background:var(--overlay);border-radius:3px;overflow:hidden}
+.rtm-cov .bar > div{height:100%;border-radius:3px;background:var(--pass)}
+.rtm-cov.gap .bar > div{background:var(--warn)}
+.rtm-cov.empty .bar > div{background:var(--fail)}
+.rtm-cov .agent-line{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--t3);font-family:'JetBrains Mono'}
+.rtm-cov .agent-line .agent-name{color:var(--secondary);font-weight:600}
+.rtm-cov .agent-line .info-i{display:inline-flex;align-items:center;justify-content:center;width:11px;height:11px;border-radius:999px;background:var(--ai-soft);color:var(--secondary);font-size:8px;font-weight:700;cursor:help}
+.row-actions{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+.row-actions button{width:28px;height:28px;border-radius:5px;background:none;border:0;color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.row-actions button:hover{background:var(--overlay);color:var(--t1)}
+.row-actions button.btn-gen{color:var(--secondary)}
+.row-actions button.btn-gen:hover{background:var(--ai-soft)}
+.checkbox{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--border-strong);background:var(--base);cursor:pointer;flex:none;position:relative;appearance:none;-webkit-appearance:none}
+.checkbox:checked{background:var(--secondary);border-color:var(--secondary)}
+.checkbox:checked::after{content:"";position:absolute;left:3px;top:0;width:5px;height:9px;border:solid #1A0B3D;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* Mobile cards */
+.req-cards{display:flex;flex-direction:column;gap:10px}
+@media (min-width:1024px){.req-cards{display:none}}
+.req-card{padding:14px;background:var(--base);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:10px}
+.req-card .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.req-card .row1 .req-id{font-size:11px}
+.req-card .req-title{font-size:14px;margin:0}
+.req-card .req-desc{font-size:12px;-webkit-line-clamp:3}
+.req-card .row3{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+
+/* Pagination */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;color:var(--t3);font-size:12px;border-top:1px solid var(--border)}
+.pag .info{font-family:'JetBrains Mono';font-variant-numeric:tabular-nums}
+.pag .nav{display:flex;gap:6px}
+.pag .nav button{height:30px;padding:0 12px;border-radius:5px;background:var(--raised);border:1px solid var(--border);color:var(--t2);font-size:12px;cursor:pointer}
+.pag .nav button:hover:not(:disabled){background:var(--overlay);color:var(--t1)}
+.pag .nav button:disabled{opacity:0.4;cursor:not-allowed}
+
+/* Empty state */
+.empty{padding:60px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+.empty .icon{width:60px;height:60px;border-radius:50%;background:var(--ai-soft);display:flex;align-items:center;justify-content:center;color:var(--secondary)}
+.empty h3{font-family:'DM Sans';font-size:18px;color:var(--t1);margin:0;font-weight:600}
+.empty p{font-size:13px;color:var(--t3);margin:0;max-width:420px;line-height:20px}
+.empty .actions{display:flex;gap:10px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="app" data-rail="expanded">
+
+  <!-- TOP BAR (LOCKED — F15 v2 canonical) -->
+  <header class="topbar">
+    <button class="menu-btn" aria-label="Open menu" data-shell-hamburger>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="brand">
+      <span class="brand-mark">Q</span>
+      <span class="brand-word">QA Nexus</span>
+    </div>
+    <button class="proj-pill">
+      <span class="dot">IR</span>
+      <span>Iksula Returns</span>
+      <span class="meta">· main</span>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <div class="global-search">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="label">Search everything…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+    <div style="flex:1"></div>
+    <button class="icon-btn" aria-label="New"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v3L3 11h10l-1-2V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="pip"></span></button>
+    <button class="icon-btn" aria-label="Switch project"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <div class="mode-toggle">
+      <button class="on">Operate</button>
+      <button>Review</button>
+      <button>Prove</button>
+    </div>
+    <div class="user-pill">
+      <span class="user-av">YM</span>
+      <span class="name">Yogesh M.</span>
+    </div>
+  </header>
+
+  <!-- LEFT RAIL (LOCKED — F15 v2 canonical) -->
+  <nav class="rail">
+    <button class="rail-toggle" data-shell-collapse>
+      <span class="rt-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8H2M2 8l4-4M2 8l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="rt-label">Collapse</span>
+    </button>
+    <a class="nav-item" data-tone="home" data-label="Home" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V11z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span>Home</span>
+    </a>
+    <div class="nav-section">Plan</div>
+    <a class="nav-item active" data-tone="info" data-label="Requirements" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span>Requirements</span>
+      <span class="nav-count">142</span>
+    </a>
+    <a class="nav-item" data-tone="primary" data-label="Test Plans & Cycles" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 9h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Test Plans &amp; Cycles</span>
+    </a>
+    <a class="nav-item" data-tone="pass" data-label="Test Cases" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span>Test Cases</span>
+      <span class="nav-count">1,284</span>
+    </a>
+    <div class="nav-section">Author</div>
+    <a class="nav-item" data-tone="warn" data-label="Test Suites" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Test Suites</span>
+    </a>
+    <a class="nav-item" data-tone="secondary" data-label="Knowledge Base" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h12a2 2 0 0 1 2 2v15l-7-3-7 3V6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span>Knowledge Base</span>
+      <span class="nav-count mono">1.2K</span>
+    </a>
+    <a class="nav-item disabled" data-label="Automation Studio" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Automation Studio</span>
+      <span class="nav-pill">v1.5</span>
+    </a>
+    <a class="nav-item disabled" data-label="Data &amp; Mocks" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" stroke="currentColor" stroke-width="1.8"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <span>Data &amp; Mocks</span>
+      <span class="nav-pill">v1.5</span>
+    </a>
+    <div class="nav-section">Run</div>
+    <a class="nav-item" data-tone="primary" data-label="Runs &amp; Sessions" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 4l13 8-13 8V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <span>Runs &amp; Sessions</span>
+      <span class="nav-count">3</span>
+    </a>
+    <a class="nav-item" data-tone="info" data-label="Environments" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="5" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="18" height="5" rx="1" stroke="currentColor" stroke-width="1.8"/><circle cx="7" cy="8.5" r="0.7" fill="currentColor"/><circle cx="7" cy="15.5" r="0.7" fill="currentColor"/></svg></span>
+      <span>Environments</span>
+    </a>
+    <div class="nav-section">Analyse</div>
+    <a class="nav-item" data-tone="info" data-label="Run Results" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Run Results</span>
+    </a>
+    <a class="nav-item" data-tone="fail" data-label="Defects / Failures" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 21h20L12 2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></span>
+      <span>Defects / Failures</span>
+      <span class="nav-count" style="color:var(--fail)">14</span>
+    </a>
+    <a class="nav-item" data-tone="warn" data-label="Reports" href="#">
+      <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 16V12M12 16V8M16 16v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span>Reports</span>
+    </a>
+    <div class="rail-foot">
+      <span class="av">YM</span>
+      <div class="who">
+        <span class="name">Yogesh Mohite</span>
+        <span class="role">Sr QA · Admin</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT — F14 page -->
+  <main class="main">
+    <nav class="crumb">
+      <a href="#">Home</a><span class="sep">/</span>
+      <a href="#">Plan</a><span class="sep">/</span>
+      <span class="now">Requirements</span>
+    </nav>
+
+    <div class="page-head">
+      <div>
+        <h1 class="display">Requirements</h1>
+        <p>Source of truth for what must be tested. Generate test cases from any requirement with <strong style="color:var(--secondary)">Composer</strong> using project KB context.</p>
+      </div>
+      <div class="page-head-actions">
+        <button class="btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 5l3 3 8-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8v6H2V4h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Import from Jira
+        </button>
+        <button class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          New requirement
+        </button>
+      </div>
+    </div>
+
+    <!-- Sprint context -->
+    <div class="sprint-row">
+      <span class="sprint-chip">
+        <span class="dot"></span>
+        Sprint 42 active
+        <span class="meta">Day 9 / 14</span>
+      </span>
+      <span class="sprint-meta">
+        <span><span class="sm-num">142</span> requirements</span>
+        <span><span class="sm-num" style="color:var(--pass)">87%</span> RTM coverage</span>
+        <span><span class="sm-num" style="color:var(--warn)">11</span> at-risk</span>
+        <span><span class="sm-num" style="color:var(--fail)">3</span> uncovered</span>
+      </span>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-grp">
+        <span class="filter-label">Priority</span>
+        <button class="chip tone-fail on">P0</button>
+        <button class="chip tone-warn">P1</button>
+        <button class="chip tone-info">P2</button>
+        <button class="chip">P3</button>
+      </div>
+      <div style="width:1px;height:18px;background:var(--border)"></div>
+      <div class="filter-grp">
+        <span class="filter-label">Status</span>
+        <button class="chip tone-pass">Approved</button>
+        <button class="chip tone-warn on">In review</button>
+        <button class="chip tone-info">Draft</button>
+        <button class="chip">Archived</button>
+      </div>
+      <div style="width:1px;height:18px;background:var(--border)"></div>
+      <div class="filter-grp">
+        <span class="filter-label">Coverage</span>
+        <button class="chip">All</button>
+        <button class="chip tone-warn on">Has gaps</button>
+        <button class="chip tone-fail">Uncovered</button>
+      </div>
+      <div style="flex:1;min-width:8px"></div>
+      <div class="search-mini">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" placeholder="Search title, ID, description…">
+      </div>
+    </div>
+
+    <!-- Bulk action bar (visible when selected) -->
+    <div class="bulk-bar show">
+      <span>3 requirements selected</span>
+      <div class="actions">
+        <button class="btn btn-ai" style="height:30px;padding:0 12px;font-size:12px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2M4.5 4.5l-1.5-1.5M13 13l-1.5-1.5M4.5 11.5l-1.5 1.5M13 3l-1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+          Generate test cases for selected · Composer<sup style="font-size:8px;opacity:0.7;margin-left:2px">ⓘ</sup>
+        </button>
+        <button class="btn" style="height:30px;padding:0 12px;font-size:12px">Convert to Jira</button>
+        <button class="btn" style="height:30px;padding:0 12px;font-size:12px">Archive</button>
+      </div>
+    </div>
+
+    <!-- Requirements table (desktop) + cards (mobile) -->
+    <div class="req-table-wrap">
+      <table class="req-table">
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" class="checkbox"></th>
+            <th style="width:100px">ID</th>
+            <th>Title &amp; description</th>
+            <th style="width:60px">Pri</th>
+            <th style="width:110px">Status</th>
+            <th style="width:170px">RTM coverage</th>
+            <th style="width:120px">Updated</th>
+            <th style="width:120px;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="selected">
+            <td><input type="checkbox" class="checkbox" checked></td>
+            <td><span class="req-id">RET-247</span></td>
+            <td>
+              <span class="req-title">Refund window for digital goods extends to 30 days on partial-download failure</span>
+              <p class="req-desc">When a customer's digital purchase is interrupted mid-download or the file is corrupt, the standard 14-day refund window must auto-extend to 30 days from purchase date. The support agent must attach the failed-download log when issuing the refund…</p>
+              <span class="req-source jira"><span class="dot"></span>Jira · RET-247 · linked 2 hr ago</span>
+            </td>
+            <td><span class="prio prio-p0">P0</span></td>
+            <td><span class="status-chip s-review">In review</span></td>
+            <td>
+              <div class="rtm-cov gap">
+                <span class="nums">8 <span class="of">/ 12</span></span>
+                <div class="bar"><div style="width:67%"></div></div>
+                <span class="agent-line">linked by <span class="agent-name">Composer</span><span class="info-i" title="Test Case Generator agent">i</span></span>
+              </div>
+            </td>
+            <td><span class="mono" style="font-size:11px;color:var(--t3)">2 hr ago</span><br><span style="font-size:11px;color:var(--t4)">Akshay P.</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-gen" title="Generate with Composer"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                <button title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                <button title="More"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="selected">
+            <td><input type="checkbox" class="checkbox" checked></td>
+            <td><span class="req-id">RET-248</span></td>
+            <td>
+              <span class="req-title">Partial returns: per-shipment refund pro-ration with stock-zone label generation</span>
+              <p class="req-desc">For multi-item orders containing 2+ line items, the customer can return a subset. The RMA flow issues one shipping label per shipment-zone group and refund is calculated as (unit_price × qty_returned) − pro_rata_discount, processed independently per group…</p>
+              <span class="req-source jira"><span class="dot"></span>Jira · RET-248 · linked 4 hr ago</span>
+            </td>
+            <td><span class="prio prio-p1">P1</span></td>
+            <td><span class="status-chip s-review">In review</span></td>
+            <td>
+              <div class="rtm-cov">
+                <span class="nums">14 <span class="of">/ 14</span></span>
+                <div class="bar"><div style="width:100%"></div></div>
+                <span class="agent-line">linked by <span class="agent-name">Composer</span><span class="info-i" title="Test Case Generator agent">i</span></span>
+              </div>
+            </td>
+            <td><span class="mono" style="font-size:11px;color:var(--t3)">4 hr ago</span><br><span style="font-size:11px;color:var(--t4)">Yogesh M.</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-gen" title="Generate with Composer"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                <button title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                <button title="More"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr class="selected">
+            <td><input type="checkbox" class="checkbox" checked></td>
+            <td><span class="req-id">RET-251</span></td>
+            <td>
+              <span class="req-title">Bulk return manual review SLA: 24-hour queue for 10+ unit same-SKU returns</span>
+              <p class="req-desc">Bulk returns (orders containing 10+ units of the same SKU) require manual review by the Returns Operations team. The portal flags these and routes them to a 24-hour SLA queue. Refund is held pending Ops approval…</p>
+              <span class="req-source jira"><span class="dot"></span>Jira · RET-251 · linked 1 day ago</span>
+            </td>
+            <td><span class="prio prio-p1">P1</span></td>
+            <td><span class="status-chip s-draft">Draft</span></td>
+            <td>
+              <div class="rtm-cov empty">
+                <span class="nums">0 <span class="of">/ —</span></span>
+                <div class="bar"><div style="width:0%"></div></div>
+                <span class="agent-line" style="color:var(--fail)">no test cases yet</span>
+              </div>
+            </td>
+            <td><span class="mono" style="font-size:11px;color:var(--t3)">1 day ago</span><br><span style="font-size:11px;color:var(--t4)">Kishor K.</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-gen" title="Generate with Composer"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                <button title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                <button title="More"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td><span class="req-id">RET-252</span></td>
+            <td>
+              <span class="req-title">RMA approval matrix: 2-of-3 sign-off for refunds &gt;₹25,000</span>
+              <p class="req-desc">When refund amount exceeds ₹25,000, the RMA approval requires 2-of-3 sign-off across CX agent, Ops lead, and Finance. Below this threshold, single CX agent approval is sufficient…</p>
+              <span class="req-source"><span class="dot"></span>Manual · created in QA Nexus</span>
+            </td>
+            <td><span class="prio prio-p2">P2</span></td>
+            <td><span class="status-chip s-approved">Approved</span></td>
+            <td>
+              <div class="rtm-cov">
+                <span class="nums">6 <span class="of">/ 6</span></span>
+                <div class="bar"><div style="width:100%"></div></div>
+                <span class="agent-line">linked by <span style="color:var(--t2)">Akshay P.</span></span>
+              </div>
+            </td>
+            <td><span class="mono" style="font-size:11px;color:var(--t3)">2 days ago</span><br><span style="font-size:11px;color:var(--t4)">Akshay P.</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-gen" title="Generate with Composer"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                <button title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                <button title="More"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td><span class="req-id">RET-258</span></td>
+            <td>
+              <span class="req-title">Holiday calendar exceptions: refund window pauses for Indian Stock Exchange holidays</span>
+              <p class="req-desc">Refund processing windows (5-7 business days) exclude Republic Day, Holi, Independence Day, Gandhi Jayanti, Diwali, Christmas, plus state-specific holidays where the warehouse is located…</p>
+              <span class="req-source"><span class="dot"></span>Manual · created in QA Nexus</span>
+            </td>
+            <td><span class="prio prio-p2">P2</span></td>
+            <td><span class="status-chip s-approved">Approved</span></td>
+            <td>
+              <div class="rtm-cov">
+                <span class="nums">9 <span class="of">/ 9</span></span>
+                <div class="bar"><div style="width:100%"></div></div>
+                <span class="agent-line">linked by <span class="agent-name">Composer</span><span class="info-i" title="Test Case Generator agent">i</span></span>
+              </div>
+            </td>
+            <td><span class="mono" style="font-size:11px;color:var(--t3)">3 days ago</span><br><span style="font-size:11px;color:var(--t4)">Nadim S.</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-gen" title="Generate with Composer"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                <button title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                <button title="More"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/><circle cx="13" cy="8" r="1" fill="currentColor"/></svg></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Mobile cards (visible <1024px) -->
+      <div class="req-cards">
+        <article class="req-card">
+          <div class="row1">
+            <input type="checkbox" class="checkbox" checked>
+            <span class="req-id">RET-247</span>
+            <span class="prio prio-p0">P0</span>
+            <span class="status-chip s-review">In review</span>
+          </div>
+          <span class="req-title">Refund window for digital goods extends to 30 days on partial-download failure</span>
+          <p class="req-desc">When a customer's digital purchase is interrupted mid-download or the file is corrupt, the standard 14-day refund window must auto-extend to 30 days from purchase date.</p>
+          <div class="row3">
+            <div class="rtm-cov gap" style="flex:1;min-width:140px">
+              <span class="nums">8 <span class="of">/ 12</span> · <span style="color:var(--secondary)">Composer</span><span class="info-i" title="Test Case Generator agent">i</span></span>
+              <div class="bar"><div style="width:67%"></div></div>
+            </div>
+            <div class="row-actions">
+              <button class="btn-gen" title="Generate with Composer"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <button title="Edit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+        </article>
+        <article class="req-card">
+          <div class="row1">
+            <input type="checkbox" class="checkbox">
+            <span class="req-id">RET-248</span>
+            <span class="prio prio-p1">P1</span>
+            <span class="status-chip s-review">In review</span>
+          </div>
+          <span class="req-title">Partial returns: per-shipment refund pro-ration with stock-zone label generation</span>
+          <p class="req-desc">For multi-item orders containing 2+ line items, the customer can return a subset. The RMA flow issues one shipping label per shipment-zone group.</p>
+          <div class="row3">
+            <div class="rtm-cov" style="flex:1;min-width:140px">
+              <span class="nums">14 <span class="of">/ 14</span> · <span style="color:var(--secondary)">Composer</span><span class="info-i" title="Test Case Generator agent">i</span></span>
+              <div class="bar"><div style="width:100%"></div></div>
+            </div>
+            <div class="row-actions">
+              <button class="btn-gen"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <button><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+        </article>
+        <article class="req-card">
+          <div class="row1">
+            <input type="checkbox" class="checkbox">
+            <span class="req-id">RET-251</span>
+            <span class="prio prio-p1">P1</span>
+            <span class="status-chip s-draft">Draft</span>
+          </div>
+          <span class="req-title">Bulk return manual review SLA: 24-hour queue for 10+ unit same-SKU returns</span>
+          <p class="req-desc">Bulk returns require manual review by the Returns Ops team. Portal flags these to 24-hr SLA queue.</p>
+          <div class="row3">
+            <div class="rtm-cov empty" style="flex:1;min-width:140px">
+              <span class="nums">0 <span class="of">/ —</span> · <span style="color:var(--fail)">no test cases yet</span></span>
+              <div class="bar"><div style="width:0%"></div></div>
+            </div>
+            <div class="row-actions">
+              <button class="btn-gen"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v3M8 12v3M3 8h-2M15 8h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <button><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11 2l3 3-9 9-4 1 1-4 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="pag">
+        <span class="info">Showing 1–5 of 142</span>
+        <div class="nav">
+          <button disabled>Prev</button>
+          <button>Next</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+  // ─── Shell behavior — collapse + mobile hamburger (LOCKED from F15 v2) ───
+  (function(){
+    const app = document.querySelector('.app');
+    const rail = document.querySelector('.rail');
+    const collapseBtn = document.querySelector('[data-shell-collapse]');
+    const hamburgerBtn = document.querySelector('[data-shell-hamburger]');
+    const STORAGE_KEY = 'qa-nexus.shell.rail-collapsed';
+
+    // Restore collapsed state from localStorage
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === 'true' && window.innerWidth >= 1024) {
+        app.setAttribute('data-rail', 'collapsed');
+      }
+    } catch(e) {}
+
+    // Desktop collapse toggle
+    if (collapseBtn) {
+      collapseBtn.addEventListener('click', () => {
+        const isCollapsed = app.getAttribute('data-rail') === 'collapsed';
+        app.setAttribute('data-rail', isCollapsed ? 'expanded' : 'collapsed');
+        try { localStorage.setItem(STORAGE_KEY, !isCollapsed); } catch(e) {}
+      });
+    }
+
+    // Mobile hamburger toggle (slide-in drawer)
+    if (hamburgerBtn) {
+      hamburgerBtn.addEventListener('click', () => {
+        rail.classList.toggle('mobile-open');
+        document.body.style.overflow = rail.classList.contains('mobile-open') ? 'hidden' : '';
+      });
+    }
+
+    // Close drawer on backdrop tap (clicking outside the rail)
+    document.addEventListener('click', (e) => {
+      if (rail.classList.contains('mobile-open') &&
+          !rail.contains(e.target) &&
+          !hamburgerBtn?.contains(e.target)) {
+        rail.classList.remove('mobile-open');
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Close drawer + collapse rail on ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && rail.classList.contains('mobile-open')) {
+        rail.classList.remove('mobile-open');
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Close drawer when nav link clicked (mobile)
+    rail.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (rail.classList.contains('mobile-open')) {
+          rail.classList.remove('mobile-open');
+          document.body.style.overflow = '';
+        }
+      });
+    });
+  })();
+</script>
+</body>
+</html>
