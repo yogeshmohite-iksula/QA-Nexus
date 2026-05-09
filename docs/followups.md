@@ -2,6 +2,47 @@
 
 ---
 
+## [2026-05-08] (aq) P1 — `[platform]` Add `prettier --check` as pre-push gate 2 — RESOLVED in this PR
+
+**Symptom:** Prettier-cascade has now bitten 5 PRs across 2 days:
+Day-12 #62 / #75 / #77 / #78 (cleared by MAIN's #79 fix on main); Day-13
+#85 / #87 (cleared by BE+1's prettier-write fixes). Pattern is always
+the same: a spec file with subtle whitespace drift sneaks past
+author-time gates, CI lint catches it, MAIN relays a fix back, BE+1
+runs `pnpm exec prettier --write` + force-pushes. Round-trip cost is
+~5–15 min per PR + relay overhead.
+
+**Root cause:** The pre-push hook had typecheck + frozen-lockfile +
+CHANGELOG gates but no prettier gate. Husky pre-commit also doesn't
+run prettier. Authors discover format errors only after CI reports.
+
+**Fix shipped in this PR:**
+
+`.husky/pre-push` gets a new gate 2 (between typecheck and
+frozen-lockfile): `pnpm exec prettier --check .`. The repo's
+`.prettierrc` + `.prettierignore` are honored. Fast — ~1–2s on warm
+cache. On failure, the script prints:
+
+- "Files needing format:" list (capped at 10)
+- One-line auto-fix command: `pnpm exec prettier --write .`
+- Re-stage + retry instructions
+- Bypass note (`git push --no-verify`, but warns CI lint will fail)
+
+Old gate numbering (1/3, 2/3, 3/3) renumbered to 4 gates (1/4, 2/4,
+3/4, 4/4), informational work-log token refresh promoted to 5/5.
+
+**Owner:** BE chat. **Tag:** `[platform]`. **Severity:** P1
+(prevents author-time cascade-storm pattern). **Effort:** S (15 min).
+
+**Cross-references:**
+
+- PR #79 (MAIN's prettier-on-main fix from Day-12 — root cause that
+  bled into the cascade)
+- BE+1 prettier-write commits on #85 + #87 (Day-13 cleanup)
+- `docs/CHANGELOG.md` Day-13 (aq) entry
+
+---
+
 ## [2026-05-07] (an) P1 — `[m2-followup]` F15 KB RAG answer-UI surface not yet built
 
 **Discovered:** Day-12 TASK 3 mid-flight. The Day-12 brief listed
