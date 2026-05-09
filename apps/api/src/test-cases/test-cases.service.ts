@@ -611,8 +611,14 @@ export class TestCasesService {
       testCaseId: string;
       key: string;
       title: string;
-      priority: string;
-      status: string;
+      priority: 'P0' | 'P1' | 'P2' | 'P3';
+      status:
+        | 'ai_draft'
+        | 'manual_draft'
+        | 'reviewed'
+        | 'active'
+        | 'flaky'
+        | 'deprecated';
       format: 'step' | 'gherkin';
     }>
   > {
@@ -648,8 +654,14 @@ export class TestCasesService {
       testCaseId: l.testCase.id,
       key: l.testCase.key,
       title: l.testCase.title,
-      priority: l.testCase.priority,
-      status: l.testCase.status,
+      priority: l.testCase.priority as 'P0' | 'P1' | 'P2' | 'P3',
+      status: l.testCase.status as
+        | 'ai_draft'
+        | 'manual_draft'
+        | 'reviewed'
+        | 'active'
+        | 'flaky'
+        | 'deprecated',
       format: l.testCase.format as 'step' | 'gherkin',
     }));
   }
