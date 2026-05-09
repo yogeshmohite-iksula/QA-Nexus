@@ -80,6 +80,14 @@ paths = [
   # not the surrounding context — so the URL regex never fired. Path-based
   # allowlist is the correct mechanism here.
   '''apps/api/README\.md''',
+  # 2026-05-09 — pre-public-flip scan caught generic-api-key false positive
+  # at FINAL_REVIEW_MVP_ARCHIVE.md:341 in vendor risk matrix prose:
+  #   "Jira: OAuth 2.0 API, deprecation/outage → 2-way sync breaks..."
+  # Low-entropy match (3.57) on prose discussing OAuth integration — not a
+  # secret. Allowlisting the archived MVP review docs (these contain prose
+  # references to vendor names + OAuth flows that legitimately match
+  # generic-api-key heuristics).
+  '''QA Nexus/Milestone/FINAL_REVIEW_MVP_ARCHIVE\.md''',
 ]
 regexes = [
   '''<your-[a-z\-]+>''',
