@@ -27,6 +27,36 @@ export interface LLMOptions {
   /** When true the gateway routes to the long-context provider (if
    *  configured). Defaults to auto-detect via prompt length heuristic. */
   forceLongContext?: boolean;
+  /**
+   * Structured-output enforcement. When `type='json_schema'`, the
+   * provider is instructed to constrain its output to the supplied
+   * JSON schema. Per ADR-013, the canonical use case is Composer (A1)
+   * test-case generation.
+   *
+   * Provider behavior:
+   *   - Groq: passes `response_format` directly to chat.completions.
+   *   - Gemini: maps to `responseMimeType: 'application/json'` +
+   *     `responseSchema` (semantic equivalent; not strict-mode).
+   *   - Other providers: should treat as best-effort + return JSON
+   *     in the output `text` field. Service-layer Zod-validates.
+   *
+   * `text` is the implicit default (no constraint applied) when the
+   * field is omitted.
+   */
+  responseFormat?:
+    | { type: 'text' }
+    | {
+        type: 'json_schema';
+        jsonSchema: {
+          /** Schema name surfaced in provider telemetry (e.g. "composer_generated_cases"). */
+          name: string;
+          /** When true the provider rejects partial-match outputs.
+           *  Groq honors this; Gemini ignores. Default true. */
+          strict?: boolean;
+          /** Plain JSON-schema object — type/properties/required at minimum. */
+          schema: Record<string, unknown>;
+        };
+      };
 }
 
 export interface LLMResult {

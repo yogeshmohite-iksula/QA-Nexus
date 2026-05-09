@@ -1,62 +1,113 @@
 // QA Nexus PM1 — ComposerService (A1 / Test Case Generator).
 //
-// Spec: M3 Day-13 TASK BE-1. Pattern A scaffold — returns 5
-// canned-but-realistic test cases for any requirement. Day-15 swaps
-// the service body to call Groq `openai/gpt-oss-120b` with
-// response_format=json_schema (per ADR-013, lands Day-14).
+// Spec: M3 Day-13 TASK BE-1 (PR #93 scaffold) + Day-14 TASK A3 real
+// Groq integration. ADR-013 locks the prompt strategy + JSON schema.
 //
-// Why Pattern A first:
-//   - FE+1 needs F16a Composer review modal to implement against a
-//     stable wire shape this week (Day-13 → Day-14 cascade).
-//   - Real LLM call requires ADR-013 prompt lock + JSON schema
-//     definition + retry/fallback flow which slots in Day-14/15.
-//   - Locking the contract NOW (canned response, audit row written,
-//     TestCaseGenerationRun persisted) lets FE flip from `stubbed: true`
-//     → `stubbed: false` with zero downstream changes when Day-15 lands.
+// Day-15-and-onward swap point now ACTIVE — service calls
+// `LLMGatewayService.complete()` with `responseFormat=json_schema`,
+// parses + Zod-validates, persists TB-022 row, audits PII-redacted.
 //
-// Pipeline (Pattern A):
-//   1. assertReqWorkspace → 404 cross-workspace OR cross-project (no leak)
+// Pipeline:
+//   1. assertReqWorkspace → 404 cross-workspace OR cross-project
 //   2. Audit `composer_generation_started` (PII guard: req_key only)
-//   3. Generate N canned cases (deterministic from reqId + index)
-//   4. Persist TestCaseGenerationRun row (TB-022) with status='success',
-//      llm_provider='groq', llm_model='openai/gpt-oss-120b', and
-//      placeholder token counts. Day-15 fills these from actual call.
+//   3. Either:
+//      a. ONLINE path (default): build prompt per ADR-013 §1, call
+//         LLMGateway with the JSON schema, retry-with-reinforcement on
+//         parse failure, fall through to long-context model on 2nd
+//         failure (gateway handles secondary-provider fallback per
+//         retry policy), parse + Zod-validate.
+//      b. OFFLINE path (`COMPOSER_OFFLINE=1`): emit canned cases for
+//         dev-without-internet. Sets `stubbed: true` in response.
+//   4. Persist TestCaseGenerationRun (TB-022) with real token counts
 //   5. Audit `composer_generation_completed` with run metadata
-//   6. Return { runId, cases[], llmMetadata, stubbed: true }
+//   6. Return { runId, cases[], llmMetadata, stubbed }
 //
 // PII discipline: audit payloads carry req_key + counts only. NEVER
-// requirement title/description or generated case text (case content
-// can echo customer PII from the requirement description).
+// requirement title/description, generated case text, raw prompt, or
+// raw completion. Pinned by composer-pii-guard.spec.ts.
 
 import {
   Injectable,
   Logger,
   NotFoundException,
   ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import type {
+import { LLMGatewayService } from '../llm/llm-gateway.service';
+import {
+  AllProvidersFailedError,
+  RetryableLLMError,
+  type LLMResult,
+} from '../llm/types';
+import {
   ComposerGenerateRequest,
-  ComposerGenerateResponse,
-  ComposerGeneratedCase,
+  type ComposerGenerateResponse,
+  type ComposerGeneratedCase,
 } from '@qa-nexus/shared';
+import {
+  COMPOSER_SYSTEM_PROMPT,
+  COMPOSER_JSON_REINFORCEMENT,
+  COMPOSER_RESPONSE_JSON_SCHEMA,
+  COMPOSER_RESPONSE_SCHEMA_NAME,
+  COMPOSER_TEMPERATURE,
+  COMPOSER_MAX_TOKENS,
+  ComposerParseError,
+  buildComposerUserMessage,
+  type ComposerLLMResponse,
+} from './composer-prompt';
 import type { ActorContext } from './test-cases.service';
 
-/// Day-15 swap target. Centralized so the Day-15 PR has a single
-/// search-and-replace point. Mirrors ADR-012's pattern of pinning the
-/// model id in source-code constants (greppable, diff-visible).
-const COMPOSER_LLM_PROVIDER = 'groq' as const;
-const COMPOSER_LLM_MODEL = 'openai/gpt-oss-120b' as const;
+/// Provider identifier surfaced in audit + TB-022. The actual provider
+/// answering may differ when fallback fires; `LLMResult.providerName`
+/// + `LLMResult.modelUsed` are the source of truth at runtime.
+const COMPOSER_LLM_PROVIDER_DEFAULT = 'groq';
+const COMPOSER_LLM_MODEL_DEFAULT = 'openai/gpt-oss-120b';
 
-/// Deterministic latency simulator for Pattern A — returns a value in
-/// the same ballpark Day-15's real Groq call will exhibit (~600-1200ms
-/// observed during PR #57 RAG calls). Lets FE develop loading states
-/// against realistic timing without flakiness in tests.
+/// Offline-mode token estimate constants — used when COMPOSER_OFFLINE=1
+/// emits canned cases without an LLM call. Kept in same ballpark as
+/// real Groq calls observed during PR #57 RAG.
 const STUB_LATENCY_MS = 850;
 const STUB_TOKENS_IN = 420;
 const STUB_TOKENS_OUT_PER_CASE = 180;
+
+/// Hard ceiling on JSON-parse retries before we give up. Each retry
+/// re-calls the LLM (cost) so cap small. ADR-013 §5 attempt 1 + 2.
+const MAX_JSON_PARSE_RETRIES = 1;
+
+/// Zod schema for the LLM response envelope. Re-uses the canonical
+/// case shape from @qa-nexus/shared via the input parser; we hand-
+/// build the envelope here to avoid pulling in extra deps.
+const CASES_VALIDATION_SCHEMA = z.object({
+  cases: z
+    .array(
+      // The LLM emits the same shape as ComposerGeneratedCase; we
+      // re-validate with explicit types to catch enum drift.
+      z.object({
+        key: z.string().min(2).max(40),
+        title: z.string().min(1),
+        preconditions: z.string(),
+        stepsJson: z.array(
+          z.object({
+            order: z.number().int().nonnegative(),
+            action: z.string().min(1),
+            expected: z.string().optional(),
+          }),
+        ),
+        expectedResult: z.string(),
+        priority: z.enum(['P0', 'P1', 'P2', 'P3']),
+        format: z.enum(['step', 'gherkin']),
+        gherkin: z.string().nullable(),
+        rationale: z.string(),
+        sourceChunkIds: z.array(z.string().uuid()),
+      }),
+    )
+    .min(1)
+    .max(10),
+});
 
 @Injectable()
 export class ComposerService {
@@ -65,6 +116,7 @@ export class ComposerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly llm: LLMGatewayService,
   ) {}
 
   /// Resolve a requirement + assert its project is in the actor's
@@ -73,13 +125,19 @@ export class ComposerService {
     projectId: string,
     requirementId: string,
     ctx: ActorContext,
-  ): Promise<{ key: string; title: string; projectKey: string }> {
+  ): Promise<{
+    key: string;
+    title: string;
+    description: string;
+    projectKey: string;
+  }> {
     const req = await this.prisma.requirement.findUnique({
       where: { id: requirementId },
       select: {
         projectId: true,
         key: true,
         title: true,
+        description: true,
         project: { select: { workspaceId: true, key: true } },
       },
     });
@@ -95,6 +153,7 @@ export class ComposerService {
     return {
       key: req.key,
       title: req.title,
+      description: req.description ?? '',
       projectKey: req.project.key,
     };
   }
@@ -106,12 +165,16 @@ export class ComposerService {
   async generate(
     projectId: string,
     requirementId: string,
-    input: ComposerGenerateRequest,
+    rawInput: unknown,
     ctx: ActorContext,
   ): Promise<ComposerGenerateResponse> {
+    // Re-parse input here as well as the controller — defense in
+    // depth + lets us call generate() from internal triggers later.
+    const input = ComposerGenerateRequest.parse(rawInput);
     const req = await this.assertReqWorkspace(projectId, requirementId, ctx);
 
-    // Audit: generation started (counts/keys only, NEVER req.title).
+    // Audit: generation started (counts/keys only, NEVER req.title
+    // text or description text).
     await this.audit.write({
       workspaceId: ctx.workspaceId,
       actorId: ctx.actorId,
@@ -123,6 +186,8 @@ export class ComposerService {
         requirement_id: requirementId,
         workspace_id: ctx.workspaceId,
         req_key: req.key,
+        title_length: req.title.length,
+        description_length: req.description.length,
         requested_count: input.count,
         requested_format: input.format,
         actor_email: ctx.actorEmail,
@@ -130,23 +195,104 @@ export class ComposerService {
     });
 
     // ────────────────────────────────────────────────────────────────
-    // Pattern A scaffold — Day-15 swap point.
+    // Online vs offline mode branch.
     // ────────────────────────────────────────────────────────────────
-    // Day-15 will: build the system prompt + user message per ADR-013,
-    // call this.llm.complete(prompt, { systemPrompt, temperature: 0.4,
-    // maxTokens: 1500, model: COMPOSER_LLM_MODEL,
-    // responseFormat: { type: 'json_schema', schema: ... } }), parse the
-    // JSON response into ComposerGeneratedCase[], retry once on parse
-    // failure, fall back to llama-4-scout on 2x failure, fall back to
-    // Gemini on 3x failure, error on 4x.
-    //
-    // Today's Pattern A returns 5 canned cases derived deterministically
-    // from (req.key, index) so tests are stable.
-    const cases = this.generateCannedCases(req, input.count);
-    const tokensOut = STUB_TOKENS_OUT_PER_CASE * cases.length;
-    const latencyMs = STUB_LATENCY_MS;
+    const offline = process.env.COMPOSER_OFFLINE === '1';
+    let cases: ComposerGeneratedCase[];
+    let providerName: string;
+    let modelUsed: string;
+    let tokensIn: number;
+    let tokensOut: number;
+    let latencyMs: number;
+    let fallbackUsed: boolean;
+    let stubbed: boolean;
+    let runStatus: 'success' | 'partial' | 'failed' = 'success';
+    let errorReason: string | null = null;
 
-    // Persist TB-022 row so audit + analytics can correlate.
+    if (offline || this.llm.deferred) {
+      // Offline / deferred-gateway path — emit canned cases.
+      const reason = offline
+        ? 'COMPOSER_OFFLINE=1'
+        : `LLM gateway deferred: ${this.llm.deferredReason ?? 'unknown'}`;
+      this.logger.log(`composer offline path engaged: ${reason}`);
+      cases = this.generateCannedCases(req, input.count);
+      providerName = COMPOSER_LLM_PROVIDER_DEFAULT;
+      modelUsed = COMPOSER_LLM_MODEL_DEFAULT;
+      tokensIn = STUB_TOKENS_IN;
+      tokensOut = STUB_TOKENS_OUT_PER_CASE * cases.length;
+      latencyMs = STUB_LATENCY_MS;
+      fallbackUsed = false;
+      stubbed = true;
+    } else {
+      // ONLINE path — call LLMGateway with retry chain per ADR-013 §5.
+      try {
+        const llmRun = await this.callComposerLLM(req, input);
+        cases = llmRun.cases;
+        providerName = llmRun.providerName;
+        modelUsed = llmRun.modelUsed;
+        tokensIn = llmRun.tokensIn;
+        tokensOut = llmRun.tokensOut;
+        latencyMs = llmRun.latencyMs;
+        fallbackUsed = llmRun.fallbackUsed;
+        stubbed = false;
+        if (llmRun.parseRetries > 0) {
+          runStatus = 'partial';
+          errorReason = `succeeded after ${llmRun.parseRetries} JSON-parse retry attempt(s)`;
+        }
+      } catch (err) {
+        runStatus = 'failed';
+        const msg = err instanceof Error ? err.message : String(err);
+        errorReason = msg.length > 500 ? msg.slice(0, 500) : msg;
+        // Still write the failed TB-022 row + audit BEFORE re-throwing
+        // so the chain stays auditable.
+        const failedRunId = randomUUID();
+        await this.prisma.testCaseGenerationRun.create({
+          data: {
+            id: failedRunId,
+            projectId,
+            requirementId,
+            triggeredBy: ctx.actorId,
+            llmProvider: COMPOSER_LLM_PROVIDER_DEFAULT,
+            llmModel: COMPOSER_LLM_MODEL_DEFAULT,
+            inputTokenCount: 0,
+            outputTokenCount: 0,
+            chunksRetrieved: 0,
+            casesGenerated: 0,
+            casesAccepted: null,
+            casesDedupeFlagged: null,
+            durationMs: 0,
+            status: 'failed',
+            errorReason,
+          },
+        });
+        await this.audit.write({
+          workspaceId: ctx.workspaceId,
+          actorId: ctx.actorId,
+          entityType: 'composer_run',
+          entityId: failedRunId,
+          action: 'composer_generation_failed',
+          payload: {
+            run_id: failedRunId,
+            project_id: projectId,
+            requirement_id: requirementId,
+            workspace_id: ctx.workspaceId,
+            req_key: req.key,
+            error_reason: errorReason,
+            actor_email: ctx.actorEmail,
+          },
+        });
+        // Surface as 503 — FE shows "Composer temporarily unavailable".
+        throw new ServiceUnavailableException({
+          error: 'composer_unavailable',
+          message:
+            'Composer could not generate test cases — all providers exhausted.',
+          retry_after: 60,
+          run_id: failedRunId,
+        });
+      }
+    }
+
+    // Persist TB-022 success/partial row.
     const runId = randomUUID();
     await this.prisma.testCaseGenerationRun.create({
       data: {
@@ -154,17 +300,17 @@ export class ComposerService {
         projectId,
         requirementId,
         triggeredBy: ctx.actorId,
-        llmProvider: COMPOSER_LLM_PROVIDER,
-        llmModel: COMPOSER_LLM_MODEL,
-        inputTokenCount: STUB_TOKENS_IN,
+        llmProvider: providerName,
+        llmModel: modelUsed,
+        inputTokenCount: tokensIn,
         outputTokenCount: tokensOut,
-        chunksRetrieved: 0, // Day-15 will set this from KbSearchService
+        chunksRetrieved: 0, // M3.5 will set this from KbSearchService
         casesGenerated: cases.length,
         casesAccepted: null, // FE updates after F16a review
-        casesDedupeFlagged: null, // Day-15+ Curator pass
+        casesDedupeFlagged: null, // Curator pass populates
         durationMs: latencyMs,
-        status: 'success',
-        errorReason: null,
+        status: runStatus,
+        errorReason,
       },
     });
 
@@ -181,13 +327,17 @@ export class ComposerService {
         requirement_id: requirementId,
         workspace_id: ctx.workspaceId,
         req_key: req.key,
+        title_length: req.title.length,
+        description_length: req.description.length,
         cases_generated: cases.length,
-        llm_provider: COMPOSER_LLM_PROVIDER,
-        llm_model: COMPOSER_LLM_MODEL,
-        tokens_in: STUB_TOKENS_IN,
+        llm_provider: providerName,
+        llm_model: modelUsed,
+        tokens_in: tokensIn,
         tokens_out: tokensOut,
         duration_ms: latencyMs,
-        stubbed: true, // Day-15 flips this off
+        fallback_used: fallbackUsed,
+        run_status: runStatus,
+        stubbed,
         actor_email: ctx.actorEmail,
       },
     });
@@ -197,23 +347,139 @@ export class ComposerService {
       runId,
       cases,
       llmMetadata: {
-        providerName: COMPOSER_LLM_PROVIDER,
-        modelUsed: COMPOSER_LLM_MODEL,
-        tokensIn: STUB_TOKENS_IN,
+        providerName,
+        modelUsed,
+        tokensIn,
         tokensOut,
         latencyMs,
-        fallbackUsed: false,
+        fallbackUsed,
       },
-      stubbed: true,
+      stubbed,
     };
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Pattern A canned-cases generator
-  //
-  // Returns realistic step-format test cases. Templates loosely based
-  // on RET-247 (refund flow) but parameterized so any requirement
-  // gets coherent output. Day-15 deletes this method.
+  // ONLINE LLM call orchestration — ADR-013 §5 retry chain.
+  // ─────────────────────────────────────────────────────────────────
+
+  private async callComposerLLM(
+    req: {
+      key: string;
+      title: string;
+      description: string;
+      projectKey: string;
+    },
+    input: ComposerGenerateRequest,
+  ): Promise<{
+    cases: ComposerGeneratedCase[];
+    providerName: string;
+    modelUsed: string;
+    tokensIn: number;
+    tokensOut: number;
+    latencyMs: number;
+    fallbackUsed: boolean;
+    parseRetries: number;
+  }> {
+    const userMessage = buildComposerUserMessage({
+      reqKey: req.key,
+      reqTitle: req.title,
+      reqDescription: req.description,
+      projectKey: req.projectKey,
+      count: input.count,
+      format: input.format,
+      // M3.5 will populate from KbSearchService when input.useKbContext.
+      chunks: undefined,
+    });
+
+    let parseRetries = 0;
+    let lastResult: LLMResult | null = null;
+
+    for (let attempt = 0; attempt <= MAX_JSON_PARSE_RETRIES; attempt++) {
+      const systemPrompt =
+        attempt === 0
+          ? COMPOSER_SYSTEM_PROMPT
+          : `${COMPOSER_SYSTEM_PROMPT}\n\n${COMPOSER_JSON_REINFORCEMENT}`;
+      let result: LLMResult;
+      try {
+        result = await this.llm.complete(userMessage, {
+          systemPrompt,
+          temperature: COMPOSER_TEMPERATURE,
+          maxTokens: COMPOSER_MAX_TOKENS,
+          responseFormat: {
+            type: 'json_schema',
+            jsonSchema: {
+              name: COMPOSER_RESPONSE_SCHEMA_NAME,
+              strict: true,
+              schema: COMPOSER_RESPONSE_JSON_SCHEMA as Record<string, unknown>,
+            },
+          },
+        });
+      } catch (err) {
+        // RetryableLLMError + AllProvidersFailedError both bubble out.
+        // Gateway already retried + tried fallback provider; no more
+        // retries here. Re-throw to outer try/catch in generate().
+        if (
+          err instanceof RetryableLLMError ||
+          err instanceof AllProvidersFailedError
+        ) {
+          throw err;
+        }
+        throw err;
+      }
+      lastResult = result;
+
+      // Parse + validate.
+      let parsed: ComposerLLMResponse;
+      try {
+        const json = JSON.parse(result.text) as unknown;
+        parsed = CASES_VALIDATION_SCHEMA.parse(json) as ComposerLLMResponse;
+      } catch (err) {
+        // Parse OR Zod validation failed. Retry with reinforcement
+        // unless we've burned our budget.
+        if (attempt < MAX_JSON_PARSE_RETRIES) {
+          parseRetries += 1;
+          this.logger.warn(
+            `composer JSON parse failed on attempt ${attempt + 1} ` +
+              `(provider=${result.providerName} model=${result.modelUsed}); ` +
+              `retrying with reinforcement`,
+          );
+          continue;
+        }
+        // Out of retries. Throw a typed error so generate() turns it
+        // into a 503 with audit trail.
+        throw new ComposerParseError(
+          `Composer LLM output failed JSON/Zod validation after ${attempt + 1} attempt(s): ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+          result.text.length > 500 ? result.text.slice(0, 500) : result.text,
+        );
+      }
+
+      // Success.
+      return {
+        cases: parsed.cases,
+        providerName: result.providerName,
+        modelUsed: result.modelUsed,
+        tokensIn: result.tokensIn,
+        tokensOut: result.tokensOut,
+        latencyMs: result.latencyMs,
+        fallbackUsed: result.fallbackUsed,
+        parseRetries,
+      };
+    }
+
+    // Unreachable — loop either returns or throws.
+    /* c8 ignore next */
+    throw new Error(
+      `composer retry loop exited without return (lastResult=${lastResult?.providerName ?? 'none'})`,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Offline canned-cases generator — kept for COMPOSER_OFFLINE=1 dev
+  // mode + automatic fallback when LLM gateway is deferred (no env
+  // vars). Output shape identical to LLM path so the FE can render
+  // either without branching.
   // ─────────────────────────────────────────────────────────────────
 
   private generateCannedCases(
@@ -430,8 +696,6 @@ export class ComposerService {
         action: s.action,
         expected: s.expected,
       }));
-      // Suggested key uses the proposal index. FE may rename before
-      // POST; key uniqueness is enforced server-side at the create step.
       const suggestedKey = `TC-${req.projectKey}-PROPOSED-${String(idx + 1).padStart(3, '0')}`;
       return {
         key: suggestedKey,
@@ -443,7 +707,7 @@ export class ComposerService {
         format: 'step' as const,
         gherkin: null,
         rationale: t.rationale,
-        sourceChunkIds: [], // Day-15 will populate from KbSearchService
+        sourceChunkIds: [],
       };
     });
   }

@@ -35,12 +35,43 @@ export class GroqProvider extends BaseProvider {
       messages.push({ role: 'system', content: opts.systemPrompt });
     messages.push({ role: 'user', content: prompt });
 
+    // ADR-013 §2 — Structured output via Groq's `response_format`.
+    // When the caller passes a JSON schema, we forward it verbatim to
+    // Groq's API. Groq accepts the OpenAI-canonical shape:
+    //   { type: 'json_schema', json_schema: { name, strict, schema } }
+    // Free-form text remains the default.
+    let responseFormat:
+      | {
+          type: 'json_schema';
+          json_schema: {
+            name: string;
+            strict?: boolean;
+            schema: Record<string, unknown>;
+          };
+        }
+      | undefined;
+    if (opts.responseFormat?.type === 'json_schema') {
+      responseFormat = {
+        type: 'json_schema',
+        json_schema: {
+          name: opts.responseFormat.jsonSchema.name,
+          strict: opts.responseFormat.jsonSchema.strict ?? true,
+          schema: opts.responseFormat.jsonSchema.schema,
+        },
+      };
+    }
+
     try {
       const resp = await this.client.chat.completions.create({
         model,
         messages,
         temperature: opts.temperature ?? 0.7,
         max_tokens: opts.maxTokens,
+        // groq-sdk types may not yet declare response_format; cast the
+        // request payload only at the call site.
+        ...(responseFormat
+          ? ({ response_format: responseFormat } as Record<string, unknown>)
+          : {}),
       });
       const text = resp.choices[0]?.message?.content ?? '';
       const usage = resp.usage;
