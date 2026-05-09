@@ -117,7 +117,12 @@ export class CuratorService {
     });
 
     // ────────────────────────────────────────────────────────────────
-    // Pattern A scaffold — Day-16 swap point.
+    // PATTERN-A → PATTERN-B SWAP: Day-15/Day-16 — replace canned
+    // similarity scores with real pgvector cosine. Embedding via
+    // @xenova/transformers (per ADR-003 amendment: bge-small-en-v1.5,
+    // 384-dim — ADR-014 must reconcile if FP rate forces bge-large
+    // upgrade + vector(384)→vector(1024) migration).
+    // Threshold canon: 0.85 flag, 0.95 block. See ADR-014.
     // ────────────────────────────────────────────────────────────────
     // Day-16 will: embed the source case via EmbeddingService.embed()
     // (using the case's title + preconditions + stepsJson concatenated),

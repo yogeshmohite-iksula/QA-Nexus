@@ -1,0 +1,177 @@
+{
+  "_meta": {
+    "purpose": "Reference fixture — exact wire shape FE+1 should expect from POST /api/projects/:projectId/requirements/:reqId/test-cases/generate. Generated 2026-05-09 (Day-14 TASK B1) via ComposerService OFFLINE path (no Groq key needed). Once Day-15 deploy sets LLM_PRIMARY_PROVIDER=groq + GROQ_API_KEY on Render, the wire shape is identical except (a) `cases[].title/preconditions/steps/expectedResult/rationale` will be model-generated (not canned), (b) `llmMetadata.tokensIn/tokensOut/latencyMs` will reflect real Groq usage, (c) `stubbed: false`. Schema lock is enforced by ADR-013 + packages/shared/src/schemas/test-case.ts ComposerGenerateResponse Zod schema.",
+    "endpoint": "POST /api/projects/:projectId/requirements/:reqId/test-cases/generate",
+    "request_body_schema": "@qa-nexus/shared :: ComposerGenerateRequest",
+    "response_body_schema": "@qa-nexus/shared :: ComposerGenerateResponse",
+    "json_schema_constant": "apps/api/src/test-cases/composer-prompt.ts :: COMPOSER_RESPONSE_JSON_SCHEMA",
+    "input_used": {
+      "projectId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "requirementId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "req_key": "RET-247",
+      "req_title": "Refund flow within 7 days",
+      "body": { "count": 5, "format": "auto" }
+    }
+  },
+  "ok": true,
+  "runId": "11111111-1111-4111-8111-111111111111",
+  "cases": [
+    {
+      "key": "TC-RET-PROPOSED-001",
+      "title": "Refund flow within 7 days — happy path — primary user flow",
+      "preconditions": "User authenticated; relevant entity in valid state.",
+      "stepsJson": [
+        {
+          "order": 1,
+          "action": "Navigate to the screen described by RET-247",
+          "expected": "Screen loads with default state."
+        },
+        {
+          "order": 2,
+          "action": "Trigger the primary action under test",
+          "expected": "Action executes without error."
+        },
+        {
+          "order": 3,
+          "action": "Verify the success outcome",
+          "expected": "Expected behavior occurs end-to-end."
+        }
+      ],
+      "expectedResult": "Primary flow described by RET-247 completes successfully.",
+      "priority": "P1",
+      "format": "step",
+      "gherkin": null,
+      "rationale": "Covers the core happy-path described in the requirement. Highest-value first case per testing pyramid.",
+      "sourceChunkIds": []
+    },
+    {
+      "key": "TC-RET-PROPOSED-002",
+      "title": "Refund flow within 7 days — invalid input — validation error",
+      "preconditions": "User authenticated; entity in valid pre-state.",
+      "stepsJson": [
+        {
+          "order": 1,
+          "action": "Submit invalid input (empty / malformed / out-of-range)",
+          "expected": "Server returns 400 with field-level error."
+        },
+        {
+          "order": 2,
+          "action": "Verify FE renders error inline next to the field",
+          "expected": "Error message visible; submit button stays disabled."
+        }
+      ],
+      "expectedResult": "Invalid input is rejected at both client + server; user sees actionable error.",
+      "priority": "P1",
+      "format": "step",
+      "gherkin": null,
+      "rationale": "Validation errors are the most common user-facing failure mode. Covers both layers of defense.",
+      "sourceChunkIds": []
+    },
+    {
+      "key": "TC-RET-PROPOSED-003",
+      "title": "Refund flow within 7 days — cross-workspace isolation guard",
+      "preconditions": "Two workspaces with overlapping entity IDs.",
+      "stepsJson": [
+        {
+          "order": 1,
+          "action": "User in workspace A attempts to fetch entity from workspace B",
+          "expected": "API returns 404 (not 403 — leak-free)."
+        },
+        {
+          "order": 2,
+          "action": "Verify response body is opaque (no entity-existence leak)",
+          "expected": "404 message is generic; no metadata leaked."
+        }
+      ],
+      "expectedResult": "Cross-workspace access denied with no existence leak (mirrors M2 isolation pattern).",
+      "priority": "P0",
+      "format": "step",
+      "gherkin": null,
+      "rationale": "Multi-tenant isolation is the highest-risk security control. Canon: 404 not 403 on cross-tenant.",
+      "sourceChunkIds": []
+    },
+    {
+      "key": "TC-RET-PROPOSED-004",
+      "title": "Refund flow within 7 days — audit log integrity",
+      "preconditions": "User performs the action under test.",
+      "stepsJson": [
+        {
+          "order": 1,
+          "action": "Trigger the action that should write an audit row",
+          "expected": "Audit row written synchronously with HMAC chain link."
+        },
+        {
+          "order": 2,
+          "action": "Run pnpm verify:audit",
+          "expected": "Chain integrity verified; no tampered or skipped rows."
+        }
+      ],
+      "expectedResult": "Action emits a chain-bound audit row; verifier accepts the chain.",
+      "priority": "P1",
+      "format": "step",
+      "gherkin": null,
+      "rationale": "Hard Rule 7: every state-changing action writes audit_log. Verifier must re-run clean.",
+      "sourceChunkIds": []
+    },
+    {
+      "key": "TC-RET-PROPOSED-005",
+      "title": "Refund flow within 7 days — rate-limit + retry behavior",
+      "preconditions": "Rate limiter configured; user has no quota remaining.",
+      "stepsJson": [
+        {
+          "order": 1,
+          "action": "Attempt the action when over rate limit",
+          "expected": "429 with Retry-After header."
+        },
+        {
+          "order": 2,
+          "action": "Wait the indicated duration + retry",
+          "expected": "Action succeeds on retry."
+        }
+      ],
+      "expectedResult": "Rate limit returns 429 with backoff hint; retry succeeds within window.",
+      "priority": "P2",
+      "format": "step",
+      "gherkin": null,
+      "rationale": "Rate limiting protects free-tier quotas; tests both the limit + the recovery path.",
+      "sourceChunkIds": []
+    }
+  ],
+  "llmMetadata": {
+    "providerName": "groq",
+    "modelUsed": "openai/gpt-oss-120b",
+    "tokensIn": 420,
+    "tokensOut": 900,
+    "latencyMs": 850,
+    "fallbackUsed": false
+  },
+  "stubbed": true,
+  "_error_response_examples": {
+    "503_retry_exhausted": {
+      "statusCode": 503,
+      "message": "Composer could not generate test cases — all providers exhausted.",
+      "error": "composer_unavailable",
+      "retry_after": 60,
+      "run_id": "<UUID of failed TB-022 row, recorded BEFORE throw for audit>"
+    },
+    "400_zod_validation_failure": {
+      "statusCode": 400,
+      "message": "<Zod issue path + message — e.g. count: Number must be less than or equal to 10>",
+      "error": "Bad Request",
+      "_note": "Fires before LLM call. ComposerGenerateRequest Zod parse runs at the controller surface."
+    },
+    "404_requirement_not_found": {
+      "statusCode": 404,
+      "message": "requirement <UUID> not found in this project",
+      "error": "Not Found",
+      "_note": "Cross-workspace OR cross-project reqId — uniform 404 (no existence leak)."
+    },
+    "403_stakeholder_role": {
+      "statusCode": 403,
+      "message": "Stakeholder role is read-only on test case generation",
+      "error": "Forbidden",
+      "_note": "Defense-in-depth — @Roles guard catches upstream first."
+    }
+  },
+  "_streaming_mode": "NON-STREAMING. Single JSON response after model completes. F16a/b should show a loading spinner for the full 1-3s generation window. ADR-013 §Consequences explicitly rejects streaming for this surface — modal renders all cases at once."
+}
