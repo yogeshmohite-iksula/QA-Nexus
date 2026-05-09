@@ -26,7 +26,10 @@ jobs:
           version: 10.33.2
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Node 22 required for wrangler@latest (5.x).
+          # CLAUDE.md locked-deps says node>=20; 22 satisfies the constraint.
+          # Only bumping deploy.yml — ci.yml stays at 20 for compatibility.
+          node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web build
