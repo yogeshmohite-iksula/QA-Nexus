@@ -42,6 +42,8 @@ import {
   UpdateTestCaseInput,
   TestCaseListQuery,
   CreateTestCaseLinkInput,
+  BulkLinkInput,
+  BulkDeleteInput,
   type TestCaseListResponse,
   type TestCaseDetailResponse,
   type TestCaseCreateResponse,
@@ -49,6 +51,8 @@ import {
   type TestCaseDeleteResponse,
   type TestCaseLinkResponse,
   type TestCaseUnlinkResponse,
+  type BulkLinkResponse,
+  type BulkDeleteResponse,
 } from '@qa-nexus/shared';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
@@ -123,6 +127,74 @@ export class TestCasesProjectScopedController {
         total: result.total,
         page: result.page,
         pageSize: result.pageSize,
+      },
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // BULK OPERATIONS — TASK BE-2 (Day-13).
+  // Both endpoints return per-row outcome arrays so the FE can
+  // render success/failure UX without a second round-trip. Mixed-
+  // project IDs land in `failed[]` rather than failing the whole call.
+  // ────────────────────────────────────────────────────────────────
+
+  /// Link N test cases to a single requirement. Used by F14m2 modal.
+  @Post('bulk-link')
+  @HttpCode(200) // 200 — partial success is normal (failed[] may be non-empty)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
+  async bulkLink(
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ): Promise<BulkLinkResponse> {
+    const input = BulkLinkInput.parse(body);
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    const result = await this.testCases.bulkLink(
+      projectId,
+      input.requirementId,
+      input.testCaseIds,
+      ctx,
+    );
+    return {
+      ok: true,
+      requirementId: result.requirementId,
+      linked: result.linked,
+      failed: result.failed,
+      totals: {
+        requested: input.testCaseIds.length,
+        created: result.linked.filter((l) => l.outcome === 'created').length,
+        existed: result.linked.filter((l) => l.outcome === 'existed').length,
+        failed: result.failed.length,
+      },
+    };
+  }
+
+  /// Bulk soft-delete N test cases. Used by F14 list-page checkbox flow.
+  @Post('bulk-delete')
+  @HttpCode(200)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
+  async bulkDelete(
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ): Promise<BulkDeleteResponse> {
+    const input = BulkDeleteInput.parse(body);
+    const ctx = await this.actorOf(req);
+    this.testCases.assertWriteRole(ctx);
+    const result = await this.testCases.bulkArchive(
+      projectId,
+      input.testCaseIds,
+      ctx,
+    );
+    return {
+      ok: true,
+      archived: result.archived,
+      failed: result.failed,
+      totals: {
+        requested: input.testCaseIds.length,
+        archived: result.archived.length,
+        failed: result.failed.length,
       },
     };
   }

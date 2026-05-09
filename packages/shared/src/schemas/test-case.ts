@@ -523,3 +523,94 @@ export const CuratorCheckResponse = z.object({
   stubbed: z.boolean(),
 });
 export type CuratorCheckResponse = z.infer<typeof CuratorCheckResponse>;
+
+// ─────────────────────────────────────────────────────────────────────
+// M3 Day-13 TASK BE-2 — Bulk operations.
+//
+//   POST /api/projects/:projectId/test-cases/bulk-link
+//   POST /api/projects/:projectId/test-cases/bulk-delete
+//
+// Both endpoints accept an array of testCaseIds (1..MAX) and return
+// per-row outcome arrays so the FE can render success/failure UX
+// without a second round-trip. Used by F14m2 Link Test Case modal +
+// F14 list-page bulk-archive checkbox flow.
+// ─────────────────────────────────────────────────────────────────────
+
+/// Hard cap on bulk operations — keeps Postgres transaction size +
+/// audit row size bounded. M3 pilot upper bound is 50 cases per
+/// project; larger ops should be re-thought (CSV import path).
+export const BULK_OPERATION_MAX_IDS = 50;
+
+export const BulkLinkInput = z.object({
+  /// Requirement to link all listed test cases to. Must belong to the
+  /// project in the URL path. Cross-project requirementId → 404.
+  requirementId: Uuid,
+  /// 1..50 unique test case UUIDs. All must belong to the project in
+  /// the URL path.
+  testCaseIds: z.array(Uuid).min(1).max(BULK_OPERATION_MAX_IDS),
+});
+export type BulkLinkInput = z.infer<typeof BulkLinkInput>;
+
+export const BulkLinkOutcomeItem = z.object({
+  testCaseId: Uuid,
+  /// 'created' = link did not exist + was inserted.
+  /// 'existed' = link already present (idempotent no-op).
+  outcome: z.enum(['created', 'existed']),
+});
+export type BulkLinkOutcomeItem = z.infer<typeof BulkLinkOutcomeItem>;
+
+export const BulkLinkFailureItem = z.object({
+  testCaseId: Uuid,
+  /// Short error key the FE can map to a friendly message:
+  ///   'not_found'        — testCaseId not in this project
+  ///   'cross_project'    — testCase exists but in a different project
+  ///   'cross_workspace'  — testCase exists but in a different workspace
+  reason: z.enum(['not_found', 'cross_project', 'cross_workspace']),
+});
+export type BulkLinkFailureItem = z.infer<typeof BulkLinkFailureItem>;
+
+export const BulkLinkResponse = z.object({
+  ok: z.literal(true),
+  requirementId: Uuid,
+  linked: z.array(BulkLinkOutcomeItem),
+  failed: z.array(BulkLinkFailureItem),
+  /// Convenience aggregates for FE summary line.
+  totals: z.object({
+    requested: z.number().int().nonnegative(),
+    created: z.number().int().nonnegative(),
+    existed: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+  }),
+});
+export type BulkLinkResponse = z.infer<typeof BulkLinkResponse>;
+
+export const BulkDeleteInput = z.object({
+  /// 1..50 unique test case UUIDs. All must belong to the project in
+  /// the URL path. Mixed-project IDs return per-row 'cross_project'
+  /// in `failed` rather than failing the whole call.
+  testCaseIds: z.array(Uuid).min(1).max(BULK_OPERATION_MAX_IDS),
+});
+export type BulkDeleteInput = z.infer<typeof BulkDeleteInput>;
+
+export const BulkDeleteOutcomeItem = z.object({
+  testCaseId: Uuid,
+});
+export type BulkDeleteOutcomeItem = z.infer<typeof BulkDeleteOutcomeItem>;
+
+export const BulkDeleteFailureItem = z.object({
+  testCaseId: Uuid,
+  reason: z.enum(['not_found', 'cross_project', 'cross_workspace']),
+});
+export type BulkDeleteFailureItem = z.infer<typeof BulkDeleteFailureItem>;
+
+export const BulkDeleteResponse = z.object({
+  ok: z.literal(true),
+  archived: z.array(BulkDeleteOutcomeItem),
+  failed: z.array(BulkDeleteFailureItem),
+  totals: z.object({
+    requested: z.number().int().nonnegative(),
+    archived: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+  }),
+});
+export type BulkDeleteResponse = z.infer<typeof BulkDeleteResponse>;
