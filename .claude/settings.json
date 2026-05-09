@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/pre-tool-use/inject-memory.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-use/enforce-no-playwright-mcp.sh"
           }
         ]
       },
@@ -279,7 +283,8 @@
       "Edit(.env)",
       "Write(.env)",
       "Edit(apps/**/.env)",
-      "Write(apps/**/.env)"
+      "Write(apps/**/.env)",
+      "mcp__playwright__*"
     ]
   }
 }
