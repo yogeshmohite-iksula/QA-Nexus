@@ -2,6 +2,87 @@
 
 ---
 
+## [2026-05-09] (ar) P2 — `[platform]` Cross-worktree cascade rebase pattern — locked-frame / abandoned-rebase-state hazards
+
+**Symptom (Day-14 cascade):** During Day-14's BE cascade rebase of 4
+PRs (#87 / #93 / #95 / #97) onto a moving `origin/main` (which had
+absorbed Hard-Rule-14/15 v2-frame migration #100, prettier-gate #91,
+and TASK-2 #87 in rapid succession), the rebase encountered TWO
+distinct hazard patterns that the canonical `git rebase --onto
+origin/main <upstream>` runbook didn't anticipate:
+
+**Hazard 1 — "Cross-worktree untracked locked frames":**
+Five v2 HTMLs (`F18-F22 v2.html`) appeared as **untracked** in BE's
+worktree at session-resume because PR #100 had moved them from `frame
+html view/` + `frames - claude code build/` into `Redesign Frame by
+claude design/` while BE's local main was still pre-#100. Naive `git
+checkout <branch>` would have failed (and any destructive cleanup
+would have violated **Hard Rule 3** since these are LOCKED FRAMES).
+Worse — F15 + F16b v2 carried Yogesh's pending design tweaks (129 +
+2014 line modifications) that already-merged PR #100 had absorbed,
+but the worktree didn't yet know.
+
+**Hazard 2 — "Abandoned rebase-merge state in sibling worktree":**
+The pre-compaction session left `.git/worktrees/Project10-QA_Nexus-
+backend/rebase-merge/` populated with stale state pointing at
+`feature/be-m3-test-cases-bulk-ops`. This made `git switch
+feature/be-m3-test-cases-bulk-ops` from the main worktree fail with
+`fatal: 'feature/be-m3-test-cases-bulk-ops' is already used by
+worktree at...` even though `git worktree list --porcelain` showed
+the backend worktree as `detached`. The branch was effectively
+locked across worktrees by the abandoned rebase metadata.
+
+**Why the canonical runbook missed it:** The Day-13 cascade pattern
+assumed (a) a single worktree with clean tree, (b) all `origin/main`
+movement was source-only, never locked-frame, (c) `rebase --continue`
+reliably advances msgnum after `git add` of resolved files. None of
+these held on Day-14.
+
+**Mitigation pattern (validated this PR):**
+
+1. **`git stash push --include-untracked`** as the first action on
+   any cascade resume — captures locked-frame deltas non-
+   destructively. Stash is move-aside, not modify.
+2. **Verify locked-frame integrity post-rebase** by comparing stash's
+   post-state blob hash against `git ls-tree origin/main -- <path>`.
+   Match → safe to drop. Drift → retain stash + report. (This PR:
+   F15 stash blob `47cb6d9` matched origin/main verbatim; same for
+   F16b.)
+3. **For abandoned rebase-merge state in sibling worktree:** move
+   the `rebase-merge/` directory aside (don't delete) within
+   `.git/worktrees/<sibling>/` — preserves recovery option,
+   unblocks the cross-worktree branch lock.
+4. **Cherry-pick over rebase --continue** when the rebase machinery
+   gets stuck on a phantom unmerged-paths error. After
+   `git switch -C <branch> origin/main`, `git cherry-pick <feature-
+sha>` is the cleaner path. Empty CI-retrigger commits can be
+   skipped entirely.
+5. **Prettier --check pre-push gate (from `(aq)`)** caught spec-file
+   drift on every BE PR this cascade — confirmed working as
+   designed; cascade-storm prevention is real.
+
+**ADR worth writing:** `docs/architecture/adr-XXX-cascade-rebase-
+with-untracked-locked-frames.md` capturing the 5-step mitigation as
+the canonical Day-14+ runbook. Author: BE chat. Reviewers: MAIN +
+FE+1 (cross-worktree pattern affects all 3 chats).
+
+**Owner:** BE chat. **Tag:** `[platform]`. **Severity:** P2
+(documentation hardening — current Day-13 runbook works for happy
+path, breaks on cross-worktree concurrent state). **Effort:** M
+(45 min for ADR + cross-link from CLAUDE.md token-discipline section).
+
+**Cross-references:**
+
+- PRs #93 / #95 / #97 (this Day-14 cascade — all 3 force-pushed
+  with cherry-pick recovery)
+- PR #100 (locked-frame v1→v2 migration that triggered Hazard 1)
+- PR #91 — `(aq)` prettier gate (caught drift this cascade)
+- PR #87 — TASK 2 requirements CRUD (auto-merged mid-cascade,
+  triggered re-rebase need)
+- `docs/CHANGELOG.md` Day-14 (ar) entry (when ADR ships)
+
+---
+
 ## [2026-05-08] (aq) P1 — `[platform]` Add `prettier --check` as pre-push gate 2 — RESOLVED in this PR
 
 **Symptom:** Prettier-cascade has now bitten 5 PRs across 2 days:
