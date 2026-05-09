@@ -114,6 +114,20 @@ export class LLMGatewayService implements OnModuleInit {
         501,
       );
     }
+    // LLM_DEBUG=true → emit raw prompt + system to stderr for FE+1
+    // wiring debugging. NEVER enable in production (would log PII to
+    // stdout); env-gated for local dev only. Guarded by binary string
+    // check so any non-'true' value (including unset) is a no-op.
+    // Day-14 TASK B1.3.
+    if (process.env.LLM_DEBUG === 'true') {
+      process.stderr.write(
+        '\n[LLM_DEBUG] complete() called\n' +
+          `[LLM_DEBUG] systemPrompt (${(opts.systemPrompt ?? '').length} chars):\n` +
+          `${opts.systemPrompt ?? '(none)'}\n` +
+          `[LLM_DEBUG] prompt (${prompt.length} chars):\n${prompt}\n` +
+          `[LLM_DEBUG] opts: ${JSON.stringify({ model: opts.model, temperature: opts.temperature, maxTokens: opts.maxTokens, forceLongContext: opts.forceLongContext, responseFormat: opts.responseFormat?.type ?? 'text' })}\n`,
+      );
+    }
     // Wrap the entire routing + retry + fallback flow in a single span
     // per .claude/rules/api.md binding rule. The span is always emitted
     // (even if it fails) — attributes capture which route fired + which
@@ -144,6 +158,16 @@ export class LLMGatewayService implements OnModuleInit {
             'llm.route_reason': result.routeReason,
           });
           span.setStatus({ code: SpanStatusCode.OK });
+          // LLM_DEBUG=true → emit raw completion + provider metadata.
+          // Day-14 TASK B1.3.
+          if (process.env.LLM_DEBUG === 'true') {
+            process.stderr.write(
+              `[LLM_DEBUG] result provider=${result.providerName} model=${result.modelUsed} ` +
+                `tokensIn=${result.tokensIn} tokensOut=${result.tokensOut} latencyMs=${result.latencyMs} ` +
+                `fallbackUsed=${result.fallbackUsed} route=${result.routeReason}\n` +
+                `[LLM_DEBUG] completion (${result.text.length} chars):\n${result.text}\n\n`,
+            );
+          }
           return result;
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
