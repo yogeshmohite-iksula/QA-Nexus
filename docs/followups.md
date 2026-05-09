@@ -2,6 +2,139 @@
 
 ---
 
+## [2026-05-09] (av) P3 — `[m3-followup]` TestCase.embedding backfill + CLAUDE.md doc-drift on embedding model
+
+**Two coupled doc-debt + data-debt items, filed together because they
+share the same root cause (CLAUDE.md says bge-large but reality is
+bge-small per ADR-003 amendment + Day-5 vector(384) migration).**
+
+### Item 1 — TestCase.embedding backfill job (M3.5+)
+
+**Symptom (ADR-014 §8):** Curator's pgvector cosine search excludes
+rows where `test_cases.embedding IS NULL`. M2-era manual TestCases
+(created via /test-cases POST before Composer wired auto-embedding)
+have no embedding → silently skipped from dedup. Service logs
+`metadata.skippedNullEmbeddings` count for observability but the
+cases themselves never surface in F14m2 banner — even when a new
+proposal IS a near-duplicate of one of them.
+
+**Fix scope:** ~3 hr. New script
+`scripts/backfill-test-case-embeddings.ts` that:
+
+- Selects all `test_cases WHERE embedding IS NULL AND status != 'deprecated'`
+- Batches through `EmbeddingService.embedBatch(texts)` at batch size 32
+- Writes back via raw SQL (Prisma can't update `vector(384)` columns
+  directly — same constraint as M2 KbChunk backfill in PR #34)
+- Idempotent (re-runnable; only touches NULL rows)
+- Audit row `test_case_embedding_backfilled` per batch with counts
+- Optional `--dry-run` flag for QA validation
+
+**Trigger:** post-M3 close once Composer + Curator are operational
+in production AND Akshay confirms the backlog of pre-M3 manual cases
+is non-trivial. If pilot starts with few/no manual cases, defer
+indefinitely (Composer will be the only source of new cases).
+
+**Owner:** BE+1 + Yogesh approval gate. **Priority:** P3.
+
+### Item 2 — CLAUDE.md doc-drift on embedding model
+
+**Symptom:** `CLAUDE.md` "Locked tech stack" §"Embeddings" still says:
+
+> "BAAI/bge-large-en-v1.5 in-process via `@xenova/transformers`
+> (1024-dim, ~47ms/embed warm)"
+
+But the actual data layer is `Xenova/bge-small-en-v1.5` (384-dim,
+~33 MB, ~50ms/embed warm) per ADR-003 amendment + ADR-009 +
+migration `apps/api/prisma/raw/migrations/0002_vector_384_dim.sql`
+
+- `apps/api/src/embedding/embedding.service.ts` `EXPECTED_DIM = 384`.
+
+Same drift in PM1_PRD v8.1 + PM1_ERD v2.1 (both reference bge-large).
+
+**Fix scope:** ~30 min. Single edit to CLAUDE.md "Embeddings" line
+
+- note in PRD/ERD's relevant sections that bge-small is the runtime
+  model (with bge-large + Qwen3-0.6B as future-target pin per ADR-003
+  amendment). Schedule during M3.5 doc consolidation pass alongside
+  any other CLAUDE.md drift accumulated during M3 build.
+
+**Owner:** Yogesh (CLAUDE.md is admin-edit-only) or BE+1 with
+explicit approval. **Priority:** P3 (cosmetic; runtime is correct).
+
+**Cross-references:**
+
+- ADR-014 §"Embedding model reality vs CLAUDE.md spec — the reconciliation"
+- ADR-003 + ADR-003-amendment
+- `apps/api/prisma/raw/migrations/0002_vector_384_dim.sql` (the actual ground truth)
+- `apps/api/src/embedding/embedding.service.ts` `DEFAULT_MODEL_ID`
+- followup `(au)` (sibling — bge-large upgrade evaluation)
+
+---
+
+## [2026-05-09] (au) P3 — `[m3-followup]` Post-pilot embedding-model upgrade evaluation (bge-small → bge-large / Qwen3-0.6B / Nomic-v1.5 / BGE-M3)
+
+**Filed:** Day-14 alongside ADR-014 §"Decision §2 Path C". Path C
+deliberately defers the bge-large vs bge-small decision until pilot
+data is available — this followup tracks the eval gate.
+
+**Trigger (any one of):**
+
+1. Curator FP rate > 5% measured against Iksula's labeled seed set
+   in the first 2 weeks of pilot
+2. Pilot expands beyond 8 users → tighter dedup quality matters
+3. Render upgrades to paid tier (Hobby) → 512 MB ceiling lifted
+4. Akshay or Yogesh requests "stricter dedup" UX
+
+**Scope:** ~3 hr. Benchmark the following on production Curator
+dataset (Iksula test_cases at end of pilot week 4):
+
+| Model                                        | Dim  | RAM      | Latency target | MTEB avg |
+| -------------------------------------------- | ---- | -------- | -------------- | -------- |
+| Xenova/bge-small-en-v1.5 (current)           | 384  | ~33 MB   | ~50ms warm     | 62.17    |
+| Xenova/bge-large-en-v1.5                     | 1024 | ~470 MB  | ~150ms warm    | 64.23    |
+| Xenova/Qwen3-Embedding-0.6B (when published) | 1024 | ~600 MB  | TBD            | 67.80+   |
+| Xenova/nomic-embed-text-v1.5                 | 768  | ~250 MB  | ~100ms warm    | 62.39    |
+| Xenova/bge-m3                                | 1024 | ~570 MB  | TBD            | 65.30    |
+| Xenova/bge-large-en-v1.5 (int8 quantized)    | 1024 | ~120 MB? | ~120ms warm?   | 63.5 est |
+
+**Measurement protocol:**
+
+- Re-embed full Iksula corpus with each candidate model (separate
+  index per model — temporary parallel `test_cases.embedding_<model>`
+  columns OR temporary `test_cases_eval` table)
+- Run Curator's actual cosine search against each
+- Score precision / recall / FP-rate at the 0.85 / 0.95 thresholds
+- Measure RAM (resident + peak during embed batch) on Render Free dyno
+- Measure p50 / p95 / p99 latency for embed + cosine search
+
+**Decision matrix per model:**
+
+- **Pass:** RAM < 512 MB × 0.7 = 358 MB headroom AND latency < 200ms
+  p95 AND quality delta > +2 MTEB pt over bge-small
+- **Conditional pass:** RAM acceptable but latency > 200ms → consider
+  if quality delta > +5 pt
+- **Fail:** RAM > 358 MB OR quality delta ≤ +1 pt
+
+**Migration cost (if upgrade chosen):**
+
+- Schema migration: `ALTER TABLE test_cases ALTER COLUMN embedding
+TYPE vector(<new-dim>) USING NULL`
+- Backfill: re-run `(av)` Item 1's backfill script with new model
+- HNSW index drop + recreate (dim-specific per pgvector docs)
+- Update `EMBEDDING_MODEL_ID` env var on Render
+- Update ADR-003 amendment + CLAUDE.md per `(av)` Item 2
+
+**Owner:** BE+1 + Yogesh approval gate. **Priority:** P3 (post-pilot).
+
+**Cross-references:**
+
+- ADR-014 §"Decision §2 Path C" + §"Negative" (quality cost note)
+- ADR-003 + ADR-003-amendment
+- `(av)` (sibling — backfill + doc-drift)
+- CLAUDE.md "Embeddings" (current state + future-target pin)
+
+---
+
 ## [2026-05-09] (ar) P2 — `[platform]` Cross-worktree cascade rebase pattern — locked-frame / abandoned-rebase-state hazards
 
 **Symptom (Day-14 cascade):** During Day-14's BE cascade rebase of 4
