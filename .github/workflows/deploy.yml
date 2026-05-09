@@ -29,6 +29,11 @@ jobs:
           node-version: "20"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Build the @qa-nexus/shared workspace package first so its dist/ exists
+      # before next build resolves `import ... from '@qa-nexus/shared'` in
+      # apps/web/lib/api/*.ts. Without this, next build fails with
+      # "Module not found: Can't resolve '@qa-nexus/shared'".
+      - run: pnpm --filter @qa-nexus/shared build
       - run: pnpm --filter web build
       - name: Deploy to Cloudflare Pages
         # Required GitHub repo secret: CLOUDFLARE_API_TOKEN (Pages:Edit scope)
