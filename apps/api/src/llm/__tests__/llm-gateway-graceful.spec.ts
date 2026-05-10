@@ -19,18 +19,23 @@ describe('LLMGatewayService — graceful deferred mode', () => {
     process.env = { ...originalEnv };
   });
 
-  it('onModuleInit does NOT throw when LLM_PRIMARY_PROVIDER is unset', () => {
+  it('onModuleInit does NOT throw when LLM_PRIMARY_PROVIDER + DB are both empty (env-first then DB-fallback per ADR-015)', async () => {
     delete process.env.LLM_PRIMARY_PROVIDER;
-    const svc = new LLMGatewayService();
-    expect(() => svc.onModuleInit()).not.toThrow();
+    const svc = new LLMGatewayService({
+      llmProvider: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as any);
+    await expect(svc.onModuleInit()).resolves.not.toThrow();
     expect(svc.deferred).toBe(true);
     expect(svc.deferredReason).toMatch(/LLM_PRIMARY_PROVIDER/);
+    expect(svc.configSource).toBe('none');
   });
 
   it('complete() in deferred mode throws 501 with admin-friendly message', async () => {
     delete process.env.LLM_PRIMARY_PROVIDER;
-    const svc = new LLMGatewayService();
-    svc.onModuleInit();
+    const svc = new LLMGatewayService({
+      llmProvider: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as any);
+    await svc.onModuleInit();
     let caught: unknown = null;
     try {
       await svc.complete('test prompt');
@@ -43,22 +48,27 @@ describe('LLMGatewayService — graceful deferred mode', () => {
     expect(exc.message).toMatch(/F26 UI/);
   });
 
-  it('onModuleInit succeeds normally when LLM_PRIMARY_PROVIDER is set', () => {
+  it('onModuleInit succeeds via env path when LLM_PRIMARY_PROVIDER is set', async () => {
     process.env.LLM_PRIMARY_PROVIDER = 'groq';
     process.env.LLM_PRIMARY_MODEL = 'openai/gpt-oss-120b';
-    const svc = new LLMGatewayService();
-    expect(() => svc.onModuleInit()).not.toThrow();
+    const svc = new LLMGatewayService({
+      llmProvider: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as any);
+    await svc.onModuleInit();
     expect(svc.deferred).toBe(false);
     expect(svc.deferredReason).toBeNull();
+    expect(svc.configSource).toBe('env');
     const cfg = svc.getConfig();
     expect(cfg).not.toBeNull();
     expect(cfg!.primaryProvider).toBe('groq');
   });
 
-  it('getConfig() returns null in deferred mode', () => {
+  it('getConfig() returns null in deferred mode', async () => {
     delete process.env.LLM_PRIMARY_PROVIDER;
-    const svc = new LLMGatewayService();
-    svc.onModuleInit();
+    const svc = new LLMGatewayService({
+      llmProvider: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as any);
+    await svc.onModuleInit();
     expect(svc.getConfig()).toBeNull();
   });
 });

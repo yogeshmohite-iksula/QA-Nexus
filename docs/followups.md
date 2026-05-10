@@ -2,6 +2,37 @@
 
 ---
 
+## [2026-05-10] (az) P2 — `[m3-followup]` Remove Path C bridge + add F26-equivalent admin LLM config UI flows when F26 v2 ships in M5
+
+**Filed:** Day-15 alongside ADR-015 (Path C transitional bridge for runtime LLM provider config). This followup tracks the **removal milestone** so the throwaway code from Path C doesn't accumulate as long-term tech debt.
+
+**Trigger:** F26 v2 React UI ships in M5 + admins are configuring LLM providers via the web form (NOT via the `seed-llm-provider.ts` CLI).
+
+**Removal scope (3-4 hr work):**
+
+1. **Remove env-var fallback** in `LLMGatewayService.readConfigFromEnv()` — OR gate behind `LLM_DEPLOY_ENV_FALLBACK=true` for emergency operator hatch.
+2. **Remove seed script** `apps/api/scripts/seed-llm-provider.ts` — OR move to `apps/api/scripts/legacy/` as ops escape hatch with README warning.
+3. **Add hot-reload endpoint** `POST /api/admin/llm/reload` (Admin-only) — replaces "redeploy after seed" pattern. F26 v2 hits this on save.
+4. **Add AAD to crypto helper** in `apps/api/src/llm/crypto.ts` — `AAD = workspaceId + providerKind` binds ciphertext to its row context (defends against row-swap attacks). Backward-compat: read-side accepts both AAD + non-AAD ciphertext during the migration window; write-side always emits AAD.
+5. **Refactor providers** (`GroqProvider`, `GeminiProvider`, future) to take explicit `apiKey` constructor arg — removes the `process.env.GROQ_API_KEY` mutation in `readConfigFromDb`. Provider-registry passes the key through.
+6. **Wire `agent_model_assignments` (TB-021) → `LLMGatewayService.config`** so secondary + long_context providers come from per-agent×role routing instead of being undefined.
+7. **Mark ADR-015** `Status: Superseded by F26 v2` (or `Retired`).
+
+**Owner:** BE chat (post-F26 v2 sister PR). **Severity:** P2 (transitional code; not blocking). **Effort:** M (3-4 hr).
+
+**Why P2 not P3:** the longer Path C lives, the higher the surface area for misuse (operators forgetting to rotate keys via UI vs CLI; env vars accumulating; the `process.env` mutation pattern getting copied elsewhere). Should be cleaned up within 2 weeks of F26 v2 ship.
+
+**Cross-references:**
+
+- ADR-015 §"Lifespan + retirement" — full retirement plan
+- `apps/api/src/llm/llm-gateway.service.ts` `readConfigFromDb` — the patch this followup removes
+- `apps/api/src/llm/crypto.ts` — AAD addition target
+- `apps/api/scripts/seed-llm-provider.ts` — script removal target
+- M5 spec for F26 v2 (TBD — Claude Design redesign in progress)
+- CLAUDE.md Hard Rule 1 ($0/month) + Hard Rule 6 (no secrets in repo) — both preserved by Path C, must remain preserved post-retirement
+
+---
+
 ## [2026-05-09] (av) P3 — `[m3-followup]` TestCase.embedding backfill + CLAUDE.md doc-drift on embedding model
 
 **Two coupled doc-debt + data-debt items, filed together because they

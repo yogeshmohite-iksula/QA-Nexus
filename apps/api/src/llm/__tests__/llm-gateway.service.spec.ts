@@ -93,7 +93,7 @@ function setEnv(env: Record<string, string | undefined>): void {
 describe('LLMGatewayService', () => {
   let svc: LLMGatewayService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     providerMocks.clear();
     setEnv({
       LLM_PRIMARY_PROVIDER: 'mock-primary',
@@ -104,8 +104,10 @@ describe('LLMGatewayService', () => {
       LLM_LONG_CONTEXT_MODEL: 'long-model',
       LLM_LONG_CONTEXT_THRESHOLD_TOKENS: '100',
     });
-    svc = new LLMGatewayService();
-    svc.onModuleInit();
+    svc = new LLMGatewayService({
+      llmProvider: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as any);
+    await svc.onModuleInit();
   });
 
   afterEach(() => {
@@ -273,8 +275,10 @@ describe('LLMGatewayService', () => {
       LLM_SECONDARY_PROVIDER: undefined,
       LLM_SECONDARY_MODEL: undefined,
     });
-    svc = new LLMGatewayService();
-    svc.onModuleInit();
+    svc = new LLMGatewayService({
+      llmProvider: { findFirst: jest.fn().mockResolvedValue(null) },
+    } as any);
+    await svc.onModuleInit();
     providerMocks.set(
       'mock-primary',
       makeMock({
