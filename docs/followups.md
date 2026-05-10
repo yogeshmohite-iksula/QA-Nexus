@@ -22,6 +22,77 @@ Discovery during Day-15 M3 close (FE+1 TASK D3 prep) revealed PR #95 shipped `PO
 **ETA:** L (~3-5 hr combined across BE + FE).
 **Cross-references:** PR #113 (F16c Pattern A scaffold), PR #95 (existing bulk-link/bulk-delete), PR #116 (canonical FE Pattern B wire pattern), `(aw)` (sister F16c canon question).
 
+## [2026-05-10] (bc) P1 — `[fe-followup]` FE auth client call paths: drop `/api` prefix from BetterAuth requests
+
+**Filed:** Day-15 alongside `(bb)` BE auth-mount widening (PR #117).
+
+**Symptom:** FE POSTs to `/api/auth/sign-in/magic-link` were 404'ing. The `/api` prefix is for Nest controllers (those exist at `/api/auth/sign-up`, `/api/auth/sign-in`, etc. via `@Controller('auth')` + `setGlobalPrefix('api')`). BetterAuth's native handler is mounted DIRECTLY on the express app at `/auth/*` — NO `/api` prefix.
+
+**Root cause:** Mismatch between FE auth client config (using `/api/auth/*`) and BE BetterAuth mount path (`/auth/*` per `basePath` set in `AuthService.onModuleInit`). The mount-path mismatch is the inverse of the BE-side `(bb)` issue — `(bb)` widens BE to handle catch-all; `(bc)` fixes FE to call the right base.
+
+**Fix scope:** ~15 min. In `apps/web/lib/auth/` (or wherever the BetterAuth client is configured — likely `@better-auth/client/react`):
+
+```ts
+// BEFORE
+const client = createAuthClient({
+  baseURL: 'https://qa-nexus-api.onrender.com/api/auth',
+});
+
+// AFTER
+const client = createAuthClient({
+  baseURL: 'https://qa-nexus-api.onrender.com/auth',
+});
+```
+
+Local dev should follow the same pattern (drop the `/api` prefix from the BetterAuth client baseURL only — Nest controllers under `/api/*` continue to work).
+
+**Owner:** FE+1 chat (sister PR to BE #117). **Severity:** P1 (auth was broken end-to-end on Day-15 staging — BE #117 unblocks the catch-all but FE still calls the wrong base).
+
+**Cross-references:**
+
+- `(bb)` (sister BE-side fix — PR #117 widened mount)
+- `apps/api/src/auth/auth.service.ts` — `basePath=/auth` log line at boot
+- `apps/api/src/main.ts:54` — express catch-all post-#117
+- BetterAuth docs §"Custom basePath" — canonical client config pattern
+
+---
+
+## [2026-05-10] (bb) P1 — `[m3-platform]` Express auth mount was narrow (catch-all is BetterAuth canonical) — RESOLVED in PR #117
+
+**Filed + resolved Day-15 in the same PR.**
+
+**Symptom:** `apps/api/src/main.ts` mounted the BetterAuth handler at two specific paths:
+
+```ts
+expressApp.all('/auth/magic-link/*', toNodeHandler(authService.auth));
+expressApp.all('/auth/get-session', toNodeHandler(authService.auth));
+```
+
+— covering only the verify + session-check endpoints. When Day-15 FE flipped to a new sign-in flow per Pattern B (PR #116) and POSTed to `/auth/sign-in/magic-link`, the mount didn't expose that path → 404. Pre-existing latent bug; NOT caused by Path C / PR #115 (verified via `git diff`).
+
+**Diagnostic clue:** `/auth/get-session` returned 200 throughout — proving BetterAuth handler + Nest async `onModuleInit` initialization were healthy. The FE's reported 405 was actually 404 (interpretation drift in error handling).
+
+**Fix shipped in PR #117:**
+
+```ts
+// catch-all per BetterAuth standard pattern — let it own its basePath
+expressApp.all('/auth/*', toNodeHandler(authService.auth));
+```
+
+Preserves all existing callers (subsets of `/auth/*`) + unblocks `/auth/sign-in/magic-link` + any future BetterAuth endpoint without further wiring.
+
+**Future audit note (this is the followup-keeper part):** Any new `toNodeHandler(...)` mount for a third-party library that publishes its own routing tree (BetterAuth, Clerk, Auth.js, NextAuth, etc.) MUST use a catch-all (`/path/*`), NOT enumerated sub-paths. Enumerated sub-paths are silent-fail-prone — a new endpoint shipped by the upstream lib won't be reachable. CI smoke test should hit the third-party lib's introspection endpoint (e.g., BetterAuth's `/auth/get-session` or its OpenAPI route) on every release to catch mount drift.
+
+**Owner:** BE chat. **Severity:** P1 (RESOLVED). **Effort:** S (1 LOC + CHANGELOG + 2 followups).
+
+**Cross-references:**
+
+- PR #117 — the fix
+- `(bc)` (sister FE-side fix — drop `/api` prefix from auth client baseURL)
+- `apps/api/src/main.ts:54` — the widened mount
+- `apps/api/src/auth/auth.service.ts` — `basePath=/auth` setting
+- BetterAuth docs §"Mounting in Express" — standard catch-all pattern
+
 ---
 
 ## [2026-05-10] (az) P2 — `[m3-followup]` Remove Path C bridge + add F26-equivalent admin LLM config UI flows when F26 v2 ships in M5
