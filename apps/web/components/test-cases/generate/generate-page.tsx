@@ -1,27 +1,53 @@
-// F16b A1 Generate from Requirement — Pattern A page (M3 Day-14 TASK A2).
+// F16b A1 Generate from Requirement — Pattern B page (M3 Day-15 TASK D2).
 //
 // Implements F16b A1 Generate from Requirement v2.html. Hard Rule 14
 // AdminShell wrap (active='test-cases'). Hard Rule 15 v2-HTML-faithful
-// port. Pattern A: source pre-selected to RET-247 + canned 5 cases
-// dataset; Day-15 swap point flips to real Composer + Curator
-// endpoints from BE+1.
+// port (visual unchanged from PR #110 Pattern A scaffold).
 //
-// Modal triggers / nav source: F16a Test Case Method Chooser modal
-// "AI Generated" card → router.push('/test-cases/generate?source=RET-247').
-// On Pattern A, the `source` param is informational; the canned
-// dataset is always RET-247.
+// Pattern A → Pattern B flip (Day-15 TASK D2):
+//   - `onGenerate` + `onRegenAll` now POST
+//     `/api/projects/:projectId/requirements/:reqId/test-cases/generate`
+//     (the Composer endpoint shipped in PR #109 — real Groq + ADR-013).
+//   - BE wire shape pinned by `@qa-nexus/shared` Zod schemas + reference
+//     fixture `docs/architecture/composer-sample-RET-247.json`.
+//   - `composer-adapter.ts` maps BE `ComposerGeneratedCase` → FE
+//     `GeneratedCase` so the existing case-card / case-list-pane render
+//     trees keep working unchanged.
+//   - `requirement-key-resolver.ts` translates URL `?source=RET-247` to
+//     the canonical (projectId, requirementId) UUID pair until the M3.5
+//     `GET /api/projects?key=…` endpoint lands.
+//   - Stubbed-mode awareness: when BE returns `stubbed:true` (Render env
+//     missing LLM_PRIMARY_PROVIDER / GROQ_API_KEY), FE renders identically
+//     and shows a "demo data" Sonner toast on success — mirrors M2 pattern.
+//
+// Markers still on Pattern A (deferred to future PRs):
+//   - accept-case, reject-case, edit-case → POST /test-cases (single-case
+//     creation endpoint not yet wired here)
+//   - regen-variation → per-card regen endpoint (M3.5)
+//   - curator-action → POST /test-cases/:tcId/duplicates (separate Curator
+//     wire-up; Pattern B for that lives in F14m2 Day-16 task)
+//   - accept-all, back, save-exit → FE-only state / nav
 
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { AdminShell } from '@/components/admin/admin-shell';
+import {
+  generateTestCases,
+  ComposerUnavailableError,
+  ComposerSchemaError,
+  ComposerRateLimitError,
+} from '@/lib/api/composer-api';
 import { Stepper, type StepKey } from './stepper';
 import { SourcePane } from './source-pane';
 import { CaseListPane } from './case-list-pane';
 import { ActivityPane } from './activity-pane';
-import { CANNED_CASES, CANNED_ACTIVITY, type GeneratedCase } from './canned-data';
+import { CANNED_ACTIVITY, type GeneratedCase } from './canned-data';
+import { adaptComposerCases } from './composer-adapter';
+import { resolveRequirementKey } from './requirement-key-resolver';
 
 const ACTIVITY_STORAGE_KEY = 'qa-nexus.f16b.activity-closed';
 
@@ -40,10 +66,13 @@ function GeneratePageContent() {
   const searchParams = useSearchParams();
   const sourceFromUrl = searchParams?.get('source') ?? 'RET-247';
 
-  const [cases, setCases] = useState<GeneratedCase[]>(() => CANNED_CASES);
+  const [cases, setCases] = useState<GeneratedCase[]>(() => []);
   const [isGenerating, setIsGenerating] = useState(true);
   const [streamingElapsed, setStreamingElapsed] = useState(0.74);
   const [isActivityClosed, setIsActivityClosed] = useState(false);
+  // Guard against StrictMode double-mount + accidental loops — initial
+  // auto-generate runs exactly once per (sourceFromUrl) page entry.
+  const hasAutoTriggered = useRef(false);
 
   // Restore activity-pane closed state from localStorage on mount
   useEffect(() => {
@@ -89,12 +118,59 @@ function GeneratePageContent() {
     }
   }, []);
 
-  // Pattern A handlers — log + mutate state locally. Day-15 these
-  // become real API calls.
-  const onGenerate = useCallback(() => {
-    console.info('pattern-a:deferred:f16b:generate-start', { source: sourceFromUrl });
+  // Pattern B handler — POSTs to the real Composer endpoint, adapts
+  // wire-shape, replaces cases on success, surfaces typed errors via
+  // Sonner. Single-flight: guarded by `isGenerating` to ignore re-clicks
+  // mid-call.
+  const runGenerate = useCallback(async () => {
+    const resolved = resolveRequirementKey(sourceFromUrl);
+    if (!resolved) {
+      toast.error(`Requirement "${sourceFromUrl}" not found in current project seed.`);
+      setIsGenerating(false);
+      return;
+    }
     setIsGenerating(true);
+    try {
+      const res = await generateTestCases({
+        projectId: resolved.projectId,
+        requirementId: resolved.requirementId,
+        count: 5,
+        format: 'auto',
+      });
+      setCases(adaptComposerCases(res.cases, resolved.requirementKey));
+      if (res.stubbed) {
+        toast.message('Demo data', {
+          description:
+            'Composer is in stubbed mode (LLM env not yet wired on Render). Shape is real; content is canned.',
+        });
+      }
+    } catch (e) {
+      if (e instanceof ComposerUnavailableError) {
+        toast.error(`Composer unavailable (503). Retry in ${e.retryAfterSec ?? 60}s.`);
+      } else if (e instanceof ComposerRateLimitError) {
+        toast.error(`Groq rate limit hit. Retry in ${e.retryAfterSec ?? 30}s.`);
+      } else if (e instanceof ComposerSchemaError) {
+        toast.error(`Composer rejected request: ${e.message}`);
+      } else {
+        toast.error(`Generate failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
   }, [sourceFromUrl]);
+
+  // Auto-trigger generate on first mount when arriving via F16a chooser
+  // with `?source=KEY`. Guards against StrictMode double-mount.
+  useEffect(() => {
+    if (hasAutoTriggered.current) return;
+    hasAutoTriggered.current = true;
+    void runGenerate();
+  }, [runGenerate]);
+
+  // Source pane "Generate" CTA + regen-all both call the same handler.
+  const onGenerate = useCallback(() => {
+    void runGenerate();
+  }, [runGenerate]);
 
   const onAcceptCase = useCallback((id: string) => {
     console.info('pattern-a:deferred:f16b:accept-case', { id });
@@ -131,8 +207,8 @@ function GeneratePageContent() {
   );
 
   const onRegenAll = useCallback(() => {
-    console.info('pattern-a:deferred:f16b:regen-all');
-  }, []);
+    void runGenerate();
+  }, [runGenerate]);
 
   const onAcceptAll = useCallback(() => {
     console.info('pattern-a:deferred:f16b:accept-all');
