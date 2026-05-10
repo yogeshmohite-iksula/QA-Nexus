@@ -72,11 +72,41 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
   const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3001';
   const { crossSubDomain, useSecure } = resolveCookieDomain(baseUrl);
 
-  // Trusted origins for CORS + CSRF — both subdomains under the parent zone.
+  // Trusted origins for CORS + CSRF — BetterAuth handles its own preflight
+  // checks via this list (we deliberately do NOT call app.enableCors() in
+  // main.ts — letting BetterAuth own the /auth/* surface keeps the policy
+  // single-sourced).
+  //
+  // Production list includes:
+  //   - https://app.qanexus.iksula.com  (canonical app subdomain — future)
+  //   - https://api.qanexus.iksula.com  (canonical api subdomain — future)
+  //   - https://qa-nexus-web.pages.dev  (Cloudflare Pages prod alias — TODAY)
+  //
+  // Cloudflare Pages preview-deployment hashes (e.g.
+  // https://89c44180.qa-nexus-web.pages.dev) are NOT in the default list —
+  // operators wanting to test a preview build can append via the
+  // AUTH_TRUSTED_ORIGINS env var (comma-separated). Day-15 P0 fix per
+  // followup (bd) — magic-link was 405-then-CORS-blocked because the
+  // pages.dev alias was missing.
+  //
   // Local dev gets localhost too so Next.js dev server can call the API.
-  const trustedOrigins = useSecure
-    ? ['https://app.qanexus.iksula.com', 'https://api.qanexus.iksula.com']
+  const baseTrusted = useSecure
+    ? [
+        'https://app.qanexus.iksula.com',
+        'https://api.qanexus.iksula.com',
+        'https://qa-nexus-web.pages.dev',
+      ]
     : ['http://localhost:3000', 'http://localhost:3001'];
+
+  // Optional env-var override for additional origins (preview hashes,
+  // staging aliases, etc.). Comma-separated. Trimmed + filtered to
+  // non-empty entries. Appended to the base list (does NOT replace).
+  const envExtras = (process.env.AUTH_TRUSTED_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  const trustedOrigins = [...baseTrusted, ...envExtras];
 
   return betterAuth({
     secret,

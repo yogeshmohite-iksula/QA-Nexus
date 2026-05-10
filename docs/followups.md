@@ -2,6 +2,34 @@
 
 ---
 
+## [2026-05-10] (bd) P3 — `[m5-hardening]` BetterAuth `trustedOrigins` wildcard-subdomain support for Cloudflare Pages previews
+
+**Filed:** Day-15 alongside CORS hotfix (PR #122 — extends `trustedOrigins` to include `qa-nexus-web.pages.dev` + env-var append for extras).
+
+**Symptom:** Cloudflare Pages preview deployments use hash-prefixed subdomains (e.g. `https://89c44180.qa-nexus-web.pages.dev`). Each preview build gets a fresh hash. Adding each hash to `trustedOrigins` via the `AUTH_TRUSTED_ORIGINS` env var works but requires per-build operator action — wrong long-term ergonomics.
+
+**Fix scope:** ~2 hr. Refactor `apps/api/src/auth/auth.config.ts` to support pattern-matching origins:
+
+- BetterAuth `trustedOrigins` accepts strings OR (in newer versions) a function. Switch to a function predicate that accepts:
+  - Exact strings from `AUTH_TRUSTED_ORIGINS` (current behavior preserved)
+  - Wildcard patterns like `https://*.qa-nexus-web.pages.dev` (parses to a regex)
+- Test matrix: exact match, wildcard match, non-match, base list, env extras.
+- ADR sidecar IF the predicate logic gets complex enough (e.g., regex caching, security review of pattern format).
+
+**Trigger:** M5 (F26 v2 admin UI ships) OR earlier if Yogesh wants to share preview-build links with stakeholders during M4 dev cycles. Until then, manually append the preview hash via Render env var when needed.
+
+**Owner:** BE chat. **Severity:** P3 (workaround exists via `AUTH_TRUSTED_ORIGINS`).
+
+**Cross-references:**
+
+- PR #122 — extends static list + env-var append
+- `apps/api/src/auth/auth.config.ts:77` — current implementation
+- BetterAuth docs §"trustedOrigins" — function-predicate support
+- followup `(bb)` (sister BE-side: express auth mount catch-all)
+- followup `(bc)` (sister FE-side: drop `/api` prefix from baseURL)
+
+---
+
 ## [2026-05-10] (be) P2 — Cloudflare Pages NEXT_PUBLIC_API_BASE_URL not injecting at Next.js build time
 
 Day-15 cross-FE E2E surfaced that Cloudflare Pages **built and deployed successfully** with `NEXT_PUBLIC_API_BASE_URL` set as a Plaintext variable in Pages → qa-nexus-web → Settings → Variables and Secrets, **but the value did not bake into the FE JS bundle**. Verified by inspecting network calls from `qa-nexus-web.pages.dev` post-deploy: requests still hit `pages.dev` origin (same-origin fallback), not `https://qa-nexus-api.onrender.com`.
