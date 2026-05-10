@@ -2,6 +2,28 @@
 
 ---
 
+## [2026-05-10] (ay) P2 — F16c Bulk Import Pattern B flip deferred from M3 to M5
+
+Discovery during Day-15 M3 close (FE+1 TASK D3 prep) revealed PR #95 shipped `POST /api/projects/:projectId/test-cases/bulk-link` + `POST /api/projects/:projectId/test-cases/bulk-delete`, **not** `POST /test-cases/bulk-create`. F16c bulk-import flow needs CSV/XLSX parse → many-new-test-case insert endpoint, which is a fundamentally different surface than bulk-link (which links _existing_ IDs to a requirement) or bulk-delete (soft-archive).
+
+**Decision (Yogesh, 2026-05-10):** Defer F16c Pattern B flip from M3 to **M5 (Automation + Reports + MVP Launch)** — natural home given M5 already includes Automation Studio file-import patterns. Three reasons:
+
+1. F16c Pattern A scaffold (#113, merged Day-15) already gives end-user UX preview with canned data — sufficient for M3 close.
+2. Pattern B today would create throwaway code (no real `bulk-create` endpoint to wire).
+3. F16c bulk import naturally fits M5 file-import scope.
+
+**Scope for M5:**
+
+- **BE+1:** Design + ship `POST /api/projects/:projectId/test-cases/bulk-create` accepting `{ rows: Array<{ key?, title, preconditions, stepsJson, expectedResult, priority?, format?, sourceCaseId? }> }` with Zod schema in `@qa-nexus/shared`. Per-row outcome shape mirrors PR #95 `BulkLinkOutcomeItem` / `BulkDeleteOutcomeItem` pattern (`created` / `failed[]` with typed reasons). Hard cap 50 rows per call (re-uses `BULK_OPERATION_MAX_IDS` constant). Audit row per call (`test_cases_bulk_created`).
+- **FE+1:** Wire F16c modal's CSV/XLSX upload + parse + dedupe stage `Continue` CTA to the new endpoint. Mirror Pattern B pattern from PR #116 (typed-error toasts, request/response Zod validation, stubbed-mode awareness if applicable).
+- **(aw)** F16c bare "A2" agent-tag canon question still pending (filed Day-10) — resolve in same M5 pass.
+
+**Owner:** BE+1 + FE+1 in M5 kickoff.
+**ETA:** L (~3-5 hr combined across BE + FE).
+**Cross-references:** PR #113 (F16c Pattern A scaffold), PR #95 (existing bulk-link/bulk-delete), PR #116 (canonical FE Pattern B wire pattern), `(aw)` (sister F16c canon question).
+
+---
+
 ## [2026-05-10] (az) P2 — `[m3-followup]` Remove Path C bridge + add F26-equivalent admin LLM config UI flows when F26 v2 ships in M5
 
 **Filed:** Day-15 alongside ADR-015 (Path C transitional bridge for runtime LLM provider config). This followup tracks the **removal milestone** so the throwaway code from Path C doesn't accumulate as long-term tech debt.
