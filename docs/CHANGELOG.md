@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 15 — Defer BETTER_AUTH_SECRET check until DB row exists (PR #115 CI regression)
+
+- **`fix(api)`** — `LLMGatewayService.readConfigFromDb()` re-ordered: call `prisma.llmProvider.findFirst()` BEFORE checking `BETTER_AUTH_SECRET`. CI envs rightly lack the seed (it lives only in Render + local `.env`); when DB is empty (fresh CI state), service should fall through to deferred mode with the actual root cause (`"no LLM_PRIMARY_PROVIDER env AND no llm_providers row"`), NOT mask it with a misleading `"BETTER_AUTH_SECRET required"` error. Seed is only required when there's a row to decrypt — actionable error then mentions the `llm_providers` row id + provider kind so operator can correlate. **+2 new regression tests** in `llm-gateway-graceful.spec.ts` pinning both invariants (LLM specs: 39 → 41).
+
 ### Added — Day 15 M3 — Runtime LLM provider config bridge + ADR-015 (2026-05-10 — Path C transitional)
 
 - **`docs(adr)`** — **ADR-015 Runtime LLM provider config bridge** ships at `docs/architecture/adr-015-runtime-llm-config-bridge.md` with `Status: Transitional` (superseded by F26 v2 React UI in M5). Path C decision: ship a CLI seed script + 50-LOC gateway patch that lets admin onboard an LLM provider via `pnpm exec ts-node apps/api/scripts/seed-llm-provider.ts` with the API key AES-GCM-encrypted via `BETTER_AUTH_SECRET`. Preserves Yogesh's runtime-config design intent (no Render env vars), ships M3 close on schedule, forward-compatible with F26 v2 (same tables + same encryption format). 6 alternatives rejected: env vars (violates intent), full F26 React build (multi-day), skip Composer (undermines M3 close), one-shot REST endpoint (more attack surface), hardcoded key (Hard Rule 6 ban). Sister followup `(az)` filed for removal milestone post-F26 v2.

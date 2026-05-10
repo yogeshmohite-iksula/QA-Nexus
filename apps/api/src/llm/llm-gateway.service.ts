@@ -396,12 +396,11 @@ export class LLMGatewayService implements OnModuleInit {
    * configuring via web. Tracked in followup `(az)`.
    */
   private async readConfigFromDb(): Promise<GatewayConfig | null> {
-    const seed = process.env.BETTER_AUTH_SECRET;
-    if (!seed) {
-      throw new Error(
-        'BETTER_AUTH_SECRET env var is required for DB-config decrypt path (ADR-015).',
-      );
-    }
+    // Check the table FIRST — fresh DB / CI envs have no provider row,
+    // so we can return null cleanly without needing BETTER_AUTH_SECRET.
+    // The seed only matters when there's actually a row to decrypt
+    // (avoids a false-positive error in CI test envs that lack the
+    // env var by design — they never reach the decrypt path anyway).
     const provider = await this.prisma.llmProvider.findFirst({
       where: { status: 'connected' },
       orderBy: { createdAt: 'asc' },
@@ -414,6 +413,18 @@ export class LLMGatewayService implements OnModuleInit {
     });
     if (!provider) {
       return null;
+    }
+
+    // Row found → we MUST have the seed to decrypt. If missing now,
+    // it's a real operator error (DB has a row but env is unconfigured).
+    const seed = process.env.BETTER_AUTH_SECRET;
+    if (!seed) {
+      throw new Error(
+        'BETTER_AUTH_SECRET env var is required to decrypt the DB-stored ' +
+          'LLM provider API key (ADR-015). A llm_providers row exists ' +
+          `(id=${provider.id}, kind=${provider.providerKind}) but the ` +
+          'gateway cannot decrypt it without the seed.',
+      );
     }
 
     // Decrypt + inject — defensive: if decrypt fails (wrong seed,
