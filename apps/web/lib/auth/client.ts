@@ -17,11 +17,28 @@
 // must align `magicLink({ expiresIn: 60 * 10 })` to keep FE/BE copy
 // in sync (action item per CHANGELOG Day-9 entry).
 //
-// `baseURL`: process.env.NEXT_PUBLIC_API_BASE_URL is set per-env in
-// Cloudflare Pages — local dev defaults to http://localhost:3001 (BE
-// NestJS port). The `!` non-null assertion is safe because the env var
-// is required at build-time; the build will fail loudly if missing,
-// which is the desired behaviour (vs silent runtime crash).
+// `baseURL` resolution order (post-followup `(be)`, 2026-05-10):
+//
+//  1. process.env.NEXT_PUBLIC_API_BASE_URL — preferred when it bakes
+//     correctly. Set per-env (local dev / staging / prod) so dev hits
+//     localhost:3001 and staging/prod hit their own Render origins.
+//
+//  2. 'https://qa-nexus-api.onrender.com' — production fallback. Used
+//     when the env var fails to inject at Cloudflare Pages build time
+//     (verified Day-15: var was set as Plaintext in Variables and
+//     Secrets, deployment succeeded, but the bundle still referenced
+//     same-origin instead of the API origin). Likely Cloudflare Pages
+//     × Next.js framework integration quirk; tracked in followup `(be)`
+//     for proper M5 investigation. Hardcoded prod URL is the bridge
+//     until the env-var injection is reliable.
+//
+// Original `!` non-null assertion (Day-9) was the desired behaviour
+// when env-var injection was assumed reliable — it failed the build
+// loudly if missing. Day-15 reality: Cloudflare Pages built fine but
+// the value didn't bake into the JS bundle, so the silent fallback
+// to same-origin was happening at RUNTIME — exactly the failure mode
+// the `!` was meant to prevent. The string fallback below catches
+// both build-time and run-time variants of the same problem.
 //
 // `basePath`: '/auth' aligns the BetterAuth client with BE's canonical
 // mount basePath (per Render boot log: `BetterAuth initialised
@@ -33,7 +50,7 @@ import { createAuthClient } from 'better-auth/react';
 import { magicLinkClient } from 'better-auth/client/plugins';
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL!,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://qa-nexus-api.onrender.com',
   basePath: '/auth',
   plugins: [magicLinkClient()],
 });
