@@ -54,6 +54,13 @@ interface MockOpts {
   caseWorkspaceId?: string;
   caseKey?: string;
   caseProjectKey?: string;
+  caseTitle?: string;
+  casePreconditions?: string;
+  caseStepsJson?: unknown;
+  /** When true, mock EmbeddingService.deferred=true so the canned
+   *  Pattern A path engages (preserves scaffold test semantics).
+   *  Default true. Set to false to exercise the real ONLINE pgvector path. */
+  embedderDeferred?: boolean;
 }
 
 function makeService(opts: MockOpts = {}) {
@@ -62,6 +69,12 @@ function makeService(opts: MockOpts = {}) {
   const caseWsId = opts.caseWorkspaceId ?? FAKE_ACTOR.workspaceId;
   const caseKey = opts.caseKey ?? 'TC-RET-247';
   const caseProjectKey = opts.caseProjectKey ?? 'RET';
+  const caseTitle = opts.caseTitle ?? 'Refund flow within 7 days';
+  const casePreconditions = opts.casePreconditions ?? 'User authenticated';
+  const caseStepsJson = opts.caseStepsJson ?? [
+    { order: 1, action: 'Click refund', expected: 'Modal opens' },
+  ];
+  const embedderDeferred = opts.embedderDeferred ?? true;
 
   const prisma = {
     testCase: {
@@ -70,18 +83,28 @@ function makeService(opts: MockOpts = {}) {
           ? {
               projectId: caseProjectId,
               key: caseKey,
+              title: caseTitle,
+              preconditions: casePreconditions,
+              stepsJson: caseStepsJson,
               project: { workspaceId: caseWsId, key: caseProjectKey },
             }
           : null,
       ),
+      count: jest.fn().mockResolvedValue(0),
     },
+    $queryRawUnsafe: jest.fn(),
   };
   const audit = {
     write: jest.fn().mockResolvedValue({ id: 'audit-1', thisHash: 'h' }),
   };
+  const embedder = {
+    deferred: embedderDeferred,
+    deferredReason: embedderDeferred ? 'no model loaded in test' : null,
+    embed: jest.fn(),
+  };
 
-  const svc = new CuratorService(prisma as any, audit as any);
-  return { svc, prisma, audit };
+  const svc = new CuratorService(prisma as any, audit as any, embedder as any);
+  return { svc, prisma, audit, embedder };
 }
 
 const DEFAULT_REQ = {
@@ -304,6 +327,200 @@ describe('[@M3-BE-3] CuratorService.check (Pattern A scaffold)', () => {
     it('CuratorCheckRequest enforces topK <= 20', () => {
       const result = CuratorCheckRequest.safeParse({ topK: 21 });
       expect(result.success).toBe(false);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────
+  // Day-14 TASK B+2 — ONLINE pgvector path tests (ADR-014).
+  // ────────────────────────────────────────────────────────────────────
+
+  describe('[@Day-14-B+2] ONLINE pgvector cosine path', () => {
+    /// Build a fake 384-dim Float32Array for embed mock.
+    function fakeEmbedding(seed = 0.1): Float32Array {
+      const v = new Float32Array(384);
+      for (let i = 0; i < 384; i++) v[i] = seed + i / 10000;
+      return v;
+    }
+
+    /// Build a raw SQL row matching RawCuratorMatchRow shape.
+    function row(
+      sim: number,
+      id = '11111111-1111-4111-8111-111111111111',
+      key = 'TC-RET-EX-001',
+      title = 'Existing refund case',
+    ) {
+      return { id, key, title, similarity: sim };
+    }
+
+    it('block path — match >=0.95 produces verdict=block + stubbed=false', async () => {
+      const { svc, prisma, embedder } = makeService({
+        embedderDeferred: false,
+      });
+      // 2 candidates exist; 0 skipped null embeddings; 1 high-sim row.
+      prisma.testCase.count.mockResolvedValueOnce(2); // total candidate count
+      prisma.$queryRawUnsafe
+        .mockResolvedValueOnce([{ count: 0n }]) // skipped null count
+        .mockResolvedValueOnce([
+          row(
+            0.97,
+            'aaaa1111-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            'TC-RET-DUP-001',
+            'Near-dup case',
+          ),
+        ]);
+      embedder.embed.mockResolvedValueOnce(fakeEmbedding(0.5));
+
+      const result = await svc.check(
+        PROJECT_ID,
+        CASE_HIGH,
+        DEFAULT_REQ,
+        FAKE_ACTOR,
+      );
+
+      expect(result.stubbed).toBe(false);
+      expect(result.verdict).toBe('block');
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches[0].verdict).toBe('block');
+      expect(result.matches[0].similarity).toBeCloseTo(0.97, 2);
+      expect(result.searchMetadata.candidatesScanned).toBe(2);
+    });
+
+    it('flag path — match in [0.85, 0.95) produces verdict=flag', async () => {
+      const { svc, prisma, embedder } = makeService({
+        embedderDeferred: false,
+      });
+      prisma.testCase.count.mockResolvedValueOnce(5);
+      prisma.$queryRawUnsafe
+        .mockResolvedValueOnce([{ count: 0n }])
+        .mockResolvedValueOnce([
+          row(
+            0.88,
+            'bbbb2222-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            'TC-RET-SIM-002',
+            'Similar case',
+          ),
+        ]);
+      embedder.embed.mockResolvedValueOnce(fakeEmbedding(0.3));
+
+      const result = await svc.check(
+        PROJECT_ID,
+        CASE_HIGH,
+        DEFAULT_REQ,
+        FAKE_ACTOR,
+      );
+
+      expect(result.verdict).toBe('flag');
+      expect(result.matches[0].verdict).toBe('flag');
+      expect(result.matches[0].similarity).toBeCloseTo(0.88, 2);
+    });
+
+    it('clean path — only sub-flag matches → verdict=clear, matches=[]', async () => {
+      const { svc, prisma, embedder } = makeService({
+        embedderDeferred: false,
+      });
+      prisma.testCase.count.mockResolvedValueOnce(3);
+      // Raw SQL returns 2 sub-flag rows; threshold filter drops both.
+      prisma.$queryRawUnsafe
+        .mockResolvedValueOnce([{ count: 0n }])
+        .mockResolvedValueOnce([row(0.72), row(0.55)]);
+      embedder.embed.mockResolvedValueOnce(fakeEmbedding(0.1));
+
+      const result = await svc.check(
+        PROJECT_ID,
+        CASE_HIGH,
+        DEFAULT_REQ,
+        FAKE_ACTOR,
+      );
+
+      expect(result.verdict).toBe('clear');
+      expect(result.matches).toEqual([]);
+      expect(result.highestSimilarity).toBe(0);
+      expect(result.stubbed).toBe(false);
+    });
+
+    it('empty corpus fast-path — count=0 → no embed call, verdict=clear', async () => {
+      const { svc, prisma, embedder } = makeService({
+        embedderDeferred: false,
+      });
+      prisma.testCase.count.mockResolvedValueOnce(0); // zero candidates
+      // Should NOT call $queryRawUnsafe (skipped-null) OR embed.
+
+      const result = await svc.check(
+        PROJECT_ID,
+        CASE_HIGH,
+        DEFAULT_REQ,
+        FAKE_ACTOR,
+      );
+
+      expect(result.verdict).toBe('clear');
+      expect(result.matches).toEqual([]);
+      expect(result.searchMetadata.candidatesScanned).toBe(0);
+      expect(embedder.embed).not.toHaveBeenCalled();
+      expect(prisma.$queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it('null-embedding skip — mixed corpus exposes skipped count in audit', async () => {
+      const { svc, prisma, audit, embedder } = makeService({
+        embedderDeferred: false,
+      });
+      prisma.testCase.count.mockResolvedValueOnce(10); // 10 total
+      prisma.$queryRawUnsafe
+        .mockResolvedValueOnce([{ count: 4n }]) // 4 with NULL embedding
+        .mockResolvedValueOnce([
+          row(
+            0.92,
+            'cccc3333-cccc-4ccc-8ccc-cccccccccccc',
+            'TC-RET-PARTIAL-003',
+            'Partial match',
+          ),
+        ]);
+      embedder.embed.mockResolvedValueOnce(fakeEmbedding(0.2));
+
+      await svc.check(PROJECT_ID, CASE_HIGH, DEFAULT_REQ, FAKE_ACTOR);
+
+      const completedAudit = audit.write.mock.calls.find(
+        (c: any[]) => c[0].action === 'curator_dedupe_check_completed',
+      );
+      expect(completedAudit![0].payload.skipped_null_embeddings).toBe(4);
+      // candidatesScanned = total - skippedNull = 10 - 4 = 6
+      expect(completedAudit![0].payload.candidates_scanned).toBe(6);
+    });
+
+    it('passes pgvector literal + project + caseId + fetchLimit to raw SQL', async () => {
+      const { svc, prisma, embedder } = makeService({
+        embedderDeferred: false,
+      });
+      prisma.testCase.count.mockResolvedValueOnce(8);
+      prisma.$queryRawUnsafe
+        .mockResolvedValueOnce([{ count: 0n }])
+        .mockResolvedValueOnce([row(0.6)]);
+      embedder.embed.mockResolvedValueOnce(fakeEmbedding(0.42));
+
+      await svc.check(
+        PROJECT_ID,
+        CASE_HIGH,
+        { ...DEFAULT_REQ, topK: 5 },
+        FAKE_ACTOR,
+      );
+
+      // Last $queryRawUnsafe call should be the cosine search itself.
+      const cosineCall = prisma.$queryRawUnsafe.mock.calls.at(-1)!;
+      // SQL fragment uses cosine-ops `<=>` operator.
+      expect(cosineCall[0]).toMatch(/embedding <=> \$1::vector/);
+      expect(cosineCall[0]).toMatch(/c\.id\s+!= \$3::uuid/);
+      // pgvector literal: `[v1,v2,...,v384]` string.
+      expect(cosineCall[1]).toMatch(/^\[/);
+      expect(cosineCall[1]).toMatch(/\]$/);
+      // projectId + sourceCaseId positions.
+      expect(cosineCall[2]).toBe(PROJECT_ID);
+      expect(cosineCall[3]).toBe(CASE_HIGH);
+      // fetchLimit = topK * 2 = 10 (under RAW_SQL_FETCH_CEILING).
+      expect(cosineCall[4]).toBe(10);
+      // Embed input includes title + preconditions + steps action+expected.
+      const embedInput = embedder.embed.mock.calls[0][0];
+      expect(embedInput).toContain('Refund flow within 7 days');
+      expect(embedInput).toContain('User authenticated');
+      expect(embedInput).toContain('Click refund Modal opens');
     });
   });
 });
