@@ -106,6 +106,28 @@ body {
   }
 }
 
+/* streamPulse + skelShimmer -- F16b A1 Generate from Requirement v2.html
+   lines 469-487. Used by the Composer streaming card's left-edge gradient
+   bar + skeleton shimmer lines while a test case is being generated.
+   prefers-reduced-motion override below disables both for accessibility. */
+@keyframes streamPulse {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 -200%;
+  }
+}
+
+@keyframes skelShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

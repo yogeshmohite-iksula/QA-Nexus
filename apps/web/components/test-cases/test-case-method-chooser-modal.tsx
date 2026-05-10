@@ -76,7 +76,7 @@ const CARDS: MethodCard[] = [
     recommended: true,
     iconTile: Sparkles,
     cta: 'Generate with A1',
-    targetRoute: '/test-cases/new?method=ai',
+    targetRoute: '/test-cases/generate?source=RET-247',
     meta: [
       { icon: Clock, text: '~30s for 5 cases' },
       { icon: Shield, text: 'Grounded in F15 KB' },
@@ -226,7 +226,7 @@ export function TestCaseMethodChooserModal({ open, onClose }: TestCaseMethodChoo
       draftedCases: 3,
     });
     onClose();
-    router.push('/test-cases/new?method=ai&resume=RET-247');
+    router.push('/test-cases/generate?source=RET-247&resume=1');
   }
 
   return (
