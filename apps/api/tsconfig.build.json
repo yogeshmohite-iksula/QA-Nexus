@@ -1,4 +1,17 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
+  // `scripts/` excluded so the implicit tsc rootDir stays anchored to
+  // `src/` — otherwise compiling apps/api/scripts/*.ts shifts rootDir
+  // up to apps/api/ and the build emits dist/src/main.js instead of
+  // dist/main.js, breaking `node dist/main` start:prod (PR #115 CI #3).
+  // Scripts under apps/api/scripts/ are run via ts-node directly,
+  // not compiled into the production build artifact.
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "prisma",
+    "scripts",
+    "**/*spec.ts"
+  ]
 }

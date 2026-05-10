@@ -24,6 +24,8 @@ import {
   RetryableLLMError,
 } from './types';
 import { getProvider, listProviders } from './provider-registry';
+import { PrismaService } from '../prisma/prisma.service';
+import { decryptApiKey, envVarForProviderKind } from './crypto';
 
 /**
  * Tracer for LLM gateway spans. Per `.claude/rules/api.md`:
@@ -59,36 +61,90 @@ export class LLMGatewayService implements OnModuleInit {
    * Matches R2Service / EmailService pattern. Per Yogesh + arch decision
    * (Day-4 noon): LLM keys come from F26 UI in M1, not env vars. Until
    * F26 lands, the service should NOT crash on boot if vars missing.
+   *
+   * ADR-015 (M3-close, Day-15): config resolution is now env-first then
+   * DB-fallback (TB-019 `llm_providers`). Stays in deferred mode only
+   * when BOTH env AND DB are empty. Source recorded in `configSource`.
    */
   public deferred = true;
   public deferredReason: string | null = null;
+  /** Where the active config came from. Surfaced in /health + boot logs. */
+  public configSource: 'env' | 'db' | 'none' = 'none';
 
-  onModuleInit(): void {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit(): Promise<void> {
+    // Env-first per ADR-015 §"Resolution order" — preserves backward
+    // compat for existing Render env-var-driven deployments.
     try {
-      this.config = this.readConfig();
+      this.config = this.readConfigFromEnv();
       this.deferred = false;
       this.deferredReason = null;
+      this.configSource = 'env';
+      this.logBootSummary('env');
+      return;
+    } catch (envErr) {
+      const envMsg = envErr instanceof Error ? envErr.message : String(envErr);
       this.logger.log(
-        `LLMGateway initialised: primary=${this.config.primaryProvider}` +
-          (this.config.primaryModel ? `:${this.config.primaryModel}` : '') +
-          (this.config.secondaryProvider
-            ? ` · secondary=${this.config.secondaryProvider}`
-            : ' · NO secondary configured (no fallback available)') +
-          (this.config.longContextProvider
-            ? ` · long-context=${this.config.longContextProvider} (threshold=${this.config.longContextThresholdTokens} tok)`
-            : ''),
-      );
-      this.logger.log(
-        `available providers in registry: ${listProviders().join(', ')}`,
-      );
-    } catch (e) {
-      this.deferred = true;
-      this.deferredReason = e instanceof Error ? e.message : String(e);
-      this.logger.warn(
-        `LLMGateway running in DEFERRED mode (no provider configured): ${this.deferredReason}. ` +
-          `Admin must configure via F26 UI in M1 — until then any /llm/* call returns 501.`,
+        `LLMGateway env-config not present (${envMsg}); attempting DB fallback per ADR-015...`,
       );
     }
+
+    // DB-fallback (Path C bridge — Day-15). Reads TB-019 + TB-020,
+    // decrypts api_key_encrypted via BETTER_AUTH_SECRET, injects
+    // plaintext into process.env so the lazy-constructed provider
+    // (GroqProvider, GeminiProvider) finds it on first call.
+    try {
+      const dbConfig = await this.readConfigFromDb();
+      if (dbConfig) {
+        this.config = dbConfig;
+        this.deferred = false;
+        this.deferredReason = null;
+        this.configSource = 'db';
+        this.logBootSummary('db');
+        return;
+      }
+      // No DB row found AND no env config → deferred (current behavior).
+      this.deferred = true;
+      this.deferredReason =
+        'no LLM_PRIMARY_PROVIDER env var AND no llm_providers row with status=connected';
+      this.configSource = 'none';
+      this.logger.warn(
+        `LLMGateway running in DEFERRED mode: ${this.deferredReason}. ` +
+          `Admin must EITHER set LLM_* env vars OR run \`pnpm exec ts-node apps/api/scripts/seed-llm-provider.ts\` ` +
+          `(per ADR-015) — until then any /llm/* call returns 501.`,
+      );
+    } catch (dbErr) {
+      // DB read OR decrypt failed — surface as deferred with the actual
+      // error so operators can debug (e.g., wrong BETTER_AUTH_SECRET).
+      this.deferred = true;
+      this.deferredReason =
+        dbErr instanceof Error ? dbErr.message : String(dbErr);
+      this.configSource = 'none';
+      this.logger.error(
+        `LLMGateway DB-fallback FAILED: ${this.deferredReason}. ` +
+          `Service stays in DEFERRED mode. Common causes: BETTER_AUTH_SECRET ` +
+          `mismatch (decrypt fail), Prisma migration not applied (table missing), ` +
+          `or seed script never run.`,
+      );
+    }
+  }
+
+  /** Single source of truth for boot-summary log line. */
+  private logBootSummary(source: 'env' | 'db'): void {
+    this.logger.log(
+      `LLMGateway initialised (source=${source}): primary=${this.config.primaryProvider}` +
+        (this.config.primaryModel ? `:${this.config.primaryModel}` : '') +
+        (this.config.secondaryProvider
+          ? ` · secondary=${this.config.secondaryProvider}`
+          : ' · NO secondary configured (no fallback available)') +
+        (this.config.longContextProvider
+          ? ` · long-context=${this.config.longContextProvider} (threshold=${this.config.longContextThresholdTokens} tok)`
+          : ''),
+    );
+    this.logger.log(
+      `available providers in registry: ${listProviders().join(', ')}`,
+    );
   }
 
   /** Return the active config snapshot — used by /health and /llm/providers.
@@ -292,8 +348,9 @@ export class LLMGatewayService implements OnModuleInit {
     }
   }
 
-  /** Read env config at boot. Throws if primary is missing. */
-  private readConfig(): GatewayConfig {
+  /** Read env config at boot. Throws if primary is missing.
+   *  Renamed from `readConfig` per ADR-015 (env-first then DB-fallback). */
+  private readConfigFromEnv(): GatewayConfig {
     const primary = process.env.LLM_PRIMARY_PROVIDER;
     if (!primary) {
       throw new Error(
@@ -308,6 +365,91 @@ export class LLMGatewayService implements OnModuleInit {
       secondaryModel: process.env.LLM_SECONDARY_MODEL,
       longContextProvider: process.env.LLM_LONG_CONTEXT_PROVIDER,
       longContextModel: process.env.LLM_LONG_CONTEXT_MODEL,
+      longContextThresholdTokens: Number(
+        process.env.LLM_LONG_CONTEXT_THRESHOLD_TOKENS ??
+          DEFAULT_LONG_CONTEXT_THRESHOLD,
+      ),
+    };
+  }
+
+  /**
+   * ADR-015 (Path C transitional bridge — Day-15) — read provider config
+   * from `llm_providers` (TB-019) when env vars are absent. Strategy:
+   *
+   *   1. Find the first provider row with status='connected' (any
+   *      workspace — multi-tenancy enforcement happens upstream of the
+   *      gateway via service-layer ActorContext checks).
+   *   2. AES-GCM-decrypt `api_key_encrypted` via BETTER_AUTH_SECRET.
+   *   3. Inject plaintext key into `process.env[GROQ_API_KEY|...]` so
+   *      the lazy-constructed provider class (GroqProvider, etc.) finds
+   *      it on first `getProvider()` call. Internal-only env mutation;
+   *      never leaves the process.
+   *   4. Map provider's first enabled model → primaryModel.
+   *   5. (Future) Map AgentModelAssignment rows for secondary +
+   *      long_context. v1 leaves these undefined — single-provider
+   *      Groq-only path is sufficient for M3 close.
+   *
+   * Returns null when no provider row exists (caller stays in deferred
+   * mode). Throws when decrypt fails (caller surfaces error to operator).
+   *
+   * Will be removed when F26 v2 React UI ships in M5 + admins are
+   * configuring via web. Tracked in followup `(az)`.
+   */
+  private async readConfigFromDb(): Promise<GatewayConfig | null> {
+    // Check the table FIRST — fresh DB / CI envs have no provider row,
+    // so we can return null cleanly without needing BETTER_AUTH_SECRET.
+    // The seed only matters when there's actually a row to decrypt
+    // (avoids a false-positive error in CI test envs that lack the
+    // env var by design — they never reach the decrypt path anyway).
+    const provider = await this.prisma.llmProvider.findFirst({
+      where: { status: 'connected' },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        models: {
+          where: { enabledForWorkspace: true },
+          orderBy: { displayName: 'asc' },
+        },
+      },
+    });
+    if (!provider) {
+      return null;
+    }
+
+    // Row found → we MUST have the seed to decrypt. If missing now,
+    // it's a real operator error (DB has a row but env is unconfigured).
+    const seed = process.env.BETTER_AUTH_SECRET;
+    if (!seed) {
+      throw new Error(
+        'BETTER_AUTH_SECRET env var is required to decrypt the DB-stored ' +
+          'LLM provider API key (ADR-015). A llm_providers row exists ' +
+          `(id=${provider.id}, kind=${provider.providerKind}) but the ` +
+          'gateway cannot decrypt it without the seed.',
+      );
+    }
+
+    // Decrypt + inject — defensive: if decrypt fails (wrong seed,
+    // tampered ciphertext) the helper throws + we propagate up.
+    const plaintextKey = decryptApiKey(provider.apiKeyEncrypted, seed);
+    const envVar = envVarForProviderKind(provider.providerKind);
+    process.env[envVar] = plaintextKey;
+    this.logger.log(
+      `LLMGateway: injected ${envVar} from db (provider_id=${provider.id} kind=${provider.providerKind}); ` +
+        `provider class will pick it up on next getProvider() call.`,
+    );
+
+    // Pick the first enabled model as primary. v1 of the bridge —
+    // F26 v2 will wire AgentModelAssignment for per-agent×role routing.
+    const primaryModelId = provider.models[0]?.modelId;
+
+    return {
+      primaryProvider: provider.providerKind,
+      primaryModel: primaryModelId,
+      // v1: secondary + long_context not derived from DB. Future PR
+      // (or F26 v2) joins AgentModelAssignment to populate these.
+      secondaryProvider: undefined,
+      secondaryModel: undefined,
+      longContextProvider: undefined,
+      longContextModel: undefined,
       longContextThresholdTokens: Number(
         process.env.LLM_LONG_CONTEXT_THRESHOLD_TOKENS ??
           DEFAULT_LONG_CONTEXT_THRESHOLD,
