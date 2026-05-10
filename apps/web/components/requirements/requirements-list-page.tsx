@@ -40,6 +40,10 @@ import { AdminShell } from '@/components/admin/admin-shell';
 import { AgentName } from '@/components/ui/agent-name';
 import { EditRequirementModal } from './edit-requirement-modal';
 import { LinkTestCaseModal } from './link-test-case-modal';
+import {
+  RequirementDetailDrawer,
+  type RequirementDetailDrawerData,
+} from './requirement-detail-drawer';
 
 // ---------------------------------------------------------------------------
 // Types — local view models for the Pattern A scaffold. Shape mirrors
@@ -277,6 +281,7 @@ function RequirementsListContent() {
   const searchParams = useSearchParams();
   const editMode = searchParams?.get('edit') ?? null;
   const linkRequirementId = searchParams?.get('link') ?? null;
+  const viewRequirementId = searchParams?.get('view') ?? null;
 
   const openNewRequirement = useCallback(() => {
     console.info('pattern-a:deferred:requirements:new');
@@ -306,6 +311,28 @@ function RequirementsListContent() {
   const closeLinkModal = useCallback(() => {
     router.replace('/requirements');
   }, [router]);
+
+  const openViewDrawer = useCallback(
+    (id: string) => {
+      console.info('pattern-a:deferred:requirements:row:view', { id });
+      router.push(`/requirements?view=${id}`);
+    },
+    [router],
+  );
+
+  const closeViewDrawer = useCallback(() => {
+    router.replace('/requirements');
+  }, [router]);
+
+  // Convert a row → drawer-data shape. Pattern A: synthesize the
+  // detail fields locally; Pattern B (Day-15) will fetch the full
+  // requirement via /api/projects/:projectId/requirements/:reqId.
+  const drawerData: RequirementDetailDrawerData | null = useMemo(() => {
+    if (!viewRequirementId) return null;
+    const row = rows.find((r) => r.id === viewRequirementId);
+    if (!row) return null;
+    return rowToDrawerData(row);
+  }, [viewRequirementId, rows]);
 
   useEffect(() => {
     console.info('pattern-a:deferred:requirements:load', {
@@ -472,6 +499,7 @@ function RequirementsListContent() {
           onToggleAll={toggleAll}
           onEditRow={openEditRequirement}
           onLinkTestCases={openLinkTestCases}
+          onOpenView={openViewDrawer}
         />
         <PaginationFooter total={142} from={1} to={filteredRows.length} />
       </div>
@@ -485,6 +513,7 @@ function RequirementsListContent() {
             selected={selectedIds.has(row.id)}
             onToggle={() => toggleRow(row.id)}
             onEdit={() => openEditRequirement(row.id)}
+            onOpenView={() => openViewDrawer(row.id)}
           />
         ))}
         <PaginationFooter total={142} from={1} to={filteredRows.length} />
@@ -499,6 +528,21 @@ function RequirementsListContent() {
       <LinkTestCaseModal
         requirementId={editMode === null ? linkRequirementId : null}
         onClose={closeLinkModal}
+      />
+      {/* F14 Requirement Detail Drawer (Day-14 TASK A3) — opens via
+          ?view=<id>. Mutually exclusive with ?edit and ?link; renders
+          only when neither modal is mounted. */}
+      <RequirementDetailDrawer
+        open={editMode === null && linkRequirementId === null && drawerData !== null}
+        data={drawerData}
+        onClose={closeViewDrawer}
+        onOpenEdit={(id) => {
+          // Switch from drawer (view) → modal (edit) by replacing the URL.
+          router.replace(`/requirements?edit=${id}`);
+        }}
+        onGenerate={(id) => {
+          router.push(`/test-cases/generate?source=${id}`);
+        }}
       />
     </main>
   );
@@ -807,6 +851,7 @@ function RequirementsTable({
   onToggleAll,
   onEditRow,
   onLinkTestCases,
+  onOpenView,
 }: {
   rows: Requirement[];
   selectedIds: Set<string>;
@@ -815,6 +860,7 @@ function RequirementsTable({
   onToggleAll: () => void;
   onEditRow: (id: string) => void;
   onLinkTestCases: (id: string) => void;
+  onOpenView: (id: string) => void;
 }) {
   return (
     <table className="w-full border-collapse text-left">
@@ -855,7 +901,7 @@ function RequirementsTable({
                 background: selected ? 'rgba(167,139,250,0.06)' : 'transparent',
                 boxShadow: selected ? 'inset 3px 0 0 var(--secondary)' : 'none',
               }}
-              onClick={() => console.info('pattern-a:deferred:requirements:open', { id: row.id })}
+              onClick={() => onOpenView(row.id)}
             >
               <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                 <input
@@ -1028,11 +1074,13 @@ function RequirementCard({
   selected,
   onToggle,
   onEdit,
+  onOpenView,
 }: {
   row: Requirement;
   selected: boolean;
   onToggle: () => void;
   onEdit: () => void;
+  onOpenView: () => void;
 }) {
   const pri = priorityTone(row.priority);
   const stat = statusTone(row.status);
@@ -1044,7 +1092,7 @@ function RequirementCard({
         background: selected ? 'rgba(167,139,250,0.06)' : 'var(--base)',
       }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
           checked={selected}
@@ -1068,13 +1116,21 @@ function RequirementCard({
           {stat.label}
         </span>
       </div>
-      <p className="mt-2 text-[13px] font-medium text-[var(--text-primary)]">{row.title}</p>
-      <p className="mt-1 line-clamp-3 text-[12px] text-[var(--text-tertiary)]">{row.description}</p>
+      <button
+        type="button"
+        onClick={onOpenView}
+        className="mt-2 block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+      >
+        <p className="text-[13px] font-medium text-[var(--text-primary)]">{row.title}</p>
+        <p className="mt-1 line-clamp-3 text-[12px] text-[var(--text-tertiary)]">
+          {row.description}
+        </p>
+      </button>
       <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-tertiary)]">
         <span style={{ fontFamily: 'var(--font-mono)' }}>
           RTM: {row.rtmLinked}/{row.rtmTotal ?? '—'}
         </span>
-        <div className="flex gap-1">
+        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <RowAction
             label={`Generate test cases for ${row.id}`}
             icon={Sparkles}
@@ -1123,4 +1179,122 @@ function PaginationFooter({ total, from, to }: { total: number; from: number; to
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Drawer-data adapter — maps a Requirement row → drawer view-model.
+// Day-14 TASK A3. Pattern A: synthesize fields locally + return a
+// canned dataset for known IDs (RET-247 etc.) that the v2 mocks
+// reference. Pattern B (Day-15) will fetch full requirement detail
+// via /api/projects/:projectId/requirements/:reqId.
+// ---------------------------------------------------------------------------
+
+function rowToDrawerData(row: Requirement): RequirementDetailDrawerData {
+  // Status mapping: list page uses 'approved' | 'in-review' | 'draft' |
+  // 'archived'; drawer accepts a slightly broader vocabulary.
+  const statusMap: Record<Status, { kind: RequirementDetailDrawerData['status']; label: string }> =
+    {
+      approved: { kind: 'active', label: 'Approved' },
+      'in-review': { kind: 'in-review', label: 'In review' },
+      draft: { kind: 'draft', label: 'Draft' },
+      archived: { kind: 'archived', label: 'Archived' },
+    };
+  const status = statusMap[row.status];
+
+  // Acceptance criteria + Composer suggestions canon by row id. Falls
+  // back to deterministic-but-generic phrasing for rows not enumerated.
+  const known: Record<string, { ac: string[]; suggestions: string[] }> = {
+    'RET-247': {
+      ac: [
+        'Refund window auto-extends from 14 → 30 days when ≥1 download segment fails.',
+        'Affected customers receive an email + in-app banner within 1 hour of detection.',
+        'Stock Ops daily reconciliation report lists all extended-window refunds.',
+      ],
+      suggestions: [
+        'Generate 5 test cases covering happy path + 14-day boundary + segment-failure.',
+        'Add KB chunk: refund_policy_v3.pdf §2.1 (download-failure clause).',
+        'Curator dedup: cross-check vs TC-RET-0142 (refund-API retry tests).',
+      ],
+    },
+    'RET-248': {
+      ac: [
+        'Multi-package returns pro-rate refunds by shipment value, not flat-split.',
+        'Per-zone return labels generated for north / south / west warehouses.',
+        'Carrier routing service receives the correct zone code on every label.',
+      ],
+      suggestions: [
+        'Cover 3-shipment cart with mixed zones in the test plan.',
+        'Add KB chunk: warehouse_routing_spec.md (zone matrix).',
+      ],
+    },
+    'RET-251': {
+      ac: [
+        'Bulk returns of same SKU within 24-hour window flag for Lead manual review.',
+        'F08 Home queue surfaces flagged bulk returns with 24-hour SLA timer.',
+      ],
+      suggestions: [
+        'Compose 3 test cases: 9-unit (no flag), 10-unit (flag), 11-unit (flag).',
+        'Generate from Composer with KB grounding.',
+      ],
+    },
+    'RET-252': {
+      ac: [
+        'Refunds > ₹25,000 require 2-of-3 sign-off from {QA Lead, Stock Ops, Finance}.',
+        'F21 Defects Hub surfaces pending high-value approvals.',
+      ],
+      suggestions: [
+        'Boundary test at exactly ₹25,000 (no approval needed).',
+        '2-approver path + 3-approver path; reject path.',
+      ],
+    },
+    'RET-258': {
+      ac: [
+        'Refund windows freeze on declared NSE/BSE holidays for both 14-day and 30-day windows.',
+        'Holiday list pulls from RBI calendar API at midnight IST.',
+      ],
+      suggestions: [
+        'Compose calendar boundary test suite (DST / holiday eve / fall-back).',
+        'Pin a Curator dedup against the existing TC-RET-0098 holiday tests.',
+      ],
+    },
+  };
+  const kn = known[row.id] ?? {
+    ac: [`${row.title}.`, 'Acceptance criteria for this requirement land via Pattern B (Day-15).'],
+    suggestions: [
+      'Generate 5 test cases via Composer.',
+      'Run Curator dedup against existing TC library.',
+    ],
+  };
+
+  // RTM coverage stats — synthesize pass/fail/blocked/not-run from
+  // rtmLinked + a simple heuristic. Pattern B will pull real run
+  // results.
+  const linked = row.rtmLinked;
+  const passed = Math.max(0, Math.floor(linked * 0.65));
+  const failed = Math.max(0, Math.floor(linked * 0.1));
+  const blocked = Math.max(0, Math.floor(linked * 0.05));
+  const notRun = Math.max(0, linked - passed - failed - blocked);
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    status: status.kind,
+    statusLabel: status.label,
+    jiraKey: row.source === 'jira' ? row.id : undefined,
+    jiraUrl: row.source === 'jira' ? `https://iksula.atlassian.net/browse/${row.id}` : undefined,
+    acceptanceCriteria: kn.ac,
+    linkedTestCaseCount: linked,
+    passedCount: passed,
+    failedCount: failed,
+    blockedCount: blocked,
+    notRunCount: notRun,
+    composerSuggestions: kn.suggestions,
+    traceability: {
+      sprint: 'Sprint 42',
+      epicKey: 'RET-200',
+      epicTitle: 'Refund & Returns v2',
+      auditChainHash: '4f9a2b8c1d3e0a5b6c7d8e9f0a1b2c3d',
+    },
+  };
 }
