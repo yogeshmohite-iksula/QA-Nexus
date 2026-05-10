@@ -88,6 +88,13 @@ paths = [
   # references to vendor names + OAuth flows that legitimately match
   # generic-api-key heuristics).
   '''QA Nexus/Milestone/FINAL_REVIEW_MVP_ARCHIVE\.md''',
+  # 2026-05-10 — Day-15 RWD sweep script (added in PR #117) trips
+  # generic-api-key entropy 3.58 on route-fixture key 'F16b-PB-generate'
+  # at scripts/m3-d4-rwd-sweep.js:69. The string is a Playwright test
+  # fixture identifier, not a secret. Allowlisting the file unblocks
+  # #117 + 3 cascade-shadowed PRs (#118 EOD docs, #119 + #120 BetterAuth
+  # mount fixes) that all hit the same false positive.
+  '''scripts/m3-d4-rwd-sweep\.js''',
 ]
 regexes = [
   '''<your-[a-z\-]+>''',
