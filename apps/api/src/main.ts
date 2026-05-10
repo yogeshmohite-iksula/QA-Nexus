@@ -51,8 +51,13 @@ async function bootstrap() {
   // Force eager init so authService.auth is populated before the first request.
   authService.onModuleInit?.();
   const expressApp = app.getHttpAdapter().getInstance();
-  expressApp.all('/auth/magic-link/*', toNodeHandler(authService.auth));
-  expressApp.all('/auth/get-session', toNodeHandler(authService.auth));
+  // BetterAuth catch-all per the standard pattern (basePath=/auth set in
+  // AuthService) — let BetterAuth own its entire base path. Previously
+  // narrow mount (only /auth/magic-link/* + /auth/get-session) silently
+  // 404'd /auth/sign-in/magic-link + any future BetterAuth endpoint.
+  // Surfaced Day-15 when FE flipped to a new sign-in flow per Pattern B.
+  // See followup (bb) for full RCA + (bc) for FE-side prefix coordination.
+  expressApp.all('/auth/*', toNodeHandler(authService.auth));
 
   // Body parsers for all other Nest controllers (incl. our wrapper auth endpoints).
   app.use(express.json({ limit: '1mb' }));
