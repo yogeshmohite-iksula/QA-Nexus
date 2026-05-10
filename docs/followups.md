@@ -2,6 +2,36 @@
 
 ---
 
+## [2026-05-10] (be) P2 — Cloudflare Pages NEXT_PUBLIC_API_BASE_URL not injecting at Next.js build time
+
+Day-15 cross-FE E2E surfaced that Cloudflare Pages **built and deployed successfully** with `NEXT_PUBLIC_API_BASE_URL` set as a Plaintext variable in Pages → qa-nexus-web → Settings → Variables and Secrets, **but the value did not bake into the FE JS bundle**. Verified by inspecting network calls from `qa-nexus-web.pages.dev` post-deploy: requests still hit `pages.dev` origin (same-origin fallback), not `https://qa-nexus-api.onrender.com`.
+
+Likely a Cloudflare Pages × Next.js framework integration quirk (specific to how `NEXT_PUBLIC_*` vars are wired through the Pages build worker vs `next build`'s expected `process.env` shape at compile-time). Could also be a Next.js 15 + Pages workers compat regression.
+
+**Current bridge (FE+1 PR, 2026-05-10):** Hardcoded production URL fallback in `apps/web/lib/auth/client.ts`:
+
+```ts
+baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://qa-nexus-api.onrender.com',
+```
+
+This works for prod immediately (no Cloudflare config dependency) AND preserves dev/staging dynamic URL when the env var DOES bake correctly. Defense in depth. No breaking change.
+
+**Scope for M5 investigation:**
+
+- Read latest Cloudflare Pages docs on `NEXT_PUBLIC_*` env-var injection for Next.js 15 framework preset
+- Test alternative env-var configs: Build env var (vs Variable) · Secret type · Production vs Preview environment scopes · `wrangler.toml` vs Pages dashboard
+- Verify with `pnpm --filter web build` locally + `node -e "console.log(process.env.NEXT_PUBLIC_API_BASE_URL)"` to confirm baseline expectation
+- Audit any other `NEXT_PUBLIC_*` vars that might silently fall back (currently only this one; other absolute URLs in FE are co-located in `lib/api/*-api.ts` with the same pattern)
+- If confirmed Cloudflare bug: file Cloudflare support ticket OR migrate to Render Pages / Vercel (cost-equivalent free tier)
+- If confirmed config quirk: document the working pattern + remove the hardcoded fallback bridge
+
+**Owner:** FE+1 + Yogesh (Cloudflare dashboard access).
+**Severity:** P2 — bridge works; investigation is hygiene + tech-debt cleanup.
+**Effort:** S–M (1–3 hr depending on whether quick fix vs platform migration).
+**Cross-references:** PR #120 (basePath fix — sibling auth fix) · `apps/web/lib/auth/client.ts` (file header documents the resolution order + bridge rationale) · `apps/web/lib/api/users-api.ts` (sister Pattern B FE client using same `NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001'` pattern — does NOT have prod fallback yet, audit when fixing).
+
+---
+
 ## [2026-05-10] (ay) P2 — F16c Bulk Import Pattern B flip deferred from M3 to M5
 
 Discovery during Day-15 M3 close (FE+1 TASK D3 prep) revealed PR #95 shipped `POST /api/projects/:projectId/test-cases/bulk-link` + `POST /api/projects/:projectId/test-cases/bulk-delete`, **not** `POST /test-cases/bulk-create`. F16c bulk-import flow needs CSV/XLSX parse → many-new-test-case insert endpoint, which is a fundamentally different surface than bulk-link (which links _existing_ IDs to a requirement) or bulk-delete (soft-archive).
