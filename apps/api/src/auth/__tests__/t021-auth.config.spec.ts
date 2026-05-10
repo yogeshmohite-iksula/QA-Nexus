@@ -144,13 +144,18 @@ describe('T021 — auth.config.ts (Day-9 wiring)', () => {
   });
 
   describe('trustedOrigins (CORS + CSRF)', () => {
-    it('production: app.* and api.* under qanexus.iksula.com', () => {
+    afterEach(() => {
+      delete process.env.AUTH_TRUSTED_ORIGINS;
+    });
+
+    it('production: app.*, api.*, AND qa-nexus-web.pages.dev (Day-15 fix)', () => {
       process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
       buildAuth(fakePrisma as never, fakeEmail as never);
       const config = (betterAuth as jest.Mock).mock.calls[0][0];
       expect(config.trustedOrigins).toEqual([
         'https://app.qanexus.iksula.com',
         'https://api.qanexus.iksula.com',
+        'https://qa-nexus-web.pages.dev',
       ]);
     });
 
@@ -161,6 +166,46 @@ describe('T021 — auth.config.ts (Day-9 wiring)', () => {
       expect(config.trustedOrigins).toEqual([
         'http://localhost:3000',
         'http://localhost:3001',
+      ]);
+    });
+
+    it('AUTH_TRUSTED_ORIGINS env appends comma-separated extras (production)', () => {
+      process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
+      process.env.AUTH_TRUSTED_ORIGINS =
+        'https://89c44180.qa-nexus-web.pages.dev, https://staging.qanexus.iksula.com';
+      buildAuth(fakePrisma as never, fakeEmail as never);
+      const config = (betterAuth as jest.Mock).mock.calls[0][0];
+      expect(config.trustedOrigins).toEqual([
+        'https://app.qanexus.iksula.com',
+        'https://api.qanexus.iksula.com',
+        'https://qa-nexus-web.pages.dev',
+        'https://89c44180.qa-nexus-web.pages.dev',
+        'https://staging.qanexus.iksula.com',
+      ]);
+    });
+
+    it('AUTH_TRUSTED_ORIGINS env: empty/whitespace entries filtered out', () => {
+      process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
+      process.env.AUTH_TRUSTED_ORIGINS = ' , https://valid.example.com , ';
+      buildAuth(fakePrisma as never, fakeEmail as never);
+      const config = (betterAuth as jest.Mock).mock.calls[0][0];
+      expect(config.trustedOrigins).toEqual([
+        'https://app.qanexus.iksula.com',
+        'https://api.qanexus.iksula.com',
+        'https://qa-nexus-web.pages.dev',
+        'https://valid.example.com',
+      ]);
+    });
+
+    it('AUTH_TRUSTED_ORIGINS env: appends to localhost dev list too', () => {
+      process.env.BETTER_AUTH_URL = 'http://localhost:3001';
+      process.env.AUTH_TRUSTED_ORIGINS = 'http://192.168.1.10:3000';
+      buildAuth(fakePrisma as never, fakeEmail as never);
+      const config = (betterAuth as jest.Mock).mock.calls[0][0];
+      expect(config.trustedOrigins).toEqual([
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://192.168.1.10:3000',
       ]);
     });
   });
