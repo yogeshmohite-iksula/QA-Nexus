@@ -11,7 +11,7 @@
 //     errorCallbackURL: '/sign-in?error=expired',
 //   });
 //
-// Verify route is owned by BetterAuth at `/api/auth/magic-link/verify`
+// Verify route is owned by BetterAuth at `/auth/magic-link/verify`
 // (no custom FE page — the link auto-authenticates + redirects via
 // `callbackURL`). Magic-link expiry is locked to 10 minutes; BE T021
 // must align `magicLink({ expiresIn: 60 * 10 })` to keep FE/BE copy
@@ -22,11 +22,18 @@
 // NestJS port). The `!` non-null assertion is safe because the env var
 // is required at build-time; the build will fail loudly if missing,
 // which is the desired behaviour (vs silent runtime crash).
+//
+// `basePath`: '/auth' aligns the BetterAuth client with BE's canonical
+// mount basePath (per Render boot log: `BetterAuth initialised
+// (basePath=/auth)`). BetterAuth client defaults to `/api/auth` which
+// caused 404 on production magic-link sign-in (Day-15 cross-FE E2E).
+// Closes audit followup `(bc)`.
 
 import { createAuthClient } from 'better-auth/react';
 import { magicLinkClient } from 'better-auth/client/plugins';
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL!,
+  basePath: '/auth',
   plugins: [magicLinkClient()],
 });
