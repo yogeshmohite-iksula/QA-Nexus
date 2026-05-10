@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 15 — Crypto test flakes from base64url last-char tampering (PR #115 CI #2)
+
+- **`fix(test)`** — `crypto.spec.ts` tamper-detection tests rewritten to mutate at the BYTE level (decode → bit-flip → re-encode) instead of replacing the last base64url character. **The crypto implementation was correct all along** — AES-GCM auth-tag verification works as designed. The bug was test-side: base64url encoding for a 16-byte auth tag uses 22 chars where the last char's top 2 bits are real + bottom 4 bits are ignored padding. Flipping `'A'`→`'B'` (which differ only in the ignored low-4 bits) decodes to IDENTICAL bytes → no actual tamper happened → decrypt rightly succeeded → test failed. CI hit unlucky random auth tag with the `'A'`→`'B'`-equivalent property; local passed by chance. New `flipFirstBit()` helper toggles the LSB of the first byte of the decoded buffer — guaranteed delta. Same flakiness latent in the ciphertext tamper test (longer cipher → low probability but still a smell) — also fixed. **+1 new sanity-check test** asserts `flipFirstBit()` actually mutates the decoded buffer (defense against future "simplification" regressions). Crypto specs: 13 → 15. Verified 5 consecutive runs stable.
+
 ### Fixed — Day 15 — Defer BETTER_AUTH_SECRET check until DB row exists (PR #115 CI regression)
 
 - **`fix(api)`** — `LLMGatewayService.readConfigFromDb()` re-ordered: call `prisma.llmProvider.findFirst()` BEFORE checking `BETTER_AUTH_SECRET`. CI envs rightly lack the seed (it lives only in Render + local `.env`); when DB is empty (fresh CI state), service should fall through to deferred mode with the actual root cause (`"no LLM_PRIMARY_PROVIDER env AND no llm_providers row"`), NOT mask it with a misleading `"BETTER_AUTH_SECRET required"` error. Seed is only required when there's a row to decrypt — actionable error then mentions the `llm_providers` row id + provider kind so operator can correlate. **+2 new regression tests** in `llm-gateway-graceful.spec.ts` pinning both invariants (LLM specs: 39 → 41).

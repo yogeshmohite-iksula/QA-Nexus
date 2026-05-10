@@ -42,21 +42,33 @@ describe('[@m3-close] llm/crypto — AES-256-GCM helper', () => {
   });
 
   describe('tamper detection (GCM auth tag)', () => {
+    /// Flip the LSB of the FIRST byte of a base64url-encoded buffer.
+    /// Tampering at the BYTE level (vs character level) is required:
+    /// base64url last-char tampering can be a no-op when the flipped
+    /// bits land in the encoding's padding region (e.g., a 16-byte
+    /// auth tag uses 22 base64url chars where the last char's top 2
+    /// bits are real + bottom 4 bits are ignored — 'A'→'B' decodes to
+    /// IDENTICAL bytes). PR #115 CI flake was exactly this — see
+    /// commit message of the fix for the full base64url-padding
+    /// analysis. Byte-level mutation is deterministic + guaranteed to
+    /// change the decoded buffer.
+    function flipFirstBit(b64url: string): string {
+      const buf = Buffer.from(b64url, 'base64url');
+      buf[0] ^= 0x01; // toggle LSB of first byte — guaranteed delta
+      return buf.toString('base64url');
+    }
+
     it('throws when ciphertext segment is altered', () => {
       const triplet = encryptApiKey(PLAINTEXT, SEED);
       const [iv, authTag, ct] = triplet.split('.');
-      // Flip a character in the ciphertext segment.
-      const tamperedCt = ct.slice(0, -1) + (ct.endsWith('A') ? 'B' : 'A');
-      const tampered = [iv, authTag, tamperedCt].join('.');
+      const tampered = [iv, authTag, flipFirstBit(ct)].join('.');
       expect(() => decryptApiKey(tampered, SEED)).toThrow();
     });
 
     it('throws when authTag segment is altered', () => {
       const triplet = encryptApiKey(PLAINTEXT, SEED);
       const [iv, authTag, ct] = triplet.split('.');
-      const tamperedTag =
-        authTag.slice(0, -1) + (authTag.endsWith('A') ? 'B' : 'A');
-      const tampered = [iv, tamperedTag, ct].join('.');
+      const tampered = [iv, flipFirstBit(authTag), ct].join('.');
       expect(() => decryptApiKey(tampered, SEED)).toThrow();
     });
 
@@ -65,6 +77,23 @@ describe('[@m3-close] llm/crypto — AES-256-GCM helper', () => {
       expect(() =>
         decryptApiKey(triplet, 'totally-different-seed-value-xxxxxxxxxxxxxx'),
       ).toThrow();
+    });
+
+    it('flipFirstBit helper actually mutates the decoded buffer (sanity check)', () => {
+      // Defense against future regression — if this helper ever becomes
+      // a no-op (e.g., someone "simplifies" it back to char-level),
+      // this assertion fails before the tamper tests do.
+      const original = Buffer.from('Hello world', 'utf8').toString('base64url');
+      const flipped = (function flipFirstBit(b64url: string) {
+        const buf = Buffer.from(b64url, 'base64url');
+        buf[0] ^= 0x01;
+        return buf.toString('base64url');
+      })(original);
+      expect(flipped).not.toBe(original);
+      const originalBytes = Buffer.from(original, 'base64url');
+      const flippedBytes = Buffer.from(flipped, 'base64url');
+      expect(originalBytes[0]).not.toBe(flippedBytes[0]);
+      expect(originalBytes[0] ^ flippedBytes[0]).toBe(0x01);
     });
   });
 
