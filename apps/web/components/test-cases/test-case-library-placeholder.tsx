@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight, Plus } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { TestCaseMethodChooserModal } from './test-case-method-chooser-modal';
+import { BulkImportModal } from './bulk-import-modal';
 
 export function TestCaseLibraryPlaceholder() {
   return (
@@ -29,6 +30,7 @@ function TestCaseLibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isChooserOpen = (searchParams?.get('new-test-case') ?? null) === '1';
+  const isBulkImportOpen = (searchParams?.get('bulk-import') ?? null) === '1';
 
   const openChooser = useCallback(() => {
     console.info('pattern-a:deferred:test-cases:new-test-case');
@@ -36,6 +38,10 @@ function TestCaseLibraryContent() {
   }, [router]);
 
   const closeChooser = useCallback(() => {
+    router.replace('/test-cases');
+  }, [router]);
+
+  const closeBulkImport = useCallback(() => {
     router.replace('/test-cases');
   }, [router]);
 
@@ -107,6 +113,7 @@ function TestCaseLibraryContent() {
       </section>
 
       <TestCaseMethodChooserModal open={isChooserOpen} onClose={closeChooser} />
+      <BulkImportModal open={isBulkImportOpen} onClose={closeBulkImport} />
     </main>
   );
 }

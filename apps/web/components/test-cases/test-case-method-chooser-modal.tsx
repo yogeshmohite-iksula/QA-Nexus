@@ -91,7 +91,7 @@ const CARDS: MethodCard[] = [
     tone: 'info',
     iconTile: Upload,
     cta: 'Open uploader',
-    targetRoute: '/test-cases/new?method=bulk',
+    targetRoute: '/test-cases?bulk-import=1',
     meta: [
       { icon: FileText, text: 'CSV · XLSX · ≤10 MB' },
       { icon: CheckSquare, text: 'Auto field-map + A2 dedupe' },
