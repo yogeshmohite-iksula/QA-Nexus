@@ -1,36 +1,43 @@
 // QA Nexus PM1 — EmailService.
 //
-// Spec: ADR-008 (Day-8) — swap from Resend stub to Gmail SMTP via
-// nodemailer. Resend custom-domain wiring blocked by IT in Day-7
-// follow-up; Gmail App Password is the pilot bridge.
+// Spec: ADR-018 (Day-16) — migration from nodemailer/Gmail SMTP to
+// Resend HTTPS API. Render Free tier silently blocks outbound SMTP
+// connections (Sept 2025 policy), so the ADR-008 SMTP path stopped
+// delivering email in production. Resend's HTTPS POST to api.resend.com
+// bypasses the block; free tier 3,000 emails/month is sufficient for
+// the 8-user pilot. Public API contract from Day-6 (sendInvitation /
+// sendMagicLink / sendPasswordReset / send / getCapturedEmails /
+// clearCapturedEmails) is preserved verbatim — only the underlying
+// transport changed.
 //
 // Modes (DEFERRED-pattern, mirrors LLMGateway / R2Service):
-//   - REAL    : Full SMTP env present + parsed. Calls nodemailer.sendMail.
-//   - DEFERRED: SMTP env partially missing OR parse failure. Logs body
+//   - REAL    : RESEND_API_KEY parsed OK + NODE_ENV != test. Calls
+//               resend.emails.send().
+//   - DEFERRED: RESEND_API_KEY missing OR Zod parse failure. Logs body
 //               to stdout + returns { messageId: 'deferred-<uuid>',
-//               stubbed: true }. Visible-warning at boot.
+//               stubbed: true }. Visible-warning at boot. Same shape as
+//               ADR-008 to keep operator muscle memory.
 //   - CAPTURE : NODE_ENV=test OR EMAIL_TEST_CAPTURE=true. In-memory
-//               queue, no transport calls. Tests assert via getCapturedEmails().
+//               queue, no transport calls. Tests assert via
+//               getCapturedEmails().
 //
-// BCC discipline (Day-8 follow-up): every send sets `bcc: SMTP_BCC_EMAIL`
-// so Yogesh's work email gets a silent pilot-tracking copy. Recipient
-// does NOT see this in headers (BCC is hidden by RFC). Without BCC,
-// the audit log is the only ground-truth — adding BCC gives Yogesh a
-// human-readable inbox view without adding any FE work.
+// BCC discipline (Day-8 follow-up, retained): every send sets
+// `bcc: RESEND_BCC_EMAIL` (when set) so Yogesh's work email gets a
+// silent pilot-tracking copy. Recipient does NOT see this in headers
+// (BCC is hidden by RFC). Without BCC the audit log is the only
+// ground-truth — adding BCC gives Yogesh a human-readable inbox view
+// without adding any FE work.
 //
-// Error policy: nodemailer failures are LOGGED + RETURNED with
+// Error policy: Resend SDK failures are LOGGED + RETURNED with
 // { messageId, error }, never thrown. Caller (invitations service)
 // captures the error in its audit row — invite still committed,
-// user can resend.
-//
-// Public API contract preserved from Day-6 (Resend version):
-//   - sendInvitation / sendMagicLink / sendPasswordReset / send / getHealth
-//   - getCapturedEmails / clearCapturedEmails for tests
+// user can resend. RESEND_API_KEY is redacted from any error message
+// before logging (defence-in-depth, mirrors SMTP_PASSWORD redaction).
 
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { createTransport, type Transporter } from 'nodemailer';
-import { parseSmtpEnv, type SmtpEnv } from '@qa-nexus/shared';
+import { Resend } from 'resend';
+import { parseResendEnv, type ResendEnv } from '@qa-nexus/shared';
 import {
   renderInvitationSubject,
   renderInvitationHtml,
@@ -67,8 +74,8 @@ export interface CapturedEmail extends SendEmailParams {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Transporter | null = null;
-  private smtpEnv: SmtpEnv | null = null;
+  private resend: Resend | null = null;
+  private resendEnv: ResendEnv | null = null;
   private mode: 'real' | 'deferred' | 'capture' = 'deferred';
   private captureQueue: CapturedEmail[] = [];
 
@@ -84,41 +91,48 @@ export class EmailService {
       process.env.EMAIL_TEST_CAPTURE === 'true'
     ) {
       this.mode = 'capture';
-      this.transporter = null;
-      this.smtpEnv = null;
+      this.resend = null;
+      this.resendEnv = null;
       return;
     }
 
     try {
-      this.smtpEnv = parseSmtpEnv(process.env);
+      this.resendEnv = parseResendEnv(process.env);
       this.mode = 'real';
-      this.transporter = createTransport({
-        host: this.smtpEnv.SMTP_HOST,
-        port: this.smtpEnv.SMTP_PORT,
-        secure: this.smtpEnv.SMTP_SECURE, // false for 587 STARTTLS
-        auth: {
-          user: this.smtpEnv.SMTP_USER,
-          pass: this.smtpEnv.SMTP_PASSWORD,
-        },
-      });
-      // Boot log — NEVER includes the password.
+      this.resend = new Resend(this.resendEnv.RESEND_API_KEY);
+      // Boot log — NEVER includes the API key.
       this.logger.log(
-        `EmailService REAL: ${this.smtpEnv.SMTP_HOST}:${this.smtpEnv.SMTP_PORT} ` +
-          `secure=${this.smtpEnv.SMTP_SECURE} from=${this.smtpEnv.SMTP_FROM_EMAIL} ` +
-          `bcc=${this.smtpEnv.SMTP_BCC_EMAIL}`,
+        `EmailService REAL: Resend HTTPS API · ` +
+          `from="${this.resendEnv.RESEND_FROM_NAME}" <${this.resendEnv.RESEND_FROM_EMAIL}>` +
+          (this.resendEnv.RESEND_REPLY_TO
+            ? ` reply-to=${this.resendEnv.RESEND_REPLY_TO}`
+            : '') +
+          (this.resendEnv.RESEND_BCC_EMAIL
+            ? ` bcc=${this.resendEnv.RESEND_BCC_EMAIL}`
+            : ' bcc=(none)'),
       );
+      // Compatibility hint: SMTP_* env vars from ADR-008 are no longer
+      // consumed. Warn so operators can clean them up (followup (bh)).
+      if (process.env.SMTP_HOST || process.env.SMTP_USER) {
+        this.logger.warn(
+          `SMTP_* env vars detected but unused — ADR-018 superseded ADR-008. ` +
+            `Remove SMTP_HOST/PORT/SECURE/USER/PASSWORD/FROM_NAME/FROM_EMAIL/` +
+            `REPLY_TO/BCC_EMAIL from Render env vars (followup (bh)).`,
+        );
+      }
     } catch (err) {
       // Validation failure → deferred mode, NOT a hard crash. The API
       // still boots; invitations + magic-links log to stdout instead
       // of sending. /health surfaces deferred state.
       this.mode = 'deferred';
-      this.transporter = null;
-      this.smtpEnv = null;
+      this.resend = null;
+      this.resendEnv = null;
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.warn(
-        `EmailService DEFERRED — SMTP env invalid: ${msg}. ` +
-          `Magic-links + invites will be logged to stdout. Set the SMTP_* ` +
-          `env vars on Render to enable real sending. (See ADR-008.)`,
+        `EmailService DEFERRED — Resend env invalid: ${msg}. ` +
+          `Magic-links + invites will be logged to stdout. Set RESEND_API_KEY ` +
+          `(plus optional RESEND_FROM_EMAIL/NAME/REPLY_TO/BCC_EMAIL) on Render ` +
+          `to enable real sending. (See ADR-018.)`,
       );
     }
   }
@@ -131,13 +145,13 @@ export class EmailService {
   } {
     return {
       mode: this.mode,
-      from: this.smtpEnv?.SMTP_FROM_EMAIL ?? null,
-      bccEnabled: !!this.smtpEnv?.SMTP_BCC_EMAIL,
+      from: this.resendEnv?.RESEND_FROM_EMAIL ?? null,
+      bccEnabled: !!this.resendEnv?.RESEND_BCC_EMAIL,
     };
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // High-level methods (M1 contract; preserved from Day-6).
+  // High-level methods (M1 contract; preserved verbatim from Day-6).
   // ────────────────────────────────────────────────────────────────────
 
   async sendInvitation(params: InvitationTemplateParams): Promise<SendResult> {
@@ -217,55 +231,85 @@ export class EmailService {
     if (this.mode === 'capture') {
       const messageId = `captured-${randomUUID()}`;
       // Capture the BCC value the real path WOULD have used so tests
-      // can assert wiring without nodemailer mocking. In capture mode
-      // we read SMTP_BCC_EMAIL directly from env if set; otherwise
+      // can assert wiring without Resend mocking. In capture mode we
+      // read RESEND_BCC_EMAIL directly from env if set; otherwise
       // undefined (tests that need to assert the field can set the env).
       this.captureQueue.push({
         ...params,
         messageId,
         capturedAt: new Date().toISOString(),
-        bcc: process.env.SMTP_BCC_EMAIL,
+        bcc: process.env.RESEND_BCC_EMAIL,
       });
       return { messageId, stubbed: true };
     }
 
-    if (this.mode === 'deferred' || !this.transporter || !this.smtpEnv) {
+    if (this.mode === 'deferred' || !this.resend || !this.resendEnv) {
       this.logger.log(
-        `\n  ==== DEFERRED EMAIL (SMTP env invalid) ====` +
+        `\n  ==== DEFERRED EMAIL (Resend env invalid) ====` +
           `\n    to:      ${params.to}` +
           `\n    subject: ${params.subject}` +
           `\n    text:    ${params.text ?? '(html-only)'}` +
-          `\n  ===========================================`,
+          `\n  =============================================`,
       );
       return { messageId: `deferred-${randomUUID()}`, stubbed: true };
     }
 
     try {
-      const info = await this.transporter.sendMail({
-        from: `"${this.smtpEnv.SMTP_FROM_NAME}" <${this.smtpEnv.SMTP_FROM_EMAIL}>`,
+      // Resend SDK shape: emails.send({ from, to, subject, html, text,
+      // bcc?, reply_to? }) → { data: { id } | null, error: ... | null }.
+      // Note: SDK uses snake_case `reply_to` per Resend HTTP API.
+      const response = await this.resend.emails.send({
+        from: `${this.resendEnv.RESEND_FROM_NAME} <${this.resendEnv.RESEND_FROM_EMAIL}>`,
         to: params.to,
-        bcc: this.smtpEnv.SMTP_BCC_EMAIL, // silent pilot-tracking copy
-        replyTo: this.smtpEnv.SMTP_REPLY_TO,
         subject: params.subject,
         html: params.html,
         text: params.text,
+        ...(this.resendEnv.RESEND_BCC_EMAIL
+          ? { bcc: this.resendEnv.RESEND_BCC_EMAIL }
+          : {}),
+        ...(this.resendEnv.RESEND_REPLY_TO
+          ? { replyTo: this.resendEnv.RESEND_REPLY_TO }
+          : {}),
       });
-      // nodemailer's sendMail resolves with { messageId, accepted, rejected, ... }
-      return { messageId: info.messageId ?? 'unknown', stubbed: false };
+
+      // Resend returns { data, error } — error is non-null on API
+      // failures (invalid API key, rate limit, malformed payload, etc.).
+      // We translate to our { messageId, error } shape for symmetry
+      // with the nodemailer path callers already handle.
+      if (response.error) {
+        const safeMsg = this.redact(
+          typeof response.error === 'object' && 'message' in response.error
+            ? String(response.error.message)
+            : JSON.stringify(response.error),
+        );
+        this.logger.error(`Resend send failed for to=${params.to}: ${safeMsg}`);
+        return {
+          messageId: `failed-${randomUUID()}`,
+          stubbed: false,
+          error: safeMsg,
+        };
+      }
+
+      const messageId = response.data?.id ?? 'unknown';
+      return { messageId, stubbed: false };
     } catch (err) {
+      // Network failure / SDK throw / unexpected runtime error.
       const msg = err instanceof Error ? err.message : String(err);
-      // Defensive: NEVER let SMTP_PASSWORD or full env leak into the
-      // logged message. nodemailer's error.message can sometimes
-      // include parts of the auth header — trim if so.
-      const safeMsg = this.smtpEnv?.SMTP_PASSWORD
-        ? msg.replace(this.smtpEnv.SMTP_PASSWORD, '<redacted>')
-        : msg;
-      this.logger.error(`SMTP send failed for to=${params.to}: ${safeMsg}`);
+      const safeMsg = this.redact(msg);
+      this.logger.error(`Resend send threw for to=${params.to}: ${safeMsg}`);
       return {
         messageId: `failed-${randomUUID()}`,
         stubbed: false,
         error: safeMsg,
       };
     }
+  }
+
+  /** Defence-in-depth: NEVER let RESEND_API_KEY leak into a logged
+   *  message. Resend SDK error messages can sometimes echo back the
+   *  bearer token from the failed request — strip it if present. */
+  private redact(msg: string): string {
+    if (!this.resendEnv?.RESEND_API_KEY) return msg;
+    return msg.split(this.resendEnv.RESEND_API_KEY).join('<redacted>');
   }
 }

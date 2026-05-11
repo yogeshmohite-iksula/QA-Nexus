@@ -23,6 +23,7 @@ export * from './schemas/kb';
 export * from './schemas/llm';
 export * from './schemas/audit';
 export * from './schemas/smtp-env';
+export * from './schemas/resend-env';
 export * from './auth/role.enum';
 export * from './storage';
 // UI-facing seed/display types — extends the BE schemas with denormalized
