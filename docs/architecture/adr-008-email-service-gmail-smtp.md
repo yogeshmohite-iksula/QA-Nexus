@@ -1,10 +1,20 @@
 # ADR-008 — Email service: Gmail SMTP (via nodemailer) for the M1 pilot
 
-**Status:** Accepted
+**Status:** SUPERSEDED by [ADR-018](./adr-018-email-provider-migration-resend.md) — 2026-05-11 (Day-16)
 **Date:** 2026-05-04 (Day-8)
 **Authors:** BE chat (proposer) · Yogesh (deployer-admin, decider)
 **Supersedes:** none — extends the Day-3 EmailService (Resend SDK stub)
-**Superseded by:** none (yet)
+**Superseded by:** ADR-018 (2026-05-11) — Render Free tier silently
+blocks outbound SMTP (Sept 2025 policy change), making the path
+documented here non-functional in production. Migrated to Resend HTTPS
+API, which round-trips through `api.resend.com` over 443 and is
+unaffected by the SMTP block. The 9 `SMTP_*` env vars are deprecated;
+new contract is `RESEND_API_KEY` (required) plus 4 optional fields.
+The Day-6 public API surface (`sendInvitation` / `sendMagicLink` /
+`sendPasswordReset` / `send` / capture+deferred modes / BCC wiring) is
+preserved — only the transport flipped. See ADR-018 §4 for the full
+migration record. The historical context below remains accurate for
+the Day-8 → Day-15 window; it is retained for audit purposes.
 
 ---
 

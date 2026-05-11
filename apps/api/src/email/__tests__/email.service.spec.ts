@@ -1,24 +1,33 @@
-// Unit tests for EmailService (Day-8 Gmail SMTP via nodemailer).
+// Unit tests for EmailService (ADR-018 — Resend HTTPS API).
 //
-// Strategy: jest.mock 'nodemailer' so no real SMTP connection ever opens.
-// Pins: capture mode, deferred mode, env validation, graceful errors,
-// BCC wiring on every send (Day-8 Yogesh follow-up), template content,
-// password redaction in error logs (security guarantee).
+// Strategy: jest.mock the 'resend' package so no real HTTP request ever
+// fires. Pins: capture mode, deferred mode, env validation, graceful
+// errors (Resend `error` field + SDK throw), BCC wiring on every send
+// (Day-8 Yogesh follow-up retained), template content, API-key
+// redaction in error logs (security guarantee, mirrors ADR-008
+// SMTP_PASSWORD redaction).
+//
+// Migration note: ADR-018 supersedes ADR-008 (nodemailer/Gmail SMTP)
+// because Render Free tier blocks outbound SMTP. The public API
+// surface (sendInvitation / sendMagicLink / sendPasswordReset / send /
+// getCapturedEmails / clearCapturedEmails) is unchanged — only the
+// underlying transport flipped — so behavioural assertions below
+// mirror the pre-migration spec line-for-line where possible.
 
-jest.mock('nodemailer');
+const mockSend = jest.fn();
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({
+    emails: { send: mockSend },
+  })),
+}));
 
 import { EmailService } from '../email.service';
-import { createTransport } from 'nodemailer';
+import { Resend } from 'resend';
 import {
   renderInvitationSubject,
   renderInvitationHtml,
   renderInvitationText,
 } from '../templates/invitation';
-
-const mockSendMail = jest.fn();
-(createTransport as unknown as jest.Mock).mockImplementation(() => ({
-  sendMail: mockSendMail,
-}));
 
 const baseInv = {
   to: 'kishor.kadam@iksula.com',
@@ -29,42 +38,34 @@ const baseInv = {
   expiresAt: '2026-05-09T12:00:00Z',
 };
 
-/** Set the full 9-var SMTP env. Used by real-mode tests. */
+/** Set the Resend env (1 required + 4 optional). Used by real-mode tests. */
 function setRealEnv(overrides: Partial<Record<string, string>> = {}): void {
   process.env.NODE_ENV = 'production';
-  process.env.SMTP_HOST = 'smtp.gmail.com';
-  process.env.SMTP_PORT = '587';
-  process.env.SMTP_SECURE = 'false';
-  process.env.SMTP_USER = 'yogesh.ybm999@gmail.com';
-  process.env.SMTP_PASSWORD = 'app-password-1234567890abcd';
-  process.env.SMTP_FROM_NAME = 'QA Nexus';
-  process.env.SMTP_FROM_EMAIL = 'yogesh.ybm999@gmail.com';
-  process.env.SMTP_REPLY_TO = 'yogesh.mohite@iksula.com';
-  process.env.SMTP_BCC_EMAIL = 'yogesh.mohite@iksula.com';
+  process.env.RESEND_API_KEY = 're_test_qa_nexus_pm1_local_test_only';
+  process.env.RESEND_FROM_EMAIL = 'noreply@qanexus.iksula.com';
+  process.env.RESEND_FROM_NAME = 'QA Nexus';
+  process.env.RESEND_REPLY_TO = 'yogesh.mohite@iksula.com';
+  process.env.RESEND_BCC_EMAIL = 'yogesh.mohite@iksula.com';
   for (const [k, v] of Object.entries(overrides)) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
 }
 
-function clearAllSmtpEnv(): void {
-  delete process.env.SMTP_HOST;
-  delete process.env.SMTP_PORT;
-  delete process.env.SMTP_SECURE;
-  delete process.env.SMTP_USER;
-  delete process.env.SMTP_PASSWORD;
-  delete process.env.SMTP_FROM_NAME;
-  delete process.env.SMTP_FROM_EMAIL;
-  delete process.env.SMTP_REPLY_TO;
-  delete process.env.SMTP_BCC_EMAIL;
+function clearAllResendEnv(): void {
+  delete process.env.RESEND_API_KEY;
+  delete process.env.RESEND_FROM_EMAIL;
+  delete process.env.RESEND_FROM_NAME;
+  delete process.env.RESEND_REPLY_TO;
+  delete process.env.RESEND_BCC_EMAIL;
 }
 
-describe('EmailService (Day-8 Gmail SMTP)', () => {
+describe('EmailService (ADR-018 Resend HTTPS API)', () => {
   const ORIG_ENV = { ...process.env };
   beforeEach(() => {
-    mockSendMail.mockReset();
-    (createTransport as unknown as jest.Mock).mockClear();
-    clearAllSmtpEnv();
+    mockSend.mockReset();
+    (Resend as unknown as jest.Mock).mockClear();
+    clearAllResendEnv();
     delete process.env.EMAIL_TEST_CAPTURE;
     process.env.NODE_ENV = 'test';
   });
@@ -76,6 +77,7 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
     it('NODE_ENV=test → capture mode', () => {
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('capture');
+      expect(Resend).not.toHaveBeenCalled();
     });
 
     it('EMAIL_TEST_CAPTURE=true overrides production-looking env', () => {
@@ -85,37 +87,44 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
       expect(svc.getHealth().mode).toBe('capture');
     });
 
-    it('SMTP env complete in production → real mode', () => {
+    it('Resend env complete in production → real mode', () => {
       setRealEnv();
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('real');
-      expect(svc.getHealth().from).toBe('yogesh.ybm999@gmail.com');
+      expect(svc.getHealth().from).toBe('noreply@qanexus.iksula.com');
       expect(svc.getHealth().bccEnabled).toBe(true);
-      // Transport built with the right config
-      const cfg = (createTransport as unknown as jest.Mock).mock.calls[0][0];
-      expect(cfg.host).toBe('smtp.gmail.com');
-      expect(cfg.port).toBe(587);
-      expect(cfg.secure).toBe(false); // STARTTLS
-      expect(cfg.auth.user).toBe('yogesh.ybm999@gmail.com');
-      expect(cfg.auth.pass).toBe('app-password-1234567890abcd');
+      // Resend client constructed with the right key.
+      expect(Resend).toHaveBeenCalledTimes(1);
+      expect((Resend as unknown as jest.Mock).mock.calls[0][0]).toBe(
+        're_test_qa_nexus_pm1_local_test_only',
+      );
     });
 
-    it('SMTP env missing in production → deferred mode (no crash)', () => {
+    it('RESEND_API_KEY missing in production → deferred mode (no crash)', () => {
       process.env.NODE_ENV = 'production';
-      // No SMTP_* env at all
+      // No RESEND_* env at all
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('deferred');
-      expect(createTransport).not.toHaveBeenCalled();
+      expect(Resend).not.toHaveBeenCalled();
     });
 
-    it('SMTP env partial (missing SMTP_BCC_EMAIL) → deferred mode', () => {
-      setRealEnv({ SMTP_BCC_EMAIL: undefined });
+    it('RESEND_API_KEY without "re_" prefix → deferred mode', () => {
+      setRealEnv({ RESEND_API_KEY: 'invalid-format-token-1234567890' });
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('deferred');
     });
 
-    it('SMTP_PORT not numeric → deferred (Zod coerce fails)', () => {
-      setRealEnv({ SMTP_PORT: 'not-a-number' });
+    it('only RESEND_API_KEY set → real mode with default from/name (no BCC)', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.RESEND_API_KEY = 're_minimal_set_for_pilot_bootstrap';
+      const svc = new EmailService();
+      expect(svc.getHealth().mode).toBe('real');
+      expect(svc.getHealth().from).toBe('onboarding@resend.dev');
+      expect(svc.getHealth().bccEnabled).toBe(false);
+    });
+
+    it('invalid RESEND_FROM_EMAIL → deferred', () => {
+      setRealEnv({ RESEND_FROM_EMAIL: 'not-an-email' });
       const svc = new EmailService();
       expect(svc.getHealth().mode).toBe('deferred');
     });
@@ -152,20 +161,20 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
   });
 
   describe('capture mode', () => {
-    it('sendInvitation captures into queue (no nodemailer call)', async () => {
+    it('sendInvitation captures into queue (no Resend call)', async () => {
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^captured-/);
       expect(result.stubbed).toBe(true);
-      expect(mockSendMail).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
       const captured = svc.getCapturedEmails();
       expect(captured).toHaveLength(1);
       expect(captured[0].to).toBe(baseInv.to);
       expect(captured[0].html).toContain(baseInv.magicLinkUrl);
     });
 
-    it('capture records SMTP_BCC_EMAIL when set in env (so wire-tests can assert)', async () => {
-      process.env.SMTP_BCC_EMAIL = 'yogesh.mohite@iksula.com';
+    it('capture records RESEND_BCC_EMAIL when set in env (so wire-tests can assert)', async () => {
+      process.env.RESEND_BCC_EMAIL = 'yogesh.mohite@iksula.com';
       const svc = new EmailService();
       await svc.sendInvitation(baseInv);
       const captured = svc.getCapturedEmails();
@@ -199,31 +208,32 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
   });
 
   describe('deferred mode', () => {
-    it('sendInvitation returns deferred-prefixed messageId, no SMTP call', async () => {
+    it('sendInvitation returns deferred-prefixed messageId, no Resend call', async () => {
       process.env.NODE_ENV = 'production';
-      // No SMTP env → deferred
+      // No RESEND env → deferred
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^deferred-/);
       expect(result.stubbed).toBe(true);
-      expect(mockSendMail).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
     });
   });
 
   describe('real mode + BCC wiring + graceful errors', () => {
-    it('happy path — sendMail called with from/to/bcc/replyTo/subject/html/text', async () => {
-      mockSendMail.mockResolvedValueOnce({
-        messageId: '<gmail-id-789@smtp.gmail.com>',
+    it('happy path — emails.send called with from/to/bcc/replyTo/subject/html/text', async () => {
+      mockSend.mockResolvedValueOnce({
+        data: { id: 'resend-id-789' },
+        error: null,
       });
       setRealEnv();
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
-      expect(result.messageId).toBe('<gmail-id-789@smtp.gmail.com>');
+      expect(result.messageId).toBe('resend-id-789');
       expect(result.stubbed).toBe(false);
 
-      expect(mockSendMail).toHaveBeenCalledTimes(1);
-      const arg = mockSendMail.mock.calls[0][0];
-      expect(arg.from).toBe('"QA Nexus" <yogesh.ybm999@gmail.com>');
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const arg = mockSend.mock.calls[0][0];
+      expect(arg.from).toBe('QA Nexus <noreply@qanexus.iksula.com>');
       expect(arg.to).toBe(baseInv.to);
       // CRITICAL: every send carries the silent BCC to Yogesh's work email.
       expect(arg.bcc).toBe('yogesh.mohite@iksula.com');
@@ -234,7 +244,7 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
     });
 
     it('every public method (invite/magic-link/reset) carries the BCC field', async () => {
-      mockSendMail.mockResolvedValue({ messageId: 'x' });
+      mockSend.mockResolvedValue({ data: { id: 'x' }, error: null });
       setRealEnv();
       const svc = new EmailService();
       await svc.sendInvitation(baseInv);
@@ -249,37 +259,75 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
         expiresAt: '2026-05-04T12:00:00Z',
       });
       // 3 calls — verify BCC on each.
-      expect(mockSendMail).toHaveBeenCalledTimes(3);
-      for (const call of mockSendMail.mock.calls) {
+      expect(mockSend).toHaveBeenCalledTimes(3);
+      for (const call of mockSend.mock.calls) {
         expect(call[0].bcc).toBe('yogesh.mohite@iksula.com');
       }
     });
 
-    it('nodemailer throws — caught, logged, returned as failed result', async () => {
-      mockSendMail.mockRejectedValueOnce(new Error('connection refused'));
+    it('without RESEND_BCC_EMAIL — bcc field is OMITTED, not undefined', async () => {
+      mockSend.mockResolvedValueOnce({ data: { id: 'no-bcc' }, error: null });
+      setRealEnv({ RESEND_BCC_EMAIL: undefined });
+      const svc = new EmailService();
+      await svc.sendInvitation(baseInv);
+      const arg = mockSend.mock.calls[0][0];
+      expect('bcc' in arg).toBe(false);
+    });
+
+    it('without RESEND_REPLY_TO — replyTo field is OMITTED', async () => {
+      mockSend.mockResolvedValueOnce({ data: { id: 'no-rt' }, error: null });
+      setRealEnv({ RESEND_REPLY_TO: undefined });
+      const svc = new EmailService();
+      await svc.sendInvitation(baseInv);
+      const arg = mockSend.mock.calls[0][0];
+      expect('replyTo' in arg).toBe(false);
+    });
+
+    it('Resend returns { error } — caught, logged, returned as failed result', async () => {
+      mockSend.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'rate_limit_exceeded', name: 'RateLimitError' },
+      });
       setRealEnv();
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^failed-/);
       expect(result.stubbed).toBe(false);
-      expect(result.error).toBe('connection refused');
+      expect(result.error).toBe('rate_limit_exceeded');
     });
 
-    it('SMTP_PASSWORD never appears in returned error (defence-in-depth)', async () => {
-      // Simulate a hostile error message that includes the password.
-      mockSendMail.mockRejectedValueOnce(
-        new Error('auth failure: pass=app-password-1234567890abcd rejected'),
+    it('Resend SDK throws — caught, logged, returned as failed result', async () => {
+      mockSend.mockRejectedValueOnce(new Error('network unreachable'));
+      setRealEnv();
+      const svc = new EmailService();
+      const result = await svc.sendInvitation(baseInv);
+      expect(result.messageId).toMatch(/^failed-/);
+      expect(result.stubbed).toBe(false);
+      expect(result.error).toBe('network unreachable');
+    });
+
+    it('RESEND_API_KEY never appears in returned error (defence-in-depth)', async () => {
+      // Simulate a hostile error message that includes the API key.
+      mockSend.mockRejectedValueOnce(
+        new Error(
+          'auth failure: token=re_test_qa_nexus_pm1_local_test_only rejected',
+        ),
       );
       setRealEnv();
       const svc = new EmailService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.error).toBeDefined();
-      expect(result.error).not.toContain('app-password-1234567890abcd');
+      expect(result.error).not.toContain(
+        're_test_qa_nexus_pm1_local_test_only',
+      );
       expect(result.error).toContain('<redacted>');
     });
 
     it('legacy send() shape still works (auth.config.ts compat)', async () => {
-      mockSendMail.mockResolvedValueOnce({ messageId: 'legacy-id' });
+      mockSend.mockResolvedValueOnce({
+        data: { id: 'legacy-id' },
+        error: null,
+      });
       setRealEnv();
       const svc = new EmailService();
       const result = await svc.send({
@@ -290,36 +338,7 @@ describe('EmailService (Day-8 Gmail SMTP)', () => {
       });
       expect(result).toEqual({ id: 'legacy-id', stubbed: false });
       // Legacy path still gets BCC.
-      expect(mockSendMail.mock.calls[0][0].bcc).toBe(
-        'yogesh.mohite@iksula.com',
-      );
-    });
-  });
-
-  describe('Zod env validation (parseSmtpEnv contract)', () => {
-    // Verifies the schema parses what we expect and rejects what we don't.
-    // The full ZodError messages are exercised via the deferred-mode tests
-    // above; this section adds focused field-level coverage.
-
-    it('non-email SMTP_USER → deferred', () => {
-      setRealEnv({ SMTP_USER: 'not-an-email' });
-      const svc = new EmailService();
-      expect(svc.getHealth().mode).toBe('deferred');
-    });
-
-    it('SMTP_PORT > 65535 → deferred', () => {
-      setRealEnv({ SMTP_PORT: '99999' });
-      const svc = new EmailService();
-      expect(svc.getHealth().mode).toBe('deferred');
-    });
-
-    it('SMTP_SECURE="true" → real mode + secure=true (SSL/465 path)', () => {
-      setRealEnv({ SMTP_SECURE: 'true', SMTP_PORT: '465' });
-      const svc = new EmailService();
-      expect(svc.getHealth().mode).toBe('real');
-      const cfg = (createTransport as unknown as jest.Mock).mock.calls[0][0];
-      expect(cfg.secure).toBe(true);
-      expect(cfg.port).toBe(465);
+      expect(mockSend.mock.calls[0][0].bcc).toBe('yogesh.mohite@iksula.com');
     });
   });
 });

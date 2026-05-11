@@ -273,23 +273,25 @@ sufficient. A dedicated staging environment lets us:
 
 In the Render dashboard for `qa-nexus-api-staging`:
 
-| Var                           | Value                                                                | Source                                     |
-| ----------------------------- | -------------------------------------------------------------------- | ------------------------------------------ |
-| `DATABASE_URL`                | Neon pooled URL from Step 1.7                                        | Neon                                       |
-| `DIRECT_URL`                  | Neon direct URL from Step 1.7                                        | Neon                                       |
-| `BETTER_AUTH_SECRET`          | (leave empty — Render auto-generates per `generateValue: true`)      | Render                                     |
-| `BETTER_AUTH_COOKIE_DOMAIN`   | (leave UNSET initially; set to `.qanexus.iksula.com` after DNS swap) | —                                          |
-| `GROQ_API_KEY`                | `gsk_...` from https://console.groq.com/keys                         | Groq                                       |
-| `GEMINI_API_KEY`              | `AIza...` from https://aistudio.google.com/app/apikey                | Gemini                                     |
-| `SMTP_USER`                   | Gmail account email                                                  | Gmail                                      |
-| `SMTP_PASSWORD`               | Gmail App Password (NOT account password)                            | Gmail Workspace → Security → App passwords |
-| `R2_ACCOUNT_ID`               | Cloudflare → R2 → API Tokens                                         | R2                                         |
-| `R2_ACCESS_KEY_ID`            | (token client ID)                                                    | R2                                         |
-| `R2_SECRET_ACCESS_KEY`        | (token client secret)                                                | R2                                         |
-| `R2_ENDPOINT`                 | `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`                   | derived                                    |
-| `R2_PUBLIC_URL`               | `https://uploads.qa-nexus.iksula.com` OR `*.r2.dev` fallback         | R2                                         |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Better Stack ingest URL                                              | Better Stack                               |
-| `OTEL_EXPORTER_OTLP_HEADERS`  | `Authorization=Bearer <token>`                                       | Better Stack                               |
+| Var                           | Value                                                                | Source                 |
+| ----------------------------- | -------------------------------------------------------------------- | ---------------------- |
+| `DATABASE_URL`                | Neon pooled URL from Step 1.7                                        | Neon                   |
+| `DIRECT_URL`                  | Neon direct URL from Step 1.7                                        | Neon                   |
+| `BETTER_AUTH_SECRET`          | (leave empty — Render auto-generates per `generateValue: true`)      | Render                 |
+| `BETTER_AUTH_COOKIE_DOMAIN`   | (leave UNSET initially; set to `.qanexus.iksula.com` after DNS swap) | —                      |
+| `GROQ_API_KEY`                | `gsk_...` from https://console.groq.com/keys                         | Groq                   |
+| `GEMINI_API_KEY`              | `AIza...` from https://aistudio.google.com/app/apikey                | Gemini                 |
+| `RESEND_API_KEY`              | Resend API key — `re_...` from https://resend.com/api-keys           | Resend (ADR-018)       |
+| `RESEND_FROM_EMAIL`           | Pilot: `onboarding@resend.dev` · Prod: `noreply@qanexus.iksula.com`  | Resend / followup (bg) |
+| `RESEND_REPLY_TO`             | `yogesh.mohite@iksula.com`                                           | Iksula                 |
+| `RESEND_BCC_EMAIL`            | `yogesh.mohite@iksula.com` (silent pilot-tracking copy)              | Iksula                 |
+| `R2_ACCOUNT_ID`               | Cloudflare → R2 → API Tokens                                         | R2                     |
+| `R2_ACCESS_KEY_ID`            | (token client ID)                                                    | R2                     |
+| `R2_SECRET_ACCESS_KEY`        | (token client secret)                                                | R2                     |
+| `R2_ENDPOINT`                 | `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`                   | derived                |
+| `R2_PUBLIC_URL`               | `https://uploads.qa-nexus.iksula.com` OR `*.r2.dev` fallback         | R2                     |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Better Stack ingest URL                                              | Better Stack           |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | `Authorization=Bearer <token>`                                       | Better Stack           |
 
 All other env vars are pre-filled from the Blueprint (see `render.yaml`).
 
