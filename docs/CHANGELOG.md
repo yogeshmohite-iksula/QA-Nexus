@@ -13,6 +13,61 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 18 — Intermediate confirm page (magic-link Gmail prefetch fix) + cross-tab session sync (PR #137, M3 close blocker)
+
+**FINAL M3 close blocker.** Atomic FE + BE PR. Fixes the Gmail-prefetch class of magic-link failure (BetterAuth ≥ 1.6.11 hardcoded atomic single-use via GHSA-hc7v-rggr-4hvx; Gmail's email-security scanner pre-fetches links and consumes the token before the real user clicks). Canonical pattern (Slack, Notion, Linear, GitHub all use this): the magic-link URL now points to a FE page with a "Confirm Sign In" button instead of directly to the BetterAuth verify endpoint. Scanner can pre-fetch the page but can't click the button; real user clicks → POSTs token → session cookie set → redirect to `callbackURL`.
+
+**FE changes (this commit):**
+
+- **NEW** `apps/web/app/(auth)/verify-magic-link/page.tsx` (~210 LOC) — intermediate confirm page with three view states (`ready` / `loading` / `error`). Reuses `<BrandMark />`, `<Button variant="primary">`, and the sign-in page's centered-card layout for visual consistency. Open-redirect guard on `callbackURL` (rejects protocol-relative `//host` URLs + non-absolute paths, falls back to `/home`). AdminShell deliberately NOT wrapped (Hard Rule 14 exclusion for auth-flow pages). Wrapped in `<Suspense>` per Next.js 15 static-prerender requirement (same pattern as sign-in page).
+- **MODIFIED** `apps/web/app/(auth)/sign-in/page.tsx` — added cross-tab session polling (~30 LOC). While "Check your inbox" is on screen, polls `authClient.getSession()` every 2 s; when the verify-magic-link tab completes sign-in and sets the session cookie, the original sign-in tab auto-redirects to `/home`. 10-minute hard timeout (matches BA `expiresIn: 600s`). Three-layer cleanup (unmount + state-change + timeout).
+
+**BE changes (sister cherry-pick onto this branch by BE+1):**
+
+- `apps/api/src/auth/auth.config.ts` — `sendMagicLink` callback rewrites the URL it emails to point at `${FRONTEND_BASE_URL}/auth/verify-magic-link?token=...&callbackURL=...` instead of BA's verify endpoint. 6 new tests in `apps/api/src/auth/__tests__/` covering URL construction + encoding + fallback when env var missing. Per `.claude/scratch/137-be-sendmagiclink-draft.md` Option α.
+
+**Render env var required post-deploy:**
+
+- `FRONTEND_BASE_URL=https://qa-nexus-web.pages.dev` (belt-and-suspenders to BE soft fallback; same Cloudflare Pages × Next.js 15 env-var injection bug as PR #122 motivates the hardcoded fallback).
+
+**Visual gate (Hard Rule 13):**
+
+- `docs/screenshots/m3-verify-magic-link/verify-ready-1440.png` — desktop, button enabled, Iksula brand panel above card
+- `docs/screenshots/m3-verify-magic-link/verify-ready-320.png` — mobile, button full-width, all copy fits
+- `docs/screenshots/m3-verify-magic-link/verify-error-1440.png` — desktop, "Sign in failed" + "Request a new link" CTA
+- `docs/screenshots/m3-verify-magic-link/verify-error-320.png` — mobile, error state, no overflow
+
+**Yogesh end-to-end test plan (post-merge):**
+
+1. Render auto-redeploys after merge (~2 min)
+2. Set `FRONTEND_BASE_URL` env var if not already
+3. Request fresh magic-link from `/sign-in`
+4. Open Gmail → click magic-link → expected: lands on `/auth/verify-magic-link?token=...` with "Confirm Sign In" button visible
+5. Click "Confirm Sign In" → expected: redirects to `/home` with session cookie set
+6. Switch back to original sign-in tab → expected: auto-redirected to `/home` within 2-3 s (cross-tab polling)
+7. Reply MAIN: "magic-link GREEN end-to-end"
+
+**HOLD merge until M3 close PR lands.** Per Yogesh instruction — same hold policy as #135 (F19) and #136 (AdminShell drift). After M3 close PR cascade signal, drop "ready to merge" here for squash-merge.
+
+**Files:**
+
+- NEW `apps/web/app/(auth)/verify-magic-link/page.tsx`
+- MODIFIED `apps/web/app/(auth)/sign-in/page.tsx` (cross-tab polling)
+- MODIFIED `apps/api/src/auth/auth.config.ts` (BE one-liner, cherry-picked)
+- NEW `apps/api/src/auth/__tests__/send-magic-link.spec.ts` (6 tests, BE)
+- NEW `scripts/m3-verify-magic-link-sweep.js` (visual gate sweep)
+- NEW `docs/screenshots/m3-verify-magic-link/` (4 PNGs)
+- MODIFIED `docs/CHANGELOG.md` (this entry)
+
+**Cross-references:**
+
+- GHSA-hc7v-rggr-4hvx — BetterAuth atomic single-use security advisory
+- BetterAuth GH #6104, #7406 — magic-link callbackURL behavior
+- PR #130 → #131 → #132 → #133 — Day-17 better-auth bump saga (this PR closes the cascade)
+- PR #135 (F19 Run Console) — sister M3 close blocker, HOLD
+- PR #136 (AdminShell drift fix) — sister M3 close blocker, HOLD
+- `.claude/scratch/137-be-sendmagiclink-draft.md` — BE+1's Option α cherry-pick draft
+
 ### Fixed — Day 17 — Silent prod crash on better-auth 1.6.11 boot + remove dead `allowedAttempts` (P0 fixes #130, blocks M3 close)
 
 **P0 production-restore PR.** PR #130 (better-auth bump 1.2.12 → 1.6.11 + `allowedAttempts: 3`) silent-crashed Render on deploy with `==> No open ports detected · ==> Exited with status 1 (19s after start)`. Yogesh rolled back to the previous deploy artifact (BA 1.2.12). This PR is fix-forward; PR #130's commit stays on main per scope-discipline directive.
