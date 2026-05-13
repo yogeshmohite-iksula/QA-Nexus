@@ -90,17 +90,18 @@ describe('T021 — auth.config.ts (Day-9 wiring)', () => {
       );
     });
 
-    it('magicLink.allowedAttempts=3 — survives Gmail prefetch (Day-17 P0, BetterAuth GH #6985/#5550)', () => {
-      // Gmail's email-security scanner pre-fetches magic-link URLs
-      // before the user clicks. With the BetterAuth default of 1
-      // attempt, that pre-fetch invalidates the token → real click
-      // hits ?error=INVALID_TOKEN. Setting 3 leaves headroom for
-      // scanner (1) + real click (1) + retry (1). NOT Infinity.
+    it('magicLink config does NOT include allowedAttempts (no-op in BA 1.6.11 per GHSA-hc7v-rggr-4hvx)', () => {
+      // The Day-17 P0 #130 attempted `allowedAttempts: 3` to survive
+      // Gmail prefetch, but BA 1.6.11's atomic single-use hardcode
+      // (security advisory GHSA-hc7v-rggr-4hvx) makes any value other
+      // than `1` a no-op + surfaces a runtime warning. Canonical
+      // prefetch-proof solution: intermediate confirm page (followup
+      // (bk) / PR #133). This test pins the REMOVAL of the dead
+      // option so it doesn't drift back in by accident.
       process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
       buildAuth(fakePrisma as never, fakeEmail as never);
-      expect(magicLink).toHaveBeenCalledWith(
-        expect.objectContaining({ allowedAttempts: 3 }),
-      );
+      const call = (magicLink as jest.Mock).mock.calls[0][0];
+      expect(call).not.toHaveProperty('allowedAttempts');
     });
 
     it('includes nextCookies plugin (Next.js 15 App Router requirement)', () => {

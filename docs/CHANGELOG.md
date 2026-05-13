@@ -13,6 +13,64 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 17 — Silent prod crash on better-auth 1.6.11 boot + remove dead `allowedAttempts` (P0 fixes #130, blocks M3 close)
+
+**P0 production-restore PR.** PR #130 (better-auth bump 1.2.12 → 1.6.11 + `allowedAttempts: 3`) silent-crashed Render on deploy with `==> No open ports detected · ==> Exited with status 1 (19s after start)`. Yogesh rolled back to the previous deploy artifact (BA 1.2.12). This PR is fix-forward; PR #130's commit stays on main per scope-discipline directive.
+
+**Two root causes, both surfaced by local prod-mode boot test (the gate that should have caught #130):**
+
+1. **Zod-version mismatch.** `better-auth@1.6.11` declares `dependencies.zod: ^4.3.6` and uses zod-v4-only APIs at module load time (`z.coerce.boolean().meta(...)` in `cookies/session-store.mjs:192`). Root `package.json` has a workspace-wide `pnpm.overrides`: `{"zod": "^3.25.76"}` (legitimate — keeps zod uniform across BE+FE+shared). That override silently downgraded BA's `zod@^4.3.6` request to `zod@3.25.76` → BA's compiled `.mjs` imported zod, called `.meta()`, v3 doesn't have it → synchronous `TypeError` at top-level module evaluation, BEFORE NestJS Logger initialised → silent crash on Render.
+
+2. **`allowedAttempts` is a no-op in BA ≥ 1.6.11.** Discovered when post-fix boot test printed: `[better-auth/magic-link] allowedAttempts is ignored: tokens are consumed atomically on the first verification call (GHSA-hc7v-rggr-4hvx). Any value other than 1 has no effect; remove the option to silence this warning.` The security advisory hardcoded single-use atomic consumption — concurrent verifies could otherwise mint multiple sessions from one token. So the entire premise of #130's `allowedAttempts: 3` doesn't apply on BA ≥ 1.6.11. The Gmail-prefetch problem is real but the canonical fix is the **intermediate-confirm-page pattern** (Slack / Notion / Linear / GitHub all use this) — FE renders `/auth/verify-magic-link?token=...` with a "Confirm Sign In" button; the token is POSTed only on the real user click. Followup `(bk)` filed; tracks to PR #133.
+
+**Changes shipped here:**
+
+- **`chore(deps)`** — root `package.json` `pnpm.overrides` gets one new entry: `"better-auth>zod": "^4.3.6"`. Scoped — installs `zod@4` in `better-auth@1.6.11`'s slot only, leaves the workspace-wide `zod@^3.25.76` pin intact for all our own code, FE auth client, `@qa-nexus/shared` schemas, etc. `pnpm install --no-frozen-lockfile` regenerated the lockfile (~600 lines of churn — Zod v4 has different transitive helper tree). `pnpm-lock.yaml` committed alongside. We do NOT import any zod types FROM better-auth anywhere in `apps/api/src/` (grepped to confirm) — so no type drift; the two zod versions coexist safely.
+
+  Verification:
+
+  ```
+  $ pnpm --filter @qa-nexus/api why zod
+  zod@3.25.76   ← workspace + @better-auth/core (our code)
+  zod@4.4.3     ← better-auth@1.6.11 + better-call@1.3.5 (BA's internal)
+  ```
+
+- **`fix(api)`** — `apps/api/src/auth/auth.config.ts` removes the dead `allowedAttempts: 3` line shipped in #130 (now a no-op + emits BA runtime warning). Replaced with a multi-line comment block recording the discovery: cites GHSA-hc7v-rggr-4hvx, references the runtime warning verbatim, points forward to followup `(bk)` for the intermediate-confirm-page solution. Keeps `expiresIn: 60 * 10` unchanged.
+
+- **`test(api)`** — `apps/api/src/auth/__tests__/t021-auth.config.spec.ts` flips the `allowedAttempts=3` pinning test (shipped in #130) into a negative pin: `expect(call).not.toHaveProperty('allowedAttempts')`. Locks in the removal so the dead option doesn't drift back in by accident if a future engineer re-reads the stale GH #6985/#5550 advice. Test count stays at 486.
+
+**Why the 5 pre-push gates missed #130** (documented for audit):
+
+- `tsc --noEmit`: BA's `.d.ts` doesn't expose zod-v4-specific types externally; we consume narrowed exports (`betterAuth`, `magicLink`, `prismaAdapter`, `toNodeHandler`, `nextCookies`). The `.meta()` call lives inside BA's compiled `.mjs`, not exposed to the type surface.
+- `jest`: `t021-auth.config.spec.ts` mocks the entire `'better-auth'` module — BA's real code never loads in any of the 36 test suites. Module-load crashes are invisible to test-mocked imports.
+- **No prod-mode boot smoke step.** This is the gap. The 5-second prod-mode boot would have caught both #130 (zod meta crash) and the no-op warning before merge. Followup `(bj)` ships the husky pre-push addition.
+- `prettier`/`lint`: source-formatting only.
+- `CHANGELOG`: doc gate.
+
+**Verification artifacts** (captured locally):
+
+- `pnpm why zod` output paste (above)
+- 10-sec boot log paste in PR body — Nest fully bootstrapped, all `/auth/*` routes mapped, NO `allowedAttempts is ignored` warning, NO `TypeError: ... .meta is not a function`
+- **486/486 jest tests pass** (same count; one test flipped from positive to negative pin, no net add)
+
+**Hard Rules check:**
+
+- Rule 1 (cost): no new infra.
+- Rule 5 (ban list): zod v4 not on ban list; pnpm scoped override is a config change, not a new dep.
+- Rule 6 (no secrets): no env changes.
+- Rule 11 (escalate before non-trivial decision): escalated TWICE — (a) when local prod-boot reproduced the crash + revealed the zod-meta root cause, surfaced 4 paths to Yogesh; (b) when the post-fix boot log revealed the `allowedAttempts` no-op warning, surfaced 3 reframed paths and Yogesh chose P1+removal.
+
+**Acceptance gate (post-merge):**
+
+1. Render auto-redeploys (~2 min). Boot log MUST show NestJS startup logs + port-bind within 10s. If silent again → ROLLBACK + escalate.
+2. Yogesh re-tests magic-link from `qa-nexus-web.pages.dev/sign-in`. Gmail-prefetch issue is STILL EXPECTED to surface as `?error=INVALID_TOKEN` — that closes on PR #133 (intermediate-confirm-page, followup `(bk)`).
+3. M3 close magic-link visual gate is GREEN once PR #133 merges + Render redeploys + Yogesh confirms.
+
+**Followups filed:**
+
+- `(bj)` — add prod-mode boot smoke step to `.husky/pre-push` so dep bumps that silent-crash at module-load time are blocked at author-time, not at deploy-time. ~5 LOC husky addition. PR after #132 lands.
+- `(bk)` — intermediate-confirm-page pattern: FE renders `/auth/verify-magic-link?token=…` with a "Confirm Sign In" button; token POSTed only on real user click; scanner prefetch loads the page but never POSTs → token survives. Coordinates BE+1 (BA `sendMagicLink` URL change, ~10 LOC) + FE+1 (new page route, ~80 LOC + test). Becomes PR #133 this session.
+
 ### Fixed — Day 17 — Magic-link `?error=INVALID_TOKEN` from Gmail prefetch (M3 close visual-gate blocker)
 
 **Day-17 P0 root cause closed.** Gmail's email-security scanner pre-fetches inbound URLs (including magic-link tokens) before the user clicks, to scan for malware. With BetterAuth's default `allowedAttempts=1`, that pre-fetch consumed the single-use token → real user click hit `?error=INVALID_TOKEN` → visual gate blocked. Per BetterAuth maintainer guidance in GH discussions #6985 + #5550, the fix is `allowedAttempts: 3` on the magic-link plugin (scanner = 1, user = 1, retry = 1). Option requires BetterAuth ≥ 1.5; we were on 1.2.12. Bumped to 1.6.11 (latest 1.6 stable, NOT 1.7-beta).
