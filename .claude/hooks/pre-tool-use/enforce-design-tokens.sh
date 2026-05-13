@@ -28,7 +28,7 @@ if echo "$CONTENT" | grep -nE '(primary-container|on-primary|surface-tint|surfac
 fi
 
 # Block hex colors not in the locked whitelist
-WHITELIST='#0B0F17|#111827|#1A2233|#232C3F|#2A3347|#3B4660|#F1F5F9|#C7D0DC|#8A94A6|#94A3B8|#2DD4BF|#003732|#A78BFA|#C4B5FD|#34D399|#F87171|#FBBF24|#60A5FA|#FAFAF8'
+WHITELIST='#0B0F17|#111827|#1A2233|#232C3F|#2A3347|#3B4660|#F1F5F9|#C7D0DC|#8A94A6|#94A3B8|#2DD4BF|#003732|#A78BFA|#C4B5FD|#34D399|#F87171|#FBBF24|#60A5FA|#FAFAF8|#022C1F|#3D0707|#3F2300|#2E1065'
 HEX_HITS=$(echo "$CONTENT" | grep -niE '#[0-9a-f]{6}\b' | grep -viE "$WHITELIST" || true)
 if [ -n "$HEX_HITS" ]; then
   VIOLATIONS+="Hex color outside PM1 design-token whitelist:\n$HEX_HITS\nWhitelist: $WHITELIST\n"

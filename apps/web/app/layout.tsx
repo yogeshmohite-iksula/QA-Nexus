@@ -49,15 +49,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning on <body> only -- silences the well-known
-    // false-positive React hydration mismatch caused by browser extensions
-    // (Grammarly, ColorZilla, dark-reader, etc.) that inject attributes
-    // into <body> between SSR and client hydration. Does NOT suppress real
-    // hydration errors in our own component subtree.
+    // suppressHydrationWarning on <html> AND <body> -- silences well-known
+    // false-positive React hydration mismatches caused by browser extensions
+    // that inject attributes between SSR and client hydration:
+    //   - <html>: Scribe ('data-scribe-recorder-ready'), some screen-reader
+    //     overlays, dark-reader root-level theme markers
+    //   - <body>: Grammarly, ColorZilla, dark-reader body-level
+    // Day-17 (2026-05-13): added <html> after Scribe hydration warning hit
+    // Yogesh during F19 visual gate. Per Next.js canonical pattern — does
+    // NOT suppress real hydration errors in our own component subtree.
     // Ref: https://nextjs.org/docs/messages/react-hydration-error
     <html
       lang="en"
       className={`${inter.variable} ${dmSans.variable} ${jetBrainsMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <QueryProvider>

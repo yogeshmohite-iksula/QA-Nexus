@@ -381,13 +381,13 @@ function TopBar({
   onOpenMobileMenu: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--canvas)] px-3 sm:gap-3 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--base)] px-3 lg:gap-3 lg:px-6">
       {/* Hamburger — first child, hidden ≥ lg per F15 v2.html line 92 */}
       <button
         type="button"
         onClick={onOpenMobileMenu}
         aria-label="Open navigation"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] lg:hidden"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] lg:hidden"
       >
         <Menu size={18} aria-hidden="true" />
       </button>
@@ -413,7 +413,7 @@ function TopBar({
       <button
         type="button"
         aria-label={`Switch project (${projectCount} projects)`}
-        className="hidden shrink-0 items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] py-1.5 pl-1.5 pr-3 text-[13px] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
+        className="hidden shrink-0 items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--raised)] py-1.5 pl-1.5 pr-3 text-[13px] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
       >
         <span
           aria-hidden="true"
@@ -429,9 +429,14 @@ function TopBar({
         <ChevronDown size={12} aria-hidden="true" className="text-[var(--text-tertiary)]" />
       </button>
 
-      {/* Global search omnibox */}
-      <div className="hidden flex-1 items-center justify-center md:flex">
-        <div className="flex w-full max-w-[520px] items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] px-4 py-2 text-[13px] text-[var(--text-tertiary)]">
+      {/* Global search omnibox — visible at xl (1280+) only. Hidden at
+          768-1279 because header content (brand + projpill + 4 icons +
+          mode toggle + user pill) already exceeds available width when
+          the rail is expanded at lg (1024px). ⌘K shortcut + (+) icon-btn
+          remain accessible at every viewport. */}
+      <div className="hidden flex-1 items-center justify-center xl:flex">
+        {/* Canonical F15 v2 L102: .global-search height 36px, padding 0 10px. */}
+        <div className="flex h-9 w-full max-w-[520px] items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 text-[13px] text-[var(--text-tertiary)]">
           <Search size={14} aria-hidden="true" />
           <span className="flex-1 truncate">Search everything…</span>
           <kbd className="rounded border border-[var(--border-subtle)] bg-[var(--overlay)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
@@ -440,7 +445,10 @@ function TopBar({
         </div>
       </div>
 
-      <div className="flex flex-1 md:flex-none" />
+      {/* Spacer pushes icon cluster + user pill to the right when search
+          omnibox is hidden (< xl). At xl+ the search wrapper itself
+          handles flex-grow so spacer becomes flex-none. */}
+      <div className="flex flex-1 xl:flex-none" />
 
       {/* Icon buttons cluster — plus / bell (with notification pip) /
           crosshair (switch project) / dark-light toggle */}
@@ -453,7 +461,7 @@ function TopBar({
           <span
             aria-hidden="true"
             className="absolute -right-0.5 -top-0.5 inline-block h-1.5 w-1.5 rounded-full"
-            style={{ background: 'var(--fail)' }}
+            style={{ background: 'var(--secondary)' }}
           />
         </span>
       </IconButton>
@@ -471,7 +479,7 @@ function TopBar({
       <div
         role="tablist"
         aria-label="Mode"
-        className="hidden shrink-0 items-center rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] p-0.5 lg:inline-flex"
+        className="hidden shrink-0 items-center rounded-md border border-[var(--border-subtle)] bg-[var(--raised)] p-0.5 xl:inline-flex"
       >
         <ModeTab active>Operate</ModeTab>
         <ModeTab>Review</ModeTab>
@@ -522,7 +530,7 @@ function IconButton({
     <button
       type="button"
       onClick={onClick}
-      className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
+      className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
       {...rest}
     >
       {children}
@@ -531,15 +539,21 @@ function IconButton({
 }
 
 function ModeTab({ children, active }: { children: React.ReactNode; active?: boolean }) {
+  // Canonical F19 v2 HTML .mode.on (per probe Round 7):
+  //   active bg: var(--overlay) #232C3F (subtle, NOT primary teal)
+  //   active text: var(--text-primary) #F1F5F9 (white)
+  //   border-radius: 4px (NOT rounded-full)
+  //   padding: 0 10px · height: 26px
+  // Inactive state: text-tertiary + hover text-primary, transparent bg.
   return (
     <button
       type="button"
       role="tab"
       aria-selected={active ? 'true' : 'false'}
       className={[
-        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
+        'inline-flex h-[26px] items-center gap-1 rounded-[4px] px-2.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
         active
-          ? 'bg-[var(--primary)] text-[var(--primary-ink)]'
+          ? 'bg-[var(--overlay)] text-[var(--text-primary)]'
           : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]',
       ].join(' ')}
     >
@@ -595,7 +609,7 @@ function AdminLeftRail({
         data-mobile-open={mobileOpen ? 'true' : 'false'}
         style={mobileOpen ? { width: MOBILE_DRAWER_WIDTH } : undefined}
         className={[
-          'flex shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--canvas)]',
+          'flex shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--base)]',
           mobileOpen
             ? 'fixed bottom-0 left-0 top-14 z-50 flex shadow-[0_8px_32px_rgba(0,0,0,0.4)] lg:relative lg:top-auto lg:z-auto lg:shadow-none'
             : 'hidden lg:flex',
@@ -610,7 +624,7 @@ function AdminLeftRail({
             type="button"
             onClick={() => setMobileOpen(false)}
             aria-label="Close navigation"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
           >
             <X size={16} aria-hidden="true" />
           </button>
@@ -1114,7 +1128,12 @@ function NavLinkRow({
   const tagProps = item.disabled
     ? { type: 'button' as const, disabled: true }
     : { href: item.href };
-  const chipStyle = toneStyle(item.disabled ? 'disabled' : item.tone);
+  // Canonical F15 v2 HTML L181-201 (Hard Rule 14): `.nav-item.disabled`
+  // affects text color + opacity + cursor ONLY. The colored icon chip's
+  // `data-tone` MUST stay (visual identity, not status). The exception
+  // is items whose intrinsic tone IS 'disabled' (e.g. Automation Studio
+  // v1.5 placeholder) — those render the disabled tone style.
+  const chipStyle = toneStyle(item.tone);
   const countColor =
     item.tone === 'fail' && item.count
       ? 'var(--fail)'
@@ -1130,12 +1149,15 @@ function NavLinkRow({
       data-label={item.label}
       data-tone={item.tone}
       className={[
-        'group relative flex items-center gap-2.5 rounded-lg text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
+        // text-left + items-start text-alignment defeat any inherited
+        // text-center cascade from parent section containers (canonical
+        // F15 v2 L181 uses no text-align; safe-default to start).
+        'group relative flex items-center gap-2.5 rounded-md text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
         isCollapsed ? 'justify-center px-1.5 py-1.5' : 'px-2.5 py-2',
         active
           ? 'bg-[rgba(167,139,250,0.10)] font-medium text-[var(--text-primary)]'
           : item.disabled
-            ? 'cursor-not-allowed text-[var(--text-disabled)]'
+            ? 'cursor-not-allowed text-[var(--text-disabled)] opacity-55'
             : 'text-[var(--text-secondary)] hover:bg-[var(--raised)] hover:text-[var(--text-primary)]',
       ].join(' ')}
     >

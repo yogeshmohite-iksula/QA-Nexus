@@ -35,6 +35,46 @@
   --warn: #fbbf24;
   --info: #60a5fa;
 
+  /* Filled-status inks -- text colors for buttons/badges/banners that
+     sit ON a solid pass/fail/warn background. Mirror --primary-ink
+     naming convention. Canonical hex values per F19 Run Console v2.html
+     L407-411 (.act-pass / .act-fail / .act-block). Followup (bk) tracks
+     formal addition to 01_SYSTEM.md §3 Design Tokens. */
+  --pass-ink: #022c1f; /* very dark green -- text on solid --pass bg */
+  --fail-ink: #3d0707; /* very dark red -- text on solid --fail bg */
+  --warn-ink: #3f2300; /* dark amber -- text on solid --warn bg */
+  --secondary-ink: #2e1065; /* very dark violet -- text on solid --secondary bg */
+
+  /* v2-HTML compatibility aliases (Day-17, 2026-05-13, F19 visual gate).
+     v2 HTML frames (F14/F15/F16b/F19/etc.) use SHORT token names
+     (--border, --t1..t4). Project canon uses longer descriptive names
+     (--border-subtle, --text-primary..disabled). Aliases let v2-HTML
+     `var(--border)` references in component inline styles resolve
+     correctly WITHOUT requiring a global rename refactor.
+     Followup (bk) tracks formal reconciliation in 01_SYSTEM.md §3. */
+  --border: var(--border-subtle);
+  --t1: var(--text-primary);
+  --t2: var(--text-secondary);
+  --t3: var(--text-tertiary);
+  --t4: var(--text-disabled);
+
+  /* Alpha-blended soft + line variants — pixel-faithful to v2 HTML
+     token block (per F15 + F16b + F19 :root declarations). Used for
+     chip backgrounds, status borders, animation glow tints. Alpha
+     values verbatim from v2 HTML source. */
+  --primary-soft: rgba(45, 212, 191, 0.1);
+  --primary-line: rgba(45, 212, 191, 0.28);
+  --ai-soft: rgba(167, 139, 250, 0.12);
+  --ai-line: rgba(167, 139, 250, 0.3);
+  --pass-soft: rgba(52, 211, 153, 0.14);
+  --pass-line: rgba(52, 211, 153, 0.34);
+  --warn-soft: rgba(251, 191, 36, 0.14);
+  --warn-line: rgba(251, 191, 36, 0.34);
+  --fail-soft: rgba(248, 113, 113, 0.14);
+  --fail-line: rgba(248, 113, 113, 0.34);
+  --info-soft: rgba(96, 165, 250, 0.12);
+  --info-line: rgba(96, 165, 250, 0.3);
+
   /* F25 Prove mode -- the ONLY frame that flips canvas */
   --canvas-prove: #fafaf8; /* ivory; only used inside F25 Executive Dashboard */
 }
@@ -125,6 +165,32 @@ body {
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+/* f19Pulse + f19Shimmer — F19 Run Console v2.html source (lines 540-552).
+   Distinct from pulseDot (different opacity + scale values) — Hard Rule 15
+   requires pixel-faithful port. Used by .live-pill / .live-tag /
+   .live-cap-pill / .cr-status.running / .capture-row.streaming dots in the
+   run console.  prefers-reduced-motion override below disables both. */
+@keyframes f19Pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes f19Shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 
