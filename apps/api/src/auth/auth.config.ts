@@ -140,16 +140,23 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
       magicLink({
         // 10-minute TTL — see ADR-007 + Day-9 morning decision.
         expiresIn: 60 * 10,
-        // Day-17 P0 fix — Gmail's email-security scanner pre-fetches
-        // magic-link URLs to scan for malware. That GET request consumes
-        // the single-use token before the real user clicks, surfacing as
-        // ?error=INVALID_TOKEN on the legitimate click. Setting
-        // allowedAttempts=3 lets Gmail's scanner consume one attempt
-        // (typical), the user's real click consumes a second, and a
-        // single retry slot remains. Per BetterAuth maintainer guidance
-        // in GH discussions #6985 + #5550. NOT Infinity (would disable
-        // attempt-based invalidation entirely — too lax).
-        allowedAttempts: 3,
+        // NOTE — Day-17 P0 #130 attempted `allowedAttempts: 3` to survive
+        // Gmail's email-security scanner pre-fetch (which consumes the
+        // single-use token before the real user click → ?error=
+        // INVALID_TOKEN). After bumping to better-auth 1.6.11 (#130 →
+        // #132), the runtime warning surfaced:
+        //   "[better-auth/magic-link] `allowedAttempts` is ignored:
+        //    tokens are consumed atomically on the first verification
+        //    call (GHSA-hc7v-rggr-4hvx). Any value other than `1` has
+        //    no effect; remove the option to silence this warning."
+        // BetterAuth hardcoded single-use atomic consumption as part of
+        // the GHSA-hc7v-rggr-4hvx security fix — concurrent verification
+        // requests could otherwise mint multiple sessions from one
+        // token. The intermediate-confirm-page pattern (FE renders
+        // /auth/verify-magic-link with a "Confirm Sign In" button that
+        // POSTs the token only on real user click) is the canonical
+        // prefetch-proof solution — see followup (bk) / PR #133. NOT
+        // re-introducing allowedAttempts here.
         sendMagicLink: async ({ email: to, url }) => {
           // Use EmailService.sendMagicLink (Day-8 ADR-008 transport).
           // expiresAt is human-readable ("in 10 minutes") — used in body
