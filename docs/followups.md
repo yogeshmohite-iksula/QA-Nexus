@@ -35,11 +35,26 @@
 
 ---
 
-## [2026-05-11] (bh) P2 — Remove deprecated `SMTP_*` env vars from Render staging + production after ADR-018 migration
+## [2026-05-11] (bh) P2 — Remove deprecated `SMTP_*` env vars from Render staging + production after ADR-018 migration · ⚠️ FILE-SIDE CLOSED 2026-05-13 (Day-17); Render-side env removal still PENDING with Yogesh
+
+**Status update (2026-05-13, Day-17):** The three file-side cleanup items originally enumerated in this followup were all completed inside PR #128 (the ADR-018 migration itself) — verified clean on Day-17 via grep sweep prior to opening a `(bh)` docs-cleanup PR. Specifically:
+
+- `apps/api/.env.example` — no SMTP\_\* references remain (only `RESEND_API_KEY` line). ✅
+- `apps/web/.env.example` — never had SMTP\_\* (FE doesn't consume). ✅
+- Root `.env.example` — already migrated to `RESEND_API_KEY` + `RESEND_FROM_EMAIL`. ✅
+- `docs/deploy/render-runbook.md` Step 3 env-var table — already swapped (PR #128 did this). ✅
+- `docs/architecture/adr-008-email-service-gmail-smtp.md` — already has `**Status:** SUPERSEDED by [ADR-018]` notice + link-forward block. ✅
+
+The **two intentionally-retained references** (per ADR-018 §4 rollback-safety window) are NOT in scope of this closure — they remain until the rollback window expires (~1 sprint):
+
+- `apps/api/src/email/email.service.ts` lines 116-122 — boot-time `if (process.env.SMTP_HOST || process.env.SMTP_USER)` warning detection block. Costs one boolean check per boot; surfaces operator hint pointing back here.
+- `packages/shared/src/schemas/smtp-env.ts` — entire `SmtpEnv` Zod schema + `parseSmtpEnv()` function. Unused at runtime (no import of `parseSmtpEnv` anywhere after PR #128). Kept for rollback safety.
+
+**Open piece — Yogesh's operator task (the actual original blocker):** Remove the 9 `SMTP_*` env vars from Render dashboard for both `qa-nexus-api` (production) AND `qa-nexus-api-staging`. The boot-detection warning in `email.service.ts` will keep firing on every redeploy until these env vars are gone. Steps preserved below for operator reference.
 
 **Filed:** Day-16 alongside ADR-018 (EmailService Resend migration PR).
 
-**Symptom:** ADR-018 removes the 9 `SMTP_*` env vars from EmailService consumption (replaced by `RESEND_API_KEY` + 4 optional `RESEND_*` vars). This PR is intentionally additive on the env surface (rollback safety: redeploying the prior commit just works without re-entering 9 secrets). On boot, EmailService now logs a warning when it detects `SMTP_HOST` or `SMTP_USER` is still set — operator hint pointing back to this followup.
+**Original symptom (preserved for audit):** ADR-018 removes the 9 `SMTP_*` env vars from EmailService consumption (replaced by `RESEND_API_KEY` + 4 optional `RESEND_*` vars). This PR is intentionally additive on the env surface (rollback safety: redeploying the prior commit just works without re-entering 9 secrets). On boot, EmailService now logs a warning when it detects `SMTP_HOST` or `SMTP_USER` is still set — operator hint pointing back to this followup.
 
 **Fix scope:** ~5 min total operator action via Render dashboard.
 
