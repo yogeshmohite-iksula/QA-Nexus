@@ -1,5 +1,7 @@
 # Milestone M3 — Test Cases & AI Generation (v2)
 
+> ✅ **CLOSED 2026-05-13** — see `docs/milestones/m3-close-report.md`. Tag `m3-closed-2026-05-13` at SHA `a98797b` (#139 — auth-chain-complete commit). 52 PRs across 6 calendar days / ~3.6 working days. Production live: F08, F09, F14 + 3 modals + drawer, F15, F16a/b/c, F19, AdminShell v2 canonical realignment + magic-link auth end-to-end.
+
 **QA Nexus PM1 — Refreshed against PM1_PRD v8.1 + PM1_ERD v2.1 + lessons from M0/M1/M2 build**
 
 > ⚠️ **This v2 supersedes `Milestone_M3_Test_Cases_AI.md` (v1, 2026-04-21)** which was written against the deprecated v1.0 self-hosted vision (Gemma 4, Ollama, Graphiti, FastAPI). This v2 reflects the **actual PM1 free-tier stack** (Groq-hosted LLM, in-process embeddings, single NestJS service) plus **lived experience** from M1 close (47 PRs in M1) and M2 close-day cascade.
