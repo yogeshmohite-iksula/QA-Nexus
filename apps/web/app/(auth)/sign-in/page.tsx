@@ -24,6 +24,7 @@ import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Loader2, Mail, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth/client';
+import { getAppBaseURL } from '@/lib/env';
 import { Button } from '@/components/ui/button';
 import { Input, InputWrap, InputIcon } from '@/components/ui/input';
 import { BrandMark } from '@/components/auth/brand-mark';
@@ -114,9 +115,14 @@ function SignInPageInner() {
     // BetterAuth client resolves with { data, error } — never throws.
     // errorCallbackURL is a server-side BetterAuth config option (set in
     // BE T021's magicLink() plugin), not a client-side parameter.
+    //
+    // ABSOLUTE callbackURL required (Day-16 M3 close blocker): the
+    // verify redirect runs on the API origin (qa-nexus-api.onrender.com);
+    // a relative '/home' would resolve against the API origin and 404.
+    // Refs: BetterAuth GH #6104, #7406.
     const { error } = await authClient.signIn.magicLink({
       email: value,
-      callbackURL: '/home',
+      callbackURL: `${getAppBaseURL()}/home`,
     });
 
     if (error) {
@@ -134,9 +140,10 @@ function SignInPageInner() {
 
   async function handleResend() {
     if (resendCountdown > 0 || state !== 'sent') return;
+    // ABSOLUTE callbackURL — see handleSubmit comment above for rationale.
     const { error } = await authClient.signIn.magicLink({
       email: sentToEmail,
-      callbackURL: '/home',
+      callbackURL: `${getAppBaseURL()}/home`,
     });
     if (error) {
       toast.error('Failed to resend magic link', {
