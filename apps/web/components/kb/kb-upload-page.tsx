@@ -28,6 +28,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { ChevronRight, CheckCircle2, FileText, Loader2, UploadCloud, XCircle } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import {
@@ -292,12 +293,12 @@ function KbUploadPageContent() {
               <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
             </li>
             <li>
-              <a
+              <Link
                 href="/projects/ret/kb"
                 className="hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
               >
                 Knowledge Base
-              </a>
+              </Link>
             </li>
             <li aria-hidden="true">
               <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
@@ -656,12 +657,12 @@ function SuccessState({
         >
           Upload another
         </button>
-        <a
+        <Link
           href="/projects/iksula-returns/kb"
           className="inline-flex h-10 min-h-[44px] items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--raised)] px-5 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:min-h-0"
         >
           View Knowledge Base
-        </a>
+        </Link>
       </div>
     </div>
   );

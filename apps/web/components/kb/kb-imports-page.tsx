@@ -301,12 +301,12 @@ function KbImportsPageContent() {
                   <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
                 </li>
                 <li>
-                  <a
+                  <Link
                     href="/projects/ret/kb"
                     className="hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
                   >
                     Knowledge Base
-                  </a>
+                  </Link>
                 </li>
                 <li aria-hidden="true">
                   <ChevronRight size={11} className="text-[var(--text-tertiary)]" />
