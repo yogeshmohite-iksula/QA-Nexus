@@ -20,7 +20,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Loader2, Mail, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth/client';
@@ -29,6 +29,14 @@ import { Button } from '@/components/ui/button';
 import { Input, InputWrap, InputIcon } from '@/components/ui/input';
 import { BrandMark } from '@/components/auth/brand-mark';
 import { EvidenceMesh } from '@/components/auth/evidence-mesh';
+
+// Cross-tab session polling cadence (per #137 brief). Sign-in tab
+// polls every 2 s while showing "Check your inbox" — when the user
+// completes the magic-link verify in another tab, this tab detects
+// the new session cookie and auto-redirects. Stops after 10 min
+// (= magic-link expiry, no point polling longer).
+const SESSION_POLL_INTERVAL_MS = 2000;
+const SESSION_POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 min
 
 type SignInState = 'initial' | 'submitting' | 'sent';
 
@@ -52,6 +60,7 @@ export default function SignInPage() {
 
 function SignInPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [state, setState] = useState<SignInState>('initial');
@@ -96,6 +105,43 @@ function SignInPageInner() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [state, resendCountdown]);
+
+  // Cross-tab session polling (#137). While "Check your inbox" is on
+  // screen, poll for a session every 2 s. When the user clicks the
+  // magic-link in their email (which now opens the intermediate-confirm
+  // page in a new tab) and presses "Confirm sign in", the session
+  // cookie lands. The next poll here detects it and auto-redirects
+  // THIS tab to /home — so the user returning to the original tab
+  // sees the workspace instead of "Check your inbox".
+  //
+  // 10-minute timeout matches the magic-link expiry (BA config: 600s).
+  // We stop polling on unmount + state-change + timeout — three layers.
+  useEffect(() => {
+    if (state !== 'sent') return;
+    let stopped = false;
+    const poll = window.setInterval(async () => {
+      if (stopped) return;
+      try {
+        const session = await authClient.getSession();
+        if (session?.data?.user) {
+          stopped = true;
+          window.clearInterval(poll);
+          router.replace('/home');
+        }
+      } catch {
+        /* network blip — keep polling */
+      }
+    }, SESSION_POLL_INTERVAL_MS);
+    const timeout = window.setTimeout(() => {
+      stopped = true;
+      window.clearInterval(poll);
+    }, SESSION_POLL_TIMEOUT_MS);
+    return () => {
+      stopped = true;
+      window.clearInterval(poll);
+      window.clearTimeout(timeout);
+    };
+  }, [state, router]);
 
   const isEmailValid = useMemo(() => EMAIL_RE.test(email.trim()), [email]);
 
