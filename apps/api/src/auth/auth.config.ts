@@ -153,20 +153,33 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
         // the GHSA-hc7v-rggr-4hvx security fix — concurrent verification
         // requests could otherwise mint multiple sessions from one
         // token. The intermediate-confirm-page pattern (FE renders
-        // /auth/verify-magic-link with a "Confirm Sign In" button that
+        // /verify-magic-link with a "Confirm Sign In" button that
         // POSTs the token only on real user click) is the canonical
-        // prefetch-proof solution — see followup (bk) / PR #133. NOT
+        // prefetch-proof solution — see followup (bk) / PR #137. NOT
         // re-introducing allowedAttempts here.
         sendMagicLink: async ({ email: to, url, token }) => {
-          // Day-17 intermediate-confirm-page pattern (followup (bk), PR #137).
+          // Day-17 intermediate-confirm-page pattern (followup (bk),
+          // PR #137 + PR #139 URL-prefix fix).
           // BA emits its default `url` pointing at `<API_BASE>/auth/magic-
           // link/verify?token=...&callbackURL=...` — that's the URL a Gmail
           // scanner pre-fetch would consume. We discard it and build our
           // own FE-rooted URL preserving the same token + callbackURL.
-          // The FE page at /auth/verify-magic-link renders a "Confirm
+          // The FE page at /verify-magic-link renders a "Confirm
           // Sign In" button; the token is only POSTed to BA's verify
           // endpoint on the real user's click — scanner prefetch is
           // harmless.
+          //
+          // NOTE — URL path is `/verify-magic-link` (NOT `/auth/verify-
+          // magic-link`). The FE route lives at
+          //   apps/web/src/app/(auth)/verify-magic-link/page.tsx
+          // Per Next.js App Router docs, parenthesized segments are
+          // route GROUPS — they organize files but DO NOT appear in
+          // the URL path. So `(auth)` is stripped at routing time and
+          // the page mounts at `/verify-magic-link`. PR #137 incorrectly
+          // assumed the URL would include the `/auth/` segment, causing
+          // a 404 on real Gmail clicks. PR #139 (this commit) drops
+          // the `/auth/` prefix to match the FE convention. Ref:
+          //   https://nextjs.org/docs/app/api-reference/file-conventions/route-groups
           //
           // FRONTEND_BASE_URL soft-fallback to the production Cloudflare
           // Pages alias — matches PR #122 + #129 baseURL precedent.
@@ -185,7 +198,7 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
             // Default '/home' if BA's url is malformed (shouldn't happen).
           }
           const verifyUrl =
-            `${cleanBase}/auth/verify-magic-link` +
+            `${cleanBase}/verify-magic-link` +
             `?token=${encodeURIComponent(token)}` +
             `&callbackURL=${encodeURIComponent(callbackURL)}`;
           // Use EmailService.sendMagicLink (ADR-018 Resend transport).

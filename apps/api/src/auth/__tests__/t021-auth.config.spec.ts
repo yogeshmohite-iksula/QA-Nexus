@@ -241,7 +241,7 @@ describe('T021 — auth.config.ts (Day-9 wiring)', () => {
       expect(fakeEmail.sendMagicLink).toHaveBeenCalledWith({
         to: 'kishor.kadam@iksula.com',
         magicLinkUrl:
-          'https://qa-nexus-web.pages.dev/auth/verify-magic-link?token=abc&callbackURL=%2Fhome',
+          'https://qa-nexus-web.pages.dev/verify-magic-link?token=abc&callbackURL=%2Fhome',
         expiresAt: 'in 10 minutes',
       });
     });

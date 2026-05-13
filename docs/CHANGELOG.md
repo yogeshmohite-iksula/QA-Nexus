@@ -13,6 +13,53 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 17 — Drop `/auth/` prefix in magic-link verify URL (Next.js route-group convention, completes M3 close)
+
+**Day-17 third + final P0 of the magic-link saga.** After PR #138 restored the API from the zod-v4 crash, Yogesh clicked the magic-link in Gmail and got a **Next.js 404** at `/auth/verify-magic-link`. Manually visiting `https://qa-nexus-web.pages.dev/verify-magic-link` (no `/auth/` prefix) rendered the page cleanly with the Iksula brand + expected "Sign in failed — No sign-in token found" state.
+
+**Root cause (Next.js docs):** PR #137's FE page lives at `apps/web/src/app/(auth)/verify-magic-link/page.tsx`. The `(auth)` parenthesized segment is a **Next.js route group** — per [the official docs](https://nextjs.org/docs/app/api-reference/file-conventions/route-groups):
+
+> "(folderName) ... should not be included in the route's URL path"
+
+So `(auth)` is stripped at routing time and the page mounts at `/verify-magic-link`, NOT `/auth/verify-magic-link`. PR #137's BE-side `sendMagicLink` callback incorrectly assumed the URL would include `/auth/`. Result: scanner pre-fetch worked (Gmail follows the link to the 404 page), real user click landed on a Next.js 404. No `?error=INVALID_TOKEN` symptom because the token never reached BA's verify endpoint — the FE page that POSTs to BA was never rendered.
+
+**Decision direction:** BE emit matches FE URL convention, NOT the other way around. FE+1's `(auth)` route-group preserves the file-system organization pattern that all other auth-flow pages share (`sign-in`, `verify`, `onboarding/**`, `set-password`, `reset-password` — all live under `app/(auth)/`). Moving the FE page out of the group would break that convention. Changing one line of BE code is the right surface for the fix.
+
+**Changes shipped here:**
+
+- **`fix(api)`** — `apps/api/src/auth/auth.config.ts` `sendMagicLink` callback: drop `/auth/` segment from constructed URL. Before: `${cleanBase}/auth/verify-magic-link?...`. After: `${cleanBase}/verify-magic-link?...`. Plus a multi-line inline comment block citing the Next.js docs + the route-group convention so a future engineer doesn't add `/auth/` back when refactoring. Token + callbackURL handling unchanged. Soft-fallback `FRONTEND_BASE_URL` unchanged.
+
+- **`test(api)`** — `apps/api/src/auth/__tests__/send-magic-link.spec.ts`: 5 of the 6 existing tests updated to assert the new URL shape (regex match dropped `\/auth\/`, literal-string `toContain` checks now `/verify-magic-link?` not `/auth/verify-magic-link?`). Test #1 ("emits FE confirm-page URL, not BA verify endpoint") **strengthened** with an additional negative assertion: `expect(arg.magicLinkUrl).not.toContain('/auth/verify-magic-link')` — pins the PR #139 regression specifically. Net test count: **496/496 still passing** (1 strengthened, 5 modernized; no tests added or removed).
+
+- **`test(api)`** — `apps/api/src/auth/__tests__/t021-auth.config.spec.ts`: the legacy magic-link send test ("passes `in 10 minutes` expiry copy to EmailService") updated to assert the new FE URL: `https://qa-nexus-web.pages.dev/verify-magic-link?token=abc&callbackURL=%2Fhome` (was `/auth/verify-magic-link`).
+
+- **No new test files.** Existing coverage is the right surface — no parallel testing dimension introduced.
+
+**Why this couldn't be caught by PR #137's tests:** the tests asserted the URL contained `/auth/verify-magic-link`, which exactly matched the BE-emitted URL. The mismatch was BE↔FE (server emits one path, client expects another), not BE-internal. The only way to catch this in CI would be an E2E test that follows the emitted URL against a running FE worker. Filed as part of `(bj)` followup expansion.
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **496/496 tests** ✓ · lint clean ✓ · CHANGELOG ✓.
+
+**Prod-boot smoke (manual `(bj)` gate) ✓:** 10-second local prod-mode boot shows NestJS startup + BetterAuth initialised + all `/auth/*` routes mapped + NO `z.ipv4` TypeError (#138 override intact) + NO `allowedAttempts` warning (#132 removal intact).
+
+**Hard Rules check:**
+
+- Rule 1 (cost): no new infra
+- Rule 5 (ban list): no deps changed
+- Rule 6 (secrets): no env changes
+- Rule 11 (escalate): not triggered — research-confirmed 1-line fix with Next.js docs reference + manual page-visit proof from Yogesh
+
+**Acceptance gate (post-merge):**
+
+1. Render auto-redeploys (~2 min)
+2. Yogesh requests fresh magic-link via FE sign-in form
+3. Email arrives with URL ending `/verify-magic-link?token=...&callbackURL=...` (NO `/auth/` segment)
+4. Gmail scanner pre-fetches → page renders harmlessly (no token POST)
+5. Yogesh clicks link in Gmail → lands on `/verify-magic-link` → clicks "Confirm Sign In"
+6. POST to BA → token consumed → session cookie set → redirect to `/home`
+7. **M3 close visual gate finally GREEN end-to-end**
+
+**Followup expansion `(bj)`:** pre-push gate request-level smoke should also fetch the emitted FE URL against either the deployed Cloudflare Pages worker OR a local `pnpm --filter web build && start` worker, to catch the entire URL-mismatch class of bugs. Separate PR.
+
 ### Fixed — Day 17 — Scope zod@^4 override for `@better-auth/core` (P0 prod crash, completes #132)
 
 **Day-17 second P0 crash, final fix.** After #137 merged, Render's first auth request crashed:
