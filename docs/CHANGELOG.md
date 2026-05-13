@@ -22,9 +22,14 @@ updates land here at the end of every working day.
 - **NEW** `apps/web/app/(auth)/verify-magic-link/page.tsx` (~210 LOC) — intermediate confirm page with three view states (`ready` / `loading` / `error`). Reuses `<BrandMark />`, `<Button variant="primary">`, and the sign-in page's centered-card layout for visual consistency. Open-redirect guard on `callbackURL` (rejects protocol-relative `//host` URLs + non-absolute paths, falls back to `/home`). AdminShell deliberately NOT wrapped (Hard Rule 14 exclusion for auth-flow pages). Wrapped in `<Suspense>` per Next.js 15 static-prerender requirement (same pattern as sign-in page).
 - **MODIFIED** `apps/web/app/(auth)/sign-in/page.tsx` — added cross-tab session polling (~30 LOC). While "Check your inbox" is on screen, polls `authClient.getSession()` every 2 s; when the verify-magic-link tab completes sign-in and sets the session cookie, the original sign-in tab auto-redirects to `/home`. 10-minute hard timeout (matches BA `expiresIn: 600s`). Three-layer cleanup (unmount + state-change + timeout).
 
-**BE changes (sister cherry-pick onto this branch by BE+1):**
+**BE changes (cherry-picked onto this branch by BE+1, commit `ca7bb84`):**
 
-- `apps/api/src/auth/auth.config.ts` — `sendMagicLink` callback rewrites the URL it emails to point at `${FRONTEND_BASE_URL}/auth/verify-magic-link?token=...&callbackURL=...` instead of BA's verify endpoint. 6 new tests in `apps/api/src/auth/__tests__/` covering URL construction + encoding + fallback when env var missing. Per `.claude/scratch/137-be-sendmagiclink-draft.md` Option α.
+- `apps/api/src/auth/auth.config.ts` — `sendMagicLink` callback now destructures `token`, parses `callbackURL` out of BA's default `url`, and builds a FE-rooted confirm-page URL `${FRONTEND_BASE_URL}/auth/verify-magic-link?token=<encoded>&callbackURL=<encoded>` instead of passing BA's verify endpoint URL through. `FRONTEND_BASE_URL` soft-fallback to `https://qa-nexus-web.pages.dev` (matches Day-15 PR #122 + #129 baseURL precedent; followup `(be)` tracks Cloudflare env-var baking fix). Trailing-slash safe, special-char tokens URL-encoded, `callbackURL` defaults to `/home` when absent.
+- `apps/api/src/auth/__tests__/send-magic-link.spec.ts` (new) — 6 pinning tests: emits FE URL not BA endpoint · preserves callbackURL · defaults to `/home` · soft-fallback · URL-encodes `+`/`/`/`=` · strips trailing slash.
+- `apps/api/src/auth/__tests__/t021-auth.config.spec.ts` — 1 existing test updated to assert the new FE-URL contract (expectation flipped from BA verify URL to FE confirm-page URL).
+- **Pre-push gates 5/5 ✓** (BE half): prettier ✓ · typecheck ✓ · **492/492 tests** (486 pre-#137 + 6 new pinning tests, 1 updated) · lint ✓ · CHANGELOG ✓.
+- **Prod-boot smoke ✓** (manual (bj) gate until husky step ships): 10s NestJS boot clean, BetterAuth initialised with basePath=/auth, all `/auth/*` routes mapped, **NO `allowedAttempts` warning** (#132 removal intact), **NO `TypeError ... meta is not a function`** (#132 zod override intact). DB-connect error at tail is expected for local-only repro (fake `DATABASE_URL`).
+- Per `.claude/scratch/137-be-sendmagiclink-draft.md` Option α.
 
 **Render env var required post-deploy:**
 

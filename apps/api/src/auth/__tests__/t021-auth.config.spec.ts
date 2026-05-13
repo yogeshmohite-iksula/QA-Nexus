@@ -225,17 +225,23 @@ describe('T021 — auth.config.ts (Day-9 wiring)', () => {
   });
 
   describe('magic-link send → EmailService.sendMagicLink', () => {
-    it('passes "in 10 minutes" expiry copy to EmailService', async () => {
+    it('passes "in 10 minutes" expiry copy to EmailService (URL now points at FE confirm page per #137)', async () => {
+      // PR #137 (followup (bk)) — sendMagicLink now emits the FE
+      // confirm-page URL instead of BA's verify endpoint. Expiry copy
+      // is unchanged at "in 10 minutes".
+      delete process.env.FRONTEND_BASE_URL; // exercise soft-fallback
       process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
       buildAuth(fakePrisma as never, fakeEmail as never);
       const magicLinkOpts = (magicLink as jest.Mock).mock.calls[0][0];
       await magicLinkOpts.sendMagicLink({
         email: 'kishor.kadam@iksula.com',
         url: 'https://api.qanexus.iksula.com/auth/callback?token=abc',
+        token: 'abc',
       });
       expect(fakeEmail.sendMagicLink).toHaveBeenCalledWith({
         to: 'kishor.kadam@iksula.com',
-        magicLinkUrl: 'https://api.qanexus.iksula.com/auth/callback?token=abc',
+        magicLinkUrl:
+          'https://qa-nexus-web.pages.dev/auth/verify-magic-link?token=abc&callbackURL=%2Fhome',
         expiresAt: 'in 10 minutes',
       });
     });

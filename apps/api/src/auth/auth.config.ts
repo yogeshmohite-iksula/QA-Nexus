@@ -157,14 +157,44 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
         // POSTs the token only on real user click) is the canonical
         // prefetch-proof solution — see followup (bk) / PR #133. NOT
         // re-introducing allowedAttempts here.
-        sendMagicLink: async ({ email: to, url }) => {
-          // Use EmailService.sendMagicLink (Day-8 ADR-008 transport).
+        sendMagicLink: async ({ email: to, url, token }) => {
+          // Day-17 intermediate-confirm-page pattern (followup (bk), PR #137).
+          // BA emits its default `url` pointing at `<API_BASE>/auth/magic-
+          // link/verify?token=...&callbackURL=...` — that's the URL a Gmail
+          // scanner pre-fetch would consume. We discard it and build our
+          // own FE-rooted URL preserving the same token + callbackURL.
+          // The FE page at /auth/verify-magic-link renders a "Confirm
+          // Sign In" button; the token is only POSTed to BA's verify
+          // endpoint on the real user's click — scanner prefetch is
+          // harmless.
+          //
+          // FRONTEND_BASE_URL soft-fallback to the production Cloudflare
+          // Pages alias — matches PR #122 + #129 baseURL precedent.
+          // Followup (be) tracks the proper Cloudflare env-var baking
+          // fix.
+          const frontendBaseUrl =
+            process.env.FRONTEND_BASE_URL ?? 'https://qa-nexus-web.pages.dev';
+          const cleanBase = frontendBaseUrl.replace(/\/$/, '');
+          // Preserve callbackURL from BA's default url so user's intended
+          // landing destination survives the redirect.
+          let callbackURL = '/home';
+          try {
+            const cb = new URL(url).searchParams.get('callbackURL');
+            if (cb) callbackURL = cb;
+          } catch {
+            // Default '/home' if BA's url is malformed (shouldn't happen).
+          }
+          const verifyUrl =
+            `${cleanBase}/auth/verify-magic-link` +
+            `?token=${encodeURIComponent(token)}` +
+            `&callbackURL=${encodeURIComponent(callbackURL)}`;
+          // Use EmailService.sendMagicLink (ADR-018 Resend transport).
           // expiresAt is human-readable ("in 10 minutes") — used in body
           // copy, not for actual expiry validation (BetterAuth handles
           // that server-side via verification.expiresAt).
           await email.sendMagicLink({
             to,
-            magicLinkUrl: url,
+            magicLinkUrl: verifyUrl,
             expiresAt: 'in 10 minutes',
           });
         },
