@@ -6,7 +6,7 @@
 // allowedAttempts). BA ≥ 1.6.11 hardcodes atomic single-use per
 // GHSA-hc7v-rggr-4hvx, so allowedAttempts can't solve prefetch.
 // Canonical fix: emit a neutral FE page URL pointing at
-// /auth/verify-magic-link, FE renders a "Confirm Sign In" button,
+// /verify-magic-link, FE renders a "Confirm Sign In" button,
 // token is POSTed only on real user click. Slack/Notion/Linear/
 // GitHub all use this pattern.
 //
@@ -105,11 +105,18 @@ describe('sendMagicLink — intermediate-confirm-page URL emission (PR #137, fol
       magicLinkUrl: string;
     };
     expect(arg.magicLinkUrl).toMatch(
-      /^https:\/\/qa-nexus-web\.pages\.dev\/auth\/verify-magic-link\?token=abc/,
+      /^https:\/\/qa-nexus-web\.pages\.dev\/verify-magic-link\?token=abc/,
     );
     // Explicitly NOT pointing at the BA verify endpoint
     expect(arg.magicLinkUrl).not.toContain('api.qanexus.iksula.com');
     expect(arg.magicLinkUrl).not.toContain('/auth/magic-link/verify');
+    // PR #139 — confirm NO `/auth/` prefix on the FE confirm-page URL.
+    // FE route lives at `app/(auth)/verify-magic-link/page.tsx`; the
+    // `(auth)` is a Next.js route GROUP (parenthesized = NOT part of
+    // the URL path per Next.js App Router docs), so the page mounts
+    // at `/verify-magic-link`. PR #137 incorrectly emitted
+    // `/auth/verify-magic-link` and 404'd in production.
+    expect(arg.magicLinkUrl).not.toContain('/auth/verify-magic-link');
   });
 
   // ───────────────────────────────────────────────────────────────────
@@ -162,7 +169,7 @@ describe('sendMagicLink — intermediate-confirm-page URL emission (PR #137, fol
       magicLinkUrl: string;
     };
     expect(arg.magicLinkUrl).toMatch(
-      /^https:\/\/qa-nexus-web\.pages\.dev\/auth\/verify-magic-link\?token=t/,
+      /^https:\/\/qa-nexus-web\.pages\.dev\/verify-magic-link\?token=t/,
     );
   });
 
@@ -202,8 +209,10 @@ describe('sendMagicLink — intermediate-confirm-page URL emission (PR #137, fol
     const arg = fakeEmail.sendMagicLink.mock.calls[0][0] as {
       magicLinkUrl: string;
     };
-    // No double-slash before /auth/verify-magic-link
-    expect(arg.magicLinkUrl).not.toContain('//auth/verify-magic-link');
-    expect(arg.magicLinkUrl).toContain('/auth/verify-magic-link?');
+    // No double-slash before /verify-magic-link
+    expect(arg.magicLinkUrl).not.toContain('//verify-magic-link');
+    expect(arg.magicLinkUrl).toContain('/verify-magic-link?');
+    // Also assert the OLD broken path is NOT present (PR #139 regression pin)
+    expect(arg.magicLinkUrl).not.toContain('/auth/verify-magic-link');
   });
 });
