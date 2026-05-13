@@ -184,6 +184,50 @@ TypeError: z.ipv4 is not a function
 - PR #136 (AdminShell drift fix) — sister M3 close blocker, HOLD
 - `.claude/scratch/137-be-sendmagiclink-draft.md` — BE+1's Option α cherry-pick draft
 
+### Fixed — Day 18 — AdminShell drift fix vs F15 v2 canonical (M3 close blocker, PR #136)
+
+**Pixel-faithful AdminShell drift fix.** Playwright probe (canonical F15/F19 v2 HTML vs React port @ 1440/1024/768/320) revealed three categories of drift that survive F19 PR #135. Single-component fix in `apps/web/components/admin/admin-shell.tsx` cascades retroactively to **every authenticated page** in the project (F08 Home, F09 Projects, F12-F15 KB family, F14 Requirements, F16abc Test Cases, F19 Run Console (after #135), F27, F28).
+
+**Three drift items resolved:**
+
+1. **Data-tone nav-icon chip alpha mismatches (Item 3).** `toneStyle()` had hardcoded `rgba(X, 0.12) / 0.30` for all non-home tones; canonical alpha values differ per tone — `primary` is 0.10/0.28, `warn/pass/fail` are 0.14/0.34. Swapped all hardcoded literals for `var(--*-soft) / var(--*-line)` tokens (already in globals.css :root from F19 Round 2). Single edit-site for any future alpha tweak. Also fixed `secondary` chip color: was `var(--secondary)` violet `#a78bfa`, canon F15 L197 specifies `var(--ai-accent)` lighter violet `#c4b5fd`.
+
+2. **Utility-bar item geometry (Item 1).** Probe-confirmed drift:
+   - `icon-btn` height: was `h-9 w-9` (36px) at all viewports; canon F15 L108/112 specifies 44px (`--tap`) at <1024px, 36px at ≥1024px. WCAG 2.5.5 tap-target compliance restored at mobile + tablet. Fixed to `h-11 w-11 lg:h-9 lg:w-9`.
+   - `user-pill` height: was ~42px (`py-1.5` + 28px avatar + border); canon L120 is 36px. Pinned `h-9` + avatar `h-7 w-7` (28px per L122) + padding `py-0.5 pl-0.5 pr-2.5` per L121.
+   - `user-pill` border-radius: Tailwind `rounded-full` computes to `calc(infinity*1px)` = 33554432px in Tailwind 4; canon is `999px`. Pinned `borderRadius: '999px'` inline.
+   - `proj-pill` height: was `auto` (no explicit height); canon L94 is 36px. Pinned `h-9`.
+   - `mode-toggle` height: was `auto`; canon L114 is 32px. Pinned `h-8`.
+   - **Belt-and-suspenders 6px radius pin** applied to proj-pill / global-search / icon-btn / mode-toggle wrapper / mobile-drawer close / project-pill IR dot / global-search ⌘K kbd. Tailwind `rounded-md` is 6px today, but inline `borderRadius: '6px'` defensively survives any future theme override. Hamburger pinned to canonical 8px (L89). User-pill pinned to canonical 999px (L121).
+
+3. **Nav-item left-alignment (Item 2) — VERIFIED no drift.** Probe confirms `display: flex / align-items: center / gap: 10px / padding: 8px 10px / flex-direction: row` all match canonical L181 at every viewport. The only string-level difference is `textAlign: start` (canon) vs `left` (react) — semantically identical in LTR per CSS spec. No code change needed; documented in PR for future probe baseline.
+
+**Retroactive cascade impact:** This fix lands at the shell component level. The colored nav-icon chips, correct utility-bar heights, and pinned radii silently propagate to F08, F09, F12, F13, F14, F15, F16a/b/c, F19 (post-#135), F27, F28 — every page wrapped by `AdminShell`. No per-page edit required.
+
+**Probe-verified property match (re-probe after fix @ 4 viewports):**
+
+| Item                                                               | 1440            | 1024 | 768 | 320 |
+| ------------------------------------------------------------------ | --------------- | ---- | --- | --- |
+| Utility-bar radii + heights                                        | ✅              | ✅   | ✅  | ✅  |
+| Nav-item alignment                                                 | ✅ (start≡left) | ✅   | ✅  | ✅  |
+| Data-tone chip colors (home/primary/secondary/info/warn/pass/fail) | ✅              | ✅   | ✅  | ✅  |
+
+**Files:**
+
+- `apps/web/components/admin/admin-shell.tsx` — `toneStyle()` + `IconButton` + user-pill + proj-pill + global-search + mode-toggle + hamburger + drawer-close (all geometry/radius fixes)
+- `scripts/m3-adminshell-drift-fix-sweep.js` — NEW visual gate sweep (5 viewports + mobile drawer open)
+- `docs/screenshots/m3-adminshell-drift-fix/` — NEW 6 PNGs (1440 / 1440-collapsed / 1024 / 768 / 320 / 320-drawer)
+
+**HOLD merge until M3 close PR lands** (per Yogesh instruction, same policy as #135 F19 PR). Sister PR — branched off `feature/fe-m4-f19-run-console-pattern-a` (#135) so it inherits F19's globals.css token additions; will rebase cleanly onto main after #135 merges.
+
+**Cross-references:**
+
+- F15 v2 canonical: `PM1_UI_v2/Redesign Frame by claude design/F15 Knowledge Base v2.html` (lines 89 / 94-99 / 102-105 / 108-112 / 114-118 / 120-125 / 181-187 / 195-201)
+- `_DESIGN_RULES.md` Rule 14 (shell parity) · Rule 1 (tokens only from 01_SYSTEM.md)
+- Hard Rule 14 (CLAUDE.md) — codified F19 React as AdminShell canonical per Yogesh decision in #135 PR
+- F19 PR #135 — sister M3-close blocker, established `--*-soft / --*-line` tokens this fix depends on
+- Followup `(bk)` — formal addition of `--ai-accent` + tone alpha values to `01_SYSTEM.md §3 Design Tokens`
+
 ### Fixed — Day 17 — Silent prod crash on better-auth 1.6.11 boot + remove dead `allowedAttempts` (P0 fixes #130, blocks M3 close)
 
 **P0 production-restore PR.** PR #130 (better-auth bump 1.2.12 → 1.6.11 + `allowedAttempts: 3`) silent-crashed Render on deploy with `==> No open ports detected · ==> Exited with status 1 (19s after start)`. Yogesh rolled back to the previous deploy artifact (BA 1.2.12). This PR is fix-forward; PR #130's commit stays on main per scope-discipline directive.

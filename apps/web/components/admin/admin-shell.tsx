@@ -126,7 +126,17 @@ const SECTION_STORAGE_PREFIX = 'qa-nexus.shell.section-';
 const MOBILE_DRAWER_WIDTH = 280; // F15 v2.html line 132
 
 /** data-tone → inline style map. Keeps Rule 4 (no token extension)
- *  while matching F15 v2.html lines 163-198 visually. */
+ *  while matching F15 v2.html lines 195-201 visually.
+ *
+ *  M3 close drift fix (Day-18, post-#135): swapped hardcoded
+ *  rgba() literals for canonical `var(--*-soft)` / `var(--*-line)`
+ *  tokens (already defined in globals.css :root). Probe vs F15/F19
+ *  canonical revealed alpha mismatches: primary 0.12/0.30 → canon
+ *  0.10/0.28; warn/pass/fail 0.12/0.30 → canon 0.14/0.34. Source-of-
+ *  truth is now the globals.css token table — keeps any future
+ *  alpha tweaks single-edit. Also fixes `secondary` color which was
+ *  --secondary (violet #a78bfa) but canon F15 L197 uses --ai-accent
+ *  (lighter violet #c4b5fd). */
 function toneStyle(tone: NavTone): { background: string; borderColor: string; color: string } {
   switch (tone) {
     case 'home':
@@ -137,38 +147,38 @@ function toneStyle(tone: NavTone): { background: string; borderColor: string; co
       };
     case 'primary':
       return {
-        background: 'rgba(45,212,191,0.12)',
-        borderColor: 'rgba(45,212,191,0.30)',
+        background: 'var(--primary-soft)',
+        borderColor: 'var(--primary-line)',
         color: 'var(--primary)',
       };
     case 'secondary':
       return {
-        background: 'rgba(167,139,250,0.12)',
-        borderColor: 'rgba(167,139,250,0.30)',
-        color: 'var(--secondary)',
+        background: 'var(--ai-soft)',
+        borderColor: 'var(--ai-line)',
+        color: 'var(--ai-accent)',
       };
     case 'info':
       return {
-        background: 'rgba(96,165,250,0.12)',
-        borderColor: 'rgba(96,165,250,0.30)',
+        background: 'var(--info-soft)',
+        borderColor: 'var(--info-line)',
         color: 'var(--info)',
       };
     case 'warn':
       return {
-        background: 'rgba(251,191,36,0.12)',
-        borderColor: 'rgba(251,191,36,0.30)',
+        background: 'var(--warn-soft)',
+        borderColor: 'var(--warn-line)',
         color: 'var(--warn)',
       };
     case 'pass':
       return {
-        background: 'rgba(52,211,153,0.12)',
-        borderColor: 'rgba(52,211,153,0.30)',
+        background: 'var(--pass-soft)',
+        borderColor: 'var(--pass-line)',
         color: 'var(--pass)',
       };
     case 'fail':
       return {
-        background: 'rgba(248,113,113,0.12)',
-        borderColor: 'rgba(248,113,113,0.30)',
+        background: 'var(--fail-soft)',
+        borderColor: 'var(--fail-line)',
         color: 'var(--fail)',
       };
     case 'disabled':
@@ -382,12 +392,15 @@ function TopBar({
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--base)] px-3 lg:gap-3 lg:px-6">
-      {/* Hamburger — first child, hidden ≥ lg per F15 v2.html line 92 */}
+      {/* Hamburger — first child, hidden ≥ lg per F15 v2.html line 92.
+          Canonical L89: border-radius 8px on hamburger (NOT 6px).
+          width/height: --tap (44px). */}
       <button
         type="button"
         onClick={onOpenMobileMenu}
         aria-label="Open navigation"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] lg:hidden"
+        style={{ borderRadius: '8px' }}
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] lg:hidden"
       >
         <Menu size={18} aria-hidden="true" />
       </button>
@@ -409,16 +422,22 @@ function TopBar({
         </span>
       </Link>
 
-      {/* Project pill — gradient IR dot + Iksula Returns · main */}
+      {/* Project pill — gradient IR dot + Iksula Returns · main.
+          Canonical F15 v2 L94-100: height 36px / radius 6px / pad 0 10px /
+          gap 8px. Inner dot 18×18 / radius 4px. Pin radius inline. */}
       <button
         type="button"
         aria-label={`Switch project (${projectCount} projects)`}
-        className="hidden shrink-0 items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--raised)] py-1.5 pl-1.5 pr-3 text-[13px] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
+        style={{ borderRadius: '6px' }}
+        className="hidden h-9 shrink-0 items-center gap-2 border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 text-[13px] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
       >
         <span
           aria-hidden="true"
-          className="font-display inline-flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-bold text-[var(--primary-ink)]"
-          style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
+          className="font-display inline-flex h-[18px] w-[18px] items-center justify-center text-[9px] font-bold text-[var(--primary-ink)]"
+          style={{
+            borderRadius: '4px',
+            background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)',
+          }}
         >
           IR
         </span>
@@ -435,11 +454,19 @@ function TopBar({
           the rail is expanded at lg (1024px). ⌘K shortcut + (+) icon-btn
           remain accessible at every viewport. */}
       <div className="hidden flex-1 items-center justify-center xl:flex">
-        {/* Canonical F15 v2 L102: .global-search height 36px, padding 0 10px. */}
-        <div className="flex h-9 w-full max-w-[520px] items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 text-[13px] text-[var(--text-tertiary)]">
+        {/* Canonical F15 v2 L102-105: .global-search height 36px,
+            padding 0 10px, gap 8px, border-radius 6px (pinned inline).
+            .kbd: padding 1px 5px, border-radius 4px. */}
+        <div
+          style={{ borderRadius: '6px' }}
+          className="flex h-9 w-full max-w-[520px] items-center gap-2 border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 text-[13px] text-[var(--text-tertiary)]"
+        >
           <Search size={14} aria-hidden="true" />
           <span className="flex-1 truncate">Search everything…</span>
-          <kbd className="rounded border border-[var(--border-subtle)] bg-[var(--overlay)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
+          <kbd
+            style={{ borderRadius: '4px' }}
+            className="border border-[var(--border-subtle)] bg-[var(--base)] px-1 py-0 font-mono text-[10.5px] text-[var(--text-tertiary)]"
+          >
             ⌘K
           </kbd>
         </div>
@@ -475,31 +502,44 @@ function TopBar({
         {lightMode ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
       </IconButton>
 
-      {/* Mode toggle: Operate / Review / Prove */}
+      {/* Mode toggle: Operate / Review / Prove.
+          Canonical F15 v2 L114: .mode-toggle { height 32px; padding 2px;
+          border-radius 6px } — height pinned via h-8. */}
       <div
         role="tablist"
         aria-label="Mode"
-        className="hidden shrink-0 items-center rounded-md border border-[var(--border-subtle)] bg-[var(--raised)] p-0.5 xl:inline-flex"
+        style={{ borderRadius: '6px' }}
+        className="hidden h-8 shrink-0 items-center border border-[var(--border-subtle)] bg-[var(--raised)] p-0.5 xl:inline-flex"
       >
         <ModeTab active>Operate</ModeTab>
         <ModeTab>Review</ModeTab>
         <ModeTab>Prove</ModeTab>
       </div>
 
-      {/* User pill */}
+      {/* User pill — canonical F15 v2 L120-125:
+            .user-pill {
+              display: inline-flex; align-items: center; gap: 8px;
+              height: 36px; padding: 3px 10px 3px 3px;
+              border-radius: 999px;
+            }
+            .user-av { width: 28px; height: 28px }
+          Pin border-radius: 999px inline (rounded-full computes to a
+          huge calc(infinity*1px) in Tailwind 4 which differs from the
+          canon 999px probe value). Height pinned via h-9 (36px). */}
       <button
         type="button"
         aria-label={`Signed in as ${meName}, ${meRoleLabel}`}
-        className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] py-1.5 pl-1.5 pr-3 transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+        style={{ borderRadius: '999px' }}
+        className="flex h-9 shrink-0 items-center gap-2 border border-[var(--border-subtle)] bg-[var(--raised)] py-0.5 pl-0.5 pr-2.5 transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
       >
         <span
           aria-hidden="true"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full font-mono text-[10px] font-bold text-[var(--primary-ink)]"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-bold text-[var(--primary-ink)]"
           style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
         >
           {meInitials}
         </span>
-        <span className="hidden text-[13px] font-medium text-[var(--text-primary)] md:inline">
+        <span className="hidden text-[12.5px] font-medium text-[var(--text-primary)] md:inline">
           {meName}
         </span>
         <span
@@ -526,11 +566,21 @@ function IconButton({
   onClick?: () => void;
   'aria-label': string;
 }) {
+  // Canonical F15 v2 L108-112:
+  //   .icon-btn { width: var(--tap); height: var(--tap); border-radius: 6px }
+  //   @media (min-width: 1024px) { .icon-btn { width: 36px; height: 36px } }
+  // → 44×44 (--tap, WCAG 2.5.5 tap target) at < 1024px,
+  //   compact 36×36 at desktop.
+  // Border-radius pinned to explicit 6px (rounded-md = 6px today, but
+  // pin defensively in case a future Tailwind theme override shifts
+  // it). Same belt-and-suspenders treatment applied to proj-pill +
+  // global-search + mode-toggle below.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
+      style={{ borderRadius: '6px' }}
+      className="hidden h-11 w-11 shrink-0 items-center justify-center text-[var(--text-tertiary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex lg:h-9 lg:w-9"
       {...rest}
     >
       {children}
@@ -618,13 +668,14 @@ function AdminLeftRail({
           'transition-[width] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]',
         ].join(' ')}
       >
-        {/* Mobile-only close (top of drawer) */}
+        {/* Mobile-only close (top of drawer) — 6px radius pinned. */}
         <div className="flex items-center justify-end px-2 pb-1 pt-3 lg:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
             aria-label="Close navigation"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+            style={{ borderRadius: '6px' }}
+            className="inline-flex h-9 w-9 items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
           >
             <X size={16} aria-hidden="true" />
           </button>
