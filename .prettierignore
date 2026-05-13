@@ -42,3 +42,11 @@ pnpm-lock.yaml
 # through to the GitHub API). Ignoring keeps them from tripping the
 # pre-push prettier gate.
 pr-*-body.md
+
+# ───── Tooling-generated / pre-draft scratch (Day-17) ─────
+# Symlinked skills sources (.agents/) — not our source-of-truth.
+# Pre-draft workspace (.claude/scratch/) — in-flight ceremony docs
+# (close reports, EODs, retros) before promotion to docs/. Both are
+# treated as not-our-source for prettier.
+.agents/
+.claude/scratch/
