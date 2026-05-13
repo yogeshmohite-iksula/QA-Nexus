@@ -140,6 +140,16 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
       magicLink({
         // 10-minute TTL — see ADR-007 + Day-9 morning decision.
         expiresIn: 60 * 10,
+        // Day-17 P0 fix — Gmail's email-security scanner pre-fetches
+        // magic-link URLs to scan for malware. That GET request consumes
+        // the single-use token before the real user clicks, surfacing as
+        // ?error=INVALID_TOKEN on the legitimate click. Setting
+        // allowedAttempts=3 lets Gmail's scanner consume one attempt
+        // (typical), the user's real click consumes a second, and a
+        // single retry slot remains. Per BetterAuth maintainer guidance
+        // in GH discussions #6985 + #5550. NOT Infinity (would disable
+        // attempt-based invalidation entirely — too lax).
+        allowedAttempts: 3,
         sendMagicLink: async ({ email: to, url }) => {
           // Use EmailService.sendMagicLink (Day-8 ADR-008 transport).
           // expiresAt is human-readable ("in 10 minutes") — used in body

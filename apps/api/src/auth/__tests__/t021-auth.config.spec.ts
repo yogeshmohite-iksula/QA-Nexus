@@ -90,6 +90,19 @@ describe('T021 — auth.config.ts (Day-9 wiring)', () => {
       );
     });
 
+    it('magicLink.allowedAttempts=3 — survives Gmail prefetch (Day-17 P0, BetterAuth GH #6985/#5550)', () => {
+      // Gmail's email-security scanner pre-fetches magic-link URLs
+      // before the user clicks. With the BetterAuth default of 1
+      // attempt, that pre-fetch invalidates the token → real click
+      // hits ?error=INVALID_TOKEN. Setting 3 leaves headroom for
+      // scanner (1) + real click (1) + retry (1). NOT Infinity.
+      process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
+      buildAuth(fakePrisma as never, fakeEmail as never);
+      expect(magicLink).toHaveBeenCalledWith(
+        expect.objectContaining({ allowedAttempts: 3 }),
+      );
+    });
+
     it('includes nextCookies plugin (Next.js 15 App Router requirement)', () => {
       process.env.BETTER_AUTH_URL = 'https://api.qanexus.iksula.com';
       buildAuth(fakePrisma as never, fakeEmail as never);
