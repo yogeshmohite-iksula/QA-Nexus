@@ -13,6 +13,70 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 17 — Scope zod@^4 override for `@better-auth/core` (P0 prod crash, completes #132)
+
+**Day-17 second P0 crash, final fix.** After #137 merged, Render's first auth request crashed:
+
+```
+TypeError: z.ipv4 is not a function
+    at isValidIP (@better-auth/core@1.6.11/.../utils/ip.mjs:7:11)
+    at getIp (better-auth@1.6.11/.../get-request-ip.mjs:13:8)
+    at resolveRateLimitConfig (rate-limiter/index.mjs:107)
+```
+
+**Root cause:** PR #132 added `pnpm.overrides: "better-auth>zod": "^4.3.6"` to fix BA 1.6.11's zod-v4 requirement, but `@better-auth/core` is a **separate npm package** (BA's modular split since 1.6) — its `dependencies.zod` got the root workspace pin (`^3.25.76`) instead of v4. The v4-only `z.ipv4()` API is invoked at request-time inside `@better-auth/core/dist/utils/ip.mjs:7` to validate Render's `X-Forwarded-For` IP. The TypeError crashed BA's request handler before any error middleware could catch it → Render 502.
+
+**Why the boot-smoke from PR #132's gate missed it:** `isValidIP` is called on every auth request, never at module load. The 10-second prod-mode boot test in PR #132 confirmed Nest started + routes mapped — exactly what Render also showed — but the crash only manifests when a real auth request lands. The (bj) followup gate (boot-smoke step in pre-push) is therefore **insufficient**; it needs a request-level smoke (POST `/auth/sign-in/magic-link` with `X-Forwarded-For` header) to catch this class of bug. Filed as (bj-amend) below.
+
+**Why all 4 jest suites under `apps/api/src/auth/__tests__/` missed it:** every existing auth spec does `jest.mock('better-auth')` at the top — the real `@better-auth/core` module never loads in any of the 38 test suites. Module-load + request-handling crashes in BA internals are invisible to test-mocked imports.
+
+**Changes shipped here:**
+
+- **`chore(deps)`** — root `package.json` `pnpm.overrides` gets one new entry: `"@better-auth/core>zod": "^4.3.6"`. Sibling to the existing `"better-auth>zod"` override from PR #132. `pnpm install --no-frozen-lockfile` regenerated the lockfile. After install, the pnpm slot for `@better-auth/core@1.6.11` now nests `zod@4.4.3` (was `zod@3.25.76`). Verification:
+
+  ```
+  $ ls node_modules/.pnpm/@better-auth+core@1.6.11*/node_modules/zod/package.json
+  → "version": "4.4.3"  ✓ (was "3.25.76")
+  ```
+
+- **`test(api)`** — NEW `apps/api/src/auth/__tests__/better-auth-core-ip.spec.ts` (4 pinning tests, ~120 LOC). Exercises the override via filesystem-resolution checks rather than direct ESM import (transitive subpath import of `@better-auth/core/utils/ip` doesn't load through jest's CJS transformer). The 4 pinned invariants:
+  1. Root `pnpm.overrides` contains `@better-auth/core>zod` matching `^?4.x`
+  2. Root `pnpm.overrides` still has the sibling `better-auth>zod: ^?4.x` from PR #132
+  3. `@better-auth/core@1.6.x` resolves to `zod@4.x` in its pnpm slot (NOT `zod@3.x`)
+  4. `@better-auth/core/dist/utils/ip.mjs` exists + source contains `z.ipv4`/`z.ipv6` (the v4-only API that crashed) — proves the crash file is the SAME shape we're testing against
+
+  Together these crash the test suite if a future engineer removes the override line or downgrades BA. Total BE jest suite: 492 → **496/496 passing**.
+
+- **Verification artifacts** (captured locally; NOT in CI gate due to jest/ESM constraint above):
+  - `pnpm why zod` shows both versions resolved:
+    ```
+    zod@3.25.76  ← workspace + @qa-nexus/api + @qa-nexus/shared
+    zod@4.4.3    ← @better-auth/core + better-auth + better-call
+    ```
+  - Direct Node runtime invocation of the exact crash entrypoint:
+    ```
+    $ node --input-type=module -e "import('.../node_modules/.pnpm/@better-auth+core@1.6.11_*/node_modules/@better-auth/core/dist/utils/ip.mjs').then(m => {
+        console.log(m.isValidIP('203.0.113.42'));   // Render-style X-Forwarded-For
+        console.log(m.isValidIP('::1'));
+        console.log(m.isValidIP('not-an-ip'));
+      })"
+    → true
+    → true
+    → false
+    → CLEAN — no z.ipv4 TypeError ✓
+    ```
+
+- **Hard Rules check:** Rule 1 (no new infra), Rule 5 (no banned dep — only an override addition), Rule 6 (no secrets), Rule 11 (escalated BEFORE writing code when initial brief diagnosis "BA's getIp throws → uncaught in rate-limiter" didn't match the BA 1.6.11 source, which returns null gracefully; Yogesh provided the actual Render stack trace showing `z.ipv4 is not a function`, which matched a different root cause path entirely).
+
+- **Acceptance gate (post-merge):**
+  1. Render auto-redeploys (~2 min). Boot log MUST show NestJS startup + port-bind within 10s.
+  2. Yogesh requests fresh magic-link via FE sign-in form → email arrives with FE confirm-page URL (per #137).
+  3. Clicks link in Gmail → lands on `/auth/verify-magic-link` page → clicks "Confirm Sign In".
+  4. POST to `/auth/sign-in/magic-link` MUST NOT crash with `TypeError: z.ipv4 is not a function`.
+  5. Session cookie set → redirect to `/home`. **M3 close visual gate finally GREEN.**
+
+- **Followup `(bj)` amendment filed (separate PR):** pre-push gate needs request-level smoke (POST `/auth/sign-in/magic-link` with `X-Forwarded-For`), not just boot-smoke. Boot-smoke alone is insufficient for module-load-vs-request-handler crash classes — proven by this incident.
+
 ### Added — Day 18 — Intermediate confirm page (magic-link Gmail prefetch fix) + cross-tab session sync (PR #137, M3 close blocker)
 
 **FINAL M3 close blocker.** Atomic FE + BE PR. Fixes the Gmail-prefetch class of magic-link failure (BetterAuth ≥ 1.6.11 hardcoded atomic single-use via GHSA-hc7v-rggr-4hvx; Gmail's email-security scanner pre-fetches links and consumes the token before the real user clicks). Canonical pattern (Slack, Notion, Linear, GitHub all use this): the magic-link URL now points to a FE page with a "Confirm Sign In" button instead of directly to the BetterAuth verify endpoint. Scanner can pre-fetch the page but can't click the button; real user clicks → POSTs token → session cookie set → redirect to `callbackURL`.
