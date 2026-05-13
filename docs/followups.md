@@ -2,6 +2,21 @@
 
 ---
 
+## [2026-05-13] (bk) P2 — Retrofit action-button inks into 01_SYSTEM.md
+
+**Filed:** 2026-05-13 (Day-17, during M3 close cycle)
+**Owner:** Design system maintainer (next M3+M4 retro)
+
+During F19 design corrections, three canonical dark-ink hex values (`#022C1F` pass-ink, `#3D0707` fail-ink, `#3F2300` warn-ink) were added to `apps/web/app/globals.css` + the `enforce-design-tokens.sh` hook whitelist. These values are already canonical in the v2 HTML frames (F19 L407-411) but were never formally documented in `01_SYSTEM.md §3 Design Tokens`.
+
+**Action:** Formally add `--pass-ink` / `--fail-ink` / `--warn-ink` to `01_SYSTEM.md §3`. Ensure new tokens are referenced wherever the design system documents filled-status surfaces (action buttons, status badges, alert banners).
+
+**Why P2:** No functional impact — tokens work + hook whitelist is in sync. This is purely doc-debt cleanup so the `01_SYSTEM.md` spec stays single-source-of-truth for future frame ports.
+
+**Cross-references:** F19 Run Console v2.html L407-411 (canonical source) · PR #129+ F19 Pattern A scaffold (introduces the tokens) · `.claude/hooks/pre-tool-use/enforce-design-tokens.sh` (whitelist updated in both worktrees).
+
+---
+
 ## [2026-05-11] (bi) P2 — Update auth-flow specs + integration docs to assert "Resend" not "nodemailer"
 
 **Filed:** Day-16 alongside ADR-018 (EmailService Resend migration PR).

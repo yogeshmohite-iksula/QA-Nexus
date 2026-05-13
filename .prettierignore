@@ -36,6 +36,14 @@ pnpm-lock.yaml
 *.min.css
 *.bundle.js
 
+# ───── Design-ref HTML served via public/ ─────
+# Canonical v2 HTML files vendored under apps/web/public/_design-refs/
+# for direct in-browser viewing alongside React ports. They are
+# byte-identical to the source frames in QA Nexus/PM1/PM1_UI_v2/ and
+# must NOT be reformatted — formatting must match the canonical source
+# so visual gate diffs are meaningful.
+apps/web/public/_design-refs/
+
 # ───── Untracked scratch (Day-13 (aq)) ─────
 # One-shot PR body scratch files written for `gh pr create --body-file`.
 # Created at repo root, never committed (caller passes them straight
