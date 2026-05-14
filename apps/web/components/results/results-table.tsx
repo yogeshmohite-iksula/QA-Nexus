@@ -1,27 +1,21 @@
-// F20 Results table — canonical L441-579 (CSS) + L920-1066 (markup).
+// F20 Results table — canonical L920-1066. Hard Rule 17 verbatim.
 //
-// Suite groups (Refund Core / Refund Policy Edge / Payments) with
-// collapsible head + case rows beneath. Each case row has:
-//   - cr-status icon (pass / fail / flaky)
-//   - cr-id (mono, tertiary)
-//   - cr-title (truncate)
-//   - cr-right: duration + optional defect count badge
-//
-// Header has filter pills (All / Failures / Flaky / Regressions) +
-// Sort dropdown. Pattern A — all filter/sort actions emit deferred
-// console.info markers.
+// Three suite groups (Refund Core / Auth & Session / Payments & Tender)
+// with collapsible head + case rows. All strings consumed from
+// canned-data.ts.
 
 'use client';
 
 import { useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, X } from 'lucide-react';
-import type { CaseStatus, ResultsCaseRow, ResultsSuite } from './canned-data';
-
-interface Props {
-  suites: ResultsSuite[];
-  onCaseSelect: (caseId: string) => void;
-  selectedCaseId: string;
-}
+import {
+  F20_RESULTS_FILTER_TABS,
+  F20_RESULTS_SORT_LABEL,
+  F20_RESULTS_SUITES,
+  type CaseStatus,
+  type ResultsCaseRow,
+  type ResultsSuite,
+} from './canned-data';
 
 const STATUS_COLOR: Record<CaseStatus, { bg: string; bd: string; fg: string }> = {
   pass: { bg: 'var(--pass-soft)', bd: 'var(--pass-line)', fg: 'var(--pass)' },
@@ -38,10 +32,13 @@ function StatusIcon({ status }: { status: CaseStatus }) {
   return <span aria-hidden="true">·</span>;
 }
 
-const FILTER_TABS = ['All', 'Failures', 'Flaky', 'Regressions'] as const;
+interface Props {
+  selectedCaseId: string;
+  onCaseSelect: (caseId: string) => void;
+}
 
-export function ResultsTable({ suites, onCaseSelect, selectedCaseId }: Props) {
-  const [activeTab, setActiveTab] = useState<(typeof FILTER_TABS)[number]>('All');
+export function ResultsTable({ selectedCaseId, onCaseSelect }: Props) {
+  const [activeTab, setActiveTab] = useState<(typeof F20_RESULTS_FILTER_TABS)[number]>('All');
   return (
     <section aria-label="Results by suite" className="flex flex-col gap-3">
       {/* Filter bar */}
@@ -52,7 +49,7 @@ export function ResultsTable({ suites, onCaseSelect, selectedCaseId }: Props) {
           className="inline-flex items-center gap-0.5 rounded-md border p-0.5"
           style={{ background: 'var(--raised)', borderColor: 'var(--border)' }}
         >
-          {FILTER_TABS.map((tab) => {
+          {F20_RESULTS_FILTER_TABS.map((tab) => {
             const isActive = tab === activeTab;
             return (
               <button
@@ -81,25 +78,21 @@ export function ResultsTable({ suites, onCaseSelect, selectedCaseId }: Props) {
           type="button"
           onClick={() => console.info('pattern-a:deferred:f20:sort')}
           className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11.5px] font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-          style={{
-            background: 'var(--raised)',
-            borderColor: 'var(--border)',
-            color: 'var(--t2)',
-          }}
+          style={{ background: 'var(--raised)', borderColor: 'var(--border)', color: 'var(--t2)' }}
         >
-          Sort: Suite
+          {F20_RESULTS_SORT_LABEL}
           <ChevronDown size={11} aria-hidden="true" />
         </button>
       </header>
 
       {/* Suite groups */}
       <div className="flex flex-col gap-3">
-        {suites.map((suite) => (
+        {F20_RESULTS_SUITES.map((suite) => (
           <SuiteGroup
             key={suite.name}
             suite={suite}
-            onCaseSelect={onCaseSelect}
             selectedCaseId={selectedCaseId}
+            onCaseSelect={onCaseSelect}
           />
         ))}
       </div>
@@ -109,12 +102,12 @@ export function ResultsTable({ suites, onCaseSelect, selectedCaseId }: Props) {
 
 function SuiteGroup({
   suite,
-  onCaseSelect,
   selectedCaseId,
+  onCaseSelect,
 }: {
   suite: ResultsSuite;
-  onCaseSelect: (caseId: string) => void;
   selectedCaseId: string;
+  onCaseSelect: (caseId: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   const c = suite.counts;
@@ -213,7 +206,7 @@ function CaseRow({
         <span className="font-mono" style={{ color: 'var(--t3)' }}>
           {row.durationLabel}
         </span>
-        {row.defectCount > 0 && (
+        {row.defectsLabel && (
           <span
             className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.04em]"
             style={{
@@ -222,7 +215,7 @@ function CaseRow({
               color: 'var(--fail)',
             }}
           >
-            {row.defectCount} defect{row.defectCount === 1 ? '' : 's'}
+            {row.defectsLabel}
           </span>
         )}
       </span>

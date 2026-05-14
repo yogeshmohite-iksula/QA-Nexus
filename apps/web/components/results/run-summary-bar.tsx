@@ -1,21 +1,13 @@
-// F20 Run summary bar — canonical lines L237-300 (CSS) + L704-800 (markup).
-//
-// Layout: flex row with wrap. Left: title + run-id + "Done" check pill.
-// Middle: 5 stat tiles (total / pass / fail / flaky / blocked / skipped).
-// Right: started/duration meta + env-pill.
+// F20 Run summary bar — canonical L237-300 (CSS) + L713-735 (markup).
+// Hard Rule 17: every string consumed from canned-data.ts.
 
 'use client';
 
 import { Check } from 'lucide-react';
-import type { RunResultsMeta } from './canned-data';
+import { F20_RUN_SUMMARY } from './canned-data';
 
-interface Props {
-  meta: RunResultsMeta;
-}
-
-export function RunSummaryBar({ meta }: Props) {
-  const t = meta.totals;
-  const pct = meta.totalPct;
+export function RunSummaryBar() {
+  const s = F20_RUN_SUMMARY;
   return (
     <div
       role="region"
@@ -23,7 +15,7 @@ export function RunSummaryBar({ meta }: Props) {
       className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b px-4 py-3 sm:px-5 lg:px-7"
       style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
-      {/* LEFT — title + run-id + done pill */}
+      {/* rs-left — title + run-id + done pill */}
       <div
         className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5"
         style={{ flex: '1 1 auto', minWidth: 0 }}
@@ -32,13 +24,13 @@ export function RunSummaryBar({ meta }: Props) {
           className="m-0 text-[15px] font-semibold leading-[22px]"
           style={{ color: 'var(--t1)', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
         >
-          {meta.title}
+          {s.title}
         </h1>
         <span
           className="rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-bold"
           style={{ background: 'var(--canvas)', borderColor: 'var(--border)', color: 'var(--t3)' }}
         >
-          {meta.runId}
+          {s.runId}
         </span>
         <span
           className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.04em]"
@@ -49,39 +41,39 @@ export function RunSummaryBar({ meta }: Props) {
           }}
         >
           <Check size={11} strokeWidth={3.6} aria-hidden="true" />
-          Done
+          {s.donePillLabel}
         </span>
       </div>
 
-      {/* MIDDLE — stat tiles */}
+      {/* rs-stats — 6 stat tiles */}
       <div
         aria-label="Result counts"
         className="flex flex-wrap items-center gap-x-2 gap-y-1.5"
         style={{ flex: 'none' }}
       >
-        <Stat label="total" value={t.total} tone="t1" />
-        <Stat label="pass" value={t.pass} pct={pct.pass} tone="pass" />
-        <Stat label="fail" value={t.fail} pct={pct.fail} tone="fail" />
-        <Stat label="flaky" value={t.flaky} pct={pct.flaky} tone="warn" />
-        <Stat label="blocked" value={t.block} tone="t3" />
-        <Stat label="skipped" value={t.skip} tone="t3" />
+        <Stat label="total" value={s.totals.total} tone="t1" />
+        <Stat label="pass" value={s.totals.pass} pct={s.pcts.pass} tone="pass" />
+        <Stat label="fail" value={s.totals.fail} pct={s.pcts.fail} tone="fail" />
+        <Stat label="flaky" value={s.totals.flaky} pct={s.pcts.flaky} tone="warn" />
+        <Stat label="blocked" value={s.totals.block} tone="t3" />
+        <Stat label="skipped" value={s.totals.skip} tone="t3" />
       </div>
 
-      {/* RIGHT — meta + env pill */}
+      {/* rs-meta — started/by/duration + env-pill */}
       <div
         className="flex flex-wrap items-center gap-2.5"
         style={{ marginLeft: 'auto', flex: 'none' }}
       >
         <span className="hidden text-[12px] sm:inline" style={{ color: 'var(--t3)' }}>
-          Started <b style={{ color: 'var(--t2)' }}>{meta.startedRelative}</b>
+          Started <b style={{ color: 'var(--t2)' }}>{s.startedRelative}</b>
           <span className="mx-1.5" style={{ color: 'var(--border-strong)' }}>
             ·
           </span>
-          by <b style={{ color: 'var(--t2)' }}>{meta.startedBy}</b>
+          by <b style={{ color: 'var(--t2)' }}>{s.startedBy}</b>
           <span className="mx-1.5" style={{ color: 'var(--border-strong)' }}>
             ·
           </span>
-          duration <b style={{ color: 'var(--t2)' }}>{meta.durationLabel}</b>
+          duration <b style={{ color: 'var(--t2)' }}>{s.durationLabel}</b>
         </span>
         <span
           className="inline-flex items-center rounded border px-2 py-0.5 font-mono text-[10.5px] font-semibold"
@@ -91,7 +83,7 @@ export function RunSummaryBar({ meta }: Props) {
             color: 'var(--info)',
           }}
         >
-          {meta.envLabel}
+          {s.envPillLabel}
         </span>
       </div>
     </div>
@@ -106,7 +98,7 @@ function Stat({
 }: {
   label: string;
   value: number;
-  pct?: number;
+  pct?: string;
   tone: 't1' | 't3' | 'pass' | 'fail' | 'warn';
 }) {
   const colorMap = {
@@ -124,7 +116,7 @@ function Stat({
       <span className="uppercase tracking-[0.04em]" style={{ color: 'var(--t3)' }}>
         {label}
       </span>
-      {pct !== undefined && <span style={{ color: 'var(--t4)' }}>{pct}%</span>}
+      {pct && <span style={{ color: 'var(--t4)' }}>{pct}</span>}
     </span>
   );
 }
