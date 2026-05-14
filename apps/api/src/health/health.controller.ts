@@ -1,22 +1,37 @@
-// QA Nexus PM1 — health endpoint.
+// QA Nexus PM1 — health endpoints.
 //
-// Spec: MS0-T025. Surfaces the subsystem readouts UptimeRobot (T015)
-// hits every 5 min:
-//   - db        : Postgres ping (SELECT 1) with 2s timeout
-//   - embedding : EmbeddingService warm? + load duration
-//   - llm       : deferred (T023 not landed yet)
-//   - r2        : deferred (T013 not landed yet)
-//   - quota     : Neon DB size (vs 512 MB free tier)
+// 2-tier endpoint pattern (Day-18 #146, Neon free-tier compute fix):
 //
-// HTTP semantics:
+//   GET /health       LIGHT — returns 200 OK with { status, timestamp,
+//                     version }. NO DB query, NO R2 head, NO LLM check.
+//                     Just confirms the API process is alive + has
+//                     bound to a port. UptimeRobot pings this every
+//                     5 min; with no DB query, Neon's compute auto-
+//                     scales to zero during 9PM-9AM idle hours.
+//                     Recovers ~3-4 CU-hrs/day on the 100 CU-hr free
+//                     tier (was burning at 5.77 CU-hrs/day pace,
+//                     projected to hit cap May 17). Hard Rule 1 cost
+//                     gate hold.
+//
+//   GET /health/deep  FULL — original MS0-T025 readout: db ping,
+//                     R2 head, LLM gateway snapshot, embedding warm
+//                     state, Neon size quota, OTel exporter status.
+//                     Returns 200 / 503 / 503 by overall status.
+//                     Operators curl this on demand to verify wiring;
+//                     NOT in the UptimeRobot keep-alive path.
+//
+// HTTP semantics (deep only):
 //   - 200 OK         — all required subsystems "up" (db + embedding)
 //   - 503 Service Unavailable — at least one required subsystem "down"
-//                      OR quota >90% (warning band; UptimeRobot will alert)
+//                      OR quota >90% (warning band; alerts via deep poll)
 //   - 500 Internal   — unexpected error inside the health controller itself
 //
-// PUBLIC endpoint: no @UseGuards (UptimeRobot can't authenticate). The
+// PUBLIC endpoints: no @UseGuards (UptimeRobot can't authenticate). The
 // payload is intentionally non-sensitive — sizes + boolean states only,
 // no IDs or values.
+//
+// Original spec: MS0-T025 (single endpoint, DB-querying). Day-18
+// refactor splits into light + deep per (br) followup.
 import { Controller, Get, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { Res } from '@nestjs/common';
@@ -116,8 +131,30 @@ export class HealthController {
     private readonly r2Service: R2Service,
   ) {}
 
+  /** LIGHT health — returns immediately, NO DB query, NO subsystem
+   *  checks. UptimeRobot's 5-min keep-alive hits this; Neon compute
+   *  stays scaled to zero during idle hours. Day-18 #146 (followup
+   *  (br) Neon free-tier compute optimization). */
   @Get()
-  async health(@Res() res: Response): Promise<void> {
+  health(): {
+    status: 'ok';
+    timestamp: string;
+    version: string;
+  } {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      // npm_package_version is injected by Node when launched via `npm`/`pnpm`.
+      // Falls back to '1.0' for `node dist/main` direct invocation.
+      version: process.env.npm_package_version ?? '1.0',
+    };
+  }
+
+  /** DEEP health — full subsystem readout. Operators curl on demand
+   *  to verify connectivity. NOT in UptimeRobot keep-alive path.
+   *  Body shape unchanged from pre-#146 (`GET /health`). */
+  @Get('deep')
+  async healthDeep(@Res() res: Response): Promise<void> {
     const [dbResult, r2Result, quota] = await Promise.all([
       this.pingDb(),
       this.r2Service.health(),

@@ -13,6 +13,42 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Changed — Day 18 — `/health` decoupled from DB query (Neon free-tier compute optimization, PR #146 P1)
+
+**P1 cost-gate hold.** Project Neon usage was at **80.81/100 CU-hrs (May 14)** with the burn rate (~5.77 CU-hrs/day) projecting to hit the 100 CU-hr free-tier cap on **May 17** — well before the May-31 reset. Root cause: UptimeRobot 5-min keep-alive pings on `/health` triggered the full subsystem readout including `SELECT 1` against Postgres + `pg_database_size` quota query → kept Neon's compute warm during 9PM-9AM idle hours when no real user traffic. Hard Rule 1 ($0/mo) at risk.
+
+**2-tier endpoint pattern shipped:**
+
+- **`refactor(api)` `GET /health`** — LIGHT. Returns `{ status, timestamp, version }` synchronously. NO DB query, NO R2 head, NO LLM check, NO embedding probe. Just confirms the API process is alive + has bound to a port. UptimeRobot's keep-alive hits this; with no DB query, Neon compute auto-scales to zero during idle hours. Recovers ~3-4 CU-hrs/day → free-tier runway carries through May 31 reset with headroom.
+
+- **`feat(api)` `GET /health/deep`** — FULL. Original MS0-T025 readout: db ping ($queryRawUnsafe SELECT 1, 2s timeout), R2 head, LLM gateway snapshot (in-memory state, NOT live ping — preserves Day-4 quota-frugality), embedding warm state, Neon size quota, OTel exporter status. Returns 200 / 503 / 503 by overall status. Operators curl on demand to verify wiring; NOT in keep-alive path. Body shape unchanged from pre-#146 `/health`.
+
+- **`test(api)`** — `apps/api/src/health/__tests__/health.controller.spec.ts` (NEW, 7 tests):
+  1. `/health` returns `{ status, timestamp, version }` with NO Prisma call (`$queryRaw` + `$queryRawUnsafe` both assertion-not-called) + NO R2 call — the regression pin that locks in the (br) optimization
+  2. `/health` responds well under 50ms (UptimeRobot perf budget)
+  3. `/health` falls back to `version="1.0"` when `npm_package_version` unset
+  4. `/health/deep` invokes Prisma `$queryRawUnsafe` (db ping)
+  5. `/health/deep` invokes `R2Service.health` (storage subsystem)
+  6. `/health/deep` body includes `llm` subsystem readout
+  7. `/health/deep` returns 200 (not 500) when db ping succeeds + embedding deferred
+
+- **Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **503/503 jest** (496 baseline + 7 new health) · lint clean ✓ · CHANGELOG ✓.
+
+- **Prod-boot smoke (manual (bj) gate) ✓:** NestJS boots clean, both routes mapped: `Mapped {/health, GET}` + `Mapped {/health/deep, GET}`.
+
+- **Hard Rules check:** Rule 1 (cost — entire purpose of this PR; $0/mo retained) · Rule 5 (no banned dep) · Rule 6 (no env changes) · Rule 11 (P1 brief from Yogesh; followup-trigger explicit) · Rule 13 (no UI change; visual gate N/A).
+
+- **No FE coordination needed.** UptimeRobot URL unchanged (`/health` same path).
+
+- **Followup `(br)`** filed at top of `docs/followups.md`: UptimeRobot monitoring interval 5 min → 4 min (~30 sec operator task) to add headroom against Render's 15-min idle spin-down threshold. Sister-monitor via Better Stack free uptime considered if UptimeRobot free plan blocks <5-min interval.
+
+- **Acceptance gate (post-merge):**
+  1. Render auto-redeploys (~2 min)
+  2. UptimeRobot URL unchanged; next ping (within 5 min) returns LIGHT body without touching DB
+  3. Yogesh `curl https://qa-nexus-api.onrender.com/health/deep` → full readout to verify everything still wired
+  4. Monitor Neon dashboard for next 24h → daily CU-hr rate drops from ~5.77 → target ~2
+  5. May-31 free-tier reset reached with headroom; Hard Rule 1 held
+
 ### Added — Day 18 — M4 migration 0004: runs / defects / jira tables (PR #144, M4 kickoff)
 
 **M4 Day-18 AM task complete.** Schema delta for the M4 features (run execution, defect lifecycle, A4 RCA, Jira 2-way sync). Resolved A-F decision matrix from Day-17 BE+1 scratch:
