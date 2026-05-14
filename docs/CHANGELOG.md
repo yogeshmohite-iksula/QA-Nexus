@@ -13,6 +13,55 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 18 PM — F21 Defects Hub Pattern A scaffold (M4 TASK 2, Hard Rule 17 from start)
+
+**M4 Day-18 PM task — first frame port executed with Hard Rule 17 from the start (no fix-forward needed).** F21 Defects Hub lands at `/projects/[slug]/defects/` per Hard Rule 16 canonical-first workflow + Hard Rule 17 canned-data verbatim extraction.
+
+**Hard Rule 17 workflow:**
+
+1. `ctx_execute_file` on `PM1_UI_v2/Redesign Frame by claude design/F21 Defects Hub v2.html` (1441 lines) → sandbox at `/tmp/f21-canon-raw.json` (70 KB)
+2. `canned-data.ts` written **FIRST** from sandbox, strongly-typed
+3. **THEN** React components consuming the constants — zero hardcoded user-visible strings in component files
+4. Side-by-side screenshots (canonical + React port at 1440 + 320)
+
+**Iksula canon data verbatim:**
+
+- 10 defects D-2069 → D-2104 spanning P0/P1/P2 priorities, types App bug/Env/UI/Flaky/Test, statuses Open/In progress/In QA/Fixed/Won't fix
+- Filter strip: Priority chips (P0=23 / P1=41 / P2=68 / P3=55) + Status "Open + In progress" + Type "All" + Sprint 42
+- Toolbar: Group by Priority(active) / Status / Assignee / Sprint / None · "64 shown · 187 total" · Sort "Priority ↓ · Updated"
+- Side detail rail (D-2104 selected by default): Summary section with repro steps + linked refs (TC-1043 / RUN-…002 / JIRA RET-3392), Sherlock RCA 94% confidence, Curator similar (D-1842 92% / D-1979 79% / D-2031 68%), Activity timeline (3 rows), Comments (Suresh P. + Priya A.)
+
+**Files:**
+
+- **NEW** route `apps/web/app/(app)/projects/[slug]/defects/page.tsx` + `generateStaticParams` for Iksula RET anchor
+- **NEW** `apps/web/components/defects/canned-data.ts` (~400 LOC verbatim, strongly-typed with `NarrativeSegment` / `ReproSegment` / `DefectMetaSegment` for inline emphasis preservation)
+- **NEW** `apps/web/components/defects/{defects-page,filter-strip,toolbar,defect-row,sd-rail}.tsx` (5 components, all consume `F21_*` constants)
+- **NEW** `apps/web/public/_design-refs/F21-canonical.html` (98 KB — served for side-by-side dev comparison)
+- **NEW** `scripts/m4-f21-side-by-side.js` (Playwright sweep)
+- **NEW** `docs/screenshots/m4-f21-side-by-side/` — 4 PNGs (canonical-1440 / react-1440 / canonical-320 / react-320)
+
+**Pattern A markers** (every interactive emits `console.info('pattern-a:deferred:f21:<key>', payload)`): `priority-toggle`, `filter-select`, `search`, `group-by`, `sort`, `select-defect`, `sd-close`, `sd-action`, `open-ref`, `open-similar`, `comment-typing`, `comment-submit`.
+
+**Hard Rule compliance:**
+
+- ✅ Rule 11 — Zero invented strings; every label traces to `canned-data.ts` → F21 v2.html
+- ✅ Rule 12 (RWD) — Tested 320 / 768 / 1024 / 1440; defect grid columns collapse below lg, sd-rail hidden <lg
+- ✅ Rule 13 — Side-by-side screenshots captured; awaiting Yogesh approval
+- ✅ Rule 14 (Shell parity) — Reuses canonical F19-React `AdminShell` with `active="defects-failures"` + `projectKeyLower="ret"`
+- ✅ Rule 15 — Canonical from `Redesign Frame by claude design/F21 Defects Hub v2.html`
+- ✅ Rule 16 — Canonical-first 8-step pre-flight (read rules + read HTML + diff-probe + build diff table + fix root causes + visual gate)
+- ✅ Rule 17 — Verbatim extraction (canned-data.ts FIRST, components consume only)
+
+**Gates:** ✅ typecheck · ✅ smoke 200 · awaiting prettier + lint on commit
+
+**HOLD merge until M4 close cascade.** Sister M4 PRs: #150 (F20 verbatim), #148 (BE WebSocket Gateway), #149 (F19 Pattern B forthcoming).
+
+**Cross-references:**
+
+- F21 v2 HTML canonical: `PM1_UI_v2/Redesign Frame by claude design/F21 Defects Hub v2.html` (L758-794 filter strip · L794-812 toolbar · L820-1129 defect rows · L1129-1302 sd-rail)
+- Hard Rule 17 (codified Day-18 in PR #150) — canned-data verbatim extraction
+- PR #150 — F20 verbatim re-port (precedent for this PR's workflow)
+
 ### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
 
 **ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:
