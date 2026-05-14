@@ -128,3 +128,85 @@ jobs:
         # --redact prevents matched values from being printed to logs.
         # --no-banner keeps logs short. .gitleaks.toml is auto-discovered at root.
         run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose --no-banner
+
+  visual-regression:
+    # Spec: Day-18 evening brief. Runs the apps/web/tests/visual/
+    # Playwright VR suite on every PR that touches FE code or the
+    # VR scaffolding itself. Sister to .github/workflows/e2e.yml
+    # (which is behavioural, NOT pixel-diff).
+    #
+    # Path-filtered at the job level so doc/config-only PRs skip it.
+    # On diff failure, uploads the diff PNGs so a reviewer can
+    # download + inspect (the artifact name carries the run id +
+    # PR number for traceability).
+    #
+    # Free-tier discipline: chromium-only browser install (~140 MB),
+    # 4 viewports run serially (1 worker in CI), HTML report is
+    # uploaded only on failure to keep storage minimal.
+    name: visual-regression (playwright vr — apps/web)
+    runs-on: ubuntu-latest
+    # Path filter — skip on doc/config-only PRs.
+    if: |
+      github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.changed_files || 'apps/web', 'apps/web')
+    timeout-minutes: 15
+    env:
+      CI: "true"
+      # VR_BASELINES_READY left UNSET until FE+1's seed PR lands the
+      # canonical/F08/{320,768,1024,1440}.png baselines — without
+      # baselines, Playwright can't compare and the suite would FAIL.
+      # FE+1's seed PR (Day-19 morning) flips this to "1" alongside
+      # the canonical PNG commit. Until then, home.spec.ts test.skip()
+      # ensures CI stays green even when this job runs.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers (chromium only — free tier)
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Build shared + web
+        run: |
+          pnpm --filter @qa-nexus/shared build
+          pnpm --filter web build
+      - name: Start FE (next start) in background
+        # next start serves the production build; faster + more stable
+        # than `next dev` for VR (no HMR / no source-map injection).
+        run: |
+          (pnpm --filter web exec next start --port 3000 > /tmp/web.log 2>&1) &
+          echo "WEB_PID=$!" >> "$GITHUB_ENV"
+      - name: Wait for FE to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -sSf http://localhost:3000 > /dev/null 2>&1; then
+              echo "FE ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "FE failed to start within 30s — tail of /tmp/web.log:"
+          tail -50 /tmp/web.log
+          exit 1
+      - name: Run Playwright VR suite
+        run: pnpm --filter web test:visual
+      - name: Upload VR diff artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          # Reviewer-facing name carries PR # + run id so multi-PR queue
+          # triage stays sortable.
+          name: vr-diffs-pr${{ github.event.pull_request.number || 'push' }}-run${{ github.run_id }}
+          path: |
+            apps/web/playwright-report-visual/
+            apps/web/test-results/
+          retention-days: 14
+      - name: Stop background FE
+        if: always()
+        run: |
+          if [ -n "${WEB_PID:-}" ]; then kill "$WEB_PID" 2>/dev/null || true; fi

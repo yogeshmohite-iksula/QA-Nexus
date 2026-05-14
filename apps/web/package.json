@@ -10,7 +10,10 @@
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:visual": "playwright test --config=tests/visual/playwright.config.ts",
+    "test:visual:update": "playwright test --config=tests/visual/playwright.config.ts --update-snapshots",
+    "test:visual:install-browsers": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -30,6 +33,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

@@ -37,6 +37,54 @@ Zero new monthly cost. Hard Rule 1 ($0/mo) retained.
 
 **Day-18 PM tier-2 status entry per the 9 PM EOD plan:** BE+1's tier-1 VR suite (separate PR) + this tier-2 skill together close the discipline-drift class. From Day-19 forward, every M4+ frame port runs through this skill before reaching visual gate.
 
+### Added — Day 18 — Visual Regression (VR) Playwright suite scaffolding (P0 evening, M4 close gate)
+
+**Day-18 evening P0.** Scaffolding for the VR suite that locks pixel-level FE rendering against canonical baselines on every PR touching `apps/web/**`. Sister to the existing `apps/e2e/` Playwright suite (which exercises behavioural FE↔API flows, NOT pixel diffs).
+
+**Architecture decision: separate dirs.** VR lives at `apps/web/tests/visual/` (per brief), NOT in the existing `apps/e2e/` workspace. Rationale: (a) brief explicit, (b) VR is tightly coupled to the FE bundle so co-locating with `apps/web` keeps spec ↔ component proximity, (c) different runtime profile — VR doesn't need API + Postgres spinup, just `next start` + chromium → faster CI loop suitable for a required-on-main check.
+
+- **`feat(test)`** — `apps/web/tests/visual/playwright.config.ts` (NEW). Chromium-only (free-tier discipline; ~140 MB browser install vs ~400 MB for chromium+firefox+webkit). 4 viewport projects per CLAUDE.md Hard Rule 12: `chromium-320` (iPhone SE) · `chromium-768` (iPad portrait) · `chromium-1024` (small desktop) · `chromium-1440` (canonical desktop). `expect.toHaveScreenshot` defaults: `maxDiffPixelRatio: 0.01` (≤1% pixels may differ) · `threshold: 0.2` (per-pixel color tolerance, normalized 0-1). `animations: 'disabled'` + `caret: 'hide'` to eliminate transient noise. `snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}-{projectName}-{platform}.png'` per brief — keys baselines by viewport project AND host platform so macOS local snapshots don't false-fail Linux CI.
+
+- **`feat(test)`** — `apps/web/tests/visual/home.spec.ts` (NEW). Template spec for FE+1 to copy when adding more frames (F15, F19, etc.). Targets `/home` route. Runs once per project (4 baselines: one per viewport). Gated behind `VR_BASELINES_READY=1` env-var skip so the empty-baseline first run doesn't false-fail before FE+1 lands canonical PNGs. CI sets this env var; local dev keeps the gate off until baselines are committed.
+
+- **`feat(test)`** — `apps/web/tests/visual/README.md` (NEW). Onboarding doc — explains the two-tier `canonical/` + `__screenshots__/` split, viewport matrix, tolerance canon, local + CI invocation, "adding a new VR spec" recipe, and the `gh api` snippet to make `visual-regression` a required check on `main` branch protection.
+
+- **`chore(deps)`** — `apps/web/package.json` `+ @playwright/test ^1.59.1` devDep (the test runner; `playwright` lib was already installed for browser binaries). 3 new scripts: `test:visual` · `test:visual:update` (regen baselines after intentional design changes) · `test:visual:install-browsers` (chromium only).
+
+- **`feat(ci)`** — `.github/workflows/ci.yml` `+ visual-regression` job. Path-filtered to `apps/web/**` (skips on doc/config-only PRs). Pipeline: install pnpm deps → install chromium browser → build shared + web → `next start` in background → poll `/` for readiness (30s timeout) → run `pnpm --filter web test:visual` → on failure, upload `apps/web/playwright-report-visual/` + `apps/web/test-results/` as `vr-diffs-pr<num>-run<id>` artifact (14d retention) so reviewers can download + inspect diff PNGs. `if: always()` cleanup kills the background `next start` process.
+
+**Local smoke-test verified ✓:**
+
+```
+$ pnpm --filter web exec playwright test --config=tests/visual/playwright.config.ts --list
+[chromium-320]  › home.spec.ts:37:7 › F08 Home — VR baselines (Hard Rule 12 RWD) › renders within tolerance
+[chromium-768]  › home.spec.ts:37:7 › F08 Home — VR baselines (Hard Rule 12 RWD) › renders within tolerance
+[chromium-1024] › home.spec.ts:37:7 › F08 Home — VR baselines (Hard Rule 12 RWD) › renders within tolerance
+[chromium-1440] › home.spec.ts:37:7 › F08 Home — VR baselines (Hard Rule 12 RWD) › renders within tolerance
+Total: 4 tests in 1 file
+```
+
+Config compiles, all 4 viewport projects discover the template spec.
+
+**FE+1 follow-up tonight (per brief):**
+
+1. Populate `apps/web/tests/visual/canonical/F08/{320,768,1024,1440}.png` from a known-good /home render
+2. Run `pnpm --filter web test:visual:update` to seed `__screenshots__/`
+3. Commit both `canonical/` + `__screenshots__/` PNGs
+4. Remove the `test.skip(!process.env.VR_BASELINES_READY, ...)` gate from `home.spec.ts`
+5. Add additional VR specs for F15 / F19 / F14 / etc.
+
+**Yogesh follow-up (after merge):** make `visual-regression` a **required** check on `main` branch protection via `gh api` snippet documented in the README.
+
+**Hard Rules check:**
+
+- Rule 1 (cost): chromium-only browser install + 1 worker in CI → minimal GitHub Actions minutes
+- Rule 5 (ban list): `@playwright/test` is the canon Playwright runner; matches `apps/e2e/` choice
+- Rule 6 (secrets): no env changes
+- Rule 11 (escalate): brief explicit; no ambiguity
+- Rule 12 (RWD): VR enforces — 4 viewports = the canon breakpoints
+- Rule 13 (visual gate): VR automates what was previously manual; canonical/ stays human-curated as the editorial baseline
+
 ### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
 
 **ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:

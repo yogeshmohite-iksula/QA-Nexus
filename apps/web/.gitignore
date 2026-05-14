@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# VR suite (Day-18 P0)
+tests/visual/playwright-report-visual/
+tests/visual/test-results/
+playwright-report-visual/
+test-results/

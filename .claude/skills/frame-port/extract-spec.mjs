@@ -168,10 +168,7 @@ function buildSectionTree(node, depth = 0, max = 5) {
   const id = node.getAttribute('id') || undefined;
   const role = node.getAttribute('role') || undefined;
   const classes =
-    (node.getAttribute('class') || '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 8) || undefined; // cap to first 8 classes for readability
+    (node.getAttribute('class') || '').split(/\s+/).filter(Boolean).slice(0, 8) || undefined; // cap to first 8 classes for readability
 
   const children = [];
   for (const child of node.children) {
@@ -344,7 +341,9 @@ const sectionStats = countSections(sectionTree);
 
 console.log('');
 console.log('✓ extracted spec:');
-console.log(`    sections (total / structural)  ${sectionStats.total} / ${sectionStats.sectionLike}`);
+console.log(
+  `    sections (total / structural)  ${sectionStats.total} / ${sectionStats.sectionLike}`,
+);
 console.log(`    tokens used                    ${spec.tokens_used.length}`);
 console.log(`    tokens defined in HTML         ${Object.keys(spec.token_definitions).length}`);
 console.log(`    assets referenced              ${spec.assets.length}`);
