@@ -1,8 +1,10 @@
 # M3 — Test Cases + A1 Generation + A2 Dedup
 
-> **Last updated:** 2026-05-02 (Day 6 — pre-kickoff snapshot)
+> ✅ **CLOSED 2026-05-13** — 52 PRs / 6 calendar days / ~3.6 working days. Tag `m3-closed-2026-05-13` at SHA `a98797b`. See `docs/milestones/m3-close-report.md`.
+
+> **Last updated:** 2026-05-13 (Day 17 — M3 close ceremony)
 > **Authority:** Summary view. Binding spec:
-> `../../../QA Nexus/PM1/PM1_milestone/M3/Milestone_M3_Test_Cases_AI.md` (v1.0 with v8.1 banner).
+> `../../../QA Nexus/PM1/PM1_milestone/M3/Milestone_M3_Test_Cases_AI_v2.md` (v2, supersedes v1).
 
 ---
 

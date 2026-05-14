@@ -17,135 +17,66 @@ During F19 design corrections, three canonical dark-ink hex values (`#022C1F` pa
 
 ---
 
-## [2026-05-11] (bi) P2 — Update auth-flow specs + integration docs to assert "Resend" not "nodemailer"
+## [2026-05-13] (bn) P3 — F08 Home user-pill stub-data wiring
 
-**Filed:** Day-16 alongside ADR-018 (EmailService Resend migration PR).
+F08 Home user-pill currently shows seeded `Kishor K.` (QA Engineer canon) instead of authenticated user. Stub-data placeholder from M3 scaffolding never wired to `authClient.getSession()`.
 
-**Symptom (latent):** `apps/api/docs/integrations/betterauth-magic-link.md` (and any other auth-flow / invitation / password-reset spec doc) still references the nodemailer/Gmail SMTP delivery contract per ADR-008. The contract sentence in the spec talks about "nodemailer.sendMail()" and the 9 SMTP env vars. None of this is wrong as audit history but it is stale as forward-looking spec — a fresh engineer reading the integration doc will reach for nodemailer mocks instead of Resend mocks when authoring new tests.
+**Fix:** Replace stub render in F08 with `useSession()` hook from BetterAuth client; render `{session.user.name}` + role badge from `users.role` join.
 
-**Fix scope:** ~30 min. Sweep:
-
-- `apps/api/docs/integrations/betterauth-magic-link.md` — replace "nodemailer" → "Resend SDK" in the delivery-contract sentence; replace "SMTP*\*" env vars → "RESEND*\*" in the prerequisites section; link forward to ADR-018.
-- `apps/api/docs/integrations/betterauth-invitations.md` (if it exists / if equivalent invitation spec exists) — same sweep.
-- Any password-reset / onboarding flow spec with email-delivery wording — same sweep.
-- Confirm `docs/SECURITY.md` does NOT reference SMTP-specific rotation links (it currently lists provider rotation links — `RESEND_API_KEY` rotation link belongs there now; `SMTP_PASSWORD` rotation link is dead).
-- `docs/parallel-work/day-3-prompts.md` — historical; either retain as audit history or add a one-line "(superseded by ADR-018)" stub at the top of the email section.
-
-**Not in scope:**
-
-- ADR-008 itself (already marked SUPERSEDED in this PR).
-- Test files (already rewritten in this PR).
-- CHANGELOG (this PR's entry covers it).
-
-**Owner:** BE+1.
-**Severity:** P2 — no functional impact; spec drift only. Should land within ~1 sprint of ADR-018 to keep newcomer onboarding clean.
-**Effort:** S (~30 min, no code).
-
-**Cross-references:**
-
-- ADR-018 (`docs/architecture/adr-018-email-provider-migration-resend.md`)
-- ADR-008 (`docs/architecture/adr-008-email-service-gmail-smtp.md`) — SUPERSEDED header
-- `apps/api/src/email/email.service.ts` (the implementation)
-- this followup → `(bg)` (domain verify) and `(bh)` (env-var cleanup)
+**Owner:** FE+1 during M5 polish pass.
+**Trigger:** M5 hardening sprint.
+**ETA:** S (~30 min).
 
 ---
 
-## [2026-05-11] (bh) P2 — Remove deprecated `SMTP_*` env vars from Render staging + production after ADR-018 migration · ⚠️ FILE-SIDE CLOSED 2026-05-13 (Day-17); Render-side env removal still PENDING with Yogesh
+## [2026-05-13] (bm) P2 — Audit ALL existing M1-M3 React ports against `_DESIGN_RULES.md` 17 rules
 
-**Status update (2026-05-13, Day-17):** The three file-side cleanup items originally enumerated in this followup were all completed inside PR #128 (the ADR-018 migration itself) — verified clean on Day-17 via grep sweep prior to opening a `(bh)` docs-cleanup PR. Specifically:
+`_DESIGN_RULES.md` was imported via #134 (Day-17) but FE+1 was porting M1+M2+M3 frames for weeks without this binding spec. Retroactive audit expected to surface silent token-fallback breaks, missing hover states, ink-token gaps, etc. (See `(bl)` for ink tokens specifically.)
 
-- `apps/api/.env.example` — no SMTP\_\* references remain (only `RESEND_API_KEY` line). ✅
-- `apps/web/.env.example` — never had SMTP\_\* (FE doesn't consume). ✅
-- Root `.env.example` — already migrated to `RESEND_API_KEY` + `RESEND_FROM_EMAIL`. ✅
-- `docs/deploy/render-runbook.md` Step 3 env-var table — already swapped (PR #128 did this). ✅
-- `docs/architecture/adr-008-email-service-gmail-smtp.md` — already has `**Status:** SUPERSEDED by [ADR-018]` notice + link-forward block. ✅
+**Method:** Apply Hard Rule 16 canonical-first workflow to each shipped M1-M3 React port (F06, F07, F08, F09, F12, F13, F14, F14m1-m3, F15, F16a-c, F19, F27, F28). Build diff table per page. Fix root-cause token gaps.
 
-The **two intentionally-retained references** (per ADR-018 §4 rollback-safety window) are NOT in scope of this closure — they remain until the rollback window expires (~1 sprint):
-
-- `apps/api/src/email/email.service.ts` lines 116-122 — boot-time `if (process.env.SMTP_HOST || process.env.SMTP_USER)` warning detection block. Costs one boolean check per boot; surfaces operator hint pointing back here.
-- `packages/shared/src/schemas/smtp-env.ts` — entire `SmtpEnv` Zod schema + `parseSmtpEnv()` function. Unused at runtime (no import of `parseSmtpEnv` anywhere after PR #128). Kept for rollback safety.
-
-**Open piece — Yogesh's operator task (the actual original blocker):** Remove the 9 `SMTP_*` env vars from Render dashboard for both `qa-nexus-api` (production) AND `qa-nexus-api-staging`. The boot-detection warning in `email.service.ts` will keep firing on every redeploy until these env vars are gone. Steps preserved below for operator reference.
-
-**Filed:** Day-16 alongside ADR-018 (EmailService Resend migration PR).
-
-**Original symptom (preserved for audit):** ADR-018 removes the 9 `SMTP_*` env vars from EmailService consumption (replaced by `RESEND_API_KEY` + 4 optional `RESEND_*` vars). This PR is intentionally additive on the env surface (rollback safety: redeploying the prior commit just works without re-entering 9 secrets). On boot, EmailService now logs a warning when it detects `SMTP_HOST` or `SMTP_USER` is still set — operator hint pointing back to this followup.
-
-**Fix scope:** ~5 min total operator action via Render dashboard.
-
-For both `qa-nexus-api` (production) AND `qa-nexus-api-staging`:
-
-1. Navigate to Render dashboard → service → Environment.
-2. Delete the following 9 env vars:
-   - `SMTP_HOST`
-   - `SMTP_PORT`
-   - `SMTP_SECURE`
-   - `SMTP_USER`
-   - `SMTP_PASSWORD` (Render secret — also rotate the underlying Gmail App Password in Google account afterwards, since the value is no longer needed and should not linger)
-   - `SMTP_FROM_NAME`
-   - `SMTP_FROM_EMAIL`
-   - `SMTP_REPLY_TO`
-   - `SMTP_BCC_EMAIL`
-3. Save → Render auto-redeploys (~2 min).
-4. Confirm boot log no longer shows the "SMTP\_\* env vars detected but unused" warning.
-
-**Code-side cleanup (deferred ~1 sprint for rollback window):**
-
-- `packages/shared/src/schemas/smtp-env.ts` — delete file.
-- `packages/shared/src/index.ts` — remove `export * from './schemas/smtp-env'`.
-- `apps/api/src/email/email.service.ts` — remove the `SMTP_*` warning detection block.
-- `pnpm remove nodemailer @types/nodemailer -F @qa-nexus/api` (confirm via `pnpm why nodemailer`).
-- ADR-018 §4 update: mark this followup CLOSED + record cleanup commit hash.
-
-**Why deferred:** The warning detection adds zero runtime cost (one `if` per boot) and the schema file in `packages/shared` is unused at runtime (no import of `parseSmtpEnv` anywhere after this PR). Keeping them around for ~1 sprint = trivial rollback if any unexpected regression surfaces post-Day-16. Cleanup PR can be a 5-line diff once ADR-018 has soaked.
-
-**Owner:** Yogesh (operator action) + BE+1 (code cleanup PR).
-**Severity:** P2 — no functional impact; tech-debt + secret hygiene.
-**Effort:** S (5min ops + 30min code cleanup, separated).
-
-**Cross-references:**
-
-- ADR-018 §4 ("Operator-side changes deferred to followups")
-- `apps/api/src/email/email.service.ts` (warn-on-detection block)
-- `packages/shared/src/schemas/smtp-env.ts` (file to delete in cleanup PR)
+**Owner:** FE+1 (multi-day audit).
+**Trigger:** M4 close cushion if available, else M5 hardening.
+**ETA:** M (~2-3 days for full audit).
 
 ---
 
-## [2026-05-11] (bg) P1 — Verify `qanexus.iksula.com` domain in Resend dashboard for branded From-address
+## [2026-05-13] (bo) P1 — Pre-push prod-boot smoke + request-level smoke gate
 
-**Filed:** Day-16 alongside ADR-018 (EmailService Resend migration PR).
+Pre-push gate currently runs `pnpm build` (catches compile errors) but not request-level smoke. The #138 P0 prod crash (`z.ipv4` TypeError in BetterAuth handler) passed pre-push compile but crashed on first auth request post-deploy. Boot smoke would also miss it (the crash happens in request handler, not at app boot).
 
-**Symptom:** Post-ADR-018, EmailService runs in REAL mode using `RESEND_FROM_EMAIL=onboarding@resend.dev` — Resend's sandbox sender. Pilot users see `From: "QA Nexus" <onboarding@resend.dev>` on every magic-link / invitation / password-reset email. Acceptable for the internal pilot (recipients are colleagues), unacceptable for any branded touch + risks Iksula spam-filter heuristics flagging the unfamiliar sender on the iksula.com mail server.
+**Fix:** Add a request-level pre-push step:
 
-**Fix scope:** ~1 hr (Cloudflare DNS round-trip + Resend dashboard click).
+1. Boot app on ephemeral port (e.g., 4001) with `NODE_ENV=test`
+2. `curl -X POST http://localhost:4001/auth/sign-in/magic-link -H 'Content-Type: application/json' -d '{"email":"smoke@test.local"}'`
+3. Expect 200 (success) or 4xx (controlled rejection) — fail pre-push on 500/non-response
+4. Tear down app
 
-1. **Decide subdomain.** Recommended: `qanexus.iksula.com` (mirrors the API + FE alias prefix). Alternative: bare `iksula.com` (broader; would need IT sign-off because it touches the corporate mail-domain reputation).
-2. **Resend dashboard** → Domains → Add Domain → enter `qanexus.iksula.com`.
-3. Resend issues 4 DNS records (MX, SPF/TXT, DKIM/TXT × 2, DMARC/TXT). Copy them.
-4. **Cloudflare DNS** (Cloudflare manages iksula.com — confirm with Yogesh) → DNS → Records → add the 4 records exactly as Resend specifies. Set Proxy status to **DNS only** (no Cloudflare orange cloud — must be DNS-only for mail records).
-5. Wait for DNS propagation (5-15 min typical).
-6. Resend dashboard → Domains → click "Verify" → all 4 records green.
-7. Set Render env var `RESEND_FROM_EMAIL=noreply@qanexus.iksula.com` on both staging + production. Save → auto-redeploy.
-8. Verify EmailService boot log shows `from="QA Nexus" <noreply@qanexus.iksula.com>`.
-9. Send a test magic-link to `yogesh.mohite@iksula.com` — verify From-address is the new branded sender + email lands in inbox (not spam) + Reply-To still routes correctly.
-10. Update ADR-018 §6 acceptance gate result to record the verified From-address.
+**Owner:** BE+1 (pre-push hook script in `apps/api/scripts/`).
+**Trigger:** Day-18 first task in M4 (high priority — would have saved #138's prod-crash recovery cycle).
+**ETA:** M (~45 min — Docker-free ephemeral boot needs careful sequencing).
 
-**Risks / unknowns:**
+---
 
-- IT may require approval to add DNS records to `iksula.com` (even on a subdomain). Yogesh to confirm.
-- DKIM key rotation: Resend rotates ~yearly. The DNS records are stable (they use a delegated CNAME pattern in some Resend tiers), but verify on the Free tier specifically.
-- DMARC policy on the parent `iksula.com` zone may interact (e.g., `p=reject` on the root would block subdomain unless the subdomain's DMARC explicitly inherits).
+## [2026-05-11] (bj) ✅ CLOSED 2026-05-13 — Remove obsolete SMTP\_\* env vars from Render after Resend migration verified
 
-**Owner:** Yogesh (Cloudflare DNS access + IT coord) + BE+1 (Render env update + verify).
-**Severity:** P1 — sandbox sender works for pilot but blocks any external rollout + risks spam-filter friction.
-**Effort:** S–M (1 hr active work, gated on DNS propagation).
+**Closed via PR #133** (chore(docs): mark followup (bh) file-side CLOSED) and Yogesh's Render dashboard action post-Day-17 magic-link end-to-end green confirmation. SMTP\_\* env vars no longer referenced in code post-#128.
 
-**Cross-references:**
+Following PR #128 (EmailService migrated to Resend HTTPS API per ADR-018), the legacy SMTP\_\* env vars on Render are no longer read by the service. Yogesh to manually delete via Render dashboard once Resend delivery is verified end-to-end:
 
-- ADR-018 §3 ("Negative — `onboarding@resend.dev` from-address is unbranded")
-- ADR-018 §4 ("Operator-side changes deferred to followups")
-- ADR-018 §6 ("Acceptance gate" — re-run after this lands)
-- `packages/shared/src/schemas/resend-env.ts` (`RESEND_FROM_EMAIL` field)
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASSWORD`
+- `SMTP_FROM_NAME`
+- `SMTP_FROM_EMAIL`
+- `SMTP_REPLY_TO`
+- `SMTP_BCC_EMAIL`
+
+**Trigger:** post-M3 close, after at least one successful magic-link round-trip verifies Resend delivery.
+**Owner:** Yogesh (Render dashboard action).
+**ETA:** S (~5 min).
 
 ---
 
