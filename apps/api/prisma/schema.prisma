@@ -146,6 +146,10 @@ enum TestResultStatus {
 
 enum JiraAuthMethod {
   oauth_3lo
+  // M4 (Day-18 #144) — Atlassian API token auth, simpler bootstrap path
+  // for the pilot vs full OAuth 3LO. Discriminated by JiraConnection.
+  // authMethod; account_email is REQUIRED in this branch.
+  api_token
 
   @@map("jira_auth_method")
 }
@@ -268,21 +272,24 @@ model User {
   lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz(6)
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  workspace               Workspace              @relation("WorkspaceUsers", fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspacesCreated       Workspace[]            @relation("WorkspaceCreator")
-  projectsCreated         Project[]              @relation("ProjectCreator")
-  projectMemberships      ProjectMember[]
-  invitationsSent         UserInvitation[]       @relation("InvitedBy")
-  requirementsCreated     Requirement[]
-  testCasesCreated        TestCase[]
-  testSuitesOwned         TestSuite[]
-  testRunsTriggered       TestRun[]              @relation("TestRunTriggeredBy")
-  defectsAssigned         Defect[]               @relation("DefectAssignee")
-  kbDocumentsAuthored     KbDocument[]
-  llmProvidersCreated     LlmProvider[]
-  agentAssignmentsCreated AgentModelAssignment[]
-  auditActions            AuditLog[]
+  workspace                       Workspace               @relation("WorkspaceUsers", fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspacesCreated               Workspace[]             @relation("WorkspaceCreator")
+  projectsCreated                 Project[]               @relation("ProjectCreator")
+  projectMemberships              ProjectMember[]
+  invitationsSent                 UserInvitation[]        @relation("InvitedBy")
+  requirementsCreated             Requirement[]
+  testCasesCreated                TestCase[]
+  testSuitesOwned                 TestSuite[]
+  testRunsTriggered               TestRun[]               @relation("TestRunTriggeredBy")
+  defectsAssigned                 Defect[]                @relation("DefectAssignee")
+  kbDocumentsAuthored             KbDocument[]
+  llmProvidersCreated             LlmProvider[]
+  agentAssignmentsCreated         AgentModelAssignment[]
+  auditActions                    AuditLog[]
   testCaseGenerationRunsTriggered TestCaseGenerationRun[] @relation("TestCaseGenerationRunTriggerer")
+  /// M4 (Day-18 #144)
+  evidenceCreated                 Evidence[]              @relation("EvidenceCreator")
+  defectHistoryActions            DefectHistory[]         @relation("DefectHistoryActor")
 
   @@index([workspaceId])
   @@map("users")
@@ -299,16 +306,16 @@ model Project {
   createdBy   String   @map("created_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  creator         User             @relation("ProjectCreator", fields: [createdBy], references: [id])
-  members         ProjectMember[]
-  requirements    Requirement[]
-  testCases       TestCase[]
-  testSuites      TestSuite[]
-  testRuns        TestRun[]
-  jiraConnections JiraConnection[]
-  defects         Defect[]
-  kbDocuments     KbDocument[]
+  workspace              Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator                User                    @relation("ProjectCreator", fields: [createdBy], references: [id])
+  members                ProjectMember[]
+  requirements           Requirement[]
+  testCases              TestCase[]
+  testSuites             TestSuite[]
+  testRuns               TestRun[]
+  jiraConnections        JiraConnection[]
+  defects                Defect[]
+  kbDocuments            KbDocument[]
   testCaseGenerationRuns TestCaseGenerationRun[]
 
   @@unique([workspaceId, key])
@@ -373,10 +380,10 @@ model Requirement {
   createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  creator       User           @relation(fields: [createdBy], references: [id])
-  testCaseLinks TestCaseLink[]
-  jiraIssues    JiraIssue[]    @relation("JiraIssueRequirement")
+  project                Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator                User                    @relation(fields: [createdBy], references: [id])
+  testCaseLinks          TestCaseLink[]
+  jiraIssues             JiraIssue[]             @relation("JiraIssueRequirement")
   testCaseGenerationRuns TestCaseGenerationRun[]
 
   @@unique([projectId, key])
@@ -387,36 +394,36 @@ model Requirement {
 /// TB-007 — test case records (AI-generated or manual).
 /// RLS via project. Has 384-dim vector embedding (HNSW index in raw SQL).
 model TestCase {
-  id               String                       @id @default(uuid()) @db.Uuid
-  projectId        String                       @map("project_id") @db.Uuid
+  id               String                      @id @default(uuid()) @db.Uuid
+  projectId        String                      @map("project_id") @db.Uuid
   key              String
   title            String
-  preconditions    String                       @default("")
-  stepsJson        Json                         @default("[]") @map("steps_json") @db.JsonB
-  expectedResult   String                       @map("expected_result")
+  preconditions    String                      @default("")
+  stepsJson        Json                        @default("[]") @map("steps_json") @db.JsonB
+  expectedResult   String                      @map("expected_result")
   priority         Priority
-  status           TestCaseStatus               @default(ai_draft)
-  confidenceScore  Float?                       @map("confidence_score")
-  aiProvenanceJson Json?                        @map("ai_provenance_json") @db.JsonB
+  status           TestCaseStatus              @default(ai_draft)
+  confidenceScore  Float?                      @map("confidence_score")
+  aiProvenanceJson Json?                       @map("ai_provenance_json") @db.JsonB
   /// M3 TASK BE-01 — AI provenance columns. `format='step'` uses
   /// stepsJson (existing); `format='gherkin'` uses `gherkin` text body.
   /// `generatedByAgent` = 'composer' / 'curator' / null (manual).
   /// `sourceChunkIds` = JSONB array of kb_chunk UUIDs that grounded
   /// the generation (Composer RAG); `rationale` = LLM-rendered "why
   /// this test case" surfaced in F31 review modal.
-  format           String                       @default("step")
+  format           String                      @default("step")
   gherkin          String?
-  generatedByAgent String?                      @map("generated_by_agent")
-  sourceChunkIds   Json?                        @map("source_chunk_ids") @db.JsonB
+  generatedByAgent String?                     @map("generated_by_agent")
+  sourceChunkIds   Json?                       @map("source_chunk_ids") @db.JsonB
   rationale        String?
   /// 384-dim Xenova/bge-small-en-v1.5 vector. HNSW (vector_cosine_ops, m=16,
   /// ef_construction=64) index added in raw SQL migration. Per ADR-003
   /// amendment + ADR-009 (Render Free 512 MB constraint). Migration:
   /// apps/api/prisma/raw/migrations/0002_vector_384_dim.sql (Day-5).
   embedding        Unsupported("vector(384)")?
-  createdBy        String                       @map("created_by") @db.Uuid
-  createdAt        DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy        String                      @map("created_by") @db.Uuid
+  createdAt        DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   creator          User              @relation(fields: [createdBy], references: [id])
@@ -436,30 +443,30 @@ model TestCase {
 /// Lifecycle: row inserted on Composer trigger, status updated as run
 /// progresses through retrieval → generation → user review.
 model TestCaseGenerationRun {
-  id                  String   @id @default(uuid()) @db.Uuid
-  projectId           String   @map("project_id") @db.Uuid
+  id                 String   @id @default(uuid()) @db.Uuid
+  projectId          String   @map("project_id") @db.Uuid
   /// Optional — Composer can be invoked without a specific requirement
   /// (free-form prompt mode). NULL also when a requirement is later
   /// deleted (ON DELETE SET NULL per migration).
-  requirementId       String?  @map("requirement_id") @db.Uuid
-  triggeredBy         String   @map("triggered_by") @db.Uuid
+  requirementId      String?  @map("requirement_id") @db.Uuid
+  triggeredBy        String   @map("triggered_by") @db.Uuid
   /// 'groq' | 'gemini' (CHECK constraint enforces in raw SQL).
-  llmProvider         String   @map("llm_provider")
-  llmModel            String   @map("llm_model")
-  inputTokenCount     Int      @default(0) @map("input_token_count")
-  outputTokenCount    Int      @default(0) @map("output_token_count")
-  chunksRetrieved     Int      @default(0) @map("chunks_retrieved")
-  casesGenerated      Int      @default(0) @map("cases_generated")
+  llmProvider        String   @map("llm_provider")
+  llmModel           String   @map("llm_model")
+  inputTokenCount    Int      @default(0) @map("input_token_count")
+  outputTokenCount   Int      @default(0) @map("output_token_count")
+  chunksRetrieved    Int      @default(0) @map("chunks_retrieved")
+  casesGenerated     Int      @default(0) @map("cases_generated")
   /// NULL until user accepts/rejects in F31 review modal.
-  casesAccepted       Int?     @map("cases_accepted")
+  casesAccepted      Int?     @map("cases_accepted")
   /// NULL until Curator dedupe pass runs (post-generation).
-  casesDedupeFlagged  Int?     @map("cases_dedupe_flagged")
-  durationMs          Int      @map("duration_ms")
+  casesDedupeFlagged Int?     @map("cases_dedupe_flagged")
+  durationMs         Int      @map("duration_ms")
   /// 'success' | 'partial' | 'failed' (CHECK constraint enforces).
-  status              String
+  status             String
   /// Truncated to ~500 chars in app code (mirrors kb_search_failed).
-  errorReason         String?  @map("error_reason")
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  errorReason        String?  @map("error_reason")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   requirement Requirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
@@ -556,9 +563,21 @@ model TestRunResult {
   evidenceUri    String?          @map("evidence_uri")
   failureMessage String?          @map("failure_message")
   stackTrace     String?          @map("stack_trace")
+  /// M4 (Day-18 #144) — what the tester actually saw during execution.
+  /// Free text. Surfaces in F20 Run Results detail panel.
+  actualResult   String?          @map("actual_result")
+  /// M4 (Day-18 #144) — JSONB array of evidence.id UUIDs attached to this
+  /// execution. Denormalized for fast lookup; canonical source is
+  /// evidence.test_run_result_id.
+  evidenceIds    Json             @default("[]") @map("evidence_ids") @db.JsonB
+  /// M4 (Day-18 #144) — when status=blocked, required free-text reason.
+  /// Drives F20 + A4 RCA L1 (environment context). App-layer enforced.
+  blockedReason  String?          @map("blocked_reason")
 
-  run      TestRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
-  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  run      TestRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCase TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  /// M4 (Day-18 #144)
+  evidence Evidence[]
 
   @@index([runId])
   @@index([testCaseId])
@@ -574,14 +593,24 @@ model JiraConnection {
   projectId                  String               @map("project_id") @db.Uuid
   authMethod                 JiraAuthMethod       @default(oauth_3lo) @map("auth_method")
   jiraBaseUrl                String               @map("jira_base_url")
+  /// Holds OAuth access token (oauth_3lo) OR Atlassian API token (api_token),
+  /// distinguished by `authMethod`. AES-GCM ciphertext via crypto.ts (PR #115).
   oauthAccessTokenEncrypted  String               @map("oauth_access_token_encrypted")
   oauthRefreshTokenEncrypted String               @map("oauth_refresh_token_encrypted")
   oauthExpiresAt             DateTime             @map("oauth_expires_at") @db.Timestamptz(6)
   status                     JiraConnectionStatus @default(active)
   lastSyncAt                 DateTime?            @map("last_sync_at") @db.Timestamptz(6)
+  /// M4 (Day-18 #144) — per-integration Jira-status → defect_status map.
+  /// `{}` = use default mapping. Surfaces in F26 admin config.
+  statusMapping              Json                 @default("{}") @map("status_mapping") @db.JsonB
+  /// M4 (Day-18 #144) — REQUIRED when authMethod=api_token; the Atlassian
+  /// account whose API token is in oauth_access_token_encrypted. NULL when
+  /// authMethod=oauth_3lo (BetterAuth tracks user identity instead).
+  accountEmail               String?              @map("account_email")
 
-  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  issues  JiraIssue[]
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues   JiraIssue[]
+  syncLogs JiraSyncLog[]
 
   @@index([projectId])
   @@map("jira_connections")
@@ -625,13 +654,26 @@ model Defect {
   jiraIssueId           String?      @map("jira_issue_id") @db.Uuid
   createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   resolvedAt            DateTime?    @map("resolved_at") @db.Timestamptz(6)
+  /// M4 (Day-18 #144) — free-text component label (e.g. "checkout-flow",
+  /// "payments-gateway"). Drives F21 filter + A4 RCA L3 (recent commits).
+  component             String?
+  /// M4 (Day-18 #144) — stamped on resolved → verified transition.
+  /// Surfaces "time-to-verify" SLA in F25 Executive Dashboard.
+  verifiedAt            DateTime?    @map("verified_at") @db.Timestamptz(6)
+  /// M4 (Day-18 #144) — stamped on verified → closed transition.
+  /// Permanent terminal state; differs from resolved_at (dev-side fix-complete).
+  closedAt              DateTime?    @map("closed_at") @db.Timestamptz(6)
 
-  project             Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  triggeredByRun      TestRun?    @relation("DefectTriggeredByRun", fields: [triggeredByRunId], references: [id], onDelete: SetNull)
-  triggeredByTestCase TestCase?   @relation("DefectTriggeredByTestCase", fields: [triggeredByTestCaseId], references: [id], onDelete: SetNull)
-  assignee            User?       @relation("DefectAssignee", fields: [assigneeId], references: [id])
+  project             Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggeredByRun      TestRun?        @relation("DefectTriggeredByRun", fields: [triggeredByRunId], references: [id], onDelete: SetNull)
+  triggeredByTestCase TestCase?       @relation("DefectTriggeredByTestCase", fields: [triggeredByTestCaseId], references: [id], onDelete: SetNull)
+  assignee            User?           @relation("DefectAssignee", fields: [assigneeId], references: [id])
   rcaReports          RcaReport[]
-  jiraIssues          JiraIssue[] @relation("JiraIssueDefect")
+  jiraIssues          JiraIssue[]     @relation("JiraIssueDefect")
+  /// M4 (Day-18 #144)
+  evidence            Evidence[]
+  history             DefectHistory[]
+  jiraSyncLogs        JiraSyncLog[]
 
   @@unique([projectId, key])
   @@index([projectId])
@@ -652,6 +694,21 @@ model RcaReport {
   topHypothesis       String   @map("top_hypothesis")
   createdByAgentRunId String   @map("created_by_agent_run_id") @db.Uuid
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// M4 (Day-18 #144) — A4 5-layer confidence canon: L1=0.90 / L2=0.80 /
+  /// L3=0.60 / L4=0.50 / L5=0.40 baseline. Runtime A4 computes per-defect
+  /// actuals. CHECK constraint enforces 0.0-1.0 in raw migration SQL.
+  layer1Confidence    Float?   @map("layer1_confidence") @db.DoublePrecision
+  layer2Confidence    Float?   @map("layer2_confidence") @db.DoublePrecision
+  layer3Confidence    Float?   @map("layer3_confidence") @db.DoublePrecision
+  layer4Confidence    Float?   @map("layer4_confidence") @db.DoublePrecision
+  layer5Confidence    Float?   @map("layer5_confidence") @db.DoublePrecision
+  /// M4 (Day-18 #144) — OTel trace_id for the A4 Promise.all parallel
+  /// orchestration. Permits Grafana drill-down from F21 RCA panel.
+  otelTraceId         String?  @map("otel_trace_id")
+  /// M4 (Day-18 #144) — user feedback {"rating":1-5, "correctLayer":1-5|null,
+  /// "comment":text|null, "submittedBy":user.id, "submittedAt":timestamptz}.
+  /// Drives DeepEval golden-set refresh.
+  feedback            Json     @default("{}") @map("feedback") @db.JsonB
 
   defect            Defect   @relation(fields: [defectId], references: [id], onDelete: Cascade)
   createdByAgentRun AgentRun @relation(fields: [createdByAgentRunId], references: [id])
@@ -685,14 +742,14 @@ model KbDocument {
 /// TB-018 — chunked KB content for semantic search.
 /// RLS transitive via parent document. 384-dim vector embedding.
 model KbChunk {
-  id           String                       @id @default(uuid()) @db.Uuid
-  documentId   String                       @map("document_id") @db.Uuid
-  chunkText    String                       @map("chunk_text")
+  id           String                      @id @default(uuid()) @db.Uuid
+  documentId   String                      @map("document_id") @db.Uuid
+  chunkText    String                      @map("chunk_text")
   /// 384-dim Xenova/bge-small-en-v1.5 vector. HNSW index in raw SQL
   /// migration. Per ADR-003 amendment + ADR-009 (Day-5).
   embedding    Unsupported("vector(384)")?
-  chunkIndex   Int                          @map("chunk_index")
-  metadataJson Json                         @default("{}") @map("metadata_json") @db.JsonB
+  chunkIndex   Int                         @map("chunk_index")
+  metadataJson Json                        @default("{}") @map("metadata_json") @db.JsonB
 
   document KbDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
@@ -828,7 +885,7 @@ model AuthUser {
 /// Token is opaque random; cookie name `better-auth.session_token`.
 model AuthSession {
   id        String   @id @default(uuid())
-  userId    String  
+  userId    String
   token     String   @unique
   expiresAt DateTime
   ipAddress String?
@@ -848,7 +905,7 @@ model AuthSession {
 /// BetterAuth's adapter requires the table to exist.
 model AuthAccount {
   id                    String    @id @default(uuid())
-  userId                String   
+  userId                String
   accountId             String
   providerId            String
   accessToken           String?
@@ -899,10 +956,129 @@ model AuditLog {
   thisHash    String   @map("this_hash") @db.Char(64)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  actor     User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  actor         User?           @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  /// M4 (Day-18 #144) — back-relations from rows that pin themselves to an
+  /// audit chain entry via audit_log_id FK. SetNull keeps the audit row
+  /// immutable on cascade.
+  evidence      Evidence[]
+  defectHistory DefectHistory[]
+  jiraSyncLogs  JiraSyncLog[]
 
   @@unique([workspaceId, createdAt])
   @@index([entityType, entityId])
   @@map("audit_log")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// M4 (Day-18 #144) — Runs / Defects / Jira tables.
+// Schema delta: apps/api/prisma/raw/migrations/0004_m4_runs_defects_jira.sql
+// Spec: PM1_ERD v2.1 §3.6 / §3.7 / §3.9 / §3.10 / §7
+// ────────────────────────────────────────────────────────────────────────────
+
+/// M4 — screenshots / HARs / logs / videos attached to a test_run_result OR
+/// a defect (XOR via DB CHECK constraint). r2_path is the canonical R2 key;
+/// signed_url_expires_at is the lifetime of the currently-issued presigned
+/// URL (re-issue if expired).
+model Evidence {
+  id                 String    @id @default(uuid()) @db.Uuid
+  testRunResultId    String?   @map("test_run_result_id") @db.Uuid
+  defectId           String?   @map("defect_id") @db.Uuid
+  r2Path             String    @map("r2_path")
+  signedUrlExpiresAt DateTime? @map("signed_url_expires_at") @db.Timestamptz(6)
+  contentType        String?   @map("content_type")
+  sizeBytes          BigInt?   @map("size_bytes")
+  filename           String?
+  createdBy          String?   @map("created_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  auditLogId         String?   @map("audit_log_id") @db.Uuid
+
+  testRunResult TestRunResult? @relation(fields: [testRunResultId], references: [id], onDelete: Cascade)
+  defect        Defect?        @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  creator       User?          @relation("EvidenceCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  auditLog      AuditLog?      @relation(fields: [auditLogId], references: [id], onDelete: SetNull)
+
+  @@index([testRunResultId])
+  @@index([defectId])
+  @@index([createdBy])
+  @@map("evidence")
+}
+
+/// M4 — defect state-transition audit trail. One row per status change.
+/// from_status=NULL on the initial Create row. transitioned_at + audit_log_id
+/// make this a tamper-evident chain via the audit_log HMAC reference.
+model DefectHistory {
+  id             String        @id @default(uuid()) @db.Uuid
+  defectId       String        @map("defect_id") @db.Uuid
+  fromStatus     DefectStatus? @map("from_status")
+  toStatus       DefectStatus  @map("to_status")
+  actorId        String?       @map("actor_id") @db.Uuid
+  comment        String?
+  transitionedAt DateTime      @default(now()) @map("transitioned_at") @db.Timestamptz(6)
+  auditLogId     String?       @map("audit_log_id") @db.Uuid
+
+  defect   Defect    @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  actor    User?     @relation("DefectHistoryActor", fields: [actorId], references: [id], onDelete: SetNull)
+  auditLog AuditLog? @relation(fields: [auditLogId], references: [id], onDelete: SetNull)
+
+  @@index([defectId, transitionedAt])
+  @@index([actorId])
+  @@map("defect_history")
+}
+
+/// M4 — inbound Jira webhook event log. UNIQUE on event_id for idempotent
+/// dedupe (Jira retries on 5xx). signature_valid=false rows kept for
+/// forensics. Process via processed=false partial index.
+///
+/// CRITICAL — Day-20 implementation note: Atlassian Jira webhooks compute
+/// HMAC-SHA256 on RAW body bytes. Use a dedicated raw-body middleware on
+/// /api/jira/webhook ONLY (rest of API keeps JSON parsing).
+model JiraWebhookEvent {
+  id              String    @id @default(uuid()) @db.Uuid
+  eventId         String    @unique @map("event_id")
+  jiraIssueKey    String?   @map("jira_issue_key")
+  eventType       String    @map("event_type")
+  payload         Json      @db.JsonB
+  signatureValid  Boolean   @map("signature_valid")
+  processed       Boolean   @default(false)
+  processingError String?   @map("processing_error")
+  receivedAt      DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt     DateTime? @map("processed_at") @db.Timestamptz(6)
+
+  @@index([receivedAt])
+  @@index([jiraIssueKey])
+  @@map("jira_webhook_events")
+}
+
+/// M4 — every Jira API call (outbound) or webhook processing (inbound).
+/// payload_hash for dedupe + diff detection. retried + retryOf form a
+/// retry chain. F28 Audit surfaces failed entries.
+model JiraSyncLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  jiraConnectionId String?  @map("jira_connection_id") @db.Uuid
+  /// 'outbound' | 'inbound' (DB CHECK enforces).
+  direction        String
+  /// 'create_issue' | 'update_status' | 'fetch_issue' | 'process_webhook' | ...
+  action           String
+  defectId         String?  @map("defect_id") @db.Uuid
+  jiraIssueKey     String?  @map("jira_issue_key")
+  payloadHash      String   @map("payload_hash") @db.Char(64)
+  httpStatus       Int?     @map("http_status")
+  success          Boolean
+  errorMessage     String?  @map("error_message")
+  retried          Boolean  @default(false)
+  retryOf          String?  @map("retry_of") @db.Uuid
+  occurredAt       DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  auditLogId       String?  @map("audit_log_id") @db.Uuid
+
+  jiraConnection JiraConnection? @relation(fields: [jiraConnectionId], references: [id], onDelete: SetNull)
+  defect         Defect?         @relation(fields: [defectId], references: [id], onDelete: SetNull)
+  retryParent    JiraSyncLog?    @relation("JiraSyncLogRetryChain", fields: [retryOf], references: [id], onDelete: SetNull)
+  retries        JiraSyncLog[]   @relation("JiraSyncLogRetryChain")
+  auditLog       AuditLog?       @relation(fields: [auditLogId], references: [id], onDelete: SetNull)
+
+  @@index([jiraConnectionId])
+  @@index([defectId])
+  @@index([occurredAt])
+  @@map("jira_sync_logs")
 }

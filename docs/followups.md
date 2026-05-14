@@ -49,6 +49,40 @@ Jira webhook posts JSON to our `/webhooks/jira` endpoint with an `X-Hub-Signatur
 
 ---
 
+## [2026-05-14] (br) P2 — UptimeRobot interval 5 min → 4 min on `/health` (after PR #147 lands)
+
+**Filed:** Day-18 alongside PR #146 (HealthController 2-tier refactor — `/health` no longer queries DB).
+
+**Symptom:** Render Free Hobby spins down after **15 minutes idle**. UptimeRobot's free plan defaults to a **5-minute keep-alive interval**, which barely keeps the dyno warm — the 10-min headroom is fine steady-state, but a single missed ping (retry, network blip) can push past 15 min and trigger a cold-start. Render cold-start on PM1 = ~38 s (NestJS init + embedding model load).
+
+Pre-#146 `/health` queried Postgres every 5 min → kept Neon's compute warm. Now that `/health` is DB-free, only the HTTP ping itself wakes the API process — so the interval matters more.
+
+**Fix scope:** ~30 sec operator action via UptimeRobot dashboard.
+
+1. UptimeRobot dashboard → `qa-nexus-api` HTTP monitor → Edit.
+2. Change `Monitoring Interval` from `5 minutes` → `4 minutes`.
+3. Save. **Verify free plan allows 4-min** (UptimeRobot free has historically been 5-min minimum; if blocked, sister-monitor via Better Stack free uptime as belt-and-suspenders).
+
+**Effect:** ping cadence 4 min < Render 15-min idle threshold with headroom (4-min ping + 1 dropped ping = 8 min). Combined with PR #146's DB-free `/health`, the API stays warm but Neon compute auto-scales to zero during the 9PM-9AM idle window.
+
+**Verification (~24h after change):**
+
+- Neon dashboard → Compute usage → daily CU-hr rate dropped from ~5.77 (pre-#146) → target ~2.
+- Render dashboard → service → Activity → zero cold-starts during the 12hr operating window.
+- UptimeRobot → no missed pings + 100% uptime maintained.
+
+**Owner:** Yogesh (operator action; UptimeRobot dashboard).
+**Severity:** P2 — keep-alive works at 5-min; the 4-min change is headroom hardening.
+**Effort:** S (30 sec; potentially blocked by UptimeRobot free-plan interval minimum — investigate before deciding).
+
+**Cross-references:**
+
+- PR #146 — `/health` 2-tier refactor (LIGHT for keep-alive, `/health/deep` for operator on-demand)
+- Render docs — Free Hobby spin-down after 15 min idle
+- UptimeRobot pricing — confirm free plan supports 4-min interval
+
+---
+
 ## [2026-05-13] (bk) P2 — Retrofit action-button inks into 01_SYSTEM.md
 
 **Filed:** 2026-05-13 (Day-17, during M3 close cycle)
