@@ -183,6 +183,29 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Policy stack:** Rules 3+12+13+14+15+16 above + **Rule 17 (canned-data extraction)**. Together: structure + responsiveness + visual gate + shell + v2-source + canonical-first + verbatim-extraction. Each rule closes a different drift class; Rule 17 closes the stub-data-invention class specifically.
 
+18. **All frame ports MUST execute via `.claude/skills/frame-port/` (mandatory).** Codified Day-18 PM 2026-05-14 after PR #145 was closed (NOT merged) as the first Hard Rule 17 violation precedent. The skill orchestrates a 7-step workflow (1. extract-canned-data, 2. extract-spec, 3. Yogesh approves spec, 4. scaffold TSX from spec+canned-data NOT from HTML, 5. diff-probe, 6. Rule 13 visual gate ONLY after diff-probe clean, 7. commit + PR). Skipping the skill workflow = visual gate FAIL regardless of output quality.
+
+    **Why:** Rules 12-17 each catch a specific drift class, but they require human discipline. Rule 18 makes the workflow executable + auditable — `diff-probe.mjs` returns exit 1 if any section is missing or pixel diff >5% at any of 320/768/1024/1440, so FE+1 cannot accidentally submit a drifted port to Rule 13 review.
+
+    **Workflow tools (all in `.claude/skills/frame-port/`):**
+    - `SKILL.md` — orchestrator instructions; triggers on "port frame Fxx" / "build Fxx React port" / similar
+    - `extract-spec.mjs` — Step 2 tool: HTML → spec.json (section tree + tokens + assets + canned-data key candidates). Uses jsdom.
+    - `diff-probe.mjs` — Step 5 tool: Playwright + sharp diff at 320/768/1024/1440. Exit 0 = clean; Exit 1 = drift (visual gate blocked).
+    - `README.md` — usage doc for FE+1's terminal.
+
+    **The close-and-redo precedent:** If `diff-probe.mjs` shows a section was implemented with invented data (e.g. cluster titles not in `canned-data.ts`), the PR is CLOSED, NOT patched. FE+1 returns to Step 4 with the canonical references and re-scaffolds. This rule exists because incremental patching of drift symptoms historically compounds — by the time the third "minor" patch lands, the diff vs canonical is too large to reconcile in one pass. The close-and-redo loop runs at most once per frame because Step 5 catches drift early.
+
+    **Forbidden in Step 4:**
+    - Opening the HTML in an editor and reading it to write TSX (this is what produced the #145 invention drift)
+    - Inventing class names not in `spec.json.tokens_used` or `spec.json.sections[].classes`
+    - Inventing strings not in `canned-data.ts`
+    - "Improving" the canonical example data
+    - Patching diff-probe symptoms without understanding root cause
+
+    **Cross-references:** Rule 12 (RWD) · Rule 13 (visual gate) · Rule 14 (shell parity) · Rule 15 (v2 HTML source-of-truth) · Rule 16 (canonical-first workflow) · Rule 17 (canned-data extraction) · `.claude/skills/frame-port/SKILL.md` · PR #145 → #150 precedent · M4 v2 plan §7.5 progress log entries.
+
+    **Policy stack:** Rules 3+12+13+14+15+16+17 above + **Rule 18 (skill-mandatory workflow)**. Together: structure + responsiveness + visual gate + shell + v2-source + canonical-first + verbatim-extraction + automated-enforcement. Rule 18 is the layer that makes the previous seven rules executable, not just aspirational. Each rule closes a different drift class; Rule 18 closes the discipline-drift class (humans forgetting to run the checks).
+
 ## Locked tech stack (PM1)
 
 **Frontend:** Next.js 15 (App Router) · React 19 · Tailwind CSS 4 (CSS-first config) · shadcn/ui · Sonner · lucide-react · react-hook-form · Zod · Framer Motion · TanStack Query v5 · TipTap
