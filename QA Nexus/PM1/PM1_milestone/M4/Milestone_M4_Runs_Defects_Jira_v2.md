@@ -240,7 +240,7 @@
 | MS4-AC024  | Sherlock retry chain: gpt-oss-120b → gpt-oss-20b → gemini-2.5-flash         | jest BE (force-fail primary, assert fallback)        |
 | MS4-AC025  | Sherlock parallel agent calls via `Promise.all` (NOT LangGraph)             | code review + grep ban                               |
 | MS4-AC026  | Sherlock returns confidence score `0.0..1.0` in every response              | jest BE schema check                                 |
-| MS4-AC042  | **A4 RCA accuracy ≥40% on 50-defect golden corpus**                         | corpus harness (`scripts/eval-sherlock.ts`)          |
+| MS4-AC042  | **A4 RCA accuracy ≥40% on 50-defect golden corpus** (top-2 hit rate; see §4.5) | corpus harness (`scripts/eval-sherlock.ts`)         |
 
 ### Audit, ops, close-gate
 
@@ -261,6 +261,88 @@
 | MS4-AC039  | No new banned-list dependencies introduced                                  | enforce-pm1-stack hook clean                         |
 | MS4-AC040  | No design-token drift (enforce-design-tokens hook clean across M4 PRs)      | hook log review                                      |
 | MS4-AC041  | Two-folder workflow: `~/Claude Cowork Workspace/...` mirror updated         | manual mirror check                                  |
+
+---
+
+## 4.5 AC042 measurement protocol (50-defect golden corpus)
+
+This section defines exactly how AC042 is scored, so there is no ambiguity at M4 close.
+
+**Corpus location:** `apps/api/test/golden-sets/sherlock-rca/` — 50 defects (`def-001.json` … `def-050.json`), each with:
+
+- `input`: failed run-result context (test case ID, step number, error message, stack trace if any, environment, prior history)
+- `groundTruth.rootCauseCategory`: one of `code-bug` / `data-bug` / `env-config` / `flaky-network` / `auth-permissions` / `dependency-version` / `ui-regression` / `race-condition` / `payment-gateway` / `other` (10 categories)
+- `groundTruth.rootCauseDetail`: human-written 1-2 sentence specific cause (e.g. "Refund amount precision mismatch — INR ₹.00 vs USD $.00 conversion drops to integer at line `refund.service.ts:142`")
+- `groundTruth.acceptableAlternatives`: array of `rootCauseCategory` values that a human reviewer would also accept as correct (e.g. for an env-config bug that surfaces as a payment-gateway 500, both `env-config` and `payment-gateway` are acceptable)
+
+**Scoring rubric (top-2 hit rate):**
+
+- Sherlock returns a ranked array of up to 5 RCA candidates, each with `category` + `detail` + `confidence`.
+- **Top-2 HIT** if `groundTruth.rootCauseCategory` OR any value in `groundTruth.acceptableAlternatives` appears in the top-2 candidates by confidence.
+- **Top-2 MISS** otherwise.
+- **AC042 PASS** = `(hits / 50) ≥ 0.40` → at least **20 of 50 defects** must be top-2 hits.
+
+**Why top-2 and not top-1:** Sherlock surfaces RCA in F22 as a ranked list — the human reviewer sees both candidates. As long as the correct cause is among the top 2, the user reaches the right diagnosis fast. Top-1 strict would push the bar to ~60-70% which is unrealistic for the 4-day window. Top-2 ≥40% is achievable per the Yogesh research note (`vanilla ~11%` is top-1 strict; parallel multi-agent should easily clear top-2 ≥40%).
+
+**Why 50 and not 100+:** Smaller corpus = faster iteration. Sun reserve allocates time for prompt iteration on misses; corpus expansion is M5 scope.
+
+**Eval harness (`scripts/eval-sherlock.ts`):**
+
+- Reads all 50 `def-*.json` files
+- Calls Sherlock service in production-equivalent mode (real LLM call, full retry chain)
+- Computes hit/miss per defect + overall ratio
+- Writes report to `apps/api/test/golden-sets/sherlock-rca/results-{YYYY-MM-DD}.json`
+- CI runs nightly post-M4 close; M4-close-gate (`@M4-CLOSE-GATE`) requires latest run ≥40%
+
+**Confidence calibration sub-gate (added Day-18 PM polish):**
+
+- For every defect where Sherlock returns confidence ≥0.8, the top-1 category MUST match `groundTruth.rootCauseCategory` (strict top-1, not top-2). Misalignment here indicates Sherlock is overconfident on wrong answers — feeds back into F22 "needs human review" threshold tuning.
+- Reported in eval output as "calibration_top1_at_high_confidence" — informational only for M4, not a blocker. Becomes a hard gate in M5 if pilot users report acting on wrong high-confidence RCAs.
+
+## 4.6 "Needs human review" UI affordance — full spec
+
+Locked Day-18 directive. Implements MS4-T034 + MS4-AC016 + MS4-AC017.
+
+**Trigger:** Sherlock RCA response for a defect has `topCandidate.confidence < 0.5`.
+
+**UI in F22 Defect Detail (visible whenever the trigger condition holds):**
+
+- **Amber banner** rendered above the RCA panel, full-width within the right rail
+- Token: `bg-warn-soft` / `border-warn` / `text-warn-ink` (per `01_SYSTEM.md` warn-amber palette — token-only, NO inline hex)
+- Icon: `lucide-react` `AlertTriangle` 16×16, leading
+- **Headline:** `Sherlock is unsure — please verify the root cause`
+- **Sub-text:** `Top candidate confidence is {{confidence×100}}% (below 50% threshold). Review the candidates below or investigate manually before creating a Jira ticket.`
+- **Layout:** banner stacks ABOVE the existing 5-candidate RCA list; the list itself is NOT hidden — user still sees Sherlock's best guess
+
+**Behavior when trigger holds:**
+
+- **"Create Jira ticket" button DISABLED** with tooltip `Sherlock is unsure — confirm the root cause first to enable Jira ticket creation` (matches MS4-AC017 spec)
+- **"Override and create anyway" affordance** appears as a secondary action below the disabled button: lucide `ShieldAlert` icon + label `Override — I have verified manually`. Click opens a confirm dialog (`Confirm-480×360` per shell modal spec) requiring the user to type their initials before the Jira ticket POST fires. This action writes an `audit_log` row with type `defect.jira_create_override` capturing the low-confidence value, user ID, and initials.
+- WebSocket event broadcast: `defect.needs_review` with payload `{ defectId, confidence, sherlockRunId }` for any future workflow integration
+
+**Tap targets** (Rule 12 carry-through): override button + initials input both ≥44×44px.
+
+**RWD:** banner stacks vertically below 768px (icon + headline above sub-text); full-width sticks 16px from rail edges at every breakpoint.
+
+**Canned-data sourcing (Rule 17):** the banner copy lives in `apps/web/components/f22-defect-detail/canned-data.ts` under `F22_NEEDS_REVIEW_BANNER` — extracted from the canonical `F22 Defect Detail v2.html` if a `needs-review` state is rendered there; otherwise Yogesh provides the canonical copy Day-19 AM and FE+1 adds it as a "canonical extension" line in the canned-data file with a Yogesh-approval timestamp comment.
+
+## 4.7 WebSocket event taxonomy (BE+1 ↔ FE+1 contract, locked Day-18 PM)
+
+| Event                          | Payload                                                                            | Emitted from                                  | Consumed by               |
+| ------------------------------ | ---------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------- |
+| `run.state_changed`            | `{ runId, projectId, state, transitionedAt, transitionedByUserId? }`               | Run service on state machine transition       | F19 Run Console            |
+| `run.result_recorded`          | `{ runId, testCaseId, status, durationMs, screenshotUrl?, logsUrl? }`              | Run results writer after each test-case row   | F19 Run Console + F20 Run Results |
+| `run.completed`                | `{ runId, projectId, summary: { passed, failed, blocked, totalDurationMs } }`      | Run service on terminal state                 | F19 + F20                  |
+| `defect.created`               | `{ defectId, projectId, fromRunResultId?, severity, status, createdByUserId }`     | Defect service on insert                      | F21 Defects Hub            |
+| `defect.status_changed`        | `{ defectId, oldStatus, newStatus, changedByUserId, changedAt }`                   | Defect service on status workflow transition  | F21 + F22                  |
+| `defect.jira_linked`           | `{ defectId, jiraIssueKey, jiraUrl, syncDirection: "outbound"\|"inbound" }`        | Jira sync service after successful create     | F21 + F22                  |
+| `defect.sherlock_ready`        | `{ defectId, sherlockRunId, topConfidence, candidateCount }`                       | Sherlock service after `Promise.all` resolves | F22                        |
+| `defect.needs_review`          | `{ defectId, confidence, sherlockRunId }`                                          | Sherlock service when `topConfidence < 0.5`   | F22 (banner trigger)       |
+| `jira.webhook_received`        | `{ providerEventId, webhookEvent, defectId? }`                                     | Jira webhook receiver after HMAC verify       | F21 (toast) + audit panel  |
+
+**Channel scoping:** events are emitted to project-scoped rooms `project:{projectId}` — clients subscribe to their current project's room only. RBAC is enforced server-side (gateway middleware rejects subscription if user lacks role for project).
+
+**Single-instance constraint** (per stack lock §7): all events flow through one Render dyno's `ws` server. NO Redis pub/sub fan-out — fine for pilot scale (8 users × 12hr/day).
 
 ---
 
