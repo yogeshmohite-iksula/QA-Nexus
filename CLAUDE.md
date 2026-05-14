@@ -89,6 +89,10 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Policy stack:** Rule 3 (locked frames) → Rule 12 (RWD) → Rule 13 (visual gate) → **Rule 14 (shell parity + scrollbar + utility-bar canon)**. Each tightens the previous; Rule 14 is the layer that catches issues even green CI + clean RWD + perfect screenshots can miss.
 
+    **Day-17 (2026-05-13) amendment:** AdminShell canonical reference is F19's current React implementation, NOT the F15 v2 HTML for shell internals. Lucide-react icons retained over HTML's custom inline SVG paths. F19's React DOM is the diff-probe target for all future authenticated page ports (F18, F20, F21, F22, F23, F25, F26, F28 still pending). HTML in `PM1_UI_v2/Redesign Frame by claude design/` remains canonical for NON-shell page content per Hard Rule 15.
+
+    **Rationale:** Yogesh's Day-17 Round-4 ruling after F19 visual gate iterations. Lucide is maintained + accessible + uniform across project. Visual variance from custom HTML SVGs is acceptable.
+
 15. **FE agents must port from the v2 HTML frames in `PM1_UI_v2/Redesign Frame by claude design/`; design changes require Yogesh approval.** Established 2026-05-08 after the full v2 redesign cycle (12 frames + canonical demo + design rules) shipped. Binding requirements:
 
     **Source of truth for all React ports:**
@@ -131,6 +135,54 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Policy stack:** Rule 3 (locked frames) → Rule 12 (RWD) → Rule 13 (visual gate) → Rule 14 (shell parity) → **Rule 15 (v2 HTML frames as port source-of-truth)**. Together these guarantee every React port matches the design system; each rule catches a different class of drift.
 
+16. **Canonical-first port workflow (mandatory).** Before any frame port:
+    (1) Read `PM1_UI_v2/Redesign Frame by claude design/_DESIGN_RULES.md` in full (17 rules)
+    (2) Read the specific v2 HTML for the frame being ported
+    (3) Open v2 HTML in Chrome as `file://`; open React port at localhost in adjacent window
+    (4) Run Playwright diff-probe at multiple viewports (320 / 768 / 1024 / 1440) — capture computed styles for borders, backgrounds, typography, hover states
+    (5) Build diff table BEFORE coding fixes
+    (6) Fix root causes (often `globals.css` token gaps — undefined-token fallback to `currentColor` silently breaks borders)
+    (7) Re-screenshot side-by-side comparison
+    (8) Submit to visual gate only when diff probe shows zero unexpected drift
+
+    Established 2026-05-13 (Day-17) after F19 Round-2/3/4 drift cycles revealed undefined-token fallbacks silently breaking M3 pages. Numbered "16" rather than "15.5" for clean numbering.
+
+    **Cross-references:** Rule 13 (visual gate) · Rule 14 (shell parity + F19 React canonical for shell internals per Day-17 amendment) · Rule 15 (v2 HTML port source-of-truth for non-shell content) · `_DESIGN_RULES.md` 17 rules.
+
+    **Policy stack:** Rules 3+12+13+14+15 above + **Rule 16 (canonical-first workflow)**. Together: discovery before code → diff before fix → fix before screenshot → screenshot before gate. Catches silent-drift class.
+
+17. **Canned-data verbatim extraction (mandatory).** Before writing ANY React component code for a frame port, FE+1 must:
+
+    (1) Run `scripts/extract-canned-data.mjs` against the canonical v2 HTML
+    (2) Output: `apps/web/components/<frame>/canned-data.ts`
+    (3) ALL text content in the React port MUST come from `canned-data.ts`
+    (4) ANY string in a component file that doesn't trace back to the v2 HTML is a Hard Rule 17 violation → visual gate FAIL
+
+    The HTML's example data IS the stub data. No invention permitted.
+
+    **Rationale (Day-17/18 root cause):** F19 / F20 visual gate failures all traced to FE+1 inventing stub data (cluster titles, ticket IDs, error messages, right-rail labels) that didn't match the canonical HTML. Each invention created a "minor" drift that compounded across the screen until the diff became too large to fix in one pass. Extracting verbatim from the HTML eliminates this drift class entirely — the canonical HTML's example data IS the source of truth for stub data, no different from its tokens being the source of truth for styling.
+
+    **Workflow:**
+    - **Step 1 (mandatory first action when starting a port):** `node scripts/extract-canned-data.mjs --frame F22 --html "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F22 Defect Detail v2.html"` → writes `apps/web/components/f22-defect-detail/canned-data.ts`.
+    - **Step 2:** All component files (`*.tsx`) import strings/arrays from `canned-data.ts`. NEVER hardcode user-visible text in a `.tsx` file.
+    - **Step 3 (visual gate):** Reviewer greps every user-visible string in the React PR against `canned-data.ts` and against the source HTML. Any string that doesn't trace back to the HTML → visual gate FAIL.
+
+    **Strings that DO NOT need extraction (whitelist):**
+    - Form field placeholders that are pure type hints (`"example@email.com"`) — these are NOT canonical data
+    - Icon-only buttons with no text label
+    - `data-testid` values
+    - i18n keys (we are not using i18n in M4, but the rule survives the eventual i18n migration unchanged)
+
+    **Forbidden (Rule 17 violation triggers):**
+    - Inventing project names, ticket IDs, defect IDs, user names, error messages, log timestamps, or any user-visible text not in the v2 HTML
+    - "Improving" the canonical example data ("the HTML says 'Refund webhook timeout' but 'Webhook timeout on refund' reads better" → REJECTED)
+    - Hardcoding a string in a `.tsx` file when an equivalent string exists in the HTML (extraction was skipped → violation)
+    - Adding plausible-looking placeholder data that "feels like" Iksula returns data but isn't in the HTML
+
+    **Cross-references:** Rule 13 (visual gate) · Rule 14 (shell parity) · Rule 15 (v2 HTML port source-of-truth) · Rule 16 (canonical-first workflow) · `scripts/extract-canned-data.mjs` (the tool) · Day-17/18 F19/F20 drift cycles (rationale).
+
+    **Policy stack:** Rules 3+12+13+14+15+16 above + **Rule 17 (canned-data extraction)**. Together: structure + responsiveness + visual gate + shell + v2-source + canonical-first + verbatim-extraction. Each rule closes a different drift class; Rule 17 closes the stub-data-invention class specifically.
+
 ## Locked tech stack (PM1)
 
 **Frontend:** Next.js 15 (App Router) · React 19 · Tailwind CSS 4 (CSS-first config) · shadcn/ui · Sonner · lucide-react · react-hook-form · Zod · Framer Motion · TanStack Query v5 · TipTap
@@ -145,7 +197,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 **Embeddings:** BAAI/bge-large-en-v1.5 in-process via `@xenova/transformers` (1024-dim, ~47ms/embed warm). Model selection: see `docs/architecture/adr-003-embedding-model.md`. Qwen3-Embedding-0.6B remains the future target once Xenova ships an ONNX conversion — env var `EMBEDDING_MODEL_ID` enables hot-swap without code change.
 
-**Email:** Resend free
+**Email:** Resend free tier (3,000/mo) via `resend` SDK over HTTPS API (ADR-018, supersedes ADR-008 Gmail SMTP — Render Free blocks outbound SMTP since Sept 2025)
 
 **Hosting:** Cloudflare Pages free (FE) + Render free Hobby (API) + Neon free (DB) + UptimeRobot 5-min keep-alive on `/health`
 

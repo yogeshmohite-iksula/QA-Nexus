@@ -24,6 +24,12 @@ export * from './schemas/llm';
 export * from './schemas/audit';
 export * from './schemas/smtp-env';
 export * from './schemas/resend-env';
+// M4 (Day-18 #144) — namespaced to avoid collision with legacy
+// DefectSchema / TestRunSchema / RcaReportSchema / JiraConnection types
+// at the package root. Import as: `import { m4 } from '@qa-nexus/shared'`
+// then `m4.DefectSchema`, `m4.EvidenceSchema`, `m4.JiraIntegrationSchema`,
+// etc. M5 retro will dedupe the legacy variants.
+export * as m4 from './schemas/m4';
 export * from './auth/role.enum';
 export * from './storage';
 // UI-facing seed/display types — extends the BE schemas with denormalized

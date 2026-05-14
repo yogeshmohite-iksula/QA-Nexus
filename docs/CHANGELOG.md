@@ -114,6 +114,139 @@ updates land here at the end of every working day.
 - PR #135 — Run Console (F19) Pattern A established globals.css tokens this PR depends on
 - Followup `(bk)` — formal `--ai-accent` + tone alpha addition to `01_SYSTEM.md §3` (still open)
 
+### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
+
+**ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:
+
+- **4-agent parallel fan-out** via `Promise.all` (NOT LangGraph, NOT Hatchet): `agent.code` (`gpt-oss-120b`, stack traces) + `agent.data` (`gpt-oss-120b`, fixtures/DB) + `agent.env` (`gpt-oss-20b`, config) + `agent.flake` (`gpt-oss-20b`, retry history).
+- **Deterministic merge algorithm** (NO LLM call): group by category → take max confidence per category → ensemble boost `+0.05` per duplicate agent (cap `+0.15`) → sort + take top 5 → cap final confidence `0.95`.
+- **JSON-only response schema** with strict calibration rules ("DO NOT inflate; wrong-high-confidence is worse than right-low-confidence") to honor the F22 `< 0.5` needs-review trigger.
+- **Retry chain per agent:** primary call → 1 retry with jitter → Gemini fallback → empty array + OTel span. Aggregate tolerance: 2-of-4-agent failures OK; 3+ fails → degraded RCA UX path in F22 (separate from amber low-confidence banner).
+- **OpenTelemetry shape:** parent `sherlock.rca` span with 4 child agent spans, full provider/model/latency/byte/outcome attribution.
+- **Numbering note:** previous M4 v2 plan referenced "ADR-015" — that number is already taken by `adr-015-runtime-llm-config-bridge.md`. Renumbered to ADR-019 (next-free clean number).
+
+**`apps/api/test/golden-sets/sherlock-rca/`** (corpus scaffold for AC042 ≥40% gate per M4 v2 §4.5):
+
+- `README.md` — folder structure, schema spec, 10 category enums (`code-bug` / `data-bug` / `env-config` / `flaky-network` / `auth-permissions` / `dependency-version` / `ui-regression` / `race-condition` / `payment-gateway` / `other`), eval harness usage example.
+- `schema.json` — JSON Schema (draft-07) validating every `def-NNN.json`. Enforces UUID `runId`, env enum, category enum on `rootCauseCategory` + `acceptableAlternatives`, kbContext max 3 items, confidence enum, required field presence.
+- **5 seed defects** (`def-001.json` … `def-005.json`) sourced from F20 Run Results v2 canonical Iksula Returns failures:
+  - `def-001` TC-RET-0247 split-tender refund precision loss → `code-bug` (alt: `data-bug`)
+  - `def-002` TC-RET-0342 `refund.retry.exhausted` cold-start exhausts gateway retries → `env-config` (alt: `flaky-network`, `payment-gateway`)
+  - `def-003` TC-RET-0345 multi-currency FX (live vs locked-at-purchase) → `code-bug` (alt: `data-bug`)
+  - `def-004` TC-PAY-0211 UPI mandate revoked pre-check missing → `payment-gateway` (alt: `code-bug`)
+  - `def-005` TC-PAY-0224 3DS auth-complete race with gateway debit → `race-condition` (alt: `code-bug`, `payment-gateway`)
+- All 5 validated against `schema.json` via pure-Node validator. Coverage: 4 of 10 category enums (gap: `data-bug`, `flaky-network`, `auth-permissions`, `dependency-version`, `ui-regression`, `other` — BE+1 expansion Day-19 from the existing 62-case `cpi_postmortem_defects.json` mining source).
+
+M4 v2 plan §3 + §4.5 + §7.5 patched to reflect: ADR-019 (was ADR-015), seed status, mining source for Day-19 expansion. PR #146 still HOLD per Yogesh — waiting for final approval.
+
+### Added — Day 18 — Hard Rule 17 (canned-data verbatim extraction) + `scripts/extract-canned-data.mjs`
+
+**New CLAUDE.md Hard Rule.** Rule 17 — _Canned-data verbatim extraction (mandatory)_ — establishes that before writing ANY React component code for a frame port, FE+1 must run `scripts/extract-canned-data.mjs` against the canonical v2 HTML, output `apps/web/components/<frame>/canned-data.ts`, and import ALL user-visible strings from that file. Any string in a component file that doesn't trace back to the v2 HTML is a Rule 17 violation → visual gate FAIL.
+
+**Rationale:** F19 / F20 / F21 visual gate failures in M3 close week all traced to FE+1 inventing stub data (cluster titles, ticket IDs, error messages, right-rail labels) that didn't match the canonical HTML. Each invention created a "minor" drift that compounded across the screen. Extracting verbatim from the HTML eliminates the entire stub-data-invention drift class.
+
+**`scripts/extract-canned-data.mjs`** — pure-Node (no npm deps) regex-based extractor. Reads the canonical v2 HTML, strips scripts/styles/comments, then extracts page title, headings h1-h6, data-\* attributes, ID patterns (TC-/DEF-/REQ-/Jira-key), text content per common tag, image alt text, and aria-label / title attrs. Writes a TypeScript file with a `<FRAME>_RAW` object plus a starter `<FRAME>_PAGE_TITLE` export. The FE+1 dev organizes the raw extracts into semantically named exports (e.g. `F22_DEFECT_IDS`, `F22_RIGHT_RAIL_LABELS`) that the React port imports from.
+
+Smoke-tested against `F22 Defect Detail v2.html`: extracted 1 page title + 16 headings + 6 data-attribute groups + 13 ID matches + 319 text tags + 10 aria labels + 2 titles. Ready for M4 FE+1 workflow.
+
+Folded into M4 v2 plan as ACs MS4-AC020a (canned-data.ts exists per frame) + MS4-AC020b (no untraced strings in \*.tsx).
+
+### Docs — Day 18 — M4 v2 plan promoted (Runs/Defects/Jira, 3-day compressed + Sun reserve, M4 kickoff)
+
+**M4 kickoff doc.** Promoted `.claude/scratch/m4-v2-plan-skeleton.md` to `QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira_v2.md` (~250 lines) with the following Day-18 amendments locked per Yogesh's morning directive:
+
+- **AC042 = ≥40%** on 50-defect Sherlock RCA golden corpus (was TBD in skeleton). Sun Day-21 reserve allocated for prompt iteration if first eval miss.
+- **"Needs human review" UI affordance** — F22 Defect Detail shows an amber banner with `Sherlock is unsure — please verify the root cause` when Sherlock RCA returns `confidence < 0.5`. Disables auto-Jira-create; surfaces manual override. New tasks/ACs: MS4-T034 + MS4-AC016 + MS4-AC017.
+- **Timeline:** 3-day compressed Day-18 Thu May 14 → Day-20 Sat May 16, with **Day-21 Sun May 17 reserve** explicitly scoped (Sherlock corpus re-eval, visual gate retries, close-gate fixes, slipped ceremony — fix-only, no new scope).
+- **4 research-backed risks** (R001-R004) folded in:
+  - R001 WebSocket lifetime under Render Free scale-to-zero (UptimeRobot 4-min keep-alive + client reconnect)
+  - R002 Jira webhook HMAC needs raw-body middleware (scoped to `/webhooks/jira`, NOT global)
+  - R003 R2 CORS allow-list + XHR `upload.onprogress` for attachments >2MB (fetch() exposes no progress)
+  - R004 Jira webhook retry idempotency (UNIQUE INDEX on jira_sync_log.provider_event_id)
+- **M3 retro action items 1-5** folded into M4 ACs: close-gate sweep authored Day-1 (MS4-T023 + MS4-AC025), auth regression test in CI (MS4-AC031), Rule 16 diff-probe enforced (MS4-T039), multi-worktree hook sync (out-of-band).
+
+Parallel mirror committed to `~/Claude Cowork Workspace /AI Based QA Platform/m4-plan/` per two-folder workflow. Followup `(bq)` filed for the raw-body webhook middleware design pattern (BE+1 design Day-18 PM, implement Day-19 with MS4-T012). Summary view `docs/plans/02-milestones/M4-runs-defects-jira.md` updated to point at v2 binding spec.
+
+The v1.0 Apr 25 doc is fully superseded — only its v2.1 amendment block (lines 3-16) was binding and that's already locked in CLAUDE.md.
+
+### Changed — Day 18 — `/health` decoupled from DB query (Neon free-tier compute optimization, PR #147 P1)
+
+**P1 cost-gate hold.** Project Neon usage was at **80.81/100 CU-hrs (May 14)** with the burn rate (~5.77 CU-hrs/day) projecting to hit the 100 CU-hr free-tier cap on **May 17** — well before the May-31 reset. Root cause: UptimeRobot 5-min keep-alive pings on `/health` triggered the full subsystem readout including `SELECT 1` against Postgres + `pg_database_size` quota query → kept Neon's compute warm during 9PM-9AM idle hours when no real user traffic. Hard Rule 1 ($0/mo) at risk.
+
+**2-tier endpoint pattern shipped:**
+
+- **`refactor(api)` `GET /health`** — LIGHT. Returns `{ status, timestamp, version }` synchronously. NO DB query, NO R2 head, NO LLM check, NO embedding probe. Just confirms the API process is alive + has bound to a port. UptimeRobot's keep-alive hits this; with no DB query, Neon compute auto-scales to zero during idle hours. Recovers ~3-4 CU-hrs/day → free-tier runway carries through May 31 reset with headroom.
+
+- **`feat(api)` `GET /health/deep`** — FULL. Original MS0-T025 readout: db ping ($queryRawUnsafe SELECT 1, 2s timeout), R2 head, LLM gateway snapshot (in-memory state, NOT live ping — preserves Day-4 quota-frugality), embedding warm state, Neon size quota, OTel exporter status. Returns 200 / 503 / 503 by overall status. Operators curl on demand to verify wiring; NOT in keep-alive path. Body shape unchanged from pre-#146 `/health`.
+
+- **`test(api)`** — `apps/api/src/health/__tests__/health.controller.spec.ts` (NEW, 7 tests):
+  1. `/health` returns `{ status, timestamp, version }` with NO Prisma call (`$queryRaw` + `$queryRawUnsafe` both assertion-not-called) + NO R2 call — the regression pin that locks in the (br) optimization
+  2. `/health` responds well under 50ms (UptimeRobot perf budget)
+  3. `/health` falls back to `version="1.0"` when `npm_package_version` unset
+  4. `/health/deep` invokes Prisma `$queryRawUnsafe` (db ping)
+  5. `/health/deep` invokes `R2Service.health` (storage subsystem)
+  6. `/health/deep` body includes `llm` subsystem readout
+  7. `/health/deep` returns 200 (not 500) when db ping succeeds + embedding deferred
+
+- **Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **503/503 jest** (496 baseline + 7 new health) · lint clean ✓ · CHANGELOG ✓.
+
+- **Prod-boot smoke (manual (bj) gate) ✓:** NestJS boots clean, both routes mapped: `Mapped {/health, GET}` + `Mapped {/health/deep, GET}`.
+
+- **Hard Rules check:** Rule 1 (cost — entire purpose of this PR; $0/mo retained) · Rule 5 (no banned dep) · Rule 6 (no env changes) · Rule 11 (P1 brief from Yogesh; followup-trigger explicit) · Rule 13 (no UI change; visual gate N/A).
+
+- **No FE coordination needed.** UptimeRobot URL unchanged (`/health` same path).
+
+- **Followup `(br)`** filed at top of `docs/followups.md`: UptimeRobot monitoring interval 5 min → 4 min (~30 sec operator task) to add headroom against Render's 15-min idle spin-down threshold. Sister-monitor via Better Stack free uptime considered if UptimeRobot free plan blocks <5-min interval.
+
+- **Acceptance gate (post-merge):**
+  1. Render auto-redeploys (~2 min)
+  2. UptimeRobot URL unchanged; next ping (within 5 min) returns LIGHT body without touching DB
+  3. Yogesh `curl https://qa-nexus-api.onrender.com/health/deep` → full readout to verify everything still wired
+  4. Monitor Neon dashboard for next 24h → daily CU-hr rate drops from ~5.77 → target ~2
+  5. May-31 free-tier reset reached with headroom; Hard Rule 1 held
+
+### Added — Day 18 — M4 migration 0004: runs / defects / jira tables (PR #144, M4 kickoff)
+
+**M4 Day-18 AM task complete.** Schema delta for the M4 features (run execution, defect lifecycle, A4 RCA, Jira 2-way sync). Resolved A-F decision matrix from Day-17 BE+1 scratch:
+
+- A — ALTER `test_run_results` (NOT new `test_executions`); adds `actual_result` + `evidence_ids` JSONB + `blocked_reason`
+- B — ALTER `jira_connections` (NOT new `jira_integrations`); adds `status_mapping` JSONB + `account_email`; column-reuse for `oauth_access_token_encrypted` via `auth_method` discriminated union
+- C — SKIP `jira_links` (defect↔jira via existing 1:1 `defect.jira_issue_id` FK)
+- D — ALTER `rca_reports` (NOT new `defect_rca`); adds 5× `layer{1..5}_confidence` DOUBLE PRECISION + `otel_trace_id` + `feedback` JSONB
+- E — ALTER `defects`; adds `component` + `verified_at` + `closed_at` (skip `state`/`assignee_id` — already exist)
+- F — snake_case lowercase enum casing (matches existing canon)
+
+**New tables (4):** `evidence` (XOR parent: test_run_result OR defect, DB CHECK enforced) · `defect_history` (state-transition audit trail) · `jira_webhook_events` (UNIQUE on event_id, dedup partial index) · `jira_sync_logs` (SHA-256 payload_hash + retry chain).
+
+**Enum extension:** `jira_auth_method` += `api_token` (PM1 supports both api_token + oauth_3lo per Yogesh's Day-17 Jira decision).
+
+**Audit-log linkage:** every new table has nullable `audit_log_id` FK to `audit_log` (HMAC-SHA256 chained per PM1_ERD §3.13). SetNull on cascade keeps audit chain immutable.
+
+- **`feat(api)`** — new raw migration `apps/api/prisma/raw/migrations/0004_m4_runs_defects_jira.sql` (~290 lines including comprehensive header). All ALTERs are `ADD COLUMN IF NOT EXISTS` + `ALTER TYPE ... ADD VALUE IF NOT EXISTS` (idempotent re-run safe). All new tables are `CREATE TABLE IF NOT EXISTS`. Single transaction for atomicity. New `prisma:apply-raw:0004` script in `apps/api/package.json` (Yogesh-only invocation).
+
+- **`feat(api)`** — `apps/api/prisma/schema.prisma` synchronized: `JiraAuthMethod` enum extended, ALTERs to `JiraConnection` / `Defect` / `RcaReport` / `TestRunResult` (new fields + back-relations), 4 new models (`Evidence` with XOR parent, `DefectHistory`, `JiraWebhookEvent`, `JiraSyncLog` with retry chain self-relation), back-relations added to `User` (`evidenceCreated`, `defectHistoryActions`) + `AuditLog` (`evidence`, `defectHistory`, `jiraSyncLogs`). `prisma format` + `prisma validate` + `prisma generate` all clean.
+
+- **`feat(shared)`** — new M4 Zod schemas under `packages/shared/src/schemas/m4/`: 10 files (enums, evidence, defect, defect-history, jira-integration with discriminated union, jira-webhook-event, jira-sync-log, test-run, test-execution with status-conditional refines, rca-report with confidence 0-1 range, plus barrel `index.ts`). Re-exported as `m4` namespace from `packages/shared/src/index.ts` to avoid name collisions with legacy M0-M3 schemas (`DefectSchema`, `TestRunSchema`, `RcaReportSchema` exist at package root from earlier milestones; M5 retro will dedupe). Consumer pattern: `import { m4 } from '@qa-nexus/shared'; m4.DefectSchema.parse(...)`.
+
+- **Pre-flight (Yogesh, Day-17 evening on Neon prod):** `SELECT COUNT(*)` on `test_runs` / `test_run_results` / `defects` / `rca_reports` / `jira_connections` → all **0**. `SELECT DISTINCT status` on `test_runs` / `defects` → no rows. **Option A (direct ALTER) is safe**; no Option B 3-step backfill needed.
+
+- **Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **496/496 jest tests** (no new tests in this PR; schema-only addition with type-level coverage from existing suites) · lint clean ✓ · CHANGELOG ✓.
+
+- **Hard Rules check:**
+  - Rule 1 (cost): no new infra
+  - Rule 5 (ban list): no banned deps
+  - Rule 6 (secrets): no env changes; AES-GCM ciphertext columns inherited from existing `crypto.ts` (PR #115)
+  - Rule 7 (audit log): new tables wire `audit_log_id` per PM1_ERD §3.13; HMAC chain enforced at app layer by `AuditService` writes
+  - Rule 11 (escalate): pre-flight check + brief decision matrix authored Day-17 evening; A-F resolved before code
+
+- **HOLD merge.** Per Day-18 brief: Yogesh runs `pnpm --filter @qa-nexus/api prisma:apply-raw:0004` against Neon manually (NOT auto-applied in CI). After Yogesh confirms applied + verifies via `\d evidence` / `\d defect_history` / `\d jira_webhook_events` / `\d jira_sync_logs` / `SELECT enum_range(NULL::jira_auth_method)`, PR can squash-merge.
+
+- **Acceptance gate (post-apply + merge):**
+  1. Yogesh: `pnpm --filter @qa-nexus/api prisma:apply-raw:0004` against Neon; transaction commits cleanly
+  2. Verify: `\d evidence` shows XOR check constraint, `enum_range(NULL::jira_auth_method)` returns `{oauth_3lo, api_token}`, `\d rca_reports` shows 5 confidence + otel_trace_id + feedback columns
+  3. Merge PR → Render auto-redeploys (~2 min) → boot smoke clean (no Prisma drift; client matches DB)
+  4. M4 Day-18 PM TASK 2 (WebSocket gateway) unblocks
+
 ### Fixed — Day 17 — Drop `/auth/` prefix in magic-link verify URL (Next.js route-group convention, completes M3 close)
 
 **Day-17 third + final P0 of the magic-link saga.** After PR #138 restored the API from the zod-v4 crash, Yogesh clicked the magic-link in Gmail and got a **Next.js 404** at `/auth/verify-magic-link`. Manually visiting `https://qa-nexus-web.pages.dev/verify-magic-link` (no `/auth/` prefix) rendered the page cleanly with the Iksula brand + expected "Sign in failed — No sign-in token found" state.

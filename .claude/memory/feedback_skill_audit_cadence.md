@@ -10,15 +10,16 @@
 
 ## History
 
-| Date       | Trigger                | Audit file                                               | Notes                                                                |
-| ---------- | ---------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
-| 2026-05-06 | Day-11 / M2 kickoff    | `docs/audits/2026-05-06-skill-alignment-audit-day-11.md` | 13 hooks; followup (ae) embedding-spec drift filed                   |
-| 2026-05-08 | Day-13 / post-M2 close | `docs/audits/2026-05-08-skill-alignment-audit-day-13.md` | 15 hooks; Hard Rule 15 codified; 64 compound learnings; 18 v2 frames |
+| Date       | Trigger                | Audit file                                               | Notes                                                                                                                           |
+| ---------- | ---------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-06 | Day-11 / M2 kickoff    | `docs/audits/2026-05-06-skill-alignment-audit-day-11.md` | 13 hooks; followup (ae) embedding-spec drift filed                                                                              |
+| 2026-05-08 | Day-13 / post-M2 close | `docs/audits/2026-05-08-skill-alignment-audit-day-13.md` | 15 hooks; Hard Rule 15 codified; 64 compound learnings; 18 v2 frames                                                            |
+| 2026-05-13 | Day-17 / post-M3 close | `docs/audits/2026-05-13-skill-alignment-audit.md`        | 16 hooks (+enforce-no-playwright-mcp); Hard Rule 14 amended + Rule 16 NEW; ~76 compound learnings; design rules imported (#134) |
 
 ## Next due
 
-- **Date:** ~2026-05-12 (post-M3 close ceremony, Tue)
-- **Trigger:** M3 close tag push
+- **Date:** ~2026-05-16 (post-M4 close ceremony, Sat)
+- **Trigger:** M4 close tag push
 - **Owner:** MAIN
 
 ---

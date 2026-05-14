@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sherlock RCA golden corpus defect entry",
+  "description": "Schema for every def-NNN.json file in apps/api/test/golden-sets/sherlock-rca/. Binding: M4 v2 plan §4.5 + ADR-019.",
+  "type": "object",
+  "required": ["id", "input", "groundTruth"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^def-\\d{3}$",
+      "description": "Three-digit zero-padded ID matching the filename (def-001 … def-050)."
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "testCaseId",
+        "testCaseTitle",
+        "runId",
+        "stepNumber",
+        "stepLabel",
+        "durationMs",
+        "environment",
+        "errorMessage",
+        "kbContext"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "testCaseId": { "type": "string", "pattern": "^TC-[A-Z]+-\\d{3,5}$" },
+        "testCaseTitle": { "type": "string", "minLength": 5 },
+        "runId": { "type": "string", "format": "uuid" },
+        "stepNumber": { "type": "integer", "minimum": 1 },
+        "stepLabel": { "type": "string", "minLength": 3 },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "environment": {
+          "type": "string",
+          "enum": ["local-dev", "staging-iksula", "prod-iksula"]
+        },
+        "errorMessage": { "type": "string", "minLength": 5 },
+        "stackTrace": { "type": ["string", "null"] },
+        "priorHistory": {
+          "type": ["object", "null"],
+          "properties": {
+            "runs": { "type": "array", "items": { "type": "object" } },
+            "passRate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "lastFailureAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "kbContext": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "groundTruth": {
+      "type": "object",
+      "required": [
+        "rootCauseCategory",
+        "rootCauseDetail",
+        "acceptableAlternatives",
+        "confidence",
+        "notesForEval"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "rootCauseCategory": {
+          "type": "string",
+          "enum": [
+            "code-bug",
+            "data-bug",
+            "env-config",
+            "flaky-network",
+            "auth-permissions",
+            "dependency-version",
+            "ui-regression",
+            "race-condition",
+            "payment-gateway",
+            "other"
+          ]
+        },
+        "rootCauseDetail": { "type": "string", "minLength": 10 },
+        "acceptableAlternatives": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "code-bug",
+              "data-bug",
+              "env-config",
+              "flaky-network",
+              "auth-permissions",
+              "dependency-version",
+              "ui-regression",
+              "race-condition",
+              "payment-gateway",
+              "other"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "notesForEval": { "type": "string" }
+      }
+    }
+  }
+}

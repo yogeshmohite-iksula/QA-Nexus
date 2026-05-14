@@ -54,7 +54,14 @@ _Placeholder — fill at M2 close (target 2026-06-14)._
 
 ### M3 — Test Cases + A1 + A2
 
-_Placeholder — fill at M3 close (target 2026-07-05). At this close, A/B-test bge-small vs Qwen3-Embedding-0.6B-ONNX per drift D6._
+**✅ CLOSED 2026-05-13 — 52 PRs across 6 calendar days / ~3.6 working days.**
+
+- **Plan window:** 2026-06-15 → 2026-07-05 (21 days originally)
+- **Actual window:** 2026-05-08 (Day-13) → 2026-05-13 (Day-17) — **+1 day over compressed Tue May 12 target** (5.8× compression vs original 21-day plan)
+- **Compression driver:** Day-13 PM kickoff post-M2; Day-15 record 15-PR day; Day-17 4-PR magic-link Gmail prefetch saga absorbed 1 extra day vs target
+- **Tag:** `m3-closed-2026-05-13` at SHA `a98797b` (#139 — auth-chain-complete commit)
+- **Close report:** `docs/milestones/m3-close-report.md`
+- **Carry-overs to M4+:** A/B-test bge-small vs Qwen3-Embedding-0.6B-ONNX per drift D6 → followup `(au)`; F16c Pattern B → followup `(ay)`; Path C bridge removal when F26 v2 ships → followup `(az)`
 
 ### M4 — Test Runs + Defects + A4 + Jira
 

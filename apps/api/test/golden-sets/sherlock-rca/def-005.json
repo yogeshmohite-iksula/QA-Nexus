@@ -1,0 +1,37 @@
+{
+  "id": "def-005",
+  "input": {
+    "testCaseId": "TC-PAY-0224",
+    "testCaseTitle": "3DS challenge invocation on refund reversal",
+    "runId": "55555555-5555-4555-8555-555555555555",
+    "stepNumber": 8,
+    "stepLabel": "Trigger refund-reversal on 3DS-enrolled card — expect 3DS challenge presented BEFORE gateway debit",
+    "durationMs": 28300,
+    "environment": "staging-iksula",
+    "errorMessage": "RaceConditionError: Gateway debit completed (refund_reversal_id: rrv_47281) BEFORE 3DS challenge callback returned. 3DS challenge presented at t=12.3s, customer authentication completed at t=18.1s, but gateway debit fired at t=11.7s (BEFORE auth complete). State machine reached terminal 'reversed' state without authentication signature.",
+    "stackTrace": "RaceConditionError: gateway debit fired before 3DS auth complete\n  at threeds-orchestrator.ts:218 onChallengePresented()\n  at threeds-orchestrator.ts:142 invokeChallenge()\n  at refund.reversal.service.ts:67 executeReversal()",
+    "priorHistory": {
+      "runs": [
+        { "runId": "mm", "status": "flaky", "ranAt": "2026-05-13T08:12:00Z" },
+        { "runId": "nn", "status": "passed", "ranAt": "2026-05-12T08:12:00Z" },
+        { "runId": "oo", "status": "flaky", "ranAt": "2026-05-11T08:12:00Z" },
+        { "runId": "pp", "status": "flaky", "ranAt": "2026-05-10T08:12:00Z" },
+        { "runId": "qq", "status": "passed", "ranAt": "2026-05-09T08:12:00Z" }
+      ],
+      "passRate": 0.4,
+      "lastFailureAt": "2026-05-14T08:12:00Z"
+    },
+    "kbContext": [
+      "3DS (3-D Secure) authentication is asynchronous — the challenge is presented to the user, and the auth result returns via webhook minutes later. The reversal state machine MUST await the auth result before dispatching the gateway debit.",
+      "Iksula 3DS orchestrator uses an event-driven state machine: PENDING_AUTH → AUTH_COMPLETE → DISPATCH_DEBIT → REVERSED. Skipping any state is a race-condition bug.",
+      "The reversal service has a fast-path optimization that bypasses 3DS for trusted-device reversals. This flag may be incorrectly set in staging-iksula seed data."
+    ]
+  },
+  "groundTruth": {
+    "rootCauseCategory": "race-condition",
+    "rootCauseDetail": "Refund-reversal state machine in refund.reversal.service.ts:67 dispatches gateway debit synchronously without awaiting the 3DS auth-complete event. The flakiness (40% pass rate) suggests timing-dependent ordering — when challenge response is fast, dispatch fires before debit, when slow, debit fires first. Fix: convert executeReversal() to await the 3DS auth-complete event before calling dispatch.",
+    "acceptableAlternatives": ["code-bug", "payment-gateway"],
+    "confidence": "high",
+    "notesForEval": "Top-2 hit on race-condition, code-bug, or payment-gateway. race-condition is the canonical label (40% flake rate is a smoking gun); code-bug is the under-layer (missing await); payment-gateway captures the integration-protocol aspect. All three acceptable. Sherlock should ideally cite refund.reversal.service.ts:67 and reference the state-machine KB chunk."
+  }
+}
