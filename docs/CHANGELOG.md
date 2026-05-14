@@ -13,6 +13,46 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 18 — F20 Run Results Pattern A scaffold (M4 TASK 1, PR #147)
+
+**M4 Day-18 AM task.** F20 Run Results page lands at `/projects/[slug]/runs/[runId]/results/` per Hard Rule 16 canonical-first workflow (read `_DESIGN_RULES.md` + F20 v2 HTML before coding; no diff-probe needed — globals.css tokens already in place from F19 Round 2).
+
+**Iksula canon data:** Run `RUN-RET-2026-04-25-002` "Refund Flow — Sprint 42" · 218 cases total (187 pass 85.8% / 23 fail 10.6% / 8 flaky 3.7% / 0 blocked / 0 skipped) · env `staging-v3` · duration `42m 18s` · started by Yogesh M.
+
+**Files:**
+
+- **NEW** route `apps/web/app/(app)/projects/[slug]/runs/[runId]/results/page.tsx` + `generateStaticParams` for Iksula anchor
+- **NEW** 7 components under `apps/web/components/results/`:
+  - `canned-data.ts` — typed Pattern A fixtures (RunResultsMeta + 3 ResultsSuite + 3 ResultsCluster + SherlockSummary + EvidenceRailContext)
+  - `results-page.tsx` — main client wrapping `AdminShell active="run-results"` + 2-pane grid `[center-pane][ev-rail]` at lg+ + sticky run-level action footer
+  - `run-summary-bar.tsx` — title/run-id/Done pill + 6 stat tiles + meta line + env-pill (canonical F20 L237-300 / L704-800)
+  - `sherlock-rca-block.tsx` — page-level RCA summary card on AI surface tokens (`--ai-soft`/`--ai-line`/`--secondary`) per 01_SYSTEM.md §3.1 VIOLET=AI rule
+  - `cluster-card.tsx` — `.distinct-card` with `.med`/`.low`/(high) confidence variants, metric strip, narrative, violet "Open defect (Sherlock-prefilled)" CTA + Mark flaky / Re-run cluster / Show N cases actions
+  - `results-table.tsx` — collapsible suite groups with case rows (cr-status / cr-id / cr-title / dur / defect count badge); All/Failures/Flaky/Regressions filter tabs + Sort
+  - `evidence-rail-pane.tsx` — right rail with selected-case header + 4-tab interface (Evidence/Logs/RCA/Env diff) + evidence kv list + 4 sticky-footer actions
+- **NEW** `scripts/m4-f20-results-sweep.js` — Playwright sweep at 5 viewports
+- **NEW** `docs/screenshots/m4-f20-results/` — 5 PNGs (1440 / 1440-rail-collapsed / 1024 / 768 / 320) all under 220 KB
+
+**Pattern A markers** (every action button emits `console.info('pattern-a:deferred:f20:<key>', payload)`): `export`, `re-run-failed`, `share-link`, `create-defect`, `mark-flaky`, `re-run-cluster`, `expand-cluster`, `filter`, `sort`, `select-case`, `action`.
+
+**Hard Rule 14 shell parity:** Reuses canonical F19-React `AdminShell` with `active="run-results"` + `projectKeyLower="ret"`; no shell overrides.
+
+**Hard Rule 15 canonical fidelity:** All tokens from `01_SYSTEM.md §3` via globals.css `:root`. Confidence chip color map per 01_SYSTEM.md: high → pass green / med → warn amber / low → fail red.
+
+**RWD (Hard Rule 12):** Tested at 320 / 768 / 1024 / 1440. Center-pane single column ≤1024, 2-col cluster grid ≥1280 (xl), ev-rail right column at lg+.
+
+**Gates:** ✅ typecheck (apps/web + apps/api) · ✅ prettier · ✅ ESLint (0 new errors)
+
+**HOLD merge until M4 close cascade.** Visual gate ping to Yogesh sent with 5 screenshots; waiting on "looks good — commit" approval per Hard Rule 13.
+
+**Cross-references:**
+
+- F20 v2 HTML canonical: `PM1_UI_v2/Redesign Frame by claude design/F20 Run Results v2.html` (L235-300 layout · L704-800 summary bar · L800-920 Sherlock + clusters · L920-1066 results table · L1067-1200 ev-rail)
+- Hard Rule 16 (NEW Day-17) — canonical-first pre-flight workflow
+- Hard Rule 14 — F19 React = AdminShell canonical
+- PR #135 — Run Console (F19) Pattern A established globals.css tokens this PR depends on
+- Followup `(bk)` — formal `--ai-accent` + tone alpha addition to `01_SYSTEM.md §3` (still open)
+
 ### Fixed — Day 17 — Drop `/auth/` prefix in magic-link verify URL (Next.js route-group convention, completes M3 close)
 
 **Day-17 third + final P0 of the magic-link saga.** After PR #138 restored the API from the zod-v4 crash, Yogesh clicked the magic-link in Gmail and got a **Next.js 404** at `/auth/verify-magic-link`. Manually visiting `https://qa-nexus-web.pages.dev/verify-magic-link` (no `/auth/` prefix) rendered the page cleanly with the Iksula brand + expected "Sign in failed — No sign-in token found" state.
