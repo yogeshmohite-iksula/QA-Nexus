@@ -2,6 +2,41 @@
 
 ---
 
+## [2026-05-14] (bx) P3 — Claude Design: fix F20 v2 HTML canonical at 320px mobile viewport (horizontal-scroll bug)
+
+**Filed:** 2026-05-14 (Day-18 PM, surfaced during F20 fix-forward PR #150 visual gate)
+**Owner:** Claude Design — next design pass on `Redesign Frame by claude design/F20 Run Results v2.html`
+**Priority:** P3 — cosmetic only; production React port (PR #150) reflows correctly per Hard Rule 12 RWD
+
+**Symptom:** At 320px mobile viewport the canonical `F20 Run Results v2.html` horizontally scrolls because the `STAGING-V3` environment pill clips the right rail. The chip cluster (env pill + status pill + duration chip) doesn't reflow — they stay in a single row that overflows the 320px viewport.
+
+**Effect on React port:** None. PR #150 ported F20 per Hard Rule 12 RWD requirements — chips reflow to two rows at <768px (`flex-wrap` + `gap-2`), tap targets stay ≥44px, no horizontal scroll at 320px. Yogesh confirmed via visual gate at 1440 + 320 viewports.
+
+**Why this is a Rule 15 source-of-truth conflict (informational):** Per Hard Rule 15, FE+1 ports v2 HTML pixel-faithfully. When the HTML itself has an RWD bug (as here), Hard Rule 12 (RWD mandate) takes precedence and FE+1 fixes the React port — but the canonical HTML still has the bug, which means:
+
+1. Future React ports diff-probing F20 will see "drift" between HTML and React (false positive).
+2. The `_DESIGN_RULES.md` 17 rules don't currently call out "canonical HTML is allowed to lag on RWD when Rule 12 forces a divergent React-side fix" — should be added in the next design rules pass.
+
+**Fix scope (next Claude Design pass):**
+
+1. Open `F20 Run Results v2.html` at 320px in Chrome (DevTools → Toolbar → iPhone SE preset).
+2. Confirm the STAGING-V3 pill clip / horizontal-scroll on the chip row.
+3. Apply the F19 Round-4 reflow pattern: chip cluster uses `display: flex; flex-wrap: wrap; gap: 8px` so chips wrap to a second row at narrow viewports.
+4. Re-verify at 320 / 480 / 768 / 1024 / 1440.
+5. Commit to the same v2 HTML file (no v3 needed — this is a bugfix on canonical).
+
+**Sister design rule update:** `_DESIGN_RULES.md` gains a new rule clarifying that React ports MUST honor Hard Rule 12 (RWD) even when the canonical HTML has not yet been updated; the canonical HTML is the source-of-truth for STRUCTURE/COPY/TOKENS but NOT for RWD breakpoint behavior when the HTML itself breaks at <320px.
+
+**Cross-references:**
+
+- PR #145 — original F20 attempt, closed as Hard Rule 17 violation precedent (invented stub data); NOT related to this 320px bug.
+- PR #150 — F20 fix-forward verbatim re-port; React-side reflow already correct per Rule 12.
+- F19 Round-4 reflow pattern — referenced as the pattern to mirror in F20.
+
+**Status:** OPEN — Claude Design will pick up on next design pass; non-blocking for M4 close.
+
+---
+
 ## [2026-05-14] (bw) P2 — FE+1 fix zod3↔zod4 + `@hookform/resolvers` compat in M1-era modals
 
 **Filed:** 2026-05-14 (Day-18 ~12:18 IST, surfaced during M4 doc-PR push)
