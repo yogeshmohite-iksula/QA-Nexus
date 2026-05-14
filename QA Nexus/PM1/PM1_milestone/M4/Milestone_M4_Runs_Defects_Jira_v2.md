@@ -364,6 +364,15 @@
 
 ---
 
+## 7.5 Day-18 progress log
+
+Append-only. Each line documents a meaningful milestone landed during M4. Updated by MAIN after each merge.
+
+- **2026-05-14 12:12 IST · #144 merged → main `81708f5`** — `feat(api): M4 migration 0004 — runs/defects/jira tables`. New tables on Neon: `evidence`, `defect_history`, `jira_webhook_events`, `jira_sync_logs` (all 0 rows). New enum `jira_auth_method` with values `oauth_3lo` + `api_token` (covers the OAuth-vs-token MVP decision in §7 — both paths schema-supported). Render auto-redeploy completed at 06:46:31 UTC (~4 min after merge); confirmed via `/health` `load_duration_ms` boot-fingerprint change (15987 → 15570). **Unblocks:** BE+1 WebSocket Gateway TASK 2 (MS4-T009) + Jira client scaffold (MS4-T011) + webhook receiver (MS4-T012).
+- **2026-05-14 11:23 IST · #146 opened** — `docs(m4): M4 v2 plan (Runs/Defects/Jira, 3-day compressed + Sun reserve) [M4 kickoff]`. AC042=≥40% + "needs human review" UI affordance + Hard Rule 17 (canned-data extraction) + `extract-canned-data.mjs` all landed on this PR.
+
+---
+
 ## 8. Cross-references
 
 - `Milestone_M4_Runs_Defects_Jira.md` v1.0 (Apr 25) — superseded by this v2; only v2.1 amendment block (lines 3-16) still binding
