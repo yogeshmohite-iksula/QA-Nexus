@@ -41,7 +41,7 @@
 
 **BE+1:**
 
-- ADR-015 Sherlock prompt strategy (gpt-oss-120b primary / gpt-oss-20b L1-fast / Gemini Flash fallback; OpenTelemetry tracing; `Promise.all` parallel — NOT LangGraph)
+- **ADR-019 Sherlock prompt strategy** (draft landed Day-18 PM at `docs/architecture/adr-019-sherlock-prompt-strategy.md` — gpt-oss-120b for code/data agents, gpt-oss-20b for env/flake agents, Gemini Flash fallback; 4-agent fan-out via `Promise.all` — NOT LangGraph; OpenTelemetry trace per agent + parent span; deterministic merge with ensemble-boost; ratify Day-19 AM before BE+1 starts MS4-T016). Renumbered from "ADR-015" placeholder in skeleton — ADR-015 was already taken by `adr-015-runtime-llm-config-bridge.md`.
 - TB-009 `test_runs` + TB-010 `run_results` Prisma migration (0005 raw SQL pattern per Day-13 protocol)
 - Run service Pattern A scaffold: `POST /api/projects/:projectId/runs` returns 501 with NotImplementedError + audit row
 - Defect service Pattern A scaffold: `POST /api/projects/:projectId/defects` returns 501 + audit row
@@ -125,7 +125,7 @@
 
 | Task     | Title                                                           | Owner | Day        |
 | -------- | --------------------------------------------------------------- | ----- | ---------- |
-| MS4-T001 | ADR-015 Sherlock prompt strategy                                | BE+1  | 18         |
+| MS4-T001 | ADR-019 Sherlock prompt strategy (draft → ratify Day-19 AM)     | BE+1  | 18         |
 | MS4-T002 | TB-009 + TB-010 Prisma migration 0005 (raw SQL)                 | BE+1  | 18         |
 | MS4-T003 | TB-011 + TB-012 + TB-013 Prisma migration 0006 (raw SQL)        | BE+1  | 18         |
 | MS4-T004 | Run service Pattern A scaffold (501)                            | BE+1  | 18         |
@@ -269,6 +269,8 @@
 This section defines exactly how AC042 is scored, so there is no ambiguity at M4 close.
 
 **Corpus location:** `apps/api/test/golden-sets/sherlock-rca/` — 50 defects (`def-001.json` … `def-050.json`), each with:
+
+**Seed status Day-18 PM:** 5 seed defects + `schema.json` + `README.md` landed. Coverage: `code-bug` ×2, `env-config` ×1, `payment-gateway` ×1, `race-condition` ×1. All 5 validated against schema.json (pure-Node validator). BE+1 expands to 50 Day-19 by mining `apps/api/test/golden-sets/a4/raw/cpi_postmortem_defects.json` (62 real Iksula defects with L1-L5 tags) + remaining F20 Run Results v2 canonical failures, filling the 6-category coverage gap.
 
 - `input`: failed run-result context (test case ID, step number, error message, stack trace if any, environment, prior history)
 - `groundTruth.rootCauseCategory`: one of `code-bug` / `data-bug` / `env-config` / `flaky-network` / `auth-permissions` / `dependency-version` / `ui-regression` / `race-condition` / `payment-gateway` / `other` (10 categories)
@@ -452,6 +454,7 @@ Append-only. Each line documents a meaningful milestone landed during M4. Update
 
 - **2026-05-14 12:12 IST · #144 merged → main `81708f5`** — `feat(api): M4 migration 0004 — runs/defects/jira tables`. New tables on Neon: `evidence`, `defect_history`, `jira_webhook_events`, `jira_sync_logs` (all 0 rows). New enum `jira_auth_method` with values `oauth_3lo` + `api_token` (covers the OAuth-vs-token MVP decision in §7 — both paths schema-supported). Render auto-redeploy completed at 06:46:31 UTC (~4 min after merge); confirmed via `/health` `load_duration_ms` boot-fingerprint change (15987 → 15570). **Unblocks:** BE+1 WebSocket Gateway TASK 2 (MS4-T009) + Jira client scaffold (MS4-T011) + webhook receiver (MS4-T012).
 - **2026-05-14 11:23 IST · #146 opened** — `docs(m4): M4 v2 plan (Runs/Defects/Jira, 3-day compressed + Sun reserve) [M4 kickoff]`. AC042=≥40% + "needs human review" UI affordance + Hard Rule 17 (canned-data extraction) + `extract-canned-data.mjs` all landed on this PR.
+- **2026-05-14 13:00 IST · ADR-019 + 5 seed defects landed on #146** — `docs/architecture/adr-019-sherlock-prompt-strategy.md` (draft, ratify Day-19 AM) defines 4-agent parallel fan-out (`agent.code` + `agent.data` + `agent.env` + `agent.flake`), deterministic merge with ensemble boost, JSON-only response with calibration rules, retry chain primary→secondary→Gemini-fallback, OpenTelemetry per-agent spans aggregated into parent `sherlock.rca` span. `apps/api/test/golden-sets/sherlock-rca/` seeded with `schema.json` + `README.md` + 5 def-001…def-005 entries sourced from F20 canonical Iksula Returns failures (TC-RET-0247 split-tender, TC-RET-0342 webhook timeout, TC-RET-0345 multi-currency FX, TC-PAY-0211 UPI mandate, TC-PAY-0224 3DS race). All 5 validated against schema. Coverage: 4 of 10 enums; Day-19 BE+1 expands to 50 (gap: data-bug, flaky-network, auth-permissions, dependency-version, ui-regression, other). M4 §3 task table renumbered ADR-015 placeholder → ADR-019 (was already taken by runtime-llm-config-bridge ADR).
 
 ---
 

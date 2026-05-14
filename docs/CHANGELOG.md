@@ -13,6 +13,31 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
+
+**ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:
+
+- **4-agent parallel fan-out** via `Promise.all` (NOT LangGraph, NOT Hatchet): `agent.code` (`gpt-oss-120b`, stack traces) + `agent.data` (`gpt-oss-120b`, fixtures/DB) + `agent.env` (`gpt-oss-20b`, config) + `agent.flake` (`gpt-oss-20b`, retry history).
+- **Deterministic merge algorithm** (NO LLM call): group by category → take max confidence per category → ensemble boost `+0.05` per duplicate agent (cap `+0.15`) → sort + take top 5 → cap final confidence `0.95`.
+- **JSON-only response schema** with strict calibration rules ("DO NOT inflate; wrong-high-confidence is worse than right-low-confidence") to honor the F22 `< 0.5` needs-review trigger.
+- **Retry chain per agent:** primary call → 1 retry with jitter → Gemini fallback → empty array + OTel span. Aggregate tolerance: 2-of-4-agent failures OK; 3+ fails → degraded RCA UX path in F22 (separate from amber low-confidence banner).
+- **OpenTelemetry shape:** parent `sherlock.rca` span with 4 child agent spans, full provider/model/latency/byte/outcome attribution.
+- **Numbering note:** previous M4 v2 plan referenced "ADR-015" — that number is already taken by `adr-015-runtime-llm-config-bridge.md`. Renumbered to ADR-019 (next-free clean number).
+
+**`apps/api/test/golden-sets/sherlock-rca/`** (corpus scaffold for AC042 ≥40% gate per M4 v2 §4.5):
+
+- `README.md` — folder structure, schema spec, 10 category enums (`code-bug` / `data-bug` / `env-config` / `flaky-network` / `auth-permissions` / `dependency-version` / `ui-regression` / `race-condition` / `payment-gateway` / `other`), eval harness usage example.
+- `schema.json` — JSON Schema (draft-07) validating every `def-NNN.json`. Enforces UUID `runId`, env enum, category enum on `rootCauseCategory` + `acceptableAlternatives`, kbContext max 3 items, confidence enum, required field presence.
+- **5 seed defects** (`def-001.json` … `def-005.json`) sourced from F20 Run Results v2 canonical Iksula Returns failures:
+  - `def-001` TC-RET-0247 split-tender refund precision loss → `code-bug` (alt: `data-bug`)
+  - `def-002` TC-RET-0342 `refund.retry.exhausted` cold-start exhausts gateway retries → `env-config` (alt: `flaky-network`, `payment-gateway`)
+  - `def-003` TC-RET-0345 multi-currency FX (live vs locked-at-purchase) → `code-bug` (alt: `data-bug`)
+  - `def-004` TC-PAY-0211 UPI mandate revoked pre-check missing → `payment-gateway` (alt: `code-bug`)
+  - `def-005` TC-PAY-0224 3DS auth-complete race with gateway debit → `race-condition` (alt: `code-bug`, `payment-gateway`)
+- All 5 validated against `schema.json` via pure-Node validator. Coverage: 4 of 10 category enums (gap: `data-bug`, `flaky-network`, `auth-permissions`, `dependency-version`, `ui-regression`, `other` — BE+1 expansion Day-19 from the existing 62-case `cpi_postmortem_defects.json` mining source).
+
+M4 v2 plan §3 + §4.5 + §7.5 patched to reflect: ADR-019 (was ADR-015), seed status, mining source for Day-19 expansion. PR #146 still HOLD per Yogesh — waiting for final approval.
+
 ### Added — Day 18 — Hard Rule 17 (canned-data verbatim extraction) + `scripts/extract-canned-data.mjs`
 
 **New CLAUDE.md Hard Rule.** Rule 17 — _Canned-data verbatim extraction (mandatory)_ — establishes that before writing ANY React component code for a frame port, FE+1 must run `scripts/extract-canned-data.mjs` against the canonical v2 HTML, output `apps/web/components/<frame>/canned-data.ts`, and import ALL user-visible strings from that file. Any string in a component file that doesn't trace back to the v2 HTML is a Rule 17 violation → visual gate FAIL.
