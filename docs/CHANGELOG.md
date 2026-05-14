@@ -13,7 +13,62 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
-### Changed — Day 18 — `/health` decoupled from DB query (Neon free-tier compute optimization, PR #146 P1)
+### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
+
+**ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:
+
+- **4-agent parallel fan-out** via `Promise.all` (NOT LangGraph, NOT Hatchet): `agent.code` (`gpt-oss-120b`, stack traces) + `agent.data` (`gpt-oss-120b`, fixtures/DB) + `agent.env` (`gpt-oss-20b`, config) + `agent.flake` (`gpt-oss-20b`, retry history).
+- **Deterministic merge algorithm** (NO LLM call): group by category → take max confidence per category → ensemble boost `+0.05` per duplicate agent (cap `+0.15`) → sort + take top 5 → cap final confidence `0.95`.
+- **JSON-only response schema** with strict calibration rules ("DO NOT inflate; wrong-high-confidence is worse than right-low-confidence") to honor the F22 `< 0.5` needs-review trigger.
+- **Retry chain per agent:** primary call → 1 retry with jitter → Gemini fallback → empty array + OTel span. Aggregate tolerance: 2-of-4-agent failures OK; 3+ fails → degraded RCA UX path in F22 (separate from amber low-confidence banner).
+- **OpenTelemetry shape:** parent `sherlock.rca` span with 4 child agent spans, full provider/model/latency/byte/outcome attribution.
+- **Numbering note:** previous M4 v2 plan referenced "ADR-015" — that number is already taken by `adr-015-runtime-llm-config-bridge.md`. Renumbered to ADR-019 (next-free clean number).
+
+**`apps/api/test/golden-sets/sherlock-rca/`** (corpus scaffold for AC042 ≥40% gate per M4 v2 §4.5):
+
+- `README.md` — folder structure, schema spec, 10 category enums (`code-bug` / `data-bug` / `env-config` / `flaky-network` / `auth-permissions` / `dependency-version` / `ui-regression` / `race-condition` / `payment-gateway` / `other`), eval harness usage example.
+- `schema.json` — JSON Schema (draft-07) validating every `def-NNN.json`. Enforces UUID `runId`, env enum, category enum on `rootCauseCategory` + `acceptableAlternatives`, kbContext max 3 items, confidence enum, required field presence.
+- **5 seed defects** (`def-001.json` … `def-005.json`) sourced from F20 Run Results v2 canonical Iksula Returns failures:
+  - `def-001` TC-RET-0247 split-tender refund precision loss → `code-bug` (alt: `data-bug`)
+  - `def-002` TC-RET-0342 `refund.retry.exhausted` cold-start exhausts gateway retries → `env-config` (alt: `flaky-network`, `payment-gateway`)
+  - `def-003` TC-RET-0345 multi-currency FX (live vs locked-at-purchase) → `code-bug` (alt: `data-bug`)
+  - `def-004` TC-PAY-0211 UPI mandate revoked pre-check missing → `payment-gateway` (alt: `code-bug`)
+  - `def-005` TC-PAY-0224 3DS auth-complete race with gateway debit → `race-condition` (alt: `code-bug`, `payment-gateway`)
+- All 5 validated against `schema.json` via pure-Node validator. Coverage: 4 of 10 category enums (gap: `data-bug`, `flaky-network`, `auth-permissions`, `dependency-version`, `ui-regression`, `other` — BE+1 expansion Day-19 from the existing 62-case `cpi_postmortem_defects.json` mining source).
+
+M4 v2 plan §3 + §4.5 + §7.5 patched to reflect: ADR-019 (was ADR-015), seed status, mining source for Day-19 expansion. PR #146 still HOLD per Yogesh — waiting for final approval.
+
+### Added — Day 18 — Hard Rule 17 (canned-data verbatim extraction) + `scripts/extract-canned-data.mjs`
+
+**New CLAUDE.md Hard Rule.** Rule 17 — _Canned-data verbatim extraction (mandatory)_ — establishes that before writing ANY React component code for a frame port, FE+1 must run `scripts/extract-canned-data.mjs` against the canonical v2 HTML, output `apps/web/components/<frame>/canned-data.ts`, and import ALL user-visible strings from that file. Any string in a component file that doesn't trace back to the v2 HTML is a Rule 17 violation → visual gate FAIL.
+
+**Rationale:** F19 / F20 / F21 visual gate failures in M3 close week all traced to FE+1 inventing stub data (cluster titles, ticket IDs, error messages, right-rail labels) that didn't match the canonical HTML. Each invention created a "minor" drift that compounded across the screen. Extracting verbatim from the HTML eliminates the entire stub-data-invention drift class.
+
+**`scripts/extract-canned-data.mjs`** — pure-Node (no npm deps) regex-based extractor. Reads the canonical v2 HTML, strips scripts/styles/comments, then extracts page title, headings h1-h6, data-\* attributes, ID patterns (TC-/DEF-/REQ-/Jira-key), text content per common tag, image alt text, and aria-label / title attrs. Writes a TypeScript file with a `<FRAME>_RAW` object plus a starter `<FRAME>_PAGE_TITLE` export. The FE+1 dev organizes the raw extracts into semantically named exports (e.g. `F22_DEFECT_IDS`, `F22_RIGHT_RAIL_LABELS`) that the React port imports from.
+
+Smoke-tested against `F22 Defect Detail v2.html`: extracted 1 page title + 16 headings + 6 data-attribute groups + 13 ID matches + 319 text tags + 10 aria labels + 2 titles. Ready for M4 FE+1 workflow.
+
+Folded into M4 v2 plan as ACs MS4-AC020a (canned-data.ts exists per frame) + MS4-AC020b (no untraced strings in \*.tsx).
+
+### Docs — Day 18 — M4 v2 plan promoted (Runs/Defects/Jira, 3-day compressed + Sun reserve, M4 kickoff)
+
+**M4 kickoff doc.** Promoted `.claude/scratch/m4-v2-plan-skeleton.md` to `QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira_v2.md` (~250 lines) with the following Day-18 amendments locked per Yogesh's morning directive:
+
+- **AC042 = ≥40%** on 50-defect Sherlock RCA golden corpus (was TBD in skeleton). Sun Day-21 reserve allocated for prompt iteration if first eval miss.
+- **"Needs human review" UI affordance** — F22 Defect Detail shows an amber banner with `Sherlock is unsure — please verify the root cause` when Sherlock RCA returns `confidence < 0.5`. Disables auto-Jira-create; surfaces manual override. New tasks/ACs: MS4-T034 + MS4-AC016 + MS4-AC017.
+- **Timeline:** 3-day compressed Day-18 Thu May 14 → Day-20 Sat May 16, with **Day-21 Sun May 17 reserve** explicitly scoped (Sherlock corpus re-eval, visual gate retries, close-gate fixes, slipped ceremony — fix-only, no new scope).
+- **4 research-backed risks** (R001-R004) folded in:
+  - R001 WebSocket lifetime under Render Free scale-to-zero (UptimeRobot 4-min keep-alive + client reconnect)
+  - R002 Jira webhook HMAC needs raw-body middleware (scoped to `/webhooks/jira`, NOT global)
+  - R003 R2 CORS allow-list + XHR `upload.onprogress` for attachments >2MB (fetch() exposes no progress)
+  - R004 Jira webhook retry idempotency (UNIQUE INDEX on jira_sync_log.provider_event_id)
+- **M3 retro action items 1-5** folded into M4 ACs: close-gate sweep authored Day-1 (MS4-T023 + MS4-AC025), auth regression test in CI (MS4-AC031), Rule 16 diff-probe enforced (MS4-T039), multi-worktree hook sync (out-of-band).
+
+Parallel mirror committed to `~/Claude Cowork Workspace /AI Based QA Platform/m4-plan/` per two-folder workflow. Followup `(bq)` filed for the raw-body webhook middleware design pattern (BE+1 design Day-18 PM, implement Day-19 with MS4-T012). Summary view `docs/plans/02-milestones/M4-runs-defects-jira.md` updated to point at v2 binding spec.
+
+The v1.0 Apr 25 doc is fully superseded — only its v2.1 amendment block (lines 3-16) was binding and that's already locked in CLAUDE.md.
+
+### Changed — Day 18 — `/health` decoupled from DB query (Neon free-tier compute optimization, PR #147 P1)
 
 **P1 cost-gate hold.** Project Neon usage was at **80.81/100 CU-hrs (May 14)** with the burn rate (~5.77 CU-hrs/day) projecting to hit the 100 CU-hr free-tier cap on **May 17** — well before the May-31 reset. Root cause: UptimeRobot 5-min keep-alive pings on `/health` triggered the full subsystem readout including `SELECT 1` against Postgres + `pg_database_size` quota query → kept Neon's compute warm during 9PM-9AM idle hours when no real user traffic. Hard Rule 1 ($0/mo) at risk.
 

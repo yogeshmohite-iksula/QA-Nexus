@@ -1,0 +1,36 @@
+{
+  "id": "def-002",
+  "input": {
+    "testCaseId": "TC-RET-0342",
+    "testCaseTitle": "Refund webhook receives refund.retry.exhausted — handler timeout",
+    "runId": "22222222-2222-4222-8222-222222222222",
+    "stepNumber": 4,
+    "stepLabel": "Wait for refund.retry.exhausted webhook delivery — expect handler 200 within 30s",
+    "durationMs": 30000,
+    "environment": "staging-iksula",
+    "errorMessage": "TimeoutError: Webhook handler did not respond within 30000ms. Expected POST /webhooks/payment-gateway → 200. Gateway retry log shows 3 attempts at 0s/10s/20s with last attempt status: timeout. Final refund.retry.exhausted event was queued at 20.3s but handler never acknowledged.",
+    "stackTrace": null,
+    "priorHistory": {
+      "runs": [
+        { "runId": "ff", "status": "failed", "ranAt": "2026-05-13T08:12:00Z" },
+        { "runId": "gg", "status": "passed", "ranAt": "2026-05-12T08:12:00Z" },
+        { "runId": "hh", "status": "failed", "ranAt": "2026-05-11T08:12:00Z" },
+        { "runId": "ii", "status": "passed", "ranAt": "2026-05-10T08:12:00Z" },
+        { "runId": "jj", "status": "failed", "ranAt": "2026-05-09T08:12:00Z" }
+      ],
+      "passRate": 0.4,
+      "lastFailureAt": "2026-05-14T08:12:00Z"
+    },
+    "kbContext": [
+      "Render Free Hobby dynos cold-start at 15-min idle. Webhook receiver hosted on staging-iksula uses same dyno; first request after idle takes up to 30s to respond.",
+      "Payment gateway sends retries with 10s spacing; if handler is cold-booting, the entire retry budget can be exhausted before handler responds."
+    ]
+  },
+  "groundTruth": {
+    "rootCauseCategory": "env-config",
+    "rootCauseDetail": "Render Free Hobby dyno cold-start interaction with payment-gateway webhook retry policy. Dyno was idle >15min; first webhook hit the cold dyno which took 28s to boot, leaving 2s for the actual handler → all 3 gateway retries timed out before handler responded. UptimeRobot 4-min keep-alive on /health should prevent this (per R001 in M4 v2 plan).",
+    "acceptableAlternatives": ["flaky-network", "payment-gateway"],
+    "confidence": "high",
+    "notesForEval": "Top-2 hit on env-config / flaky-network / payment-gateway. Prior-history pass-rate of 40% is a strong flake signal. The 'real' root cause is the infrastructure config (cold-start window), but a reviewer focused on the gateway retry behavior could call it payment-gateway, and a reviewer focused on the symptomatic timing could call it flaky-network. All three are acceptable."
+  }
+}

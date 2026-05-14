@@ -1,0 +1,475 @@
+# Milestone M4 — Runs, Defects & Jira (v2)
+
+> **STATUS:** ACTIVE — M4 kickoff Day-18 Thu 2026-05-14.
+> **Predecessor:** M3 closed 2026-05-13 (tag `m3-closed-2026-05-13` → `a98797b`).
+> **Successor:** M5 (Hardening + Pilot Cutover, target 2026-05-20).
+>
+> This v2 doc supersedes the v1.0 `Milestone_M4_Runs_Defects_Jira.md` (Apr 25 draft, ~530 lines). Only the v2.1 amendment block (lines 3-16 of v1) remains binding; the rest of v1 referenced banned tooling (Hatchet, Ollama, LangGraph, Langfuse, Unleash, Doppler, Oracle, Vercel, MSW) and is fully superseded here.
+>
+> **Authored:** Day-17 PM 2026-05-13 (scratch) → promoted Day-18 AM 2026-05-14 (this file).
+
+---
+
+## 1. Headline + binding spec refs
+
+- **Milestone:** **M4 — Runs, Defects & Jira (2-way sync + Sherlock A4 RCA agent)**
+- **Sprint:** Sprint 42 of PM1 (continuation per CLAUDE.md "Iksula data canon")
+- **Duration:** **3 days compressed + Sun reserve** — Day-18 Thu May 14 → Day-20 Sat May 16; Day-21 Sun May 17 = reserve / slip-buffer
+- **Compression rationale:** M3 absorbed +1 day (Day-16 quota block + 5-fix BetterAuth chain). M4 restores the original 18-week PM1 schedule via 3-day compression. Sun reserve is explicit, not implicit — if Day-20 EOD signals slip, M4 close moves to Sun PM, not Mon AM (M5 kickoff must stay Mon May 18).
+- **Binding refs:**
+  - `QA Nexus/PM1/PM1_PRD/PM1_PRD.md` v8.1 §12.3 (Runs, Defects + Jira surface)
+  - `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` v2.1 §3.6 (TB-009 test_runs), §3.7 (TB-010 run_results), §3.8 (TB-011 defects), §3.9 (TB-012 defect_attachments), §3.10 (TB-013 jira_sync_log)
+  - v1.0 `Milestone_M4_Runs_Defects_Jira.md` v2.1 amendment block (lines 3-16) — ONLY binding portion of v1 doc
+  - `docs/milestones/m3-close-report.md` — M3 predecessor handoff
+  - `docs/retros/2026-05-13-m3-retro.md` — M2+M3 retro (action items 1-5 folded into M4 ACs below)
+
+---
+
+## 2. Day-by-day breakdown (3-day compressed + Sun reserve)
+
+### Day-18 (Thu 2026-05-14) — full day, M4 kickoff
+
+**MAIN:**
+
+- Merge M3 close PRs #141 / #142 / #143 (DONE ~08:00 IST)
+- Push tag `m3-closed-2026-05-13` → `a98797b` (DONE)
+- Promote M4 v2 plan: `.claude/scratch/m4-v2-plan-skeleton.md` → this file
+- Commit parallel mirror to `~/Claude Cowork Workspace/AI Based QA Platform/` (two-folder workflow)
+- Open PR `docs(m4): M4 v2 plan (Runs/Defects/Jira, 3-day compressed + Sun reserve) [M4 kickoff]`
+- File followup `(bq)` raw-body webhook middleware design
+- EOD Day-18 report (canonical `docs/eod-reports/2026-05-14-day-18.md`)
+
+**BE+1:**
+
+- **ADR-019 Sherlock prompt strategy** (draft landed Day-18 PM at `docs/architecture/adr-019-sherlock-prompt-strategy.md` — gpt-oss-120b for code/data agents, gpt-oss-20b for env/flake agents, Gemini Flash fallback; 4-agent fan-out via `Promise.all` — NOT LangGraph; OpenTelemetry trace per agent + parent span; deterministic merge with ensemble-boost; ratify Day-19 AM before BE+1 starts MS4-T016). Renumbered from "ADR-015" placeholder in skeleton — ADR-015 was already taken by `adr-015-runtime-llm-config-bridge.md`.
+- TB-009 `test_runs` + TB-010 `run_results` Prisma migration (0005 raw SQL pattern per Day-13 protocol)
+- Run service Pattern A scaffold: `POST /api/projects/:projectId/runs` returns 501 with NotImplementedError + audit row
+- Defect service Pattern A scaffold: `POST /api/projects/:projectId/defects` returns 501 + audit row
+- M4 close-gate test sweep `@M4-CLOSE-GATE` authoring (≥30 assertions, scaffolded Day-1 — NOT deferred per M3 retro action item 1)
+- WebSocket gateway scaffold (`@nestjs/websockets` + `ws` single-instance, NO Redis pub/sub)
+- Jira REST API v3 client scaffold (OAuth 2.0 3LO discovery + token exchange; API token fallback for MVP if Yogesh confirms)
+
+**FE+1:**
+
+- F19 Run Console real wiring (already Pattern A from M3 close, now subscribe to `/api/projects/:projectId/runs/:runId/stream` WebSocket — Pattern A returns canned event-stream)
+- F20 Run Results Pattern A scaffold (per-test-case status drill-down, canned data)
+- F21 Defects Hub Pattern A scaffold (canned list)
+- AdminShell canonical realignment carryover from M3 close (verify F19 React canonical = F15 v2 shell tokens — per Hard Rule 14 Day-17 amendment)
+
+### Day-19 (Fri 2026-05-15) — full day
+
+**BE+1:**
+
+- Run service real impl: lifecycle `pending → running → passed/failed/blocked`, idempotent state transitions, audit row per transition
+- Run results real impl: per-test-case status + timing + screenshots/logs URL refs (R2 presigned)
+- Defect service real impl: CRUD + status workflow + Jira link field
+- **Sherlock A4 RCA agent Pattern B** (real LLM call, golden-corpus evaluation):
+  - Primary: `openai/gpt-oss-120b` via Groq
+  - L1-fast: `openai/gpt-oss-20b` via Groq
+  - Fallback: `gemini-2.5-flash`
+  - Parallel multi-agent via `Promise.all` (NOT LangGraph, NOT Hatchet)
+  - OpenTelemetry span per LLM call (provider / model / latency / token-in / token-out / outcome)
+  - Confidence score in response payload (`0.0..1.0`)
+- Jira webhook receiver (HMAC-SHA256 verify with raw-body middleware — see R002)
+- Run-to-defect auto-link: first failed `run_result` triggers defect draft
+
+**FE+1:**
+
+- F20 Run Results real wiring (live drill-down)
+- F21 Defects Hub real wiring (filter / sort / drilldown)
+- F22 Defect Detail Pattern A scaffold
+- F22 Defect Detail Pattern B (real Jira link + Sherlock RCA panel)
+- **F22 "needs human review" UI affordance** for any Sherlock RCA with `confidence < 0.5` — amber banner + "Sherlock is unsure — please verify the root cause" + disable-auto-Jira-create + manual override button. Per Day-18 user directive.
+
+### Day-20 (Sat 2026-05-16) — M4 close day
+
+**BE+1:**
+
+- M4 close-gate test sweep `@M4-CLOSE-GATE` polished (authored Day-18, finalized Day-20)
+- Audit chain HMAC verification for all run / defect / jira_sync_log events
+- Run-defect-Jira E2E integration test (1 failed run → 1 defect → 1 Jira ticket → status sync back)
+- Render staging smoke (if Yogesh provisions; carries from M3 followup)
+
+**FE+1:**
+
+- F18 Test Suites Pattern A + B
+- F18m1 Edit Suite Modal
+- F19 / F20 / F21 / F22 visual gates (320 + 1440 per Rule 13)
+- RWD verification sweep across M4 routes
+
+**MAIN:**
+
+- M4 close ceremony (close report + announcement + retro)
+- Tag `m4-closed-2026-05-16` push
+- M5 kickoff prep
+- EOD Day-20 report
+
+### Day-21 (Sun 2026-05-17) — reserve / slip-buffer
+
+**Activation rule:** If Day-20 18:00 IST signals slip (M4 close-gate sweep <100% pass OR Sherlock corpus <40% accuracy OR visual gate fail on any F19/F20/F21/F22), M4 close pushes to Sun PM. M5 kickoff stays Mon May 18 AM regardless.
+
+**Sun reserve scope (in priority order):**
+
+1. Sherlock corpus re-eval if accuracy <40% on first run (prompt iteration, NOT model swap)
+2. Visual gate retries on M4 frames
+3. M4 close-gate sweep fixes
+4. M4 close ceremony if slipped
+
+**NOT permitted on Sun:** new scope, new ADRs, new dependencies. Sun is fix-only.
+
+---
+
+## 3. Tasks (MS4-T001..T042)
+
+### BE tasks
+
+| Task     | Title                                                           | Owner | Day        |
+| -------- | --------------------------------------------------------------- | ----- | ---------- |
+| MS4-T001 | ADR-019 Sherlock prompt strategy (draft → ratify Day-19 AM)     | BE+1  | 18         |
+| MS4-T002 | TB-009 + TB-010 Prisma migration 0005 (raw SQL)                 | BE+1  | 18         |
+| MS4-T003 | TB-011 + TB-012 + TB-013 Prisma migration 0006 (raw SQL)        | BE+1  | 18         |
+| MS4-T004 | Run service Pattern A scaffold (501)                            | BE+1  | 18         |
+| MS4-T005 | Run service real impl + lifecycle state machine                 | BE+1  | 19         |
+| MS4-T006 | Run results real impl (per-test-case + R2 presigned attachment) | BE+1  | 19         |
+| MS4-T007 | Defect service Pattern A scaffold (501)                         | BE+1  | 18         |
+| MS4-T008 | Defect service real impl + status workflow                      | BE+1  | 19         |
+| MS4-T009 | WebSocket gateway scaffold (`@nestjs/websockets` + `ws`)        | BE+1  | 18         |
+| MS4-T010 | WebSocket reconnect-on-dyno-wake handler                        | BE+1  | 19         |
+| MS4-T011 | Jira REST API v3 client scaffold (OAuth 2.0 3LO + token MVP)    | BE+1  | 18         |
+| MS4-T012 | Jira webhook receiver (raw-body middleware + HMAC verify)       | BE+1  | 19         |
+| MS4-T013 | Jira webhook idempotency layer (event-id dedup table)           | BE+1  | 19         |
+| MS4-T014 | Run-to-defect auto-link                                         | BE+1  | 19         |
+| MS4-T015 | Sherlock A4 RCA agent Pattern A scaffold                        | BE+1  | 18         |
+| MS4-T016 | Sherlock A4 RCA Pattern B (real LLM + Promise.all parallel)     | BE+1  | 19         |
+| MS4-T017 | Sherlock retry chain (gpt-oss-120b → gpt-oss-20b → Gemini)      | BE+1  | 19         |
+| MS4-T018 | Sherlock OpenTelemetry span emission                            | BE+1  | 19         |
+| MS4-T019 | Sherlock 50-defect golden corpus eval harness                   | BE+1  | 19         |
+| MS4-T020 | Confidence score in Sherlock response (`0.0..1.0`)              | BE+1  | 19         |
+| MS4-T021 | Audit chain extension for run / defect / jira_sync events       | BE+1  | 20         |
+| MS4-T022 | Run notification email (Resend)                                 | BE+1  | 19         |
+| MS4-T023 | M4 close-gate test sweep `@M4-CLOSE-GATE` (Day-18 → Day-20)     | BE+1  | 18 → 20    |
+| MS4-T024 | R2 CORS config + presigned URL XHR-progress wiring              | BE+1  | 19         |
+| MS4-T025 | Render staging smoke (if Yogesh provisions)                     | BE+1  | 20         |
+| MS4-T026 | Run-defect-Jira E2E integration test                            | BE+1  | 20         |
+
+### FE tasks
+
+| Task     | Title                                                          | Owner | Day |
+| -------- | -------------------------------------------------------------- | ----- | --- |
+| MS4-T027 | F19 Run Console real wiring + WebSocket subscription           | FE+1  | 18  |
+| MS4-T028 | F20 Run Results Pattern A scaffold                             | FE+1  | 18  |
+| MS4-T029 | F20 Run Results real wiring                                    | FE+1  | 19  |
+| MS4-T030 | F21 Defects Hub Pattern A scaffold                             | FE+1  | 18  |
+| MS4-T031 | F21 Defects Hub real wiring (filter/sort/drilldown)            | FE+1  | 19  |
+| MS4-T032 | F22 Defect Detail Pattern A scaffold                           | FE+1  | 19  |
+| MS4-T033 | F22 Defect Detail Pattern B (Jira link + Sherlock RCA panel)   | FE+1  | 19  |
+| MS4-T034 | F22 "needs human review" affordance (confidence <0.5 amber UI) | FE+1  | 19  |
+| MS4-T035 | F18 Test Suites Pattern A + B                                  | FE+1  | 20  |
+| MS4-T036 | F18m1 Edit Suite Modal                                         | FE+1  | 20  |
+| MS4-T037 | AdminShell canonical realignment verify (F19 React = F15 v2)   | FE+1  | 18  |
+| MS4-T038 | RWD verification sweep (M4 routes at 320/768/1024/1440)        | FE+1  | 20  |
+| MS4-T039 | F19/F20/F21/F22 visual gates (Rule 13)                         | FE+1  | each day |
+
+### MAIN / Yogesh tasks
+
+| Task     | Title                                              | Owner  | Day      |
+| -------- | -------------------------------------------------- | ------ | -------- |
+| MS4-T040 | Jira sandbox setup (iksula.atlassian.net OAuth/token) | Yogesh | 18       |
+| MS4-T041 | UptimeRobot keep-alive 5min → 4min on /health         | Yogesh | 18       |
+| MS4-T042 | Render staging dashboard (carried from M3)            | Yogesh | 18       |
+
+### M3 retro action items folded into M4 (per `docs/retros/2026-05-13-m3-retro.md`)
+
+| Retro action                                                              | Folded into                                            |
+| ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1. Close-gate test sweep authored Day-1, NOT deferred                     | MS4-T023 + MS4-AC025                                   |
+| 2. Pre-push prod-boot smoke gate (followup `(bk)`)                        | Gate added via separate PR Day-18 PM (not M4 scope)    |
+| 3. Auth chain regression test in CI                                       | MS4-AC031 (new)                                        |
+| 4. Visual diff-probe at 320/768/1024/1440 before coding fixes (Rule 16)   | MS4-T039 enforces; embedded in FE+1 workflow           |
+| 5. Multi-worktree hook whitelist sync                                     | Out-of-band Day-18 AM; not M4-tracked                  |
+
+### Hard Rule 17 enforcement (added Day-18 AM 2026-05-14)
+
+**Mandatory pre-port step for every M4 frame (F18, F19, F20, F21, F22):** FE+1 runs `node scripts/extract-canned-data.mjs --frame <ID> --html <path-to-v2-html>` BEFORE writing any React component code. Output `apps/web/components/<frame-slug>/canned-data.ts` is the only legal source of user-visible strings for that frame's React port.
+
+**Added ACs (folded into MS4-AC020 visual-gate audit):**
+
+| AC          | Title                                                                                          | Gate           |
+| ----------- | ---------------------------------------------------------------------------------------------- | -------------- |
+| MS4-AC020a  | `canned-data.ts` exists for every M4 frame before any `*.tsx` component is committed           | repo grep      |
+| MS4-AC020b  | No user-visible string literal in any M4 `*.tsx` file fails the Hard Rule 17 traceback check    | reviewer grep  |
+
+**Why this matters for M4 specifically:** F19 / F20 / F21 / F22 have dense canonical example data (cluster titles, defect IDs, ticket IDs, error messages, right-rail labels, suite names). The F19 / F20 visual gate failures in M3 close week all traced to invented stub data. Hard Rule 17 closes this drift class for the rest of PM1.
+
+---
+
+## 4. Acceptance criteria (MS4-AC001..AC042)
+
+### Core (BE/FE feature acceptance)
+
+| AC         | Title                                                                       | Gate                                                 |
+| ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------- |
+| MS4-AC001  | Run service CRUD endpoints functional (create / list / get / update)        | jest BE                                              |
+| MS4-AC002  | Run results recorded per test-case with timing + status                     | jest BE                                              |
+| MS4-AC003  | Run lifecycle state machine: pending → running → passed/failed/blocked      | jest BE                                              |
+| MS4-AC004  | WebSocket `/runs/:runId/stream` broadcasts state changes within 500ms       | jest BE + Playwright                                 |
+| MS4-AC005  | WebSocket reconnect on dyno wake (UptimeRobot 4-min ping)                   | manual smoke                                         |
+| MS4-AC006  | Defect service CRUD + status workflow (open / triage / fixed / closed)      | jest BE                                              |
+| MS4-AC007  | Jira 2-way sync (defect → Jira create + Jira → defect update)               | jest BE + sandbox smoke                              |
+| MS4-AC008  | Jira webhook HMAC-SHA256 verify rejects forged payloads                     | jest BE                                              |
+| MS4-AC009  | Jira webhook idempotency: replayed event-id is no-op                        | jest BE                                              |
+| MS4-AC010  | Jira rate-limit handling: 429 retry-after backoff                           | jest BE                                              |
+| MS4-AC011  | Run-to-defect auto-link creates draft on first failed run-result            | jest BE                                              |
+| MS4-AC012  | F19 Run Console real-time updates via WebSocket                             | Playwright                                           |
+| MS4-AC013  | F20 Run Results drill-down to per-test-case detail                          | Playwright                                           |
+| MS4-AC014  | F21 Defects Hub filter by status/severity/assignee                          | Playwright                                           |
+| MS4-AC015  | F22 Defect Detail shows Jira link + sync status                             | Playwright                                           |
+| MS4-AC016  | F22 "needs human review" amber banner appears when Sherlock confidence <0.5 | Playwright (mock low-confidence response)            |
+| MS4-AC017  | F22 disables auto-Jira-create when confidence <0.5                          | jest BE + Playwright                                 |
+| MS4-AC018  | F18 Test Suites CRUD + run-from-suite action                                | jest BE + Playwright                                 |
+| MS4-AC019  | F18m1 Edit Suite Modal saves suite definition                               | Playwright                                           |
+| MS4-AC020  | AdminShell canonical realignment (no shell-internal drift F19/F20/F21/F22)  | manual diff-probe per Rule 16                        |
+| MS4-AC021  | RWD sweep at 320/768/1024/1440 across M4 routes                             | Playwright multi-viewport                            |
+
+### Sherlock A4 RCA agent
+
+| AC         | Title                                                                       | Gate                                                 |
+| ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------- |
+| MS4-AC022  | Sherlock Pattern A scaffold returns canned RCA + confidence=0.7             | jest BE                                              |
+| MS4-AC023  | Sherlock Pattern B calls real LLM with OpenTelemetry trace span             | jest BE + trace inspection                           |
+| MS4-AC024  | Sherlock retry chain: gpt-oss-120b → gpt-oss-20b → gemini-2.5-flash         | jest BE (force-fail primary, assert fallback)        |
+| MS4-AC025  | Sherlock parallel agent calls via `Promise.all` (NOT LangGraph)             | code review + grep ban                               |
+| MS4-AC026  | Sherlock returns confidence score `0.0..1.0` in every response              | jest BE schema check                                 |
+| MS4-AC042  | **A4 RCA accuracy ≥40% on 50-defect golden corpus** (top-2 hit rate; see §4.5) | corpus harness (`scripts/eval-sherlock.ts`)         |
+
+### Audit, ops, close-gate
+
+| AC         | Title                                                                       | Gate                                                 |
+| ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------- |
+| MS4-AC027  | Audit chain HMAC-SHA256 valid for all run/defect/jira_sync_log events       | jest BE chain-verify util                            |
+| MS4-AC028  | Run notification email delivers via Resend within 30s of completion         | manual smoke + Resend dashboard                      |
+| MS4-AC029  | Render scale-to-zero handled (UptimeRobot 4-min keep-alive)                 | UptimeRobot uptime report                            |
+| MS4-AC030  | M4 close-gate test sweep tagged `@M4-CLOSE-GATE` (≥30 assertions)           | jest BE                                              |
+| MS4-AC031  | Auth chain regression test in CI (M3 retro action item 3)                   | Playwright in CI                                     |
+| MS4-AC032  | M4 close-gate sweep passes 100% in CI                                       | GitHub Actions                                       |
+| MS4-AC033  | All M4 frames (F18, F19, F20, F21, F22) visual-gated at 320 + 1440          | Rule 13 screenshots                                  |
+| MS4-AC034  | Iksula sandbox connection verified (iksula.atlassian.net OAuth or token)    | manual sandbox smoke                                 |
+| MS4-AC035  | Run-defect-Jira E2E integration test passes                                 | jest BE                                              |
+| MS4-AC036  | M4 tag `m4-closed-2026-05-16` (or Sun reserve `-17`) pushed at close        | git ls-remote verify                                 |
+| MS4-AC037  | Day-18/19/20 EOD reports filed in `docs/eod-reports/`                       | repo check                                           |
+| MS4-AC038  | $0/month free-tier quota unbreached (Groq RPD, Resend, R2, Neon)            | manual quota check                                   |
+| MS4-AC039  | No new banned-list dependencies introduced                                  | enforce-pm1-stack hook clean                         |
+| MS4-AC040  | No design-token drift (enforce-design-tokens hook clean across M4 PRs)      | hook log review                                      |
+| MS4-AC041  | Two-folder workflow: `~/Claude Cowork Workspace/...` mirror updated         | manual mirror check                                  |
+
+---
+
+## 4.5 AC042 measurement protocol (50-defect golden corpus)
+
+This section defines exactly how AC042 is scored, so there is no ambiguity at M4 close.
+
+**Corpus location:** `apps/api/test/golden-sets/sherlock-rca/` — 50 defects (`def-001.json` … `def-050.json`), each with:
+
+**Seed status Day-18 PM:** 5 seed defects + `schema.json` + `README.md` landed. Coverage: `code-bug` ×2, `env-config` ×1, `payment-gateway` ×1, `race-condition` ×1. All 5 validated against schema.json (pure-Node validator). BE+1 expands to 50 Day-19 by mining `apps/api/test/golden-sets/a4/raw/cpi_postmortem_defects.json` (62 real Iksula defects with L1-L5 tags) + remaining F20 Run Results v2 canonical failures, filling the 6-category coverage gap.
+
+- `input`: failed run-result context (test case ID, step number, error message, stack trace if any, environment, prior history)
+- `groundTruth.rootCauseCategory`: one of `code-bug` / `data-bug` / `env-config` / `flaky-network` / `auth-permissions` / `dependency-version` / `ui-regression` / `race-condition` / `payment-gateway` / `other` (10 categories)
+- `groundTruth.rootCauseDetail`: human-written 1-2 sentence specific cause (e.g. "Refund amount precision mismatch — INR ₹.00 vs USD $.00 conversion drops to integer at line `refund.service.ts:142`")
+- `groundTruth.acceptableAlternatives`: array of `rootCauseCategory` values that a human reviewer would also accept as correct (e.g. for an env-config bug that surfaces as a payment-gateway 500, both `env-config` and `payment-gateway` are acceptable)
+
+**Scoring rubric (top-2 hit rate):**
+
+- Sherlock returns a ranked array of up to 5 RCA candidates, each with `category` + `detail` + `confidence`.
+- **Top-2 HIT** if `groundTruth.rootCauseCategory` OR any value in `groundTruth.acceptableAlternatives` appears in the top-2 candidates by confidence.
+- **Top-2 MISS** otherwise.
+- **AC042 PASS** = `(hits / 50) ≥ 0.40` → at least **20 of 50 defects** must be top-2 hits.
+
+**Why top-2 and not top-1:** Sherlock surfaces RCA in F22 as a ranked list — the human reviewer sees both candidates. As long as the correct cause is among the top 2, the user reaches the right diagnosis fast. Top-1 strict would push the bar to ~60-70% which is unrealistic for the 4-day window. Top-2 ≥40% is achievable per the Yogesh research note (`vanilla ~11%` is top-1 strict; parallel multi-agent should easily clear top-2 ≥40%).
+
+**Why 50 and not 100+:** Smaller corpus = faster iteration. Sun reserve allocates time for prompt iteration on misses; corpus expansion is M5 scope.
+
+**Eval harness (`scripts/eval-sherlock.ts`):**
+
+- Reads all 50 `def-*.json` files
+- Calls Sherlock service in production-equivalent mode (real LLM call, full retry chain)
+- Computes hit/miss per defect + overall ratio
+- Writes report to `apps/api/test/golden-sets/sherlock-rca/results-{YYYY-MM-DD}.json`
+- CI runs nightly post-M4 close; M4-close-gate (`@M4-CLOSE-GATE`) requires latest run ≥40%
+
+**Confidence calibration sub-gate (added Day-18 PM polish):**
+
+- For every defect where Sherlock returns confidence ≥0.8, the top-1 category MUST match `groundTruth.rootCauseCategory` (strict top-1, not top-2). Misalignment here indicates Sherlock is overconfident on wrong answers — feeds back into F22 "needs human review" threshold tuning.
+- Reported in eval output as "calibration_top1_at_high_confidence" — informational only for M4, not a blocker. Becomes a hard gate in M5 if pilot users report acting on wrong high-confidence RCAs.
+
+## 4.6 "Needs human review" UI affordance — full spec
+
+Locked Day-18 directive. Implements MS4-T034 + MS4-AC016 + MS4-AC017.
+
+**Trigger:** Sherlock RCA response for a defect has `topCandidate.confidence < 0.5`.
+
+**UI in F22 Defect Detail (visible whenever the trigger condition holds):**
+
+- **Amber banner** rendered above the RCA panel, full-width within the right rail
+- Token: `bg-warn-soft` / `border-warn` / `text-warn-ink` (per `01_SYSTEM.md` warn-amber palette — token-only, NO inline hex)
+- Icon: `lucide-react` `AlertTriangle` 16×16, leading
+- **Headline:** `Sherlock is unsure — please verify the root cause`
+- **Sub-text:** `Top candidate confidence is {{confidence×100}}% (below 50% threshold). Review the candidates below or investigate manually before creating a Jira ticket.`
+- **Layout:** banner stacks ABOVE the existing 5-candidate RCA list; the list itself is NOT hidden — user still sees Sherlock's best guess
+
+**Behavior when trigger holds:**
+
+- **"Create Jira ticket" button DISABLED** with tooltip `Sherlock is unsure — confirm the root cause first to enable Jira ticket creation` (matches MS4-AC017 spec)
+- **"Override and create anyway" affordance** appears as a secondary action below the disabled button: lucide `ShieldAlert` icon + label `Override — I have verified manually`. Click opens a confirm dialog (`Confirm-480×360` per shell modal spec) requiring the user to type their initials before the Jira ticket POST fires. This action writes an `audit_log` row with type `defect.jira_create_override` capturing the low-confidence value, user ID, and initials.
+- WebSocket event broadcast: `defect.needs_review` with payload `{ defectId, confidence, sherlockRunId }` for any future workflow integration
+
+**Tap targets** (Rule 12 carry-through): override button + initials input both ≥44×44px.
+
+**RWD:** banner stacks vertically below 768px (icon + headline above sub-text); full-width sticks 16px from rail edges at every breakpoint.
+
+**Canned-data sourcing (Rule 17):** the banner copy lives in `apps/web/components/f22-defect-detail/canned-data.ts` under `F22_NEEDS_REVIEW_BANNER` — extracted from the canonical `F22 Defect Detail v2.html` if a `needs-review` state is rendered there; otherwise Yogesh provides the canonical copy Day-19 AM and FE+1 adds it as a "canonical extension" line in the canned-data file with a Yogesh-approval timestamp comment.
+
+## 4.7 WebSocket event taxonomy (BE+1 ↔ FE+1 contract, locked Day-18 PM)
+
+| Event                          | Payload                                                                            | Emitted from                                  | Consumed by               |
+| ------------------------------ | ---------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------- |
+| `run.state_changed`            | `{ runId, projectId, state, transitionedAt, transitionedByUserId? }`               | Run service on state machine transition       | F19 Run Console            |
+| `run.result_recorded`          | `{ runId, testCaseId, status, durationMs, screenshotUrl?, logsUrl? }`              | Run results writer after each test-case row   | F19 Run Console + F20 Run Results |
+| `run.completed`                | `{ runId, projectId, summary: { passed, failed, blocked, totalDurationMs } }`      | Run service on terminal state                 | F19 + F20                  |
+| `defect.created`               | `{ defectId, projectId, fromRunResultId?, severity, status, createdByUserId }`     | Defect service on insert                      | F21 Defects Hub            |
+| `defect.status_changed`        | `{ defectId, oldStatus, newStatus, changedByUserId, changedAt }`                   | Defect service on status workflow transition  | F21 + F22                  |
+| `defect.jira_linked`           | `{ defectId, jiraIssueKey, jiraUrl, syncDirection: "outbound"\|"inbound" }`        | Jira sync service after successful create     | F21 + F22                  |
+| `defect.sherlock_ready`        | `{ defectId, sherlockRunId, topConfidence, candidateCount }`                       | Sherlock service after `Promise.all` resolves | F22                        |
+| `defect.needs_review`          | `{ defectId, confidence, sherlockRunId }`                                          | Sherlock service when `topConfidence < 0.5`   | F22 (banner trigger)       |
+| `jira.webhook_received`        | `{ providerEventId, webhookEvent, defectId? }`                                     | Jira webhook receiver after HMAC verify       | F21 (toast) + audit panel  |
+
+**Channel scoping:** events are emitted to project-scoped rooms `project:{projectId}` — clients subscribe to their current project's room only. RBAC is enforced server-side (gateway middleware rejects subscription if user lacks role for project).
+
+**Single-instance constraint** (per stack lock §7): all events flow through one Render dyno's `ws` server. NO Redis pub/sub fan-out — fine for pilot scale (8 users × 12hr/day).
+
+---
+
+## 5. Risk register (R001-R004 research-backed + legacy P1/P2)
+
+### R001 — WebSocket lifetime under Render Free scale-to-zero
+
+- **Severity:** P1 (highest M4 risk)
+- **Trigger:** Render Free Hobby idles dynos at 15min no-request. WebSocket connections terminate on idle. Pilot is 12hr/day so dyno wakes/sleeps repeatedly within a workday.
+- **Impact:** Run Console real-time updates die silently between connections; FE shows stale data.
+- **Mitigation:**
+  1. UptimeRobot keep-alive interval `5min → 4min` on `/health` (MS4-T041)
+  2. WebSocket client reconnect on `close` with exponential backoff (MS4-T010)
+  3. FE detects stale connection (no event >60s) → polls `/runs/:id` once, then reconnects
+- **Owner:** BE+1 (server) + FE+1 (client reconnect logic)
+- **Acceptance:** MS4-AC005
+
+### R002 — Jira webhook HMAC verification needs raw request body
+
+- **Severity:** P1
+- **Trigger:** Jira posts JSON to webhook URL with an `X-Hub-Signature` header containing HMAC-SHA256 of the **raw bytes** of the request body. NestJS / Express's `bodyParser.json()` consumes the stream and stringifies to an object; recomputing HMAC over `JSON.stringify(req.body)` produces a different byte sequence than what Jira signed (whitespace, key ordering, unicode escape differences). Result: every webhook fails HMAC verify in production.
+- **Impact:** All inbound Jira → defect updates rejected as forged. 2-way sync half-broken.
+- **Mitigation:**
+  1. Mount **raw-body middleware** on the webhook route specifically: `app.use('/webhooks/jira', express.raw({ type: 'application/json' }))`
+  2. Compute HMAC over `req.body` (Buffer) BEFORE JSON.parse
+  3. Keep default JSON body-parser for all other routes (don't swap globally)
+  4. File followup `(bq)` for the middleware design pattern doc
+- **Owner:** BE+1
+- **Acceptance:** MS4-AC008
+
+### R003 — R2 CORS + XHR upload progress for defect attachments
+
+- **Severity:** P2
+- **Trigger:** Defect attachments (screenshots, log files, video) bypass Render's 512MB dyno via R2 presigned URL direct upload. Two gotchas: (a) R2 requires CORS allow-list config per-bucket for browser PUT; (b) `fetch()` does not expose upload progress events — for files >5MB users see a frozen UI. Native XHR's `upload.onprogress` is needed.
+- **Impact:** Without CORS the browser PUT errors with CORS preflight failure; without XHR progress the user UX is broken for large attachments.
+- **Mitigation:**
+  1. R2 bucket CORS config script committed at `apps/api/scripts/r2-cors-config.sh` with `AllowedOrigins: [https://qa-nexus.pages.dev, http://localhost:3000]` and `AllowedMethods: [PUT, GET, HEAD]`
+  2. FE upload helper uses `XMLHttpRequest` (not `fetch`) for files >2MB to expose `upload.onprogress`
+  3. Progress callback wired to F22 attachment row's progress bar
+- **Owner:** BE+1 (CORS config) + FE+1 (XHR helper)
+- **Acceptance:** MS4-AC013 + MS4-T024
+
+### R004 — Jira webhook retry idempotency
+
+- **Severity:** P2
+- **Trigger:** Jira retries webhook deliveries on non-2xx responses with up to ~3 retries over ~5 min. If our handler is slow or partially fails after writing to DB but before returning 200, we get duplicate inserts (defect updated twice, audit row chain breaks).
+- **Impact:** Duplicate defect updates; audit chain HMAC reverification fails (chain forked); user sees defect history with duplicate identical entries.
+- **Mitigation:**
+  1. Jira sends `x-atlassian-webhook-identifier` header (or `webhookEvent` + `issue.id` + `timestamp` composite key)
+  2. `jira_sync_log` table has a UNIQUE INDEX on `(provider_event_id, project_id)`
+  3. Webhook handler ALWAYS inserts the log row FIRST (`INSERT ... ON CONFLICT DO NOTHING RETURNING id`); if no row returned, return 200 and skip processing (duplicate)
+  4. Only write to `defects` table after log row insert succeeds
+- **Owner:** BE+1
+- **Acceptance:** MS4-AC009
+
+### Legacy risks (carried from skeleton)
+
+| Risk                                                                     | Severity | Mitigation                                                                                              |
+| ------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------- |
+| A4 RCA accuracy below 40% target (vanilla ~11% vs multi-agent ~64%)      | P1       | AC042 target set ≥40% per Yogesh decision; Sun reserve allocated for prompt iteration if first run miss |
+| 3-day compression overrun (M3 went +1 day; same risk for M4)             | P1       | Sun Day-21 reserve; scope drops listed in §6 if Day-19 EOD signals slip                                  |
+| BetterAuth re-regression after 1.6.11 bump                               | P2       | Render staging dashboard (MS4-T042) for pre-deploy smoke once Yogesh provisions                          |
+| Jira OAuth 2.0 3LO complexity vs MVP timeline                            | P2       | API token fallback for MVP (Yogesh confirms Day-18); OAuth post-M4                                       |
+
+---
+
+## 6. Scope cuts vs v1.0 (deferred to M5 or later)
+
+- Defect comments (was MS4-T037 v1; defer to M5)
+- Auto-assign defect by area (was MS4-T040 v1; defer to M5)
+- Dashboard charts (was MS4-T048-T052 v1; defer to M6 reports)
+- RCA feedback loop / thumbs-up-down (was MS4-T044 v1; defer to M5)
+- Chunk upload for defect attachments >100MB (was MS4-T036 v1; defer to M5 if needed — pilot files are <50MB)
+- 2-min poll fallback for webhook (was MS4-T029 v1; webhook-only for MVP)
+- Full docs portal (was MS4-T055-T060 v1; partial in M4 close report only)
+- Defect SLA timer (not in v1; not in M4 either — defer to M6 reports)
+- Bulk defect actions (not in v1; defer to M5 if pilot demands)
+
+---
+
+## 7. Tech stack locks (per v2.1 amendment + CLAUDE.md)
+
+| Concern                  | M4 choice                                            | NOT                              |
+| ------------------------ | ---------------------------------------------------- | -------------------------------- |
+| Workflow orchestration   | Pure TypeScript `Promise.all`                        | LangGraph, Hatchet, Temporal     |
+| LLM observability        | OpenTelemetry trace spans                            | Langfuse, LangSmith              |
+| LLM primary (Sherlock)   | `openai/gpt-oss-120b` via Groq                       | Ollama, vLLM, self-host          |
+| LLM L1-fast              | `openai/gpt-oss-20b` via Groq                        | self-host                        |
+| LLM fallback             | `gemini-2.5-flash`                                   | OpenAI direct                    |
+| Feature flags            | env var + DB row (LLM provider config bridge)        | Unleash, LaunchDarkly            |
+| Secrets                  | Render env vars + GitHub Secrets                     | Doppler, Vault                   |
+| Database                 | Postgres 15 + pgvector on Neon Free                  | Oracle, Supabase                 |
+| Hosting (web)            | Cloudflare Pages Free                                | Vercel, Netlify                  |
+| Hosting (api)            | Render Free Hobby                                    | AWS Lambda, Fly.io               |
+| Storage                  | Cloudflare R2 presigned-URL direct upload            | Render-dyno buffering, S3 direct |
+| Jira                     | REST API v3 direct + OAuth 2.0 3LO (or API token MVP) | Jira MCP, Forge app              |
+| WebSocket                | `@nestjs/websockets` + `ws` single-instance          | Redis pub/sub, Socket.io fanout  |
+| Iksula sandbox           | `iksula.atlassian.net` live                          | MSW mock, Postman mock           |
+| Email                    | Resend free                                          | SendGrid, AWS SES                |
+| Editor (defect notes)    | TipTap (already in M3)                               | Quill, Slate, Draft.js           |
+
+---
+
+## 7.5 Day-18 progress log
+
+Append-only. Each line documents a meaningful milestone landed during M4. Updated by MAIN after each merge.
+
+- **2026-05-14 12:12 IST · #144 merged → main `81708f5`** — `feat(api): M4 migration 0004 — runs/defects/jira tables`. New tables on Neon: `evidence`, `defect_history`, `jira_webhook_events`, `jira_sync_logs` (all 0 rows). New enum `jira_auth_method` with values `oauth_3lo` + `api_token` (covers the OAuth-vs-token MVP decision in §7 — both paths schema-supported). Render auto-redeploy completed at 06:46:31 UTC (~4 min after merge); confirmed via `/health` `load_duration_ms` boot-fingerprint change (15987 → 15570). **Unblocks:** BE+1 WebSocket Gateway TASK 2 (MS4-T009) + Jira client scaffold (MS4-T011) + webhook receiver (MS4-T012).
+- **2026-05-14 11:23 IST · #146 opened** — `docs(m4): M4 v2 plan (Runs/Defects/Jira, 3-day compressed + Sun reserve) [M4 kickoff]`. AC042=≥40% + "needs human review" UI affordance + Hard Rule 17 (canned-data extraction) + `extract-canned-data.mjs` all landed on this PR.
+- **2026-05-14 13:00 IST · ADR-019 + 5 seed defects landed on #146** — `docs/architecture/adr-019-sherlock-prompt-strategy.md` (draft, ratify Day-19 AM) defines 4-agent parallel fan-out (`agent.code` + `agent.data` + `agent.env` + `agent.flake`), deterministic merge with ensemble boost, JSON-only response with calibration rules, retry chain primary→secondary→Gemini-fallback, OpenTelemetry per-agent spans aggregated into parent `sherlock.rca` span. `apps/api/test/golden-sets/sherlock-rca/` seeded with `schema.json` + `README.md` + 5 def-001…def-005 entries sourced from F20 canonical Iksula Returns failures (TC-RET-0247 split-tender, TC-RET-0342 webhook timeout, TC-RET-0345 multi-currency FX, TC-PAY-0211 UPI mandate, TC-PAY-0224 3DS race). All 5 validated against schema. Coverage: 4 of 10 enums; Day-19 BE+1 expands to 50 (gap: data-bug, flaky-network, auth-permissions, dependency-version, ui-regression, other). M4 §3 task table renumbered ADR-015 placeholder → ADR-019 (was already taken by runtime-llm-config-bridge ADR).
+
+---
+
+## 8. Cross-references
+
+- `Milestone_M4_Runs_Defects_Jira.md` v1.0 (Apr 25) — superseded by this v2; only v2.1 amendment block (lines 3-16) still binding
+- `docs/milestones/m3-close-report.md` — predecessor handoff
+- `docs/retros/2026-05-13-m3-retro.md` — M2+M3 retro (actions 1-5 folded into MS4-T023 / new gate / MS4-AC031 / MS4-T039 / out-of-band)
+- `docs/audits/2026-05-13-skill-alignment-audit.md` — Day-17 audit (P1 pre-push smoke gap → followup `(bk)`)
+- `CLAUDE.md` Hard Rules 14 (Day-17 amendment — AdminShell canonical = F19 React) + 15 (FE port source-of-truth) + 16 (canonical-first port workflow)
+- `QA Nexus/PM1/PM1_PRD/PM1_PRD.md` v8.1 §12.3
+- `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` v2.1 §3.6-3.10
+- `docs/followups.md` `(bq)` raw-body webhook middleware design (filed Day-18 AM)
+- `~/Claude Cowork Workspace/AI Based QA Platform/` — parallel mirror (two-folder workflow)
+
+---
+
+_Promoted Day-18 AM 2026-05-14 from `.claude/scratch/m4-v2-plan-skeleton.md`. AC042=≥40% locked per Yogesh Day-18 directive. "Needs human review" UI affordance for confidence <0.5 locked per same directive (MS4-T034 + MS4-AC016 + MS4-AC017)._

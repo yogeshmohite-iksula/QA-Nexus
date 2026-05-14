@@ -1,0 +1,26 @@
+{
+  "id": "def-003",
+  "input": {
+    "testCaseId": "TC-RET-0345",
+    "testCaseTitle": "Multi-currency refund · INR → USD conversion mismatch",
+    "runId": "33333333-3333-4333-8333-333333333333",
+    "stepNumber": 5,
+    "stepLabel": "Submit USD refund against INR original purchase — expect FX-quote-locked amount",
+    "durationMs": 8300,
+    "environment": "staging-iksula",
+    "errorMessage": "AssertionError: Expected refund amount USD 12.05 (locked FX 1 USD = 83.20 INR from purchase at 2026-05-01), got USD 12.08 (current FX 1 USD = 82.95 INR). Refund used live FX quote instead of locked purchase-time FX.",
+    "stackTrace": "AssertionError: Expected refund amount USD 12.05, got USD 12.08\n  at Object.<anonymous> (apps/e2e/specs/refund-multi-currency.spec.ts:88:21)\n  at refund.service.ts:71 calculateRefundAmount()\n  at fx-quote.service.ts:34 getCurrentQuote()",
+    "priorHistory": null,
+    "kbContext": [
+      "Iksula Returns policy: refunds use the FX quote locked at the time of original purchase, NOT the current market FX. This protects customers from FX swings during return window.",
+      "The fx_quotes table stores quotes per orderId with TTL 365 days. Refund service must look up fx_quotes by orderId before computing refund amount in target currency."
+    ]
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "refund.service.ts:71 calls fx-quote.service.ts:34 getCurrentQuote() instead of getLockedQuoteForOrder(orderId). This violates the Iksula multi-currency refund policy that locks FX at purchase time. Fix: change refund.service.ts:71 to look up fx_quotes by orderId.",
+    "acceptableAlternatives": ["data-bug"],
+    "confidence": "high",
+    "notesForEval": "Top-2 hit on code-bug or data-bug. The bug is unambiguously code (wrong service method called) but a reviewer could call it data-bug if they interpret 'using stale-policy data source' as a data problem. Sherlock should ideally cite refund.service.ts:71 + fx-quote.service.ts:34."
+  }
+}

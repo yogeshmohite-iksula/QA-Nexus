@@ -1,0 +1,36 @@
+{
+  "id": "def-001",
+  "input": {
+    "testCaseId": "TC-RET-0247",
+    "testCaseTitle": "Process refund with split tender — gift card + credit card remainder",
+    "runId": "11111111-1111-4111-8111-111111111111",
+    "stepNumber": 7,
+    "stepLabel": "Submit refund — expect 200 + matched amounts on both tenders",
+    "durationMs": 12400,
+    "environment": "staging-iksula",
+    "errorMessage": "AssertionError: Expected refund amount on gift card tender to equal 240.00, got 239.99. Total refund 480.00 did NOT match sum(tenderAmounts) = 479.99.",
+    "stackTrace": "AssertionError: Expected refund amount on gift card tender to equal 240.00, got 239.99\n  at Object.<anonymous> (apps/e2e/specs/refund-split-tender.spec.ts:142:23)\n  at processTicksAndRejections (node:internal/process/task_queues:96:5)\n  at refund.service.ts:142 splitTenderRefund.allocate()\n  at refund.service.ts:108 buildTenderAmounts()",
+    "priorHistory": {
+      "runs": [
+        { "runId": "aa", "status": "passed", "ranAt": "2026-05-13T08:12:00Z" },
+        { "runId": "bb", "status": "passed", "ranAt": "2026-05-12T08:12:00Z" },
+        { "runId": "cc", "status": "passed", "ranAt": "2026-05-11T08:12:00Z" },
+        { "runId": "dd", "status": "passed", "ranAt": "2026-05-10T08:12:00Z" },
+        { "runId": "ee", "status": "passed", "ranAt": "2026-05-09T08:12:00Z" }
+      ],
+      "passRate": 1.0,
+      "lastFailureAt": "2026-05-14T08:12:00Z"
+    },
+    "kbContext": [
+      "Refund service uses fixed-point arithmetic only at the API boundary; internal math passes through Number multiplication which loses cent precision at >2 decimal allocations.",
+      "Iksula uses 50:50 split-tender weighting for gift-card + credit-card refunds where original purchase split was symmetric."
+    ]
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "Floating-point precision loss in refund.service.ts:142 splitTenderRefund.allocate() — gift card tender allocation uses (total * 0.5) Number math which produces 239.995 → 239.99 after toFixed(2) truncation. Should use integer minor-units (paise) arithmetic throughout.",
+    "acceptableAlternatives": ["data-bug"],
+    "confidence": "high",
+    "notesForEval": "Top-2 hit if Sherlock returns code-bug OR data-bug in either slot 1 or slot 2. Sherlock should ideally cite refund.service.ts:142. data-bug acceptable because a senior reviewer could reasonably say the bug is in how the data (amount precision) is represented vs how the code multiplies it."
+  }
+}

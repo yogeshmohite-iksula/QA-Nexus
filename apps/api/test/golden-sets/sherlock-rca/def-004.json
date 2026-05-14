@@ -1,0 +1,34 @@
+{
+  "id": "def-004",
+  "input": {
+    "testCaseId": "TC-PAY-0211",
+    "testCaseTitle": "Refund-to-original-source on UPI mandate",
+    "runId": "44444444-4444-4444-8444-444444444444",
+    "stepNumber": 6,
+    "stepLabel": "Initiate refund-to-source on completed UPI-mandate payment — expect 201 + refundId",
+    "durationMs": 9400,
+    "environment": "staging-iksula",
+    "errorMessage": "PaymentGatewayError: UPI mandate refund-to-source returned HTTP 422 — 'mandate_status: REVOKED'. Original mandate was active at purchase time (2026-04-15) but has been revoked by user (revoked_at: 2026-05-10). Gateway response: { errorCode: 'MANDATE_REVOKED', message: 'Cannot refund to revoked mandate. Use alternate refund channel.' }",
+    "stackTrace": "PaymentGatewayError at upi-mandate.client.ts:127 refundToMandate()\n  at payment-gateway.service.ts:84 dispatchRefund()\n  at refund.service.ts:201 executeRefund()",
+    "priorHistory": {
+      "runs": [
+        { "runId": "kk", "status": "passed", "ranAt": "2026-05-13T08:12:00Z" },
+        { "runId": "ll", "status": "passed", "ranAt": "2026-05-12T08:12:00Z" }
+      ],
+      "passRate": 1.0,
+      "lastFailureAt": "2026-05-14T08:12:00Z"
+    },
+    "kbContext": [
+      "UPI mandates can be revoked by users at any time via the UPI app. Once revoked, the refund-to-source channel is permanently closed for that mandate; refunds must fall back to a different channel (bank transfer or wallet credit).",
+      "The refund service should pre-check mandate status before calling refundToMandate(); if status != ACTIVE, fall back to bank-transfer refund channel.",
+      "Iksula refund-channel fallback policy: UPI mandate revoked → try saved bank account on file → try Iksula wallet credit (always last resort)."
+    ]
+  },
+  "groundTruth": {
+    "rootCauseCategory": "payment-gateway",
+    "rootCauseDetail": "Refund service does not pre-check UPI mandate status before calling refundToMandate(). When the user revokes the mandate post-purchase, the refund attempt 422s. Fix: in refund.service.ts:201 executeRefund(), look up mandate status first; if revoked, route to fallback channel (bank-transfer per KB policy).",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "high",
+    "notesForEval": "Top-2 hit on payment-gateway or code-bug. payment-gateway captures the integration aspect (gateway returned a specific failure mode we didn't handle); code-bug captures the missing pre-check logic. Either label correct. Sherlock should ideally cite refund.service.ts:201 + the KB chunk about mandate revocation handling."
+  }
+}

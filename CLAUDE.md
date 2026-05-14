@@ -151,6 +151,38 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Policy stack:** Rules 3+12+13+14+15 above + **Rule 16 (canonical-first workflow)**. Together: discovery before code → diff before fix → fix before screenshot → screenshot before gate. Catches silent-drift class.
 
+17. **Canned-data verbatim extraction (mandatory).** Before writing ANY React component code for a frame port, FE+1 must:
+
+    (1) Run `scripts/extract-canned-data.mjs` against the canonical v2 HTML
+    (2) Output: `apps/web/components/<frame>/canned-data.ts`
+    (3) ALL text content in the React port MUST come from `canned-data.ts`
+    (4) ANY string in a component file that doesn't trace back to the v2 HTML is a Hard Rule 17 violation → visual gate FAIL
+
+    The HTML's example data IS the stub data. No invention permitted.
+
+    **Rationale (Day-17/18 root cause):** F19 / F20 visual gate failures all traced to FE+1 inventing stub data (cluster titles, ticket IDs, error messages, right-rail labels) that didn't match the canonical HTML. Each invention created a "minor" drift that compounded across the screen until the diff became too large to fix in one pass. Extracting verbatim from the HTML eliminates this drift class entirely — the canonical HTML's example data IS the source of truth for stub data, no different from its tokens being the source of truth for styling.
+
+    **Workflow:**
+    - **Step 1 (mandatory first action when starting a port):** `node scripts/extract-canned-data.mjs --frame F22 --html "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F22 Defect Detail v2.html"` → writes `apps/web/components/f22-defect-detail/canned-data.ts`.
+    - **Step 2:** All component files (`*.tsx`) import strings/arrays from `canned-data.ts`. NEVER hardcode user-visible text in a `.tsx` file.
+    - **Step 3 (visual gate):** Reviewer greps every user-visible string in the React PR against `canned-data.ts` and against the source HTML. Any string that doesn't trace back to the HTML → visual gate FAIL.
+
+    **Strings that DO NOT need extraction (whitelist):**
+    - Form field placeholders that are pure type hints (`"example@email.com"`) — these are NOT canonical data
+    - Icon-only buttons with no text label
+    - `data-testid` values
+    - i18n keys (we are not using i18n in M4, but the rule survives the eventual i18n migration unchanged)
+
+    **Forbidden (Rule 17 violation triggers):**
+    - Inventing project names, ticket IDs, defect IDs, user names, error messages, log timestamps, or any user-visible text not in the v2 HTML
+    - "Improving" the canonical example data ("the HTML says 'Refund webhook timeout' but 'Webhook timeout on refund' reads better" → REJECTED)
+    - Hardcoding a string in a `.tsx` file when an equivalent string exists in the HTML (extraction was skipped → violation)
+    - Adding plausible-looking placeholder data that "feels like" Iksula returns data but isn't in the HTML
+
+    **Cross-references:** Rule 13 (visual gate) · Rule 14 (shell parity) · Rule 15 (v2 HTML port source-of-truth) · Rule 16 (canonical-first workflow) · `scripts/extract-canned-data.mjs` (the tool) · Day-17/18 F19/F20 drift cycles (rationale).
+
+    **Policy stack:** Rules 3+12+13+14+15+16 above + **Rule 17 (canned-data extraction)**. Together: structure + responsiveness + visual gate + shell + v2-source + canonical-first + verbatim-extraction. Each rule closes a different drift class; Rule 17 closes the stub-data-invention class specifically.
+
 ## Locked tech stack (PM1)
 
 **Frontend:** Next.js 15 (App Router) · React 19 · Tailwind CSS 4 (CSS-first config) · shadcn/ui · Sonner · lucide-react · react-hook-form · Zod · Framer Motion · TanStack Query v5 · TipTap
