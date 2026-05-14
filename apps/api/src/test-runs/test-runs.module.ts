@@ -1,17 +1,29 @@
-// QA Nexus PM1 — TestRunsModule (M4 STUB — Day-19 P0 #2 wiring).
+// QA Nexus PM1 — TestRunsModule (M4 P3 / Day-18 #149).
 //
-// Minimal module: registers TestRunsController (501 stubs) so the
-// AppModule surface includes test-runs endpoints before PR #149 lands
-// the full state-machine + audit + WS-emit implementation.
+// Wires:
+//   - TestRunsController (PATCH /api/test-runs/:id/{start,result,abort})
+//   - TestRunsService (state-machine + audit + WS emit)
 //
-// PR #149 (HOLD) replaces this module + controller with the full impl.
-// Route paths + module class name + file paths chosen to match #149's
-// expectations so the cascade rebase resolution is "take #149's version".
+// Imports:
+//   - PrismaModule:    state-machine updates against test_runs
+//   - AuditModule:     HMAC-chained audit_log writes (Hard Rule 7)
+//   - AuthModule:      RolesGuard + AuthService.resolveSession in
+//                      controller's requireActor() helper
+//   - RealtimeModule:  RealtimeGateway.emitTestRunProgress() — emits
+//                      test_run.progress event on every transition
 
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../prisma/prisma.module';
+import { AuditModule } from '../audit/audit.module';
+import { AuthModule } from '../auth/auth.module';
+import { RealtimeModule } from '../realtime/realtime.module';
 import { TestRunsController } from './test-runs.controller';
+import { TestRunsService } from './test-runs.service';
 
 @Module({
+  imports: [PrismaModule, AuditModule, AuthModule, RealtimeModule],
   controllers: [TestRunsController],
+  providers: [TestRunsService],
+  exports: [TestRunsService],
 })
 export class TestRunsModule {}

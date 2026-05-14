@@ -1,69 +1,45 @@
-// QA Nexus PM1 — Day-19 P0 #2 stub-contract test for TestRunsController.
+// QA Nexus PM1 — TestRunsController smoke test.
 //
-// Pins the 501 stub shape so we know if the controller drifts before
-// PR #149 lands the full implementation.
+// Originally a 501 stub-contract spec from Day-19 P0 #2 (PR #157).
+// Day-20 cascade rebase: the stub controller was superseded by PR #149's
+// real impl (TestRunsService + AuthService injected). The 17-test coverage
+// for state machine + audit + WS emit lives in `test-runs.service.spec.ts`.
+//
+// This file now serves as a thin "controller-wiring smoke": confirms the
+// controller class instantiates cleanly with mocked deps so that any future
+// constructor-shape drift surfaces here BEFORE jest tries to load the
+// service spec. Minimal coverage by design.
 
+import { Test } from '@nestjs/testing';
 import { TestRunsController } from '../test-runs.controller';
+import { TestRunsService } from '../test-runs.service';
+import { AuthService } from '../../auth/auth.service';
 
-function fakeRes() {
-  const captured: {
-    status?: number;
-    headers: Record<string, string>;
-    body?: unknown;
-  } = {
-    headers: {},
-  };
-  const res = {
-    status: (code: number) => {
-      captured.status = code;
-      return res;
-    },
-    header: (name: string, value: string) => {
-      captured.headers[name.toLowerCase()] = value;
-      return res;
-    },
-    json: (body: unknown) => {
-      captured.body = body;
-      return res;
-    },
-  };
-  return { res, captured };
-}
+describe('TestRunsController (wiring smoke — Day-20 cascade)', () => {
+  let ctrl: TestRunsController;
 
-describe('TestRunsController (M4 STUB — Day-19 P0 #2)', () => {
-  const ctrl = new TestRunsController();
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [TestRunsController],
+      providers: [
+        {
+          provide: TestRunsService,
+          useValue: {
+            transition: jest.fn(),
+            allowedTransitionsFrom: jest.fn(() => []),
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: { resolveSession: jest.fn() },
+        },
+      ],
+    }).compile();
+    ctrl = moduleRef.get(TestRunsController);
+  });
 
-  it.each([
-    [
-      'start',
-      (c: TestRunsController, r: ReturnType<typeof fakeRes>['res']) =>
-        c.start('id-1', r as never),
-    ],
-    [
-      'result',
-      (c: TestRunsController, r: ReturnType<typeof fakeRes>['res']) =>
-        c.report('id-1', r as never),
-    ],
-    [
-      'abort',
-      (c: TestRunsController, r: ReturnType<typeof fakeRes>['res']) =>
-        c.abort('id-1', r as never),
-    ],
-  ])(
-    '%s returns 501 with x-m4-stub header + landingPr=149',
-    (_name, invoke) => {
-      const { res, captured } = fakeRes();
-      invoke(ctrl, res as never);
-      expect(captured.status).toBe(501);
-      expect(captured.headers['x-m4-stub']).toBe('true');
-      const body = captured.body as {
-        m4Stub: boolean;
-        landingPr: number;
-        error: string;
-      };
-      expect(body.m4Stub).toBe(true);
-      expect(body.landingPr).toBe(149);
-      expect(body.error).toBe('NotImplemented');
-    },
-  );
+  it('instantiates with TestRunsService + AuthService injected', () => {
+    expect(ctrl).toBeDefined();
+    expect(ctrl).toBeInstanceOf(TestRunsController);
+  });
 });
