@@ -2,6 +2,25 @@
 
 ---
 
+## [2026-05-14] (bq) P1 — Raw-body webhook middleware design (Jira HMAC-SHA256 verify)
+
+**Filed:** 2026-05-14 (Day-18 AM, M4 kickoff)
+**Owner:** BE+1 (design Day-18 PM, implement Day-19 with MS4-T012)
+**Linked AC:** MS4-AC008 + risk R002
+
+Jira webhook posts JSON to our `/webhooks/jira` endpoint with an `X-Hub-Signature` header containing HMAC-SHA256 of the **raw request bytes**. NestJS / Express's default `bodyParser.json()` consumes the stream and stringifies to an object — recomputing HMAC over `JSON.stringify(req.body)` produces a different byte sequence than what Jira signed (whitespace, key order, unicode escape differences). Result: every webhook fails HMAC verify in production.
+
+**Design constraints:**
+
+1. Raw-body middleware MUST be scoped to `/webhooks/jira` only — DO NOT swap the global JSON body-parser. Mounting via NestJS's `MiddlewareConsumer.forRoutes('/webhooks/jira')` is the cleanest path; alternative is `app.use('/webhooks/jira', express.raw({ type: 'application/json' }))` BEFORE Nest's body-parser registers.
+2. Handler must read `req.body` as Buffer for HMAC compute, then `JSON.parse(req.body.toString('utf8'))` for payload access.
+3. HMAC compute: `crypto.createHmac('sha256', JIRA_WEBHOOK_SECRET).update(req.body).digest('hex')` — compare against `X-Hub-Signature: sha256=...` constant-time (`crypto.timingSafeEqual`).
+4. Document the pattern in `docs/architecture/webhook-raw-body.md` so M5+ webhooks (Slack, GitHub, Stripe-style) inherit the same design.
+
+**Status:** OPEN — design Day-18 PM, implement Day-19 alongside MS4-T012.
+
+---
+
 ## [2026-05-13] (bk) P2 — Retrofit action-button inks into 01_SYSTEM.md
 
 **Filed:** 2026-05-13 (Day-17, during M3 close cycle)

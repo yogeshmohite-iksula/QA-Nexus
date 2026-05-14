@@ -13,6 +13,24 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Docs — Day 18 — M4 v2 plan promoted (Runs/Defects/Jira, 3-day compressed + Sun reserve, M4 kickoff)
+
+**M4 kickoff doc.** Promoted `.claude/scratch/m4-v2-plan-skeleton.md` to `QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira_v2.md` (~250 lines) with the following Day-18 amendments locked per Yogesh's morning directive:
+
+- **AC042 = ≥40%** on 50-defect Sherlock RCA golden corpus (was TBD in skeleton). Sun Day-21 reserve allocated for prompt iteration if first eval miss.
+- **"Needs human review" UI affordance** — F22 Defect Detail shows an amber banner with `Sherlock is unsure — please verify the root cause` when Sherlock RCA returns `confidence < 0.5`. Disables auto-Jira-create; surfaces manual override. New tasks/ACs: MS4-T034 + MS4-AC016 + MS4-AC017.
+- **Timeline:** 3-day compressed Day-18 Thu May 14 → Day-20 Sat May 16, with **Day-21 Sun May 17 reserve** explicitly scoped (Sherlock corpus re-eval, visual gate retries, close-gate fixes, slipped ceremony — fix-only, no new scope).
+- **4 research-backed risks** (R001-R004) folded in:
+  - R001 WebSocket lifetime under Render Free scale-to-zero (UptimeRobot 4-min keep-alive + client reconnect)
+  - R002 Jira webhook HMAC needs raw-body middleware (scoped to `/webhooks/jira`, NOT global)
+  - R003 R2 CORS allow-list + XHR `upload.onprogress` for attachments >2MB (fetch() exposes no progress)
+  - R004 Jira webhook retry idempotency (UNIQUE INDEX on jira_sync_log.provider_event_id)
+- **M3 retro action items 1-5** folded into M4 ACs: close-gate sweep authored Day-1 (MS4-T023 + MS4-AC025), auth regression test in CI (MS4-AC031), Rule 16 diff-probe enforced (MS4-T039), multi-worktree hook sync (out-of-band).
+
+Parallel mirror committed to `~/Claude Cowork Workspace /AI Based QA Platform/m4-plan/` per two-folder workflow. Followup `(bq)` filed for the raw-body webhook middleware design pattern (BE+1 design Day-18 PM, implement Day-19 with MS4-T012). Summary view `docs/plans/02-milestones/M4-runs-defects-jira.md` updated to point at v2 binding spec.
+
+The v1.0 Apr 25 doc is fully superseded — only its v2.1 amendment block (lines 3-16) was binding and that's already locked in CLAUDE.md.
+
 ### Fixed — Day 17 — Drop `/auth/` prefix in magic-link verify URL (Next.js route-group convention, completes M3 close)
 
 **Day-17 third + final P0 of the magic-link saga.** After PR #138 restored the API from the zod-v4 crash, Yogesh clicked the magic-link in Gmail and got a **Next.js 404** at `/auth/verify-magic-link`. Manually visiting `https://qa-nexus-web.pages.dev/verify-magic-link` (no `/auth/` prefix) rendered the page cleanly with the Iksula brand + expected "Sign in failed — No sign-in token found" state.

@@ -1,8 +1,12 @@
 # M4 — Test Runs, Defects, A4 RCA & Jira 2-way sync
 
-> **Last updated:** 2026-05-02 (Day 6 — pre-kickoff snapshot)
+> **Last updated:** 2026-05-14 (Day-18 — M4 kickoff)
+> **Status:** ACTIVE (Day-18 → Day-20, + Sun Day-21 reserve)
 > **Authority:** Summary view. Binding spec:
-> `../../../QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira.md` (v1.0 with v8.1 banner).
+> `../../../QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira_v2.md` (v2 — supersedes v1.0 Apr 25 except its v2.1 amendment block).
+> **AC042 target:** ≥40% on 50-defect golden corpus (Yogesh decision Day-18 AM).
+> **"Needs human review" UI affordance:** F22 amber banner when Sherlock confidence <0.5 (MS4-T034 + MS4-AC016 + MS4-AC017).
+> **Top risks:** R001 WebSocket+Render-Free · R002 Jira HMAC raw body · R003 R2 CORS+XHR progress · R004 Jira webhook idempotency.
 
 ---
 
