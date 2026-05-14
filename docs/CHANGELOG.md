@@ -62,6 +62,108 @@ updates land here at the end of every working day.
 - Hard Rule 17 (codified Day-18 in PR #150) — canned-data verbatim extraction
 - PR #150 — F20 verbatim re-port (precedent for this PR's workflow)
 
+### Fixed — Day 18 — F20 Run Results verbatim re-port per Hard Rule 17 (supersedes PR #145, opens PR #150)
+
+**Visual-gate-FAIL fix-forward.** PR #145 (F20 Pattern A scaffold) was rejected by Yogesh: my canned-data invented cluster titles, narratives, and ev-rail tab structure rather than copying canonical strings from the F20 v2 HTML. This PR rewrites the entire F20 results module to consume **verbatim** content from `apps/web/components/results/canned-data.ts`, which mirrors `PM1_UI_v2/Redesign Frame by claude design/F20 Run Results v2.html` line-by-line.
+
+**New canon: Hard Rule 17 — Canned-data verbatim extraction (mandatory).** Codified after this F20 failure: open canonical HTML in Chrome as `file://`, copy semantic strings verbatim into a single `canned-data.ts` per frame, then build React components that **CONSUME** the constants. No hardcoded user-visible text in component files.
+
+**Verbatim corrections (mine → canonical):**
+
+| Element                     | My port (PR #145, WRONG)                         | Canonical (this PR)                                                                                                                                                                                                           |
+| --------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cluster 1 title             | "Split-tender refund leaves gift card untouched" | **"Payment gateway 503 timeout — race on retry"**                                                                                                                                                                             |
+| Cluster 1 class chip        | (missing)                                        | **"App Bug"** (cl-class appbug)                                                                                                                                                                                               |
+| Cluster 1 count             | "8 cases"                                        | **"8 / 23"** (cl-count)                                                                                                                                                                                                       |
+| Cluster 1 narrative         | (invented split-tender story)                    | **"Webhook handler timeout in RefundService.processRefund:241 when the payment gateway returns 503 and the system queues ≥3 retries concurrently. Reproducible on Firefox 124+; matches 2 prior incidents from 2026-03-14."** |
+| Cluster 1 metrics           | (invented)                                       | First fail 8m 14s · Last fail 31m 02s · Window 22m 48s · Cases hit 8/23                                                                                                                                                       |
+| Cluster 2 title             | "Webhook handler exhausts retries..."            | **"Calendar timezone drift — refund eligibility window"**                                                                                                                                                                     |
+| Cluster 2 class             | (missing)                                        | **"Env Issue"**                                                                                                                                                                                                               |
+| Cluster 2 narrative         | (invented retry-exhaustion story)                | **"Server timezone drift on staging-v3 — clock 11 minutes behind UTC. Cases asserting 'refund within 30 days' cross the threshold incorrectly. Probable existing defect DEF-RET-0089."**                                      |
+| Cluster 3 title             | "UPI mandate refunds miss original-source check" | **"Distinct failures · 1 flagged flaky, 10 require triage"**                                                                                                                                                                  |
+| Cluster 3 class             | (missing)                                        | **"Mixed"**                                                                                                                                                                                                                   |
+| Sherlock headline           | (missing entirely)                               | **"23 failures clustered into 3 root-cause groups. Highest-confidence cluster has 8 cases pointing to the same upstream issue."**                                                                                             |
+| Sherlock conf row           | (missing entirely)                               | Per-cluster pills: Cluster 1 · 87% / Cluster 2 · 91% env / Cluster 3 · 40-75% mixed                                                                                                                                           |
+| Ev-rail tabs                | 4 tabs: Evidence / Logs / RCA / Env diff         | **6 tabs: Case 1 / Shots 3 / Console 2 / HAR 6 / Env / Related** (with numeric badges)                                                                                                                                        |
+| Ev-rail Selected case       | label only                                       | **TC-RET-0342 + "Refund webhook receives refund.retry.exhausted — handler timeout" + AssertionError stack (RefundService.processRefund @ :241:18 + WebhookHandler.dispatch @ :88:12)**                                        |
+| Ev-rail Stack trace section | (missing)                                        | **TimeoutError + 4 frames + "4 frames hidden"**                                                                                                                                                                               |
+| Ev-rail Env diff section    | (missing)                                        | Browser Firefox 120→124, Payment SDK v3.2.1→v3.4.0, Build #4203→#4218                                                                                                                                                         |
+| Ev-rail Related defects     | (missing)                                        | DEF-RET-1302 (87%, Closed) · DEF-RET-1298 (63%, Review)                                                                                                                                                                       |
+| Suite 2 name                | "Refund Policy Edge Cases"                       | **"Auth & Session"** (42/39/2/1, TC-AUT-0089/0094/0102)                                                                                                                                                                       |
+| Suite 3 name                | "Payments"                                       | **"Payments & Tender"** (54/45/7/2)                                                                                                                                                                                           |
+
+**Files refactored:**
+
+- `apps/web/components/results/canned-data.ts` — **complete rewrite** as verbatim-typed canon. Strongly-typed segment arrays (`NarrativeSegment`, `TitleSegment`, `ErrorHeadlineSegment`, `StackLine`) preserve `<b>` / `<code>` / `<span class="mono">` inline emphasis from HTML.
+- `apps/web/components/results/cluster-card.tsx` — rewrite consuming `F20_CLUSTERS` (cl-num pill + cl-count N/23 + cl-conf chip + cl-class chip + multi-segment narrative renderer + 4-action footer with violet Open-defect CTA + "View in Run Console →" link)
+- `apps/web/components/results/sherlock-rca-block.tsx` — rewrite with sb-head + sb-headline (segment renderer for bold inline) + sb-conf-row pills
+- `apps/web/components/results/evidence-rail-pane.tsx` — full rewrite: 6 tabs with numeric badges, ev-head (Evidence + "Selected · TC-RET-0342" + close), 5 ev-sections (Selected case panel with AssertionError stack, Top stack trace with TimeoutError + 3 frames, Env diff, Related defects · Curator with status pills, sticky action footer)
+- `apps/web/components/results/results-table.tsx` — consume `F20_RESULTS_SUITES` (3 verbatim suites) + `F20_RESULTS_FILTER_TABS` + `F20_RESULTS_SORT_LABEL`
+- `apps/web/components/results/run-summary-bar.tsx` — consume `F20_RUN_SUMMARY` directly (no props)
+- `apps/web/components/results/results-page.tsx` — consume `F20_RUN_LEVEL_ACTIONS` + `F20_FAILURE_CLUSTERS_EYEBROW/INTRO`
+
+**Gates:** ✅ typecheck (0 errors) · ✅ prettier · ✅ ESLint clean
+
+**Hard Rule 17 compliance checklist** (per Yogesh's brief):
+
+- [x] All cluster titles match HTML (cl-title)
+- [x] All cluster content (narrative, metrics, suite/class tags) matches HTML
+- [x] All case rows in results table match HTML (cr-id, cr-title, dur, def labels)
+- [x] All right-rail content matches HTML (6 tabs, Selected case panel, Stack trace, Env diff, Related defects)
+- [x] All button labels match HTML (Open defect, Mark flaky, Re-run case, View in Run Console →)
+- [x] All confidence percentages match HTML (87% / 91% env / 40-75% mixed)
+
+**Cross-references:**
+
+- F20 v2 HTML canonical lines: L713-735 summary · L740-808 Sherlock · L771-915 clusters · L920-1040 suite groups · L1067-1200 ev-rail
+- Hard Rule 17 (NEW Day-18) — canned-data verbatim extraction
+- PR #145 — superseded by this PR; will be closed after #150 merges
+- Followup (bs) — `scripts/extract-canned-data.mjs` (automate verbatim extraction, Day-19)
+- Followup (bt) — `scripts/content-similarity.mjs` (Jaccard text-content check, Day-19)
+- Followup (bu) — pre-push hook `enforce-content-match.sh` (block PR push if similarity < 0.85, Day-19)
+- Followup (bv) — `.github/PULL_REQUEST_TEMPLATE/frame-port.md` (enforce side-by-side screenshot, Day-19)
+
+### Added — Day 18 — F20 Run Results Pattern A scaffold (M4 TASK 1, PR #147)
+
+**M4 Day-18 AM task.** F20 Run Results page lands at `/projects/[slug]/runs/[runId]/results/` per Hard Rule 16 canonical-first workflow (read `_DESIGN_RULES.md` + F20 v2 HTML before coding; no diff-probe needed — globals.css tokens already in place from F19 Round 2).
+
+**Iksula canon data:** Run `RUN-RET-2026-04-25-002` "Refund Flow — Sprint 42" · 218 cases total (187 pass 85.8% / 23 fail 10.6% / 8 flaky 3.7% / 0 blocked / 0 skipped) · env `staging-v3` · duration `42m 18s` · started by Yogesh M.
+
+**Files:**
+
+- **NEW** route `apps/web/app/(app)/projects/[slug]/runs/[runId]/results/page.tsx` + `generateStaticParams` for Iksula anchor
+- **NEW** 7 components under `apps/web/components/results/`:
+  - `canned-data.ts` — typed Pattern A fixtures (RunResultsMeta + 3 ResultsSuite + 3 ResultsCluster + SherlockSummary + EvidenceRailContext)
+  - `results-page.tsx` — main client wrapping `AdminShell active="run-results"` + 2-pane grid `[center-pane][ev-rail]` at lg+ + sticky run-level action footer
+  - `run-summary-bar.tsx` — title/run-id/Done pill + 6 stat tiles + meta line + env-pill (canonical F20 L237-300 / L704-800)
+  - `sherlock-rca-block.tsx` — page-level RCA summary card on AI surface tokens (`--ai-soft`/`--ai-line`/`--secondary`) per 01_SYSTEM.md §3.1 VIOLET=AI rule
+  - `cluster-card.tsx` — `.distinct-card` with `.med`/`.low`/(high) confidence variants, metric strip, narrative, violet "Open defect (Sherlock-prefilled)" CTA + Mark flaky / Re-run cluster / Show N cases actions
+  - `results-table.tsx` — collapsible suite groups with case rows (cr-status / cr-id / cr-title / dur / defect count badge); All/Failures/Flaky/Regressions filter tabs + Sort
+  - `evidence-rail-pane.tsx` — right rail with selected-case header + 4-tab interface (Evidence/Logs/RCA/Env diff) + evidence kv list + 4 sticky-footer actions
+- **NEW** `scripts/m4-f20-results-sweep.js` — Playwright sweep at 5 viewports
+- **NEW** `docs/screenshots/m4-f20-results/` — 5 PNGs (1440 / 1440-rail-collapsed / 1024 / 768 / 320) all under 220 KB
+
+**Pattern A markers** (every action button emits `console.info('pattern-a:deferred:f20:<key>', payload)`): `export`, `re-run-failed`, `share-link`, `create-defect`, `mark-flaky`, `re-run-cluster`, `expand-cluster`, `filter`, `sort`, `select-case`, `action`.
+
+**Hard Rule 14 shell parity:** Reuses canonical F19-React `AdminShell` with `active="run-results"` + `projectKeyLower="ret"`; no shell overrides.
+
+**Hard Rule 15 canonical fidelity:** All tokens from `01_SYSTEM.md §3` via globals.css `:root`. Confidence chip color map per 01_SYSTEM.md: high → pass green / med → warn amber / low → fail red.
+
+**RWD (Hard Rule 12):** Tested at 320 / 768 / 1024 / 1440. Center-pane single column ≤1024, 2-col cluster grid ≥1280 (xl), ev-rail right column at lg+.
+
+**Gates:** ✅ typecheck (apps/web + apps/api) · ✅ prettier · ✅ ESLint (0 new errors)
+
+**HOLD merge until M4 close cascade.** Visual gate ping to Yogesh sent with 5 screenshots; waiting on "looks good — commit" approval per Hard Rule 13.
+
+**Cross-references:**
+
+- F20 v2 HTML canonical: `PM1_UI_v2/Redesign Frame by claude design/F20 Run Results v2.html` (L235-300 layout · L704-800 summary bar · L800-920 Sherlock + clusters · L920-1066 results table · L1067-1200 ev-rail)
+- Hard Rule 16 (NEW Day-17) — canonical-first pre-flight workflow
+- Hard Rule 14 — F19 React = AdminShell canonical
+- PR #135 — Run Console (F19) Pattern A established globals.css tokens this PR depends on
+- Followup `(bk)` — formal `--ai-accent` + tone alpha addition to `01_SYSTEM.md §3` (still open)
+  > > > > > > > origin/feature/fe-m4-f20-canon-extract-fix
+
 ### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
 
 **ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:
