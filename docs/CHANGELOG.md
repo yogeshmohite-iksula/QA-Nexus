@@ -13,6 +13,18 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 18 — Hard Rule 17 (canned-data verbatim extraction) + `scripts/extract-canned-data.mjs`
+
+**New CLAUDE.md Hard Rule.** Rule 17 — _Canned-data verbatim extraction (mandatory)_ — establishes that before writing ANY React component code for a frame port, FE+1 must run `scripts/extract-canned-data.mjs` against the canonical v2 HTML, output `apps/web/components/<frame>/canned-data.ts`, and import ALL user-visible strings from that file. Any string in a component file that doesn't trace back to the v2 HTML is a Rule 17 violation → visual gate FAIL.
+
+**Rationale:** F19 / F20 / F21 visual gate failures in M3 close week all traced to FE+1 inventing stub data (cluster titles, ticket IDs, error messages, right-rail labels) that didn't match the canonical HTML. Each invention created a "minor" drift that compounded across the screen. Extracting verbatim from the HTML eliminates the entire stub-data-invention drift class.
+
+**`scripts/extract-canned-data.mjs`** — pure-Node (no npm deps) regex-based extractor. Reads the canonical v2 HTML, strips scripts/styles/comments, then extracts page title, headings h1-h6, data-\* attributes, ID patterns (TC-/DEF-/REQ-/Jira-key), text content per common tag, image alt text, and aria-label / title attrs. Writes a TypeScript file with a `<FRAME>_RAW` object plus a starter `<FRAME>_PAGE_TITLE` export. The FE+1 dev organizes the raw extracts into semantically named exports (e.g. `F22_DEFECT_IDS`, `F22_RIGHT_RAIL_LABELS`) that the React port imports from.
+
+Smoke-tested against `F22 Defect Detail v2.html`: extracted 1 page title + 16 headings + 6 data-attribute groups + 13 ID matches + 319 text tags + 10 aria labels + 2 titles. Ready for M4 FE+1 workflow.
+
+Folded into M4 v2 plan as ACs MS4-AC020a (canned-data.ts exists per frame) + MS4-AC020b (no untraced strings in \*.tsx).
+
 ### Docs — Day 18 — M4 v2 plan promoted (Runs/Defects/Jira, 3-day compressed + Sun reserve, M4 kickoff)
 
 **M4 kickoff doc.** Promoted `.claude/scratch/m4-v2-plan-skeleton.md` to `QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira_v2.md` (~250 lines) with the following Day-18 amendments locked per Yogesh's morning directive:

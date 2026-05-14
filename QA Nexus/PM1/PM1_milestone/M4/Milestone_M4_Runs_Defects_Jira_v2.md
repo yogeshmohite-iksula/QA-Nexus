@@ -188,6 +188,19 @@
 | 4. Visual diff-probe at 320/768/1024/1440 before coding fixes (Rule 16)   | MS4-T039 enforces; embedded in FE+1 workflow           |
 | 5. Multi-worktree hook whitelist sync                                     | Out-of-band Day-18 AM; not M4-tracked                  |
 
+### Hard Rule 17 enforcement (added Day-18 AM 2026-05-14)
+
+**Mandatory pre-port step for every M4 frame (F18, F19, F20, F21, F22):** FE+1 runs `node scripts/extract-canned-data.mjs --frame <ID> --html <path-to-v2-html>` BEFORE writing any React component code. Output `apps/web/components/<frame-slug>/canned-data.ts` is the only legal source of user-visible strings for that frame's React port.
+
+**Added ACs (folded into MS4-AC020 visual-gate audit):**
+
+| AC          | Title                                                                                          | Gate           |
+| ----------- | ---------------------------------------------------------------------------------------------- | -------------- |
+| MS4-AC020a  | `canned-data.ts` exists for every M4 frame before any `*.tsx` component is committed           | repo grep      |
+| MS4-AC020b  | No user-visible string literal in any M4 `*.tsx` file fails the Hard Rule 17 traceback check    | reviewer grep  |
+
+**Why this matters for M4 specifically:** F19 / F20 / F21 / F22 have dense canonical example data (cluster titles, defect IDs, ticket IDs, error messages, right-rail labels, suite names). The F19 / F20 visual gate failures in M3 close week all traced to invented stub data. Hard Rule 17 closes this drift class for the rest of PM1.
+
 ---
 
 ## 4. Acceptance criteria (MS4-AC001..AC042)
