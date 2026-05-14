@@ -20,13 +20,14 @@ apps/web/tests/visual/
 ```
 
 **Day-18 evening rebase note:** the original two-tier split (`canonical/`
-+ `__screenshots__/`) collapsed into single-tier `canonical/` to pick up
-FE+1's 12 baselines directly. The Playwright `snapshotPathTemplate`
-resolves to `{testDir}/canonical/{arg}/{projectName}.png` where `{arg}`
-is the frame slug (passed to `toHaveScreenshot('F08')`) and
-`{projectName}` is the bare viewport name (`320` / `768` / `1024` /
-`1440`). Run `pnpm test:visual --update-snapshots` to regenerate
-baselines after intentional design changes.
+
+- `__screenshots__/`) collapsed into single-tier `canonical/` to pick up
+  FE+1's 12 baselines directly. The Playwright `snapshotPathTemplate`
+  resolves to `{testDir}/canonical/{arg}/{projectName}.png` where `{arg}`
+  is the frame slug (passed to `toHaveScreenshot('F08')`) and
+  `{projectName}` is the bare viewport name (`320` / `768` / `1024` /
+  `1440`). Run `pnpm test:visual --update-snapshots` to regenerate
+  baselines after intentional design changes.
 
 ## Viewports (per CLAUDE.md Hard Rule 12)
 

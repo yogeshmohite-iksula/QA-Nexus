@@ -152,10 +152,12 @@ jobs:
     timeout-minutes: 15
     env:
       CI: "true"
-      # Mark VR baselines ready inside CI so the template skip-gate
-      # in home.spec.ts goes live. Local dev keeps the gate off until
-      # FE+1 commits canonical PNGs.
-      VR_BASELINES_READY: "1"
+      # VR_BASELINES_READY left UNSET until FE+1's seed PR lands the
+      # canonical/F08/{320,768,1024,1440}.png baselines — without
+      # baselines, Playwright can't compare and the suite would FAIL.
+      # FE+1's seed PR (Day-19 morning) flips this to "1" alongside
+      # the canonical PNG commit. Until then, home.spec.ts test.skip()
+      # ensures CI stays green even when this job runs.
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

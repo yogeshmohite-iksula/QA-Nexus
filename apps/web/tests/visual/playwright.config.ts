@@ -65,8 +65,7 @@ export default defineConfig({
   // Platform suffix dropped: macOS local + Linux CI share canonicals;
   // tolerance config (maxDiffPixelRatio + threshold) absorbs the 1-2
   // px subpixel anti-alias deltas between renderers.
-  snapshotPathTemplate:
-    '{testDir}/canonical/{arg}/{projectName}.png',
+  snapshotPathTemplate: '{testDir}/canonical/{arg}/{projectName}.png',
 
   // HTML reporter for both local + CI; uploaded as CI artifact on failure.
   reporter: [['html', { outputFolder: 'playwright-report-visual', open: 'never' }], ['list']],
