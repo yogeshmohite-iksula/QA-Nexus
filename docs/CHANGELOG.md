@@ -13,6 +13,30 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 18 PM — `.claude/skills/frame-port/` v1 + Hard Rule 18 (skill-mandatory port workflow)
+
+**Tier-2 of the Day-18 PM port-discipline build (companion to BE+1's Tier-1 visual-regression suite).** New skill at `.claude/skills/frame-port/` orchestrates the canonical-first port workflow as an executable, auditable pipeline. Triggered by "port frame Fxx" / "build the Fxx React port" / similar phrases.
+
+**Files:**
+
+- `SKILL.md` — orchestrator instructions defining the mandatory 7-step workflow (extract canned-data → extract spec → Yogesh approves spec → scaffold TSX from spec+canned-data NOT from HTML → diff-probe → Rule 13 visual gate ONLY after probe clean → commit + PR). Lists 11 trigger phrases.
+- `extract-spec.mjs` — Step 2 tool. Reads canonical v2 HTML via jsdom, emits `spec.json` with: section tree (`tag` / `id` / `role` / `classes` per node), `tokens_used` (every `var(--token)` ref), `token_definitions` (every `--token: value` in `<style>` blocks), `assets` (img src + bg-image url + favicon), `canned_data_keys` (data-_ attrs, heading exemplars, aria-label exemplars). Smoke-tested against F19 v2: 18 sections / 16 structural · 33 tokens used · 38 tokens defined · 6 data-_ attrs · 4 headings · 20 aria-labels.
+- `diff-probe.mjs` — Step 5 tool. Playwright + sharp pixel diff at viewports 320 / 768 / 1024 / 1440. For each: section-by-section locator-count compare (canonical vs port — FAIL if MISSING or EXTRA), pixel diff via sharp raw RGBA Manhattan distance >24 (>10% per channel — tuned for font anti-aliasing tolerance). Exit 0 = clean; Exit 1 = drift (gate blocked). Smoke-tested canonical-vs-canonical: 0.0% / 0.0% / 0.1% / 0.0% pixel diff across viewports as expected.
+- `README.md` — usage doc with quick-start, file inventory, why-this-exists rationale citing PR #145 → #150 precedent.
+- `.gitignore` — excludes per-port `specs/` and `diffs/` generated artifacts (regenerate per port).
+
+**CLAUDE.md Hard Rule 18 codified.** "All frame ports MUST execute via `.claude/skills/frame-port/`." Skipping the skill workflow = visual gate FAIL regardless of output quality. The close-and-redo precedent (Rule 17 violations are CLOSED not patched) is now formal canon — diff-probe catches drift early so the loop runs at most once per frame.
+
+**Dependencies added to root devDependencies (all already transitive — hoisted only):**
+
+- `jsdom@^29.1.1` (was in `apps/web` via vitest)
+- `playwright@^1.59.1` (was in `apps/e2e`)
+- `sharp@^0.33.5` (was in `apps/api` via `@xenova/transformers` + ADR-009 pin)
+
+Zero new monthly cost. Hard Rule 1 ($0/mo) retained.
+
+**Day-18 PM tier-2 status entry per the 9 PM EOD plan:** BE+1's tier-1 VR suite (separate PR) + this tier-2 skill together close the discipline-drift class. From Day-19 forward, every M4+ frame port runs through this skill before reaching visual gate.
+
 ### Added — Day 18 PM — ADR-019 Sherlock prompt strategy + sherlock-rca golden corpus seed (5 defects)
 
 **ADR-019** (`docs/architecture/adr-019-sherlock-prompt-strategy.md`) — draft, ratify Day-19 AM before BE+1 starts MS4-T016. Locks the M4 A4 RCA agent design:
