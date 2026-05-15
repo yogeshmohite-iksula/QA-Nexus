@@ -25,8 +25,10 @@ export function DefHead() {
     <div
       role="region"
       aria-label={F21_DEF_HEAD.ariaLabel}
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 sm:px-5 lg:px-7"
-      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
+      className="flex flex-col gap-y-2 border-b px-4 py-3 sm:px-5 md:flex-row md:flex-wrap md:items-center md:gap-x-3 lg:px-7"
+      // Day-19 Round-3 bg fix: canonical .def-head L239 defines no background
+      // (inherits canvas). Was --base (too light/wrong shade vs canonical).
+      style={{ borderColor: 'var(--border)' }}
     >
       {/* dh-left: title + stats line */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -41,9 +43,9 @@ export function DefHead() {
           style={{ color: 'var(--t3)' }}
         >
           {F21_DEF_HEAD.stats.map((stat, i) => (
-            <span key={stat.label} className="inline-flex items-center gap-1.5">
+            <span key={stat.label} className="inline-flex items-center gap-1.5 whitespace-nowrap">
               {i > 0 && <span style={{ color: 'var(--border-strong)' }}>·</span>}
-              <span>
+              <span className="whitespace-nowrap">
                 <b style={{ color: STAT_COLOR[stat.variant], fontWeight: 600 }}>{stat.count}</b>{' '}
                 {stat.label}
               </span>
@@ -52,7 +54,7 @@ export function DefHead() {
         </div>
       </div>
 
-      {/* dh-right: 3 buttons (Bulk, Export, New defect) */}
+      {/* dh-right: 3 buttons (Bulk, Export, New defect) — wraps below dh-left on mobile */}
       <div className="flex flex-wrap items-center gap-1.5">
         <button
           type="button"

@@ -73,20 +73,25 @@ export function DefectRowItem({ row, isSelected, onSelect }: Props) {
       onMouseLeave={(e) => {
         if (!isSelected) e.currentTarget.style.background = 'transparent';
       }}
-      className="grid w-full grid-cols-[auto_auto_auto_minmax(0,1fr)_auto_auto_auto_auto_auto_auto] items-center gap-2.5 border-b px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--secondary)]"
+      className="flex w-full flex-wrap items-center gap-x-2.5 gap-y-1 border-b px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--secondary)] md:grid md:grid-cols-[auto_auto_auto_minmax(0,1fr)_auto_auto_auto_auto_auto_auto] md:flex-nowrap"
       style={{
         borderColor: 'var(--border)',
         background: isSelected ? 'var(--primary-soft)' : 'transparent',
         borderLeft: isSelected ? '3px solid var(--primary)' : '3px solid transparent',
       }}
     >
-      {/* Checkbox */}
+      {/* Checkbox — Day-19 Round-3 fix: canonical .ck.on uses --secondary
+       *  violet (L362), unselected is transparent w/ --border-strong outline (L359). */}
       <span
         aria-hidden="true"
-        className="inline-flex h-4 w-4 items-center justify-center rounded border"
-        style={{ background: 'var(--canvas)', borderColor: 'var(--border)', color: 'transparent' }}
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border"
+        style={{
+          background: isSelected ? 'var(--secondary)' : 'transparent',
+          borderColor: isSelected ? 'var(--secondary)' : 'var(--border-strong)',
+          color: isSelected ? 'var(--secondary-ink)' : 'transparent',
+        }}
       >
-        <Check size={9} aria-hidden="true" />
+        <Check size={9} aria-hidden="true" strokeWidth={2.6} />
       </span>
 
       {/* Priority chip */}
@@ -102,9 +107,9 @@ export function DefectRowItem({ row, isSelected, onSelect }: Props) {
         {row.id}
       </span>
 
-      {/* Title + meta (df-mid) */}
-      <div className="flex min-w-0 flex-col">
-        <span className="truncate text-[12px] font-medium" style={{ color: 'var(--t1)' }}>
+      {/* Title + meta (df-mid) — on mobile takes a full row below the chips */}
+      <div className="order-last flex w-full min-w-0 basis-full flex-col md:order-none md:w-auto md:basis-auto">
+        <span className="text-[12px] font-medium md:truncate" style={{ color: 'var(--t1)' }}>
           {row.title}
         </span>
         {(row.agentKey || row.ref || row.metaSegments.length > 0 || row.staleLabel) && (
