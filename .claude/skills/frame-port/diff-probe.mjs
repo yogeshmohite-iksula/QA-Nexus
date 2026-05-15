@@ -429,10 +429,20 @@ for (const vp of VIEWPORTS) {
   }
   console.log('');
 
+  // v2.1.2: serialize BOTH `pixelDiff` and `pixelDiffPct` for the report.
+  // The two are aliases — JSON.stringify will keep both. Using two keys
+  // covers both naming conventions FE+1 / BE+1 / external tooling may
+  // look up. Forces null (not undefined) so JSON serialization never
+  // silently drops the field.
+  const pixelDiffFinal =
+    pixelDiffPct === undefined || pixelDiffPct === null || Number.isNaN(pixelDiffPct)
+      ? null
+      : pixelDiffPct;
   allResults.push({
     viewport: vp.name,
     perSelector,
-    pixelDiffPct,
+    pixelDiff: pixelDiffFinal,
+    pixelDiffPct: pixelDiffFinal,
     cropBounds,
     canonicalShellBounds,
     portShellBounds,
@@ -486,8 +496,9 @@ if (failed) {
 // -----------------------------------------------------------------------------
 
 // Compare two PNG files at the same viewport pixel dimensions and return
-// fraction of differing pixels in [0..1]. Uses pure-Node PNG decode via
-// dynamic import of 'sharp' (already in stack via ADR-009).
+// fraction of differing pixels in [0..1]. Uses sharp for PNG decode +
+// resize + crop (already in stack via ADR-009); pixelmatch for the actual
+// pixel comparison.
 //
 // v2.1 (Day-19): if cropBounds is provided, both images are first resized
 // to viewport dims then cropped to the same content rectangle BEFORE the
@@ -495,33 +506,52 @@ if (failed) {
 // pixels (Rule 14 / F19 React canonical) are NOT comparable to per-frame
 // custom-shell pixels (Rule 15 / v2 HTML canonical), so we exclude them.
 //
-// Tolerance: pixels are considered "different" if Manhattan distance in
-// RGB space > 24 (~10% per channel). Tuned to forgive font anti-aliasing
-// jitter while still catching real layout shifts.
+// v2.1.2 (Day-19 Bug C fix): switched from raw RGBA Manhattan distance
+// (threshold 24, NO anti-alias awareness) to pixelmatch with the same
+// options as the project's playwright VR config (`apps/web/tests/visual/
+// playwright.config.ts`):
+//   - threshold: 0.2        (color tolerance, normalized 0..1)
+//   - includeAA: false      (ignore anti-aliased glyph + icon edges)
+//   - alpha: 0.1            (transparency tolerance)
+// Previously, every AA edge — 1-2px partial-alpha gradient per glyph —
+// counted as full-pixel drift, inflating diff 3-4x vs visible content
+// drift. pixelmatch's AA detection eliminates that noise.
 async function comparePngs(canonicalPath, portPath, vp, cropBounds = null) {
   const { default: sharp } = await import('sharp');
-  const baseA = sharp(canonicalPath).resize(vp.width, vp.height, { fit: 'cover' });
-  const baseB = sharp(portPath).resize(vp.width, vp.height, { fit: 'cover' });
+  const { default: pixelmatch } = await import('pixelmatch');
 
+  // Decode + resize. ensureAlpha() gives us RGBA (4 bytes/pixel), which
+  // is what pixelmatch expects.
+  const baseA = sharp(canonicalPath)
+    .resize(vp.width, vp.height, { fit: 'cover' })
+    .ensureAlpha();
+  const baseB = sharp(portPath)
+    .resize(vp.width, vp.height, { fit: 'cover' })
+    .ensureAlpha();
+
+  let width = vp.width;
+  let height = vp.height;
   if (cropBounds && cropBounds.width > 0 && cropBounds.height > 0) {
     const safe = clampCrop(cropBounds, vp);
     baseA.extract(safe);
     baseB.extract(safe);
+    width = safe.width;
+    height = safe.height;
   }
 
   const [a, b] = await Promise.all([baseA.raw().toBuffer(), baseB.raw().toBuffer()]);
-  const len = Math.min(a.length, b.length);
-  let diffPixels = 0;
-  // Sharp .raw() returns 3 bytes/pixel (RGB) unless we ensure() to RGBA
-  const stride = 3;
-  for (let i = 0; i < len; i += stride) {
-    const dr = Math.abs(a[i] - b[i]);
-    const dg = Math.abs(a[i + 1] - b[i + 1]);
-    const db = Math.abs(a[i + 2] - b[i + 2]);
-    if (dr + dg + db > 24) diffPixels += 1;
-  }
-  const totalPixels = len / stride;
-  return diffPixels / totalPixels;
+  const diff = Buffer.alloc(width * height * 4);
+
+  const diffPixels = pixelmatch(a, b, diff, width, height, {
+    threshold: 0.2,
+    includeAA: false,
+    alpha: 0.1,
+    diffColor: [255, 0, 0],
+    aaColor: [255, 255, 0],
+  });
+
+  const totalPixels = width * height;
+  return totalPixels > 0 ? diffPixels / totalPixels : 0;
 }
 
 // v2.1 — Measure the rendered AdminShell rail width + topbar height on the

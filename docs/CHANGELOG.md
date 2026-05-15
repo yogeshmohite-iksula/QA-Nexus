@@ -13,6 +13,28 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment Parts 1 + 2 + frame-port skill v2.1.2 (pixelmatch AA tolerance + report.json fix)
+
+**v2.1.2 fix (Day-19 ~13:00, after FE+1's F21 validation showed pixel-diff math overstating visible drift by ~4x — Case C):**
+
+- **Bug C — pixel-diff inflating drift via anti-aliasing.** v2.1.1 used sharp raw RGBA Manhattan distance with threshold 24 (no AA awareness). Every anti-aliased font glyph + lucide icon stroke + sub-pixel line-height edge counted as full-pixel drift — 3-4x inflation over visible content drift. Evidence from FE+1's F21 inspection: visual side-by-side at 1440px was ~85-90% structurally aligned but pixel-diff reported 44.7%. **Fix:** switched `comparePngs()` to `pixelmatch` with the same options as the project's playwright VR config (`apps/web/tests/visual/playwright.config.ts`): `threshold: 0.2`, `includeAA: false`, `alpha: 0.1`. pixelmatch's AA detection naturally filters glyph + icon edge noise.
+- **Bug D — report.json `pixelDiff` serialization defensive fallback.** Reports could show `pixelDiff: undefined` when JSON.stringify dropped the field on edge cases (NaN, crop failure). **Fix:** force null when measurement absent; emit BOTH `pixelDiff` and `pixelDiffPct` aliases in the report so external tooling (FE+1's overlay, BE+1's VR runner) can find the value regardless of naming convention.
+- **CLAUDE.md amendment Part 2 — "Anti-alias tolerance" clarification (v2.1.2 Day-19 line):** pixelmatch options MUST include `includeAA: false` and `threshold: 0.2`. Manhattan-distance pixel comparison (v2.1.1 and earlier) was a v2.1.2 implementation bug fixed in v2.1.2 and must never recur. Consistent with VR baseline matching so the two systems agree on what "drift" means.
+- **`pixelmatch@^7.2.0` added to root devDependencies.** Pulled in directly. Sharp continues to handle PNG decode + resize + crop (no new PNG-decoder dep).
+
+**v2.1.2 smoke (F21 v2 canonical vs /home/ React, all 4 viewports — same cross-page smoke as v2.1.1):**
+
+| Viewport | v2.1.1 (raw Manhattan) | v2.1.2 (pixelmatch + AA-off) | Improvement |
+| -------- | ---------------------- | ---------------------------- | ----------- |
+| 320      | 69.33%                 | **7.45%**                    | -10x        |
+| 768      | 70.30%                 | **6.55%**                    | -10x        |
+| 1024     | 66.40%                 | **6.50%**                    | -10x        |
+| 1440     | 62.73%                 | **6.16%**                    | -10x        |
+
+Remaining 6-7% diff is REAL drift between two completely different pages (F21 Defects Hub vs /home/ Home Page). For FE+1's actual F21 React port vs F21 canonical, expected diff drops to the 1-5% range (under threshold). `report.json` fields populated correctly: `pixelDiff=0.0745...`, `pixelDiffPct=0.0745...`, both per-viewport.
+
+PR #158 force-pushed `33946ea` → new SHA with v2.1.2 fixes. FE+1 to re-validate against F21 with overlay.
+
 ### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment Parts 1 + 2 + frame-port skill v2.1.1 (ARIA-primary probe + UNION content-region pixel crop)
 
 **v2.1.1 fix (Day-19 mid-morning, after FE+1's F21 validation surfaced two implementation bugs in v2.1):**

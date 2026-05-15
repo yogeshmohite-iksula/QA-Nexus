@@ -226,6 +226,8 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Union crop is mandatory (v2.1.1 Day-19 clarification).** The shell dimensions MUST be measured separately on BOTH canonical and React port pages, then the union taken: `crop_x = max(canonical_rail_width, port_rail_width)`, `crop_y = max(canonical_topbar_height, port_topbar_height)`. Single-source measurement (e.g. measuring only the React port and applying the same crop to canonical) is wrong because canonical's custom shell has different pixel dimensions; the asymmetric crop clips canonical's content on the left and widens the diff at larger viewports. Single-source crop is a v2.1 implementation bug fixed in v2.1.1 and must never recur.
 
+    **Anti-alias tolerance (v2.1.2 Day-19 clarification).** pixelmatch options MUST include `includeAA: false` and `threshold: 0.2` to match the project's playwright VR config (`apps/web/tests/visual/playwright.config.ts` — `maxDiffPixelRatio: 0.01` + `threshold: 0.2`). Default pixelmatch (threshold 0.1, includeAA true) treats every anti-aliased font/icon edge as full-pixel drift, inflating diffs 3-4x above visible content drift. The skill probe must be consistent with VR baseline matching — same color tolerance, same AA filtering, so the two systems agree on what "drift" means. Manhattan-distance pixel comparison (v2.1.1 and earlier) was a v2.1.2 implementation bug fixed in v2.1.2 and must never recur.
+
     **Forbidden:**
     - Modifying the AdminShell to match a specific frame's custom shell design (regresses Rule 14)
     - Using `--scope full` to override the content crop (theater gate)
