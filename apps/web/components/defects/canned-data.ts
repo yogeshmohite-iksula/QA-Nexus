@@ -96,6 +96,40 @@ export type ReproSegment =
   | { kind: 'fail'; value: string };
 
 // -----------------------------------------------------------------------------
+// Def-head region — canonical L729-757 (verbatim per Hard Rule 17).
+// Day-19 Step 4 addition: Day-18 F21 components skipped this region
+// entirely; diff-probe.mjs surfaced the gap (Finding B). Adding now.
+// -----------------------------------------------------------------------------
+
+export interface DefHeadStat {
+  /** Bold count, e.g. "187" / "23" / "14" */
+  count: string;
+  /** Plain-text label, e.g. "total" / "P0" / "stale >7d" */
+  label: string;
+  /** Color variant for the bold count token. Verbatim from canonical class
+   *  variants: default / p0 / p1 / stale / rca / fix. */
+  variant: 'default' | 'p0' | 'p1' | 'stale' | 'rca' | 'fix';
+}
+
+export const F21_DEF_HEAD = {
+  title: 'Defects · Refund Flow',
+  ariaLabel: 'Defects header',
+  stats: [
+    { count: '187', label: 'total', variant: 'default' },
+    { count: '23', label: 'P0', variant: 'p0' },
+    { count: '41', label: 'P1', variant: 'p1' },
+    { count: '14', label: 'stale >7d', variant: 'stale' },
+    { count: '156', label: 'with RCA', variant: 'rca' },
+    { count: '89', label: 'fixed last 30d', variant: 'fix' },
+  ] as DefHeadStat[],
+  rightActions: [
+    { label: 'Bulk', ariaLabel: 'Bulk actions', variant: 'bulk' as const },
+    { label: 'Export', ariaLabel: 'Export', variant: 'bulk' as const },
+    { label: 'New defect', ariaLabel: 'New defect', variant: 'new-defect' as const },
+  ],
+} as const;
+
+// -----------------------------------------------------------------------------
 // Filter strip — canonical L758-794
 // -----------------------------------------------------------------------------
 

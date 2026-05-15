@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { DefHead } from './def-head';
 import { FilterStrip } from './filter-strip';
 import { DefectsToolbar } from './toolbar';
 import { DefectRowItem } from './defect-row';
@@ -19,6 +20,7 @@ export function DefectsPage() {
         className="flex min-h-0 flex-1 flex-col"
         style={{ background: 'var(--canvas)', color: 'var(--t1)' }}
       >
+        <DefHead />
         <FilterStrip />
         <DefectsToolbar />
 
