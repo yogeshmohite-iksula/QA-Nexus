@@ -13,6 +13,31 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 19 AM — VR baseline seed: 12 canonical PNGs + 3 frame specs + VR_BASELINES_READY flip
+
+**Day-19 AM seed PR.** Activates BE+1's visual-regression Playwright suite (PR #153) by committing the 12 canonical baseline PNGs FE+1 captured Day-18 evening, writing 3 frame-specific specs, and flipping the `VR_BASELINES_READY` env gate in CI.
+
+**Files:**
+
+- **NEW** `apps/web/tests/visual/canonical/{F19,F20,F21}/{320,768,1024,1440}.png` — 12 baselines (4.6 MB total). Captured via headed Chromium + Playwright `file://` against the canonical v2 HTML at `PM1_UI_v2/Redesign Frame by claude design/F{19,20,21}*.html` (full-page, dark colorScheme, deviceScaleFactor 1). Paths match BE+1's `snapshotPathTemplate: '{testDir}/canonical/{arg}/{projectName}.png'` exactly — zero move/rename.
+- **NEW** `apps/web/tests/visual/capture-canonical-baselines.mjs` — reusable ~50 LOC script accepting `FRAMES` + `VIEWPORTS` arrays. Idempotent re-capture command for future frames (F08/F14/F15/F16abc/F18/F22-F28).
+- **NEW** `apps/web/tests/visual/f19.spec.ts` — F19 Run Console route `/projects/iksula-returns/runs/RUN-RET-2026-04-25-002`. Route is on origin/main (PR #135 merged) → unskipped once `VR_BASELINES_READY=1`.
+- **NEW** `apps/web/tests/visual/f20.spec.ts` — F20 Run Results route `/projects/:slug/runs/:runId/results/`. **Double-gated**: `VR_BASELINES_READY` + `F20_ROUTE_READY`. Second flag flips when PR #150 merges; until then F20 spec stays skipped (baseline PNG ready, just waiting on route).
+- **NEW** `apps/web/tests/visual/f21.spec.ts` — F21 Defects Hub route `/projects/:slug/defects/`. **Double-gated**: `VR_BASELINES_READY` + `F21_ROUTE_READY`. Second flag flips when the Day-20 re-port (via `frame-port` skill from `wip/f21-pre-tooling-fix`) merges.
+- **DELETED** `apps/web/tests/visual/home.spec.ts` — superseded by f19/f20/f21 specs. F08 baseline can be added separately if needed; the placeholder pattern is no longer load-bearing.
+- **MODIFIED** `.github/workflows/ci.yml` — `VR_BASELINES_READY: "1"` added to the visual-regression job's env block. Replaces the prior "UNSET until seed PR" comment with the activated state.
+- **MODIFIED** `docs/CHANGELOG.md` — this entry.
+
+**Spec pattern** (copied verbatim from BE+1's `home.spec.ts` template, snapshotPathTemplate `{testDir}/canonical/{arg}/{projectName}.png`): describe-level `test.skip(!VR_BASELINES_READY)` gate + frame-specific second gate for in-flight routes + `page.goto(route)` → `waitForLoadState('networkidle')` → 500 ms hydration settle → `expect(page).toHaveScreenshot('F2x', { maxDiffPixelRatio: 0.01, threshold: 0.2, animations: 'disabled', caret: 'hide' })`.
+
+**Expected CI behaviour post-merge:** F19 spec unskipped → compares live F19 render against `canonical/F19/*.png`. First run may fail with 1-2 % pixel-diff (canonical from v2 HTML vs React port rendering — font anti-aliasing, lucide-vs-inline-SVG per Hard Rule 14 amendment). Tolerance config (`maxDiffPixelRatio: 0.01`) was designed to absorb these. If exceeded, FE+1 either (a) re-captures from React route as new baseline (intentional design ack), or (b) fixes drift root cause. F20/F21 specs stay skipped via second gate until their PRs merge.
+
+**Cross-references:**
+
+- PR #153 (BE+1) — VR Playwright suite scaffolding
+- PR #154 (MAIN) — frame-port skill v1 + Hard Rule 18
+- Day-18 Rule 17 audit: `docs/audits/2026-05-14-rule17-audit-day-18.md`
+
 ### Added — Day 18 PM — `.claude/skills/frame-port/` v1 + Hard Rule 18 (skill-mandatory port workflow)
 
 **Tier-2 of the Day-18 PM port-discipline build (companion to BE+1's Tier-1 visual-regression suite).** New skill at `.claude/skills/frame-port/` orchestrates the canonical-first port workflow as an executable, auditable pipeline. Triggered by "port frame Fxx" / "build the Fxx React port" / similar phrases.
