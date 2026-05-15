@@ -14,16 +14,47 @@
 //     --html "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F19 Run Console v2.html" \
 //     [--out .claude/skills/frame-port/specs/F19.spec.json]
 //
-// Output shape:
+// Output shape (v2, Day-19 — aria_signal added per CLAUDE.md Hard Rule 18 amendment):
 //   {
 //     "frame": "F19",
 //     "sourceHtml": "<path>",
 //     "extractedAt": "<ISO>",
-//     "sections": [{ id, role, classes, tag, children: [...] }, ...],
+//     "schemaVersion": 2,
+//     "sections": [
+//       {
+//         "tag": "header",
+//         "id": "...",
+//         "role": "banner",
+//         "classes": ["shell-header", "flex"],
+//         "aria_signal": {
+//           "role": "banner",            // PRIMARY structural signal
+//           "aria_label": "Defects header",
+//           "classes": ["shell-header", "flex"],   // SECONDARY (fallback)
+//           "data_canonical_section": null         // TERTIARY (escape hatch)
+//         },
+//         "sectionLike": true,
+//         "children": [...]
+//       },
+//       ...
+//     ],
 //     "tokens_used": ["--primary", "--border-strong", ...],
+//     "token_definitions": { "--primary": "...", ... },
 //     "assets": ["/icons/foo.svg", "data:image/...", ...],
-//     "canned_data_keys": ["DEFECT_IDS", "CLUSTER_TITLES", ...]
+//     "canned_data_keys": {
+//       "data_attributes": ["data-case", "data-tone", ...],
+//       "heading_exemplars": ["Run Console", "Cluster A · Refund Core", ...],
+//       "aria_exemplars": ["Close evidence rail", "Filter runs", ...]
+//     }
 //   }
+//
+// v2 schema is BACKWARD COMPATIBLE: existing fields preserved; aria_signal
+// is added per section. v1 spec.jsons remain valid input to v2 diff-probe
+// but produce less precise structural matching (class-name-only fallback).
+//
+// (canned_data_keys is OBJECT form, not array. FE+1 cross-references each
+// sub-list against the strings FE+1 will import from canned-data.ts.
+// Schema-mismatch noted Day-19 polish — docstring previously showed array
+// form; code has always emitted object form — see lines 313-316 below.)
 //
 // NO TSX generation. The spec is the contract that gets shown to Yogesh
 // for approval BEFORE FE+1 writes component code. After approval, FE+1
@@ -167,6 +198,8 @@ function buildSectionTree(node, depth = 0, max = 5) {
   const tag = node.tagName.toLowerCase();
   const id = node.getAttribute('id') || undefined;
   const role = node.getAttribute('role') || undefined;
+  const ariaLabel = node.getAttribute('aria-label') || undefined;
+  const dataCanonicalSection = node.getAttribute('data-canonical-section') || undefined;
   const classes =
     (node.getAttribute('class') || '').split(/\s+/).filter(Boolean).slice(0, 8) || undefined; // cap to first 8 classes for readability
 
@@ -179,11 +212,24 @@ function buildSectionTree(node, depth = 0, max = 5) {
   // Skip non-section-like nodes that have no section-like descendants
   if (!sectionLike && children.length === 0) return null;
 
+  // v2 (Day-19): aria_signal is the binding HTML ↔ React contract per
+  // CLAUDE.md Hard Rule 18 Day-19 amendment. ARIA roles + labels are
+  // PRIMARY structural signal; class names are SECONDARY (Tailwind
+  // ports diverge by design); data-canonical-section is the TERTIARY
+  // escape hatch.
+  const aria_signal = {
+    role: role ?? null,
+    aria_label: ariaLabel ?? null,
+    classes: classes ?? [],
+    data_canonical_section: dataCanonicalSection ?? null,
+  };
+
   return {
     tag,
     ...(id ? { id } : {}),
     ...(role ? { role } : {}),
     ...(classes && classes.length ? { classes } : {}),
+    aria_signal,
     sectionLike,
     children,
   };
@@ -305,6 +351,7 @@ const spec = {
   frame: frameId,
   sourceHtml: htmlPath,
   extractedAt: new Date().toISOString(),
+  schemaVersion: 2,
   generator: '.claude/skills/frame-port/extract-spec.mjs',
   sections: sectionTree,
   tokens_used: [...tokenSet].sort(),

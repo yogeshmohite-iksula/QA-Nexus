@@ -7,6 +7,26 @@
 
 ---
 
+## Prerequisites (first-time setup)
+
+Run once before the first port of the session:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+This ensures `jsdom@^29.1.1` + `playwright@^1.59.1` + `sharp@^0.33.5` are hoisted to the root `node_modules/` so the skill scripts can resolve them. All three are devDependencies of the repo root; they exist as transitive deps elsewhere, but the skill scripts run from `.claude/skills/frame-port/` and need them at root.
+
+If you skip this and run `extract-spec.mjs` cold, you'll see:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'jsdom' imported from .claude/skills/frame-port/extract-spec.mjs
+```
+
+The fix is always `pnpm install --frozen-lockfile` — never `pnpm add jsdom` (that would mutate the lockfile + drift from CI).
+
+---
+
 ## Quick start — port any frame in 7 steps
 
 ```bash

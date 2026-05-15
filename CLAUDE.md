@@ -193,6 +193,68 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
     - `diff-probe.mjs` — Step 5 tool: Playwright + sharp diff at 320/768/1024/1440. Exit 0 = clean; Exit 1 = drift (visual gate blocked).
     - `README.md` — usage doc for FE+1's terminal.
 
+    **Day-19 amendment (skill v2 — ARIA-primary structural probe).** Codified 2026-05-15 (Day-19 morning) after F21 practice re-port surfaced Finding A: the v1 diff-probe matched sections by class name (e.g., `.rail`, `.def-shell`), but Tailwind-based React ports use utility classes (`className="flex shrink-0 flex-col"`) per Hard Rule 5 + Tailwind convention. Result: v1 probe returned 0% section presence on every Tailwind port regardless of port quality — a structural false-positive failure mode that would have blocked every subsequent frame.
+
+    **The binding contract clarification:** ARIA roles and aria-labels are binding across HTML ↔ React. Class tokens are NOT. The canonical contract a React port must honor is:
+    1. **Every `role` attribute** in the canonical v2 HTML must appear in the React port on the equivalent element.
+    2. **Every `aria-label` exemplar** in `spec.json.canned_data_keys.aria_exemplars` must appear in the React port on the equivalent region.
+    3. **Class names diverge by design** — canonical uses BEM-like semantic tokens, React port uses Tailwind utilities. Neither is "more correct"; they encode the same DOM through different conventions.
+
+    **v2 diff-probe matching strategy (OR semantics — any match = section present):**
+    1. **PRIMARY — role + aria-label match.** Probe walks the React DOM for elements whose `role` + `aria-label` combination matches a `spec.json.aria_exemplar` entry. This is the right primary signal because both canonical HTML and React ports preserve ARIA — it travels with the component naturally.
+    2. **SECONDARY — class-name substring match.** v1 behavior retained as a fallback. If a React port happens to use canonical class tokens (e.g., `className="def-shell flex flex-1"`), this still matches. Optional, not required.
+    3. **TERTIARY — `data-canonical-section` attribute escape hatch.** Convention: React port may add `data-canonical-section="def-head"` to anchor sections without class-name pollution. Use when ARIA roles/labels aren't sufficient to disambiguate (rare).
+
+    Section "present" = ANY of the three matches. Section "missing" = NONE of the three. This eliminates the class-only false-positive failure mode while preserving the v1 structural sanity check.
+
+    **Forbidden (visual gate FAIL triggers added Day-19):**
+    - Dropping an `aria-label` that exists in canonical v2 HTML
+    - Changing a `role` attribute from canonical (e.g., `role="region"` → `role="group"`)
+    - Adding `data-canonical-section` as a workaround instead of fixing missing ARIA — ARIA must be primary; the data-attribute is for true escape-hatch cases (e.g., decorative wrappers without semantic meaning)
+
+    **spec.json schema change (Day-19):** `extract-spec.mjs` now emits a per-section `aria_signal: { role, aria_label, classes[], data_canonical_section }` block + a top-level `schemaVersion: 2`. Backward compatible — existing fields preserved. Re-run extract-spec on any frame to get the v2 spec; old spec.jsons remain valid input to v2 diff-probe but produce less precise structural matching.
+
+    **Cross-references:** Rule 14 (AdminShell parity — uses ARIA naturally) · Rule 15 (v2 HTML port source-of-truth) · Rule 17 (canned-data verbatim) · F21 practice re-port Day-19 Finding A (the precedent) · PR #158 (skill v2 implementation).
+
+    **Day-19 amendment Part 2 (content-region pixel comparison).** Codified 2026-05-15 (Day-19 mid-morning) after F21 practice re-port surfaced a 38-40% pixel-diff floor at desktop viewports that traced not to port quality but to shell substitution: canonical v2 HTML uses each frame's own custom shell, while React ports use AdminShell per Rule 14 Day-17 amendment. The pixel real estate of the shell is by design non-comparable.
+
+    **Resolution — two-canonical model:**
+    - The SHELL (left rail + top utility bar) is canonicalized via F19 React per Rule 14 Day-17 amendment.
+    - The CONTENT (the page-specific `<main>` area) is canonicalized via v2 HTML per Rule 15.
+
+    These are both real canonicals serving different DOM regions. diff-probe v2.1 respects this boundary by cropping both canonical and React port screenshots to the content region BEFORE pixel-diffing. Crop bounds derive from the rendered AdminShell dimensions (rail width 240px expanded / 64px collapsed / 0px at mobile <1024px; topbar 64px fixed). Pixel-diff threshold returns to strict 5% with this scoping — the floor effect dissolves once we compare apples to apples.
+
+    **Union crop is mandatory (v2.1.1 Day-19 clarification).** The shell dimensions MUST be measured separately on BOTH canonical and React port pages, then the union taken: `crop_x = max(canonical_rail_width, port_rail_width)`, `crop_y = max(canonical_topbar_height, port_topbar_height)`. Single-source measurement (e.g. measuring only the React port and applying the same crop to canonical) is wrong because canonical's custom shell has different pixel dimensions; the asymmetric crop clips canonical's content on the left and widens the diff at larger viewports. Single-source crop is a v2.1 implementation bug fixed in v2.1.1 and must never recur.
+
+    **Anti-alias tolerance (v2.1.2 Day-19 clarification).** pixelmatch options MUST include `includeAA: false` and `threshold: 0.2` to match the project's playwright VR config (`apps/web/tests/visual/playwright.config.ts` — `maxDiffPixelRatio: 0.01` + `threshold: 0.2`). Default pixelmatch (threshold 0.1, includeAA true) treats every anti-aliased font/icon edge as full-pixel drift, inflating diffs 3-4x above visible content drift. The skill probe must be consistent with VR baseline matching — same color tolerance, same AA filtering, so the two systems agree on what "drift" means. Manhattan-distance pixel comparison (v2.1.1 and earlier) was a v2.1.2 implementation bug fixed in v2.1.2 and must never recur.
+
+    **Forbidden:**
+    - Modifying the AdminShell to match a specific frame's custom shell design (regresses Rule 14)
+    - Using `--scope full` to override the content crop (theater gate)
+    - Re-baselining canonical from React port output (loses design intent)
+
+    **CLI surface:** `diff-probe.mjs --scope content` (default, 5% threshold, blocks) | `--scope full` (50% threshold, warning-only, debug). `report.json` includes the chosen scope + per-viewport `cropBounds` so reviewers can verify what was compared.
+
+    **Day-19 amendment Part 3 (GREEN / AMBER / RED band system).** Codified 2026-05-15 (Day-19 late afternoon) after F21 v2.1.2 validation surfaced a renderer-noise floor of ~5-7% at desktop viewports — a natural consequence of comparing canonical HTML (one browser context) against React port (another browser context) with different sub-pixel rasterization, even with `includeAA: false`. Industry research confirms the floor is 2-4% even on perfectly-aligned cross-renderer ports.
+
+    **Threshold calibration (rationale):** The skill's diff-probe uses the SAME pixelmatch options as the project's playwright VR config — `threshold: 0.2`, `includeAA: false`, `alpha: 0.1` per `apps/web/tests/visual/playwright.config.ts`. The 5% GREEN band is 5x the playwright VR config's `maxDiffPixelRatio: 0.01` (1%) to absorb cross-renderer rasterization variance documented in industry research for HTML→React comparison.
+
+    **Band system:**
+    - **GREEN** — pixel diff < 5% on ALL viewports. Auto-pass structural sanity; Yogesh visual gate is typically a fast-check approval.
+    - **AMBER** — pixel diff 5-10% on any viewport, DOM probe ≥ 60% sections PASS via PRIMARY (ARIA) or SECONDARY (class-match). Yogesh visual gate required; expected approval. Notes captured in PR description.
+    - **RED** — pixel diff > 10% on any viewport OR DOM probe < 60% sections PASS. Real port drift; iterate TSX. Re-probe after each fix.
+
+    **Why three bands instead of pass/fail:** A binary 5% gate either produces false-positives (AMBER ports look fine to humans but probe fails) or false-negatives (RED is silenced if threshold is loosened to accommodate AMBER). Three bands preserve strict catch of real drift while acknowledging renderer-noise floor. Industry-standard pattern (Chromatic, Percy, Lost Pixel, Cypress).
+
+    **Visual gate (Hard Rule 13) is authoritative for AMBER and GREEN.** The diff-probe is a STRUCTURAL sanity check + drift early-warning, not the product gate. Yogesh-by-eye on screenshots at 320 + 1440 remains the binding approval.
+
+    **Forbidden:**
+    - Loosening pixel threshold above 10% to make RED ports auto-pass
+    - Skipping Yogesh visual gate for AMBER ports
+    - Marking PR ready-for-review on RED status without iteration
+
+    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract + content-region pixel comparison + GREEN/AMBER/RED band system).** The amendment closes three specific drift classes: structural false-positive on Tailwind ports (Part 1), shell-substitution pixel floor (Part 2), renderer-noise floor that produced binary-gate false-positives (Part 3). Each addition to the policy stack closes a different drift class identified through actual practice.
+
     **The close-and-redo precedent:** If `diff-probe.mjs` shows a section was implemented with invented data (e.g. cluster titles not in `canned-data.ts`), the PR is CLOSED, NOT patched. FE+1 returns to Step 4 with the canonical references and re-scaffolds. This rule exists because incremental patching of drift symptoms historically compounds — by the time the third "minor" patch lands, the diff vs canonical is too large to reconcile in one pass. The close-and-redo loop runs at most once per frame because Step 5 catches drift early.
 
     **Forbidden in Step 4:**

@@ -41,6 +41,7 @@
     "husky": "^9.1.6",
     "jsdom": "^29.1.1",
     "lint-staged": "^15.2.10",
+    "pixelmatch": "^7.1.0",
     "playwright": "^1.59.1",
     "sharp": "^0.33.5",
     "prettier": "^3.3.3",
