@@ -66,6 +66,35 @@ updates land here at the end of every working day.
 
 ---
 
+### Added — Day 19 — M4 module stubs: TestRuns + Defects + JiraSync (P0 #2 AppModule wiring)
+
+**P0 HIGH per Kimi K2 review** (Day-19 morning). M4 DB tables exist (migration 0004 from Day-17 #144) but the API surface was absent — no `TestRunsModule`, `DefectsModule`, or `JiraSyncModule` on main. Per Day-19 brief decision-tree (`if module files don't exist: scaffold the three modules with stub controllers returning 501`) this PR lands additive 501 stubs so FE+1 + Yogesh have API surface to point at before the full implementations land at M4 close.
+
+**Stub contract (locked by 11 contract tests):**
+
+- All endpoints return `501 Not Implemented`
+- Response header `x-m4-stub: true` (visibility for FE+1 + Yogesh)
+- Response body `{ error, message, m4Stub: true, op | landingPr }`
+
+**11 routes registered (boot-smoke verified):**
+
+- `PATCH /api/test-runs/:id/{start,result,abort}` — replaced by PR #149 (HOLD) at M4 close; paths chosen to match #149 for clean rebase
+- `POST /api/defects` · `GET /api/defects/:id` · `GET /api/defects/:id/rca` · `POST /api/defects/:id/jira` · `PATCH /api/defects/:id/status` — replaced Day-20 alongside A4 RCA
+- `POST /api/jira/webhook` · `POST /api/projects/:slug/jira/{connect,sync}` — replaced Day-19/20 alongside HMAC raw-body middleware
+
+**Files (10 new + 1 modified, +445 LOC):**
+
+- `apps/api/src/test-runs/{test-runs.controller.ts,test-runs.module.ts,__tests__/test-runs.controller.spec.ts}`
+- `apps/api/src/defects/{defects.controller.ts,defects.module.ts,__tests__/defects.controller.spec.ts}`
+- `apps/api/src/jira-sync/{jira-sync.controller.ts,jira-sync.module.ts,__tests__/jira-sync.controller.spec.ts}`
+- `apps/api/src/app.module.ts` — `+ 3 module imports`
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **514/514 jest** (503 baseline + 11 new stub-contract tests) · lint clean ✓ · CHANGELOG ✓.
+
+**Hard Rules check:** Rule 1 (no infra) · Rule 5 (no banned dep; single-process) · Rule 6 (no env) · Rule 7 (audit not relevant — stubs return immediately) · Rule 9 (no `any`) · Rule 11 (Kimi review surfaced before code; brief decision-tree explicit). Lands as standalone P0 fix today (NOT in M4 close cascade).
+
+---
+
 ### Added — Day 18 PM — `.claude/skills/frame-port/` v1 + Hard Rule 18 (skill-mandatory port workflow)
 
 **Tier-2 of the Day-18 PM port-discipline build (companion to BE+1's Tier-1 visual-regression suite).** New skill at `.claude/skills/frame-port/` orchestrates the canonical-first port workflow as an executable, auditable pipeline. Triggered by "port frame Fxx" / "build the Fxx React port" / similar phrases.
