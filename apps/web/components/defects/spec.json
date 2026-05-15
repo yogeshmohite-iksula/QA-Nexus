@@ -1,0 +1,221 @@
+{
+  "frame": "F21",
+  "sourceHtml": "/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus-frontend/QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F21 Defects Hub v2.html",
+  "extractedAt": "2026-05-15T04:05:59.526Z",
+  "generator": ".claude/skills/frame-port/extract-spec.mjs",
+  "sections": [
+    {
+      "tag": "div",
+      "id": "app",
+      "classes": ["app"],
+      "sectionLike": false,
+      "children": [
+        {
+          "tag": "header",
+          "role": "banner",
+          "classes": ["topbar"],
+          "sectionLike": true,
+          "children": [
+            {
+              "tag": "div",
+              "role": "tablist",
+              "classes": ["mode-toggle"],
+              "sectionLike": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "aside",
+          "id": "rail",
+          "classes": ["rail"],
+          "sectionLike": true,
+          "children": [
+            {
+              "tag": "button",
+              "id": "railCollapseToggle",
+              "classes": ["rail-toggle"],
+              "sectionLike": true,
+              "children": []
+            },
+            {
+              "tag": "div",
+              "classes": ["rail-content"],
+              "sectionLike": true,
+              "children": []
+            },
+            {
+              "tag": "div",
+              "classes": ["rail-foot"],
+              "sectionLike": true,
+              "children": [
+                {
+                  "tag": "div",
+                  "classes": ["rail-foot"],
+                  "sectionLike": true,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "section",
+          "classes": ["main"],
+          "sectionLike": true,
+          "children": [
+            {
+              "tag": "div",
+              "classes": ["def-shell"],
+              "sectionLike": true,
+              "children": [
+                {
+                  "tag": "div",
+                  "role": "region",
+                  "classes": ["def-head"],
+                  "sectionLike": true,
+                  "children": []
+                },
+                {
+                  "tag": "div",
+                  "role": "region",
+                  "classes": ["filter-strip"],
+                  "sectionLike": true,
+                  "children": []
+                },
+                {
+                  "tag": "div",
+                  "role": "region",
+                  "classes": ["def-toolbar"],
+                  "sectionLike": true,
+                  "children": []
+                },
+                {
+                  "tag": "div",
+                  "classes": ["def-body"],
+                  "sectionLike": false,
+                  "children": [
+                    {
+                      "tag": "aside",
+                      "classes": ["sd-rail"],
+                      "sectionLike": true,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tokens_used": [
+    "--ai-accent",
+    "--ai-line",
+    "--ai-soft",
+    "--base",
+    "--border",
+    "--border-strong",
+    "--canvas",
+    "--fail",
+    "--fail-line",
+    "--fail-soft",
+    "--info",
+    "--info-line",
+    "--info-soft",
+    "--overlay",
+    "--pass",
+    "--pass-line",
+    "--pass-soft",
+    "--primary",
+    "--primary-ink",
+    "--primary-line",
+    "--primary-soft",
+    "--rail-w",
+    "--raised",
+    "--secondary",
+    "--secondary-ink",
+    "--t1",
+    "--t2",
+    "--t3",
+    "--t4",
+    "--tap",
+    "--topbar-h",
+    "--warn",
+    "--warn-line",
+    "--warn-soft"
+  ],
+  "token_definitions": {
+    "--canvas": "#0B0F17",
+    "--base": "#111827",
+    "--raised": "#1A2233",
+    "--overlay": "#232C3F",
+    "--border": "#2A3347",
+    "--border-strong": "#3B4660",
+    "--t1": "#F1F5F9",
+    "--t2": "#C7D0DC",
+    "--t3": "#8A94A6",
+    "--t4": "#94A3B8",
+    "--primary": "#2DD4BF",
+    "--primary-ink": "#003732",
+    "--secondary": "#A78BFA",
+    "--secondary-ink": "#2E1065",
+    "--ai-accent": "#C4B5FD",
+    "--pass": "#34D399",
+    "--fail": "#F87171",
+    "--warn": "#FBBF24",
+    "--info": "#60A5FA",
+    "--primary-soft": "rgba(45,212,191,0.10)",
+    "--primary-line": "rgba(45,212,191,0.28)",
+    "--ai-soft": "rgba(167,139,250,0.12)",
+    "--ai-line": "rgba(167,139,250,0.30)",
+    "--pass-soft": "rgba(52,211,153,0.14)",
+    "--pass-line": "rgba(52,211,153,0.34)",
+    "--warn-soft": "rgba(251,191,36,0.14)",
+    "--warn-line": "rgba(251,191,36,0.34)",
+    "--fail-soft": "rgba(248,113,113,0.14)",
+    "--fail-line": "rgba(248,113,113,0.34)",
+    "--info-soft": "rgba(96,165,250,0.12)",
+    "--info-line": "rgba(96,165,250,0.30)",
+    "--rail-w": "240px",
+    "--topbar-h": "56px",
+    "--tap": "44px",
+    "--r-sm": "6px",
+    "--r-md": "8px",
+    "--r-lg": "12px"
+  },
+  "assets": [],
+  "canned_data_keys": {
+    "data_attributes": [
+      "data-id",
+      "data-kb",
+      "data-label",
+      "data-pri",
+      "data-section",
+      "data-section-body",
+      "data-tone"
+    ],
+    "heading_exemplars": [
+      "Defects · Refund Flow",
+      "Refund > ₹10K stuck on PROCESSING — webhook timeout on payments-svc when partner-bank gateway exceeds 30s SLA."
+    ],
+    "aria_exemplars": [
+      "Open navigation",
+      "Quick create",
+      "Notifications",
+      "Theme",
+      "Primary navigation",
+      "Collapse navigation",
+      "Defects header",
+      "Bulk actions",
+      "Export",
+      "Filters",
+      "Group and sort",
+      "Select",
+      "Row actions",
+      "Defect detail",
+      "Close detail"
+    ]
+  }
+}
