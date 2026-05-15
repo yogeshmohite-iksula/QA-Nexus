@@ -21,9 +21,19 @@
 //     "extractedAt": "<ISO>",
 //     "sections": [{ id, role, classes, tag, children: [...] }, ...],
 //     "tokens_used": ["--primary", "--border-strong", ...],
+//     "token_definitions": { "--primary": "...", ... },
 //     "assets": ["/icons/foo.svg", "data:image/...", ...],
-//     "canned_data_keys": ["DEFECT_IDS", "CLUSTER_TITLES", ...]
+//     "canned_data_keys": {
+//       "data_attributes": ["data-case", "data-tone", ...],
+//       "heading_exemplars": ["Run Console", "Cluster A · Refund Core", ...],
+//       "aria_exemplars": ["Close evidence rail", "Filter runs", ...]
+//     }
 //   }
+//
+// (canned_data_keys is OBJECT form, not array. FE+1 cross-references each
+// sub-list against the strings FE+1 will import from canned-data.ts.
+// Schema-mismatch noted Day-19 polish — docstring previously showed array
+// form; code has always emitted object form — see lines 313-316 below.)
 //
 // NO TSX generation. The spec is the contract that gets shown to Yogesh
 // for approval BEFORE FE+1 writes component code. After approval, FE+1
