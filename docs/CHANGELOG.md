@@ -38,6 +38,34 @@ updates land here at the end of every working day.
 - PR #154 (MAIN) — frame-port skill v1 + Hard Rule 18
 - Day-18 Rule 17 audit: `docs/audits/2026-05-14-rule17-audit-day-18.md`
 
+---
+
+### Fixed — Day 19 — Pin `@hookform/resolvers` to `~3.9.1` (FE typecheck zod-v3↔v4 incompat blocker)
+
+**P0 unblocker for FE+1.** `apps/web/package.json` was on `^3.10.0` (resolved to 3.10.0 in lockfile); 3.10.0 was the last v3 release of `@hookform/resolvers` but already shipped TypeScript types referencing zod-v4's internal `$ZodTypeInternals` symbol. Workspace zod is `~3.25.76` (zod-v4 only enters scoped via `better-auth>zod` + `@better-auth/core>zod` overrides). Result: `pnpm --filter web typecheck` failed with `ZodObject<...>` not assignable to `ZodType<any, any, $ZodTypeInternals<any, any>>` on three M1-era modal files (invite-user-modal, founder-wizard, create-project-modal).
+
+**Diagnosis path:** Initial triage (this morning) read as stale local node_modules — recommended `pnpm install --frozen-lockfile`. FE+1's deeper diagnostic on a clean `--frozen-lockfile` install proved the fault was in `@hookform/resolvers@3.10.0` itself, not the lockfile. Verified by reading `apps/web/node_modules/zod` → symlinks to v3.25.76 (correct), but typecheck still failed → the resolver's type declarations were the problem. Hard Rule 11 lesson: when a deeper diagnostic contradicts a "looks clean" surface check, dig deeper — don't defer.
+
+**Fix:**
+
+- `apps/web/package.json`: `"@hookform/resolvers": "^3.10.0"` → `"~3.9.1"`
+- `pnpm install` → lockfile resolves to `3.9.1` (last release with stable zod-v3 internal-type shape)
+- `pnpm --filter web typecheck` → exit 0
+
+**Trade-off:** Defers the v4 migration (`@hookform/resolvers` v4.x is zod-v4-only). Tracked as followup `(cz)` for post-M4 hardening — needs paired bump of `packages/shared` zod, `apps/web` resolvers, `apps/api` zod imports, and `.claude/locked-deps.json` paired-major lock all in one PR.
+
+**Files:**
+
+- `apps/web/package.json` — version pin
+- `pnpm-lock.yaml` — resolved version 3.9.1
+- `docs/followups.md` — `(bw)` marked RESOLVED, new `(cz)` filed for the deferred v4 migration
+
+**Closes:** followup `(bw)` (filed 2026-05-14 Day-18). **Opens:** followup `(cz)` (post-M4 zod-v4 + resolvers-v4 paired migration).
+
+**Cost-gate:** zero infra impact ($0/mo holds).
+
+---
+
 ### Added — Day 18 PM — `.claude/skills/frame-port/` v1 + Hard Rule 18 (skill-mandatory port workflow)
 
 **Tier-2 of the Day-18 PM port-discipline build (companion to BE+1's Tier-1 visual-regression suite).** New skill at `.claude/skills/frame-port/` orchestrates the canonical-first port workflow as an executable, auditable pipeline. Triggered by "port frame Fxx" / "build the Fxx React port" / similar phrases.
