@@ -27,8 +27,10 @@ export function FilterStrip() {
       role="region"
       aria-label="Filters"
       className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5 sm:px-5 lg:px-7"
-      // Day-19 Round-3 bg fix: canonical L267 .filter-strip{background:var(--canvas)}
-      style={{ background: 'var(--canvas)', borderColor: 'var(--border)' }}
+      // Day-19 Round-4 bg fix per Yogesh visual gate: top control panel uses
+      // --base for visual hierarchy. Canonical CSS says --canvas but Yogesh's
+      // eye is authoritative (Hard Rule 13) — visual hierarchy wins.
+      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
       {/* Priority chip group */}
       <span

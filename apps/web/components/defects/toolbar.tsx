@@ -12,7 +12,9 @@ export function DefectsToolbar() {
       role="region"
       aria-label="Group and sort"
       className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-4 py-2 sm:px-5 lg:px-7"
-      style={{ background: 'var(--canvas)', borderColor: 'var(--border)' }}
+      // Day-19 Round-4 bg fix per Yogesh visual gate: top control panel
+      // (def-head + filter-strip + toolbar) consistently uses --base.
+      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
       <span
         className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.06em]"

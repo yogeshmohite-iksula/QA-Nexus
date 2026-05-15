@@ -26,12 +26,18 @@ export function DefHead() {
       role="region"
       aria-label={F21_DEF_HEAD.ariaLabel}
       className="flex flex-col gap-y-2 border-b px-4 py-3 sm:px-5 md:flex-row md:flex-wrap md:items-center md:gap-x-3 lg:px-7"
-      // Day-19 Round-3 bg fix: canonical .def-head L239 defines no background
-      // (inherits canvas). Was --base (too light/wrong shade vs canonical).
-      style={{ borderColor: 'var(--border)' }}
+      // Day-19 Round-4 bg fix per Yogesh visual gate: top control panel
+      // (def-head + filter-strip + toolbar) uses --base for visual hierarchy
+      // vs --canvas list-pane below. Round-3 collapsed them to canvas, but
+      // Yogesh visual gate authoritative — wants distinct shade.
+      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
-      {/* dh-left: title + stats line */}
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      {/* dh-left: title + stats line
+       *  Day-19 Round-4 mobile fix: on mobile (flex-col parent), `flex-1`
+       *  grows vertically not horizontally — child width collapses to content
+       *  min, making the h1 wrap word-by-word. `w-full` gives full width on
+       *  mobile; `md:w-auto md:flex-1` restores grow behavior on desktop. */}
+      <div className="flex w-full min-w-0 flex-col gap-1.5 md:w-auto md:flex-1">
         <h1
           className="m-0 text-[16px] font-semibold leading-[22px]"
           style={{ color: 'var(--t1)', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
