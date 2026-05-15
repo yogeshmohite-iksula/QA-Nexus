@@ -58,9 +58,10 @@
 
 ---
 
-## [2026-05-14] (bq) P1 — Raw-body webhook middleware design (Jira HMAC-SHA256 verify)
+## [2026-05-14] (bq) ✅ RESOLVED 2026-05-15 — Raw-body webhook middleware design (Jira HMAC-SHA256 verify)
 
 **Filed:** 2026-05-14 (Day-18 AM, M4 kickoff)
+**Resolved:** 2026-05-15 (Day-19 P2 — `feat/be-jira-webhook-receiver` branch). Design implemented via path-scoped `app.use('/api/jira/webhook', express.raw({...}))` BEFORE the global `express.json()` (option 2 of the original recommendation — chosen over `MiddlewareConsumer.forRoutes()` because our setup installs body-parsers in `main.ts` rather than letting NestJS auto-mount them). Pure-function `verifyHmacSha256` with constant-time `crypto.timingSafeEqual`. 27 unit tests across hmac-verifier + service + controller. Design doc at `docs/architecture/webhook-raw-body.md` with reusable pattern table for Slack/GitHub/Stripe/Linear M5+ webhooks.
 **Owner:** BE+1 (design Day-18 PM, implement Day-19 with MS4-T012)
 **Linked AC:** MS4-AC008 + risk R002
 
