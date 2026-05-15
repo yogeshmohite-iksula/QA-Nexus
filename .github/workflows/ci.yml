@@ -152,12 +152,12 @@ jobs:
     timeout-minutes: 15
     env:
       CI: "true"
-      # VR_BASELINES_READY left UNSET until FE+1's seed PR lands the
-      # canonical/F08/{320,768,1024,1440}.png baselines — without
-      # baselines, Playwright can't compare and the suite would FAIL.
-      # FE+1's seed PR (Day-19 morning) flips this to "1" alongside
-      # the canonical PNG commit. Until then, home.spec.ts test.skip()
-      # ensures CI stays green even when this job runs.
+      # FE+1 Day-19 seed PR flipped this to "1" alongside committing
+      # 12 canonical baseline PNGs at canonical/{F19,F20,F21}/{320,768,
+      # 1024,1440}.png. f19.spec.ts / f20.spec.ts / f21.spec.ts now
+      # run unskipped against those baselines. (home.spec.ts removed
+      # in same seed PR; F08 baseline can be added later if needed.)
+      VR_BASELINES_READY: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
