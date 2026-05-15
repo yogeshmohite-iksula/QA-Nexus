@@ -13,6 +13,23 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment + frame-port skill v2 (ARIA-primary structural probe)
+
+**Closes structural false-positive on Tailwind React ports surfaced by F21 Day-19 Finding A. ARIA roles + labels are now the binding HTML ↔ React contract.**
+
+The v1 `diff-probe.mjs` matched sections by class name (`.rail`, `.def-shell`). Tailwind-based React ports use utility classes (`className="flex shrink-0 flex-col"`) per Hard Rule 5 + Tailwind convention — so the v1 probe returned 0% structural presence on every Tailwind port regardless of port quality. Would have blocked every M4 frame port through the skill.
+
+**v2 changes (PR #158 extension):**
+
+- `diff-probe.mjs` — three-tier OR-semantics matching: PRIMARY (`role` + `aria-label`) → SECONDARY (class-name substring, v1 fallback) → TERTIARY (`data-canonical-section` escape hatch). Section PRESENT = any tier matches. Output table shows matched tier per side (C-tier / P-tier) for diagnostics.
+- `extract-spec.mjs` — emits `aria_signal: { role, aria_label, classes[], data_canonical_section }` per section + top-level `schemaVersion: 2`. Backward compatible — v1 spec.jsons still valid input but produce less precise structural matching.
+- `SKILL.md` — Step 5 docs updated with three-tier strategy + new "Tailwind React port note" explaining why ARIA is primary signal.
+- `CLAUDE.md` Hard Rule 18 — Day-19 amendment block inserted between "Workflow tools" and "The close-and-redo precedent". Codifies the binding HTML ↔ React contract (ARIA mandatory, class names diverge by design), documents the three-tier matching strategy, adds 3 new forbidden patterns (drop aria-label, change role, abuse data-canonical-section as workaround).
+
+**Smoke test (F08b canonical vs production /home/):** v2 PASS rate jumped from 2/5 → 4/5 selectors at every viewport (320/768/1024/1440). Remaining MISSING is real M2 drift (`stage` section in canonical wireframe, absent in production /home/) — diff-probe correctly identified real drift instead of false-positive. Pixel diff still 53-61% (real M2 wireframe-vs-production drift, expected calibration baseline).
+
+PR #158 force-pushed with the v2 amendment landing alongside the original v1 polish work.
+
 ### Added — Day 19 AM — VR baseline seed: 12 canonical PNGs + 3 frame specs + VR_BASELINES_READY flip
 
 **Day-19 AM seed PR.** Activates BE+1's visual-regression Playwright suite (PR #153) by committing the 12 canonical baseline PNGs FE+1 captured Day-18 evening, writing 3 frame-specific specs, and flipping the `VR_BASELINES_READY` env gate in CI.

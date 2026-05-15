@@ -118,53 +118,129 @@ const VIEWPORTS = [
   { name: '1440', width: 1440, height: 900 }, // standard desktop
 ];
 
-// Section-like selectors we check on BOTH pages.
-// These come from the spec.json's section tree if available; else we use
-// a default set covering the common semantic elements.
-function buildSelectorsFromSpec(s) {
+// v2 (Day-19) — Section probes with three-tier OR-semantics matching, per
+// CLAUDE.md Hard Rule 18 Day-19 amendment. Each section gets up to three
+// independent probes; a section is PRESENT if ANY of the three matches:
+//
+//   PRIMARY   — role + aria-label (canonical structural contract)
+//   SECONDARY — class-name substring (v1 fallback for ports that reuse class tokens)
+//   TERTIARY  — data-canonical-section attribute (escape hatch convention)
+//
+// Why: v1 matched by class name only. Tailwind React ports use utility
+// classes (`flex shrink-0 flex-col`) instead of canonical BEM tokens
+// (`def-shell`). Result: every Tailwind port returned 0% structural
+// presence regardless of port quality. v2 inverts the priority: ARIA is
+// the binding contract; class names are advisory; data-attribute is the
+// escape hatch.
+function buildProbesFromSpec(s) {
   if (!s?.sections) return null;
-  const selectors = [];
-  function walk(nodes, parentTag) {
+  const probes = [];
+  function walk(nodes) {
     for (const n of nodes) {
       if (n.sectionLike) {
-        // Build the most-specific selector we can:
-        //   - id wins
-        //   - then role+tag
-        //   - then class+tag
-        //   - then tag alone
-        let sel;
-        if (n.id) sel = `#${n.id}`;
-        else if (n.role) sel = `${n.tag}[role="${n.role}"]`;
-        else if (n.classes && n.classes.length) sel = `${n.tag}.${n.classes[0]}`;
-        else sel = n.tag;
-        const label = n.id || n.role || (n.classes && n.classes[0]) || n.tag;
-        selectors.push({ label, selector: sel });
+        const sig = n.aria_signal || {};
+        const label =
+          n.id || sig.aria_label || sig.role || (n.classes && n.classes[0]) || n.tag;
+
+        // Build the three-tier selector list (any match = PRESENT)
+        const tiers = [];
+        // PRIMARY: role + aria-label combo (most specific) → role alone (less)
+        if (sig.role && sig.aria_label) {
+          tiers.push({
+            tier: 'PRIMARY',
+            selector: `[role="${sig.role}"][aria-label="${escapeAttr(sig.aria_label)}"]`,
+          });
+        }
+        if (sig.role) tiers.push({ tier: 'PRIMARY', selector: `[role="${sig.role}"]` });
+        if (sig.aria_label)
+          tiers.push({
+            tier: 'PRIMARY',
+            selector: `[aria-label="${escapeAttr(sig.aria_label)}"]`,
+          });
+        // For semantic tags (header/main/aside/nav/footer/dialog) the tag
+        // itself implies an ARIA landmark role — count tag-only as PRIMARY too.
+        if (
+          ['header', 'main', 'aside', 'nav', 'footer', 'dialog', 'section'].includes(n.tag)
+        ) {
+          tiers.push({ tier: 'PRIMARY', selector: n.tag });
+        }
+        // SECONDARY: class-name substring (v1 fallback)
+        if (sig.classes && sig.classes.length) {
+          for (const cls of sig.classes.slice(0, 3)) {
+            // Skip Tailwind arbitrary-value classes (e.g. w-[272px]) and
+            // utility-only classes that are noise on the React side.
+            if (/[\[\]]/.test(cls)) continue;
+            tiers.push({ tier: 'SECONDARY', selector: `.${escapeClass(cls)}` });
+          }
+        }
+        // TERTIARY: data-canonical-section attribute (escape hatch)
+        if (sig.data_canonical_section) {
+          tiers.push({
+            tier: 'TERTIARY',
+            selector: `[data-canonical-section="${escapeAttr(sig.data_canonical_section)}"]`,
+          });
+        }
+
+        probes.push({ label, tiers });
       }
-      walk(n.children, n.tag);
+      walk(n.children);
     }
   }
   walk(s.sections);
-  // Dedupe by label (keep first)
+  // Dedupe by label
   const seen = new Set();
-  return selectors.filter((s) => {
-    if (seen.has(s.label)) return false;
-    seen.add(s.label);
+  return probes.filter((p) => {
+    if (seen.has(p.label)) return false;
+    seen.add(p.label);
     return true;
   });
 }
 
-const DEFAULT_SELECTORS = [
-  { label: 'page-header', selector: 'header' },
-  { label: 'main-content', selector: 'main' },
-  { label: 'left-rail', selector: 'aside, nav[role="navigation"], .rail, .sidebar' },
-  { label: 'right-rail', selector: '[role="complementary"]' },
-  { label: 'footer', selector: 'footer' },
-  { label: 'dialog', selector: 'dialog, [role="dialog"]' },
+function escapeAttr(s) {
+  return String(s).replace(/"/g, '\\"');
+}
+function escapeClass(s) {
+  // Only escape what CSS actually requires for class names
+  return String(s).replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+}
+
+const DEFAULT_PROBES = [
+  {
+    label: 'page-header',
+    tiers: [{ tier: 'PRIMARY', selector: 'header, [role="banner"]' }],
+  },
+  {
+    label: 'main-content',
+    tiers: [{ tier: 'PRIMARY', selector: 'main, [role="main"]' }],
+  },
+  {
+    label: 'left-rail',
+    tiers: [
+      { tier: 'PRIMARY', selector: 'aside, nav[role="navigation"], [role="navigation"]' },
+      { tier: 'SECONDARY', selector: '.rail' },
+      { tier: 'SECONDARY', selector: '.sidebar' },
+    ],
+  },
+  {
+    label: 'right-rail',
+    tiers: [{ tier: 'PRIMARY', selector: '[role="complementary"]' }],
+  },
+  {
+    label: 'footer',
+    tiers: [{ tier: 'PRIMARY', selector: 'footer, [role="contentinfo"]' }],
+  },
+  {
+    label: 'dialog',
+    tiers: [{ tier: 'PRIMARY', selector: 'dialog, [role="dialog"]' }],
+  },
 ];
 
-const selectors = buildSelectorsFromSpec(spec) || DEFAULT_SELECTORS;
+const probes = buildProbesFromSpec(spec) || DEFAULT_PROBES;
+const schemaVersion = spec?.schemaVersion ?? 1;
 
-console.log(`→ checking ${selectors.length} section selectors per viewport`);
+console.log(
+  `→ checking ${probes.length} section probes (3-tier OR semantics) per viewport · spec schema v${schemaVersion}`,
+);
 console.log('');
 
 // -----------------------------------------------------------------------------
@@ -217,21 +293,28 @@ for (const vp of VIEWPORTS) {
     await portPage.screenshot({ path: portShotPath, fullPage: false });
   }
 
-  // Selector-by-selector comparison
+  // v2: probe-by-probe OR-semantics comparison.
+  // Each probe has up to N tiered selectors. Section is PRESENT on a page
+  // if ANY tier returns >0 matches. We record WHICH tier matched for
+  // diagnostic transparency.
+  async function evalProbe(page, loadOk, probe) {
+    if (!loadOk) return { count: 0, matchedTier: null, matchedSelector: null };
+    for (const t of probe.tiers) {
+      const c = await page
+        .locator(t.selector)
+        .count()
+        .catch(() => 0);
+      if (c > 0) return { count: c, matchedTier: t.tier, matchedSelector: t.selector };
+    }
+    return { count: 0, matchedTier: null, matchedSelector: null };
+  }
+
   const perSelector = [];
-  for (const s of selectors) {
-    const inCanonical = canonicalLoadOk
-      ? await canonicalPage
-          .locator(s.selector)
-          .count()
-          .catch(() => 0)
-      : 0;
-    const inPort = portLoadOk
-      ? await portPage
-          .locator(s.selector)
-          .count()
-          .catch(() => 0)
-      : 0;
+  for (const probe of probes) {
+    const cRes = await evalProbe(canonicalPage, canonicalLoadOk, probe);
+    const pRes = await evalProbe(portPage, portLoadOk, probe);
+    const inCanonical = cRes.count;
+    const inPort = pRes.count;
     const status =
       inCanonical > 0 && inPort > 0
         ? 'PASS'
@@ -242,10 +325,12 @@ for (const vp of VIEWPORTS) {
             : 'NEITHER';
     if (status === 'MISSING' || status === 'EXTRA') failed = true;
     perSelector.push({
-      label: s.label,
-      selector: s.selector,
+      label: probe.label,
+      tiers: probe.tiers,
       canonical: inCanonical,
       port: inPort,
+      canonicalMatchedTier: cRes.matchedTier,
+      portMatchedTier: pRes.matchedTier,
       status,
     });
   }
@@ -261,13 +346,17 @@ for (const vp of VIEWPORTS) {
     }
   }
 
-  // Print per-selector table for this viewport
-  console.log(`  ${'Section'.padEnd(28)} ${'Canonical'.padStart(9)} ${'Port'.padStart(6)}  Status`);
-  console.log(`  ${'-'.repeat(28)} ${'-'.repeat(9)} ${'-'.repeat(6)}  ${'-'.repeat(7)}`);
+  // Print per-section table for this viewport (v2 — shows matched tier)
+  console.log(
+    `  ${'Section'.padEnd(28)} ${'Canon'.padStart(5)} ${'Port'.padStart(5)}  ${'C-tier'.padEnd(9)} ${'P-tier'.padEnd(9)} Status`,
+  );
+  console.log(`  ${'-'.repeat(28)} ${'-'.repeat(5)} ${'-'.repeat(5)}  ${'-'.repeat(9)} ${'-'.repeat(9)} ${'-'.repeat(7)}`);
   for (const r of perSelector) {
     const lbl = r.label.length > 28 ? r.label.slice(0, 25) + '...' : r.label.padEnd(28);
+    const ct = (r.canonicalMatchedTier || '-').padEnd(9);
+    const pt = (r.portMatchedTier || '-').padEnd(9);
     console.log(
-      `  ${lbl} ${String(r.canonical).padStart(9)} ${String(r.port).padStart(6)}  ${r.status}`,
+      `  ${lbl} ${String(r.canonical).padStart(5)} ${String(r.port).padStart(5)}  ${ct} ${pt} ${r.status}`,
     );
   }
   if (pixelDiffPct !== null) {

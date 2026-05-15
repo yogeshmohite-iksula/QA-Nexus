@@ -193,6 +193,31 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
     - `diff-probe.mjs` — Step 5 tool: Playwright + sharp diff at 320/768/1024/1440. Exit 0 = clean; Exit 1 = drift (visual gate blocked).
     - `README.md` — usage doc for FE+1's terminal.
 
+    **Day-19 amendment (skill v2 — ARIA-primary structural probe).** Codified 2026-05-15 (Day-19 morning) after F21 practice re-port surfaced Finding A: the v1 diff-probe matched sections by class name (e.g., `.rail`, `.def-shell`), but Tailwind-based React ports use utility classes (`className="flex shrink-0 flex-col"`) per Hard Rule 5 + Tailwind convention. Result: v1 probe returned 0% section presence on every Tailwind port regardless of port quality — a structural false-positive failure mode that would have blocked every subsequent frame.
+
+    **The binding contract clarification:** ARIA roles and aria-labels are binding across HTML ↔ React. Class tokens are NOT. The canonical contract a React port must honor is:
+    1. **Every `role` attribute** in the canonical v2 HTML must appear in the React port on the equivalent element.
+    2. **Every `aria-label` exemplar** in `spec.json.canned_data_keys.aria_exemplars` must appear in the React port on the equivalent region.
+    3. **Class names diverge by design** — canonical uses BEM-like semantic tokens, React port uses Tailwind utilities. Neither is "more correct"; they encode the same DOM through different conventions.
+
+    **v2 diff-probe matching strategy (OR semantics — any match = section present):**
+    1. **PRIMARY — role + aria-label match.** Probe walks the React DOM for elements whose `role` + `aria-label` combination matches a `spec.json.aria_exemplar` entry. This is the right primary signal because both canonical HTML and React ports preserve ARIA — it travels with the component naturally.
+    2. **SECONDARY — class-name substring match.** v1 behavior retained as a fallback. If a React port happens to use canonical class tokens (e.g., `className="def-shell flex flex-1"`), this still matches. Optional, not required.
+    3. **TERTIARY — `data-canonical-section` attribute escape hatch.** Convention: React port may add `data-canonical-section="def-head"` to anchor sections without class-name pollution. Use when ARIA roles/labels aren't sufficient to disambiguate (rare).
+
+    Section "present" = ANY of the three matches. Section "missing" = NONE of the three. This eliminates the class-only false-positive failure mode while preserving the v1 structural sanity check.
+
+    **Forbidden (visual gate FAIL triggers added Day-19):**
+    - Dropping an `aria-label` that exists in canonical v2 HTML
+    - Changing a `role` attribute from canonical (e.g., `role="region"` → `role="group"`)
+    - Adding `data-canonical-section` as a workaround instead of fixing missing ARIA — ARIA must be primary; the data-attribute is for true escape-hatch cases (e.g., decorative wrappers without semantic meaning)
+
+    **spec.json schema change (Day-19):** `extract-spec.mjs` now emits a per-section `aria_signal: { role, aria_label, classes[], data_canonical_section }` block + a top-level `schemaVersion: 2`. Backward compatible — existing fields preserved. Re-run extract-spec on any frame to get the v2 spec; old spec.jsons remain valid input to v2 diff-probe but produce less precise structural matching.
+
+    **Cross-references:** Rule 14 (AdminShell parity — uses ARIA naturally) · Rule 15 (v2 HTML port source-of-truth) · Rule 17 (canned-data verbatim) · F21 practice re-port Day-19 Finding A (the precedent) · PR #158 (skill v2 implementation).
+
+    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract).** The amendment closes a specific drift class: structural false-positive on Tailwind ports. Each addition to the policy stack closes a different drift class identified through actual practice.
+
     **The close-and-redo precedent:** If `diff-probe.mjs` shows a section was implemented with invented data (e.g. cluster titles not in `canned-data.ts`), the PR is CLOSED, NOT patched. FE+1 returns to Step 4 with the canonical references and re-scaffolds. This rule exists because incremental patching of drift symptoms historically compounds — by the time the third "minor" patch lands, the diff vs canonical is too large to reconcile in one pass. The close-and-redo loop runs at most once per frame because Step 5 catches drift early.
 
     **Forbidden in Step 4:**
