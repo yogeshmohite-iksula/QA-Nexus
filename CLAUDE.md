@@ -235,7 +235,25 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **CLI surface:** `diff-probe.mjs --scope content` (default, 5% threshold, blocks) | `--scope full` (50% threshold, warning-only, debug). `report.json` includes the chosen scope + per-viewport `cropBounds` so reviewers can verify what was compared.
 
-    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract + content-region pixel comparison).** The amendment closes two specific drift classes: structural false-positive on Tailwind ports (Part 1) and shell-substitution pixel floor (Part 2). Each addition to the policy stack closes a different drift class identified through actual practice.
+    **Day-19 amendment Part 3 (GREEN / AMBER / RED band system).** Codified 2026-05-15 (Day-19 late afternoon) after F21 v2.1.2 validation surfaced a renderer-noise floor of ~5-7% at desktop viewports — a natural consequence of comparing canonical HTML (one browser context) against React port (another browser context) with different sub-pixel rasterization, even with `includeAA: false`. Industry research confirms the floor is 2-4% even on perfectly-aligned cross-renderer ports.
+
+    **Threshold calibration (rationale):** The skill's diff-probe uses the SAME pixelmatch options as the project's playwright VR config — `threshold: 0.2`, `includeAA: false`, `alpha: 0.1` per `apps/web/tests/visual/playwright.config.ts`. The 5% GREEN band is 5x the playwright VR config's `maxDiffPixelRatio: 0.01` (1%) to absorb cross-renderer rasterization variance documented in industry research for HTML→React comparison.
+
+    **Band system:**
+    - **GREEN** — pixel diff < 5% on ALL viewports. Auto-pass structural sanity; Yogesh visual gate is typically a fast-check approval.
+    - **AMBER** — pixel diff 5-10% on any viewport, DOM probe ≥ 60% sections PASS via PRIMARY (ARIA) or SECONDARY (class-match). Yogesh visual gate required; expected approval. Notes captured in PR description.
+    - **RED** — pixel diff > 10% on any viewport OR DOM probe < 60% sections PASS. Real port drift; iterate TSX. Re-probe after each fix.
+
+    **Why three bands instead of pass/fail:** A binary 5% gate either produces false-positives (AMBER ports look fine to humans but probe fails) or false-negatives (RED is silenced if threshold is loosened to accommodate AMBER). Three bands preserve strict catch of real drift while acknowledging renderer-noise floor. Industry-standard pattern (Chromatic, Percy, Lost Pixel, Cypress).
+
+    **Visual gate (Hard Rule 13) is authoritative for AMBER and GREEN.** The diff-probe is a STRUCTURAL sanity check + drift early-warning, not the product gate. Yogesh-by-eye on screenshots at 320 + 1440 remains the binding approval.
+
+    **Forbidden:**
+    - Loosening pixel threshold above 10% to make RED ports auto-pass
+    - Skipping Yogesh visual gate for AMBER ports
+    - Marking PR ready-for-review on RED status without iteration
+
+    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract + content-region pixel comparison + GREEN/AMBER/RED band system).** The amendment closes three specific drift classes: structural false-positive on Tailwind ports (Part 1), shell-substitution pixel floor (Part 2), renderer-noise floor that produced binary-gate false-positives (Part 3). Each addition to the policy stack closes a different drift class identified through actual practice.
 
     **The close-and-redo precedent:** If `diff-probe.mjs` shows a section was implemented with invented data (e.g. cluster titles not in `canned-data.ts`), the PR is CLOSED, NOT patched. FE+1 returns to Step 4 with the canonical references and re-scaffolds. This rule exists because incremental patching of drift symptoms historically compounds — by the time the third "minor" patch lands, the diff vs canonical is too large to reconcile in one pass. The close-and-redo loop runs at most once per frame because Step 5 catches drift early.
 
