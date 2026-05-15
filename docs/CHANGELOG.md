@@ -13,6 +13,23 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment Parts 1 + 2 + frame-port skill v2.1.1 (ARIA-primary probe + UNION content-region pixel crop)
+
+**v2.1.1 fix (Day-19 mid-morning, after FE+1's F21 validation surfaced two implementation bugs in v2.1):**
+
+- **Bug A — asymmetric content-region crop.** v2.1 measured shell dims on the React port only and applied the SAME crop to canonical. Canonical has its OWN custom shell with DIFFERENT dimensions; same-crop clipped canonical's content on the left and widened diff at larger viewports (F21 1024: v1 full=39.9% → v2.1 content=47.0% / 1440: 39.1% → 44.7%). **Fix:** measure shell separately on both sources, take UNION (`crop_x = max(canonical_rail, port_rail)`, `crop_y = max(canonical_topbar, port_topbar)`). Applies same union crop to both screenshots so neither shell intrudes on the comparison.
+- **Bug B — SECONDARY class-name matcher silently dropped on v1 spec.jsons.** v2.1's probe builder read `n.aria_signal.classes` (v2 schema path) but v1 spec.jsons have classes at top-level `n.classes` only — no aria_signal block exists. Result: probes built from v1 specs had ZERO tiers (no PRIMARY because most non-semantic-tag sections have no role/aria; no SECONDARY because the path didn't fall back to `n.classes`; no TERTIARY). Sections like `def-shell` / `def-head` / `def-toolbar` showed `NEITHER` even though canonical HTML had the classes right there. **Fix:** read from BOTH paths — `sig.classes ?? n.classes`, `sig.role ?? n.role`. Backward-compatible with v1 specs; class-match SECONDARY tier now fires unconditionally for any section with class tokens.
+- **Report.json envelope extended** — per-viewport entry now includes `canonicalShellBounds` + `portShellBounds` + `cropBounds` (the union) so reviewer can verify what was measured on each side AND what was excluded from the diff.
+- **CLAUDE.md amendment Part 2 clarification (Day-19 v2.1.1 line):** "Union crop is mandatory" — single-source measurement is a v2.1 implementation bug fixed in v2.1.1 and must never recur. Inserted as a 1-line tightening of Hard Rule 18 Day-19 amendment Part 2.
+
+**v2.1.1 smoke (F21 v2 canonical vs /home/ React, all 4 viewports):**
+
+- Bug A fix validated: at 1440px viewport, both `canonical: rail=240px topbar=56px` AND `port: rail=240px topbar=56px` measured separately → union=240. At 320px both fall to 0 (mobile drawer overlay). At 1024 both 240. Union working correctly.
+- Bug B fix validated: `def-shell` / `rail-content` / `rail-foot` all report `C-tier=SECONDARY` (matched via class on canonical) where v2.1 would have shown NEITHER. Their "MISSING" status is REAL drift (F21 Defects Hub sections absent in /home/ React, which is the home page — expected for cross-page smoke).
+- PRIMARY tier still firing correctly: `rail` (aside tag) and `railCollapseToggle` (id-with-role) both PRIMARY-match on both pages.
+
+PR #158 force-pushed `dea1d74` → new SHA with v2.1.1 fixes. FE+1 to re-validate against F21 with overlay.
+
 ### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment Parts 1 + 2 + frame-port skill v2.1 (ARIA-primary probe + content-region pixel crop)
 
 **Closes structural false-positive on Tailwind React ports surfaced by F21 Day-19 Finding A. ARIA roles + labels are now the binding HTML ↔ React contract.**

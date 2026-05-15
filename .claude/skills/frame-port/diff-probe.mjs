@@ -151,24 +151,35 @@ function buildProbesFromSpec(s) {
   function walk(nodes) {
     for (const n of nodes) {
       if (n.sectionLike) {
+        // v2.1.1 (Day-19 Bug B fix): read from BOTH v1 top-level fields
+        // AND v2 aria_signal block, so backward-compat with v1 spec.jsons
+        // is honored. The OR-semantics of Hard Rule 18 Day-19 amendment
+        // Part 1 require all three matchers to run; previously, v1 specs
+        // (no aria_signal block) silently dropped the SECONDARY class-match
+        // because sig.classes was undefined.
         const sig = n.aria_signal || {};
+        const role = sig.role ?? n.role ?? null;
+        const aria_label = sig.aria_label ?? null;
+        const classes = sig.classes && sig.classes.length ? sig.classes : (n.classes || []);
+        const data_canonical_section = sig.data_canonical_section ?? null;
+
         const label =
-          n.id || sig.aria_label || sig.role || (n.classes && n.classes[0]) || n.tag;
+          n.id || aria_label || role || (classes && classes[0]) || n.tag;
 
         // Build the three-tier selector list (any match = PRESENT)
         const tiers = [];
         // PRIMARY: role + aria-label combo (most specific) → role alone (less)
-        if (sig.role && sig.aria_label) {
+        if (role && aria_label) {
           tiers.push({
             tier: 'PRIMARY',
-            selector: `[role="${sig.role}"][aria-label="${escapeAttr(sig.aria_label)}"]`,
+            selector: `[role="${role}"][aria-label="${escapeAttr(aria_label)}"]`,
           });
         }
-        if (sig.role) tiers.push({ tier: 'PRIMARY', selector: `[role="${sig.role}"]` });
-        if (sig.aria_label)
+        if (role) tiers.push({ tier: 'PRIMARY', selector: `[role="${role}"]` });
+        if (aria_label)
           tiers.push({
             tier: 'PRIMARY',
-            selector: `[aria-label="${escapeAttr(sig.aria_label)}"]`,
+            selector: `[aria-label="${escapeAttr(aria_label)}"]`,
           });
         // For semantic tags (header/main/aside/nav/footer/dialog) the tag
         // itself implies an ARIA landmark role — count tag-only as PRIMARY too.
@@ -177,9 +188,11 @@ function buildProbesFromSpec(s) {
         ) {
           tiers.push({ tier: 'PRIMARY', selector: n.tag });
         }
-        // SECONDARY: class-name substring (v1 fallback)
-        if (sig.classes && sig.classes.length) {
-          for (const cls of sig.classes.slice(0, 3)) {
+        // SECONDARY: class-name substring (v1 fallback). Hard Rule 18 Day-19
+        // amendment Part 1 requires this matcher to run for ANY section
+        // that has class tokens — even when ARIA is also present.
+        if (classes && classes.length) {
+          for (const cls of classes.slice(0, 3)) {
             // Skip Tailwind arbitrary-value classes (e.g. w-[272px]) and
             // utility-only classes that are noise on the React side.
             if (/[\[\]]/.test(cls)) continue;
@@ -187,10 +200,10 @@ function buildProbesFromSpec(s) {
           }
         }
         // TERTIARY: data-canonical-section attribute (escape hatch)
-        if (sig.data_canonical_section) {
+        if (data_canonical_section) {
           tiers.push({
             tier: 'TERTIARY',
-            selector: `[data-canonical-section="${escapeAttr(sig.data_canonical_section)}"]`,
+            selector: `[data-canonical-section="${escapeAttr(data_canonical_section)}"]`,
           });
         }
 
@@ -348,15 +361,23 @@ for (const vp of VIEWPORTS) {
     });
   }
 
-  // v2.1: measure AdminShell dims on the React port → derive content crop.
-  // The shell (rail + topbar) is canonicalized via F19 React per Rule 14
-  // Day-17 amendment, NOT via the per-frame v2 HTML's custom shell.
-  // Pixel-diffing the shell pixels would count shell substitution as drift,
-  // which is wrong per the two-canonical model (see CLAUDE.md Hard Rule 18
-  // Day-19 amendment Part 2). We crop both screenshots to <main> region only.
+  // v2.1: measure shell dims on BOTH sources, derive UNION content crop.
+  // v2.1.1 (Day-19 Bug A fix): the v2.1 implementation measured AdminShell
+  // dims on the React port only and applied the SAME crop to canonical.
+  // Canonical has its OWN custom shell with DIFFERENT dimensions; same-crop
+  // clipped canonical's content on the left, widening the diff at desktop
+  // viewports. Hard Rule 18 Day-19 amendment Part 2 specifies the union:
+  //   crop_x = max(canonical_rail_width, port_rail_width)
+  //   crop_y = max(canonical_topbar_height, port_topbar_height)
+  // This ensures BOTH shells are excluded from the comparison.
   let cropBounds = null;
-  if (scope === 'content' && portLoadOk) {
-    cropBounds = await measureContentBounds(portPage, vp);
+  let canonicalShellBounds = null;
+  let portShellBounds = null;
+  if (scope === 'content') {
+    if (canonicalLoadOk)
+      canonicalShellBounds = await measureContentBounds(canonicalPage, vp);
+    if (portLoadOk) portShellBounds = await measureContentBounds(portPage, vp);
+    cropBounds = unionShellCrop(canonicalShellBounds, portShellBounds, vp);
   }
 
   // Pixel diff (sharp raw RGBA, with optional content-region crop applied
@@ -394,13 +415,28 @@ for (const vp of VIEWPORTS) {
     console.log(`  pixel diff: ${(pixelDiffPct * 100).toFixed(2)}% ${tag}`);
     if (cropBounds) {
       console.log(
-        `  crop bounds: x=${cropBounds.x} y=${cropBounds.y} w=${cropBounds.width} h=${cropBounds.height} (rail=${cropBounds._rail}px topbar=${cropBounds._topbar}px)`,
+        `  union crop:  x=${cropBounds.x} y=${cropBounds.y} w=${cropBounds.width} h=${cropBounds.height}`,
       );
+      if (canonicalShellBounds)
+        console.log(
+          `    canonical: rail=${canonicalShellBounds._rail}px topbar=${canonicalShellBounds._topbar}px`,
+        );
+      if (portShellBounds)
+        console.log(
+          `    port:      rail=${portShellBounds._rail}px topbar=${portShellBounds._topbar}px`,
+        );
     }
   }
   console.log('');
 
-  allResults.push({ viewport: vp.name, perSelector, pixelDiffPct, cropBounds });
+  allResults.push({
+    viewport: vp.name,
+    perSelector,
+    pixelDiffPct,
+    cropBounds,
+    canonicalShellBounds,
+    portShellBounds,
+  });
   await canonicalPage.close();
   await portPage.close();
 }
@@ -555,6 +591,34 @@ async function measureContentBounds(page, vp) {
     height: Math.max(0, vp.height - topbarHeight),
     _rail: railWidth,
     _topbar: topbarHeight,
+  };
+}
+
+// v2.1.1 — compute the UNION shell crop from both sources. crop_x is the
+// MAX of canonical_rail_width and port_rail_width; crop_y is the MAX of
+// the two topbar heights. This excludes BOTH shells from the pixel-diff,
+// since the SHELL is canonicalized via F19 React (Rule 14) and the
+// canonical v2 HTML has its own custom shell at different dims.
+function unionShellCrop(canonical, port, vp) {
+  // If neither resolves, no crop (fall back to full-image compare).
+  if (!canonical && !port) return null;
+  const railA = canonical?._rail ?? 0;
+  const railB = port?._rail ?? 0;
+  const topA = canonical?._topbar ?? 0;
+  const topB = port?._topbar ?? 0;
+  const railUnion = Math.max(railA, railB);
+  const topUnion = Math.max(topA, topB);
+  return {
+    x: railUnion,
+    y: topUnion,
+    width: Math.max(0, vp.width - railUnion),
+    height: Math.max(0, vp.height - topUnion),
+    _rail: railUnion,
+    _topbar: topUnion,
+    _canonicalRail: railA,
+    _portRail: railB,
+    _canonicalTopbar: topA,
+    _portTopbar: topB,
   };
 }
 

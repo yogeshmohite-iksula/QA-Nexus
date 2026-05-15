@@ -224,6 +224,8 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     These are both real canonicals serving different DOM regions. diff-probe v2.1 respects this boundary by cropping both canonical and React port screenshots to the content region BEFORE pixel-diffing. Crop bounds derive from the rendered AdminShell dimensions (rail width 240px expanded / 64px collapsed / 0px at mobile <1024px; topbar 64px fixed). Pixel-diff threshold returns to strict 5% with this scoping — the floor effect dissolves once we compare apples to apples.
 
+    **Union crop is mandatory (v2.1.1 Day-19 clarification).** The shell dimensions MUST be measured separately on BOTH canonical and React port pages, then the union taken: `crop_x = max(canonical_rail_width, port_rail_width)`, `crop_y = max(canonical_topbar_height, port_topbar_height)`. Single-source measurement (e.g. measuring only the React port and applying the same crop to canonical) is wrong because canonical's custom shell has different pixel dimensions; the asymmetric crop clips canonical's content on the left and widens the diff at larger viewports. Single-source crop is a v2.1 implementation bug fixed in v2.1.1 and must never recur.
+
     **Forbidden:**
     - Modifying the AdminShell to match a specific frame's custom shell design (regresses Rule 14)
     - Using `--scope full` to override the content crop (theater gate)
