@@ -37,7 +37,7 @@ export function DefHead() {
           {F21_DEF_HEAD.title}
         </h1>
         <div
-          className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px]"
+          className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] uppercase leading-[18px] tracking-[0.04em]"
           style={{ color: 'var(--t3)' }}
         >
           {F21_DEF_HEAD.stats.map((stat, i) => (

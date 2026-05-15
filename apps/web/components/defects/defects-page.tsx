@@ -17,6 +17,7 @@ export function DefectsPage() {
   return (
     <AdminShell active="defects-failures" projectKeyLower="ret">
       <div
+        data-canonical-section="def-shell"
         className="flex min-h-0 flex-1 flex-col"
         style={{ background: 'var(--canvas)', color: 'var(--t1)' }}
       >
