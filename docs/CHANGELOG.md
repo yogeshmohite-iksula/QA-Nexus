@@ -98,6 +98,63 @@ The v1 `diff-probe.mjs` matched sections by class name (`.rail`, `.def-shell`). 
 
 PR #158 force-pushed with the v2 + v2.1 amendments landing alongside the original v1 polish work.
 
+---
+
+### Added — Day 19 — Sherlock RCA agent #1 (`agent.code` on gpt-oss-120b) [M4 TASK A4]
+
+**P1 per Day-19 plan + ADR-019.** First of four parallel Sherlock RCA agents (code/data/env/flake) the Day-20 `SherlockOrchestratorService` will fan out via `Promise.all`. This PR ships agent #1 only — pure-function, fully unit-tested, NOT yet wired into AppModule (that flip lands Day-20 alongside the orchestrator + 3 sibling agents in a single AppModule-surface PR).
+
+**Files (5 new, ~440 LOC + 10 tests):**
+
+- `apps/api/src/agents/sherlock-code/sherlock-code.service.ts` — `SherlockCodeService.analyze(input): Promise<SherlockHypothesis[]>`. Pattern lifted from `A1ScribeService`: prompt build → `LLMGatewayService.complete()` → JSON-fence strip → Zod-validate. Adds: 1-retry-with-jitter (250-1000ms) on top of LLMGateway's existing Groq→Gemini fallback. Wraps in `sherlock.code` OTel span (attrs: `defect.id`, `model`, `provider`, `latency_ms`, `input_tokens_est`, `output_bytes`, `outcome` ∈ {success|empty|failed}, `retried`).
+- `apps/api/src/agents/sherlock-code/schemas.ts` — Zod input + output. Input: `{defectId, stackTrace, failureMessage, component, recentCommits[]}`. Output: array of `{category, hypothesis, confidence, evidence[], agent: 'code'}`. Category enum (10 buckets per ADR-019 §4): `code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other`.
+- `apps/api/src/agents/sherlock-code/prompts.ts` — system prompt (Sherlock persona + JSON contract + allowed categories) + user prompt builder (defect ID + component + failure message + stack trace + optional recent commits).
+- `apps/api/src/agents/sherlock-code/sherlock-code.module.ts` — `providers + exports` only. NO controller (Day-20 orchestrator is the caller; `DefectsController.rca` stays 501-stub from #157 until Day-20).
+- `apps/api/src/agents/sherlock-code/__tests__/sherlock-code.service.spec.ts` — 10 tests via NestJS DI `useValue` mock of `LLMGatewayService` (matches A1Scribe precedent — no `jest.mock` magic; `LLMGatewayModule` is `@Global` so no transitive better-auth import chain).
+
+**Critical contract (binding):**
+
+- `analyze()` **NEVER throws to caller.** Returns `[]` on any failure (input validation / retry exhaustion / malformed JSON / Zod fail). Day-20 orchestrator counts emptiness as "agent failed" for ADR-019 §6 2-of-4 tolerance check.
+- ZERO direct LLM SDK imports — provider-agnostic seam preserved.
+- ZERO new DB hits — `agent_run` row write defers to Day-20 orchestrator.
+
+**Test coverage (10 tests, beats brief's minimum of 4):**
+
+1. happy path — valid JSON array → parsed + returned with `agent: 'code'`
+2. ` ```json ` fences stripped before parse
+3. JSON array surrounded by prose — extractor finds it via `[`/`]` bracket scan
+4. retry success — first call throws transient, second succeeds
+5. retry exhausted — both calls throw → returns `[]` (NEVER throws)
+6. malformed JSON → returns `[]` + warn logged
+7. invalid category enum → Zod rejects → returns `[]` + warn logged
+8. invariant: every returned hypothesis carries `agent: 'code'`
+9. empty `recentCommits[]` → prompt includes `(no recent-commit context available)` line
+10. invalid input UUID → input Zod fails → returns `[]` + LLM never called
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **524/524 jest** (514 baseline + 10 new sherlock-code) · lint clean ✓ · CHANGELOG ✓.
+
+**Cost-gate:** Sherlock invoked on defect creation only (8-user pilot, ~10 defects/day expected) → ~10 invocations/day Day-19 (just `agent.code`); ~40/day Day-20 once 4-agent fan-out lands. ~4% of Groq RPD daily budget on `gpt-oss-120b` (1k/day). Zero infra impact, $0/mo holds. **Neon untouched** — no new DB hot path (Neon at 81.61/100 CU-hr respected).
+
+**Hard Rules check:** Rule 1 (no infra) · Rule 5 (no banned dep) · Rule 7 (audit deferred to orchestrator — single source-of-truth) · Rule 9 (no `any`) · Rule 11 (Zod schemas + Hard Rule 11 deeper-diagnostic discipline applied through 4 false-merge cycles this morning).
+
+**M4 close cascade:** ships as part of M4 close (HOLD until Sat May 16). Joins #148 (WebSocket) + #149 (TestRun) on the cascade.
+
+**Day-20 preview** (NOT in this PR):
+
+```ts
+// SherlockOrchestratorService.runRca(defectId)
+const [code, data, env, flake] = await Promise.all([
+  this.code.analyze(input),
+  this.data.analyze(input),
+  this.env.analyze(input),
+  this.flake.analyze(input),
+]);
+const merged = this.mergeHypotheses({ code, data, env, flake });
+// then: write rca_reports row + emit defect.rca_ready WS event + audit
+```
+
+**Cross-references:** ADR-019 (Sherlock prompt strategy) · `.claude/scratch/sherlock-agent-1-design.md` (full design scratch) · A1ScribeService (pattern source) · #157 (M4 stub controllers Sherlock will eventually wire to via DefectsController.rca).
+
 ### Added — Day 19 AM — VR baseline seed: 12 canonical PNGs + 3 frame specs + VR_BASELINES_READY flip
 
 **Day-19 AM seed PR.** Activates BE+1's visual-regression Playwright suite (PR #153) by committing the 12 canonical baseline PNGs FE+1 captured Day-18 evening, writing 3 frame-specific specs, and flipping the `VR_BASELINES_READY` env gate in CI.
