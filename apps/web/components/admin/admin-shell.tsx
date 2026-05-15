@@ -685,8 +685,18 @@ function AdminLeftRail({
         <RailToggle isCollapsed={isCollapsed} onClick={onToggleCollapsed} />
 
         {/* ── ZONE 2: rail-content (scrollable middle — the single
-                       scrollbar lives here) ── */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                       scrollbar lives here) ──
+                       data-canonical-section anchors this region for
+                       frame-port diff-probe TERTIARY-tier matching
+                       (CLAUDE.md Hard Rule 18 Day-19 amendment Part 1).
+                       The canonical v2 HTML uses class="rail-content";
+                       React port preserves the semantic anchor via
+                       data-attribute since Tailwind utility classes
+                       can't carry that signal. */}
+        <div
+          data-canonical-section="rail-content"
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+        >
           <RailNav active={active} isCollapsed={isCollapsed} projectKeyLower={projectKeyLower} />
         </div>
 
@@ -707,6 +717,7 @@ function RailToggle({ isCollapsed, onClick }: { isCollapsed: boolean; onClick: (
     <button
       type="button"
       onClick={onClick}
+      data-canonical-section="railCollapseToggle"
       aria-label={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
       aria-expanded={isCollapsed ? 'false' : 'true'}
       className={[
@@ -1279,6 +1290,7 @@ function RailFoot({
 }) {
   return (
     <div
+      data-canonical-section="rail-foot"
       className={[
         'shrink-0 border-t border-[var(--border-subtle)] py-3',
         isCollapsed ? 'px-1.5' : 'px-3',
