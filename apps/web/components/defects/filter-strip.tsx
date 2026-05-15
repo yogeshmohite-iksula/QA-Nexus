@@ -49,7 +49,7 @@ export function FilterStrip() {
         style={{ background: 'var(--border)' }}
       />
 
-      {/* Status / Type / Sprint selects */}
+      {/* Status / Type / Assignee / Sprint selects */}
       <div className="flex flex-wrap items-center gap-1.5">
         {F21_FILTER_SELECTS.map((sel) => (
           <button

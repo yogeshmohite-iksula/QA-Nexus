@@ -54,8 +54,36 @@ export interface PriorityChip {
 }
 
 export interface FilterSelect {
-  label: string; // "Status" / "Type" / "Sprint"
-  value: string; // current value, e.g. "Open + In progress" / "All" / "Sprint 42"
+  label: string; // "Status" / "Type" / "Assignee" / "Sprint"
+  value: string; // current value, e.g. "Open + In progress" / "All" / "Anyone" / "Sprint 42"
+}
+
+export interface SdTab {
+  key: 'overview' | 'sherlock' | 'curator' | 'activity' | 'comments';
+  label: string; // "Overview" / "Activity" / "Comments"
+  agentMark?: string; // "SHERLOCK" / "CURATOR" — appears as prefix pill
+  secondaryLabel?: string; // "RCA" / "Similar"
+  count?: string; // "94%" / "3" / "12" / "5"
+  active: boolean;
+}
+
+export interface PeopleRow {
+  initials: string;
+  name: string;
+  role: string; // "Assignee" / "Reporter"
+  avatarTone: 'violet' | 'amber' | 'teal';
+}
+
+export interface RcaLayer {
+  name: string; // "Network" / "Service" / "Data" / "UI"
+  pct: number; // 14 / 78 / 6 / 2
+}
+
+export interface GroupHeader {
+  priority: DefectPriority;
+  pillLabel: string; // "P0" / "P1" / "P2"
+  label: string; // "Critical · ship-blockers"
+  count: string; // "23 defects" / "68 defects · collapsed"
 }
 
 export interface ToolbarGroupBy {
@@ -142,10 +170,32 @@ export const F21_PRIORITY_CHIPS: PriorityChip[] = [
 
 export const F21_PRIORITY_LABEL = 'Priority';
 
+// Day-19 Round-2 visual gate fix — Assignee filter was missing from
+// Day-18 seed; canonical L778 has `<span class="lbl">Assignee</span>
+// <span class="v">Anyone</span>` as the 3rd of 4 fs-select buttons.
 export const F21_FILTER_SELECTS: FilterSelect[] = [
   { label: 'Status', value: 'Open + In progress' },
   { label: 'Type', value: 'All' },
+  { label: 'Assignee', value: 'Anyone' },
   { label: 'Sprint', value: 'Sprint 42' },
+];
+
+// -----------------------------------------------------------------------------
+// Group separators (list pane) — canonical L819 / L944 / L1063.
+// Day-19 Round-2 visual gate fix — Day-18 seed rendered defects flat;
+// canonical shows P0/P1/P2 group-sep banner rows above each priority cohort
+// when GROUP BY = Priority (default).
+// -----------------------------------------------------------------------------
+
+export const F21_GROUP_HEADERS: GroupHeader[] = [
+  { priority: 'p0', pillLabel: 'P0', label: 'Critical · ship-blockers', count: '23 defects' },
+  { priority: 'p1', pillLabel: 'P1', label: 'High · should-fix this sprint', count: '41 defects' },
+  {
+    priority: 'p2',
+    pillLabel: 'P2',
+    label: 'Medium · backlog candidates',
+    count: '68 defects · collapsed',
+  },
 ];
 
 // Verbatim per F21 v2 HTML L789 (Day-19 Rule 17 fix per Day-18 audit
@@ -430,7 +480,10 @@ export const F21_SUMMARY = {
   ],
 };
 
-// Sherlock RCA section
+// Sherlock RCA section — canonical L1189-1210.
+// Day-19 Rule 17 audit fix — Day-18 seed paraphrased the canonical text
+// ("the handler returns 504 to the merchant SDK..." was invented).
+// Verbatim canonical text + sr-layer bars (Network/Service/Data/UI) added.
 export const F21_SHERLOCK_RCA = {
   label: 'Root cause · Sherlock',
   name: 'Sherlock',
@@ -441,9 +494,44 @@ export const F21_SHERLOCK_RCA = {
     {
       kind: 'text',
       value:
-        ' sets a 30 s read-timeout on the inbound socket. When the partner-bank gateway holds the connection longer (observed P95 = 41 s last week), the handler returns 504 to the merchant SDK while the gateway eventually commits the refund — leaving the database in PROCESSING while the customer sees failure.',
+        ' sets a 30 s read-timeout on the inbound socket. When the partner-bank gateway holds the connection longer (observed P95 = 41 s), the request is aborted before the status update is committed — leaving the refund row in ',
     },
+    { kind: 'fail', value: 'PROCESSING' },
+    { kind: 'text', value: '.' },
   ] as ReproSegment[],
+  layers: [
+    { name: 'Network', pct: 14 },
+    { name: 'Service', pct: 78 },
+    { name: 'Data', pct: 6 },
+    { name: 'UI', pct: 2 },
+  ] as RcaLayer[],
+};
+
+// -----------------------------------------------------------------------------
+// sd-rail tabs — canonical L1148-1154.
+// Day-19 Round-2 visual gate fix — Day-18 seed flattened the right-rail
+// into a single scrolling pane; canonical has 5 tabs above the body.
+// -----------------------------------------------------------------------------
+
+export const F21_SD_TABS: SdTab[] = [
+  { key: 'overview', label: 'Overview', active: true },
+  { key: 'sherlock', label: 'RCA', agentMark: 'SHERLOCK', count: '94%', active: false },
+  { key: 'curator', label: 'Similar', agentMark: 'CURATOR', count: '3', active: false },
+  { key: 'activity', label: 'Activity', count: '12', active: false },
+  { key: 'comments', label: 'Comments', count: '5', active: false },
+];
+
+// -----------------------------------------------------------------------------
+// People section (sd-rail Overview tab) — canonical L1180-1186.
+// Day-19 Round-2 visual gate fix — Day-18 seed omitted People entirely.
+// -----------------------------------------------------------------------------
+
+export const F21_PEOPLE = {
+  label: 'People',
+  rows: [
+    { initials: 'SP', name: 'Suresh P.', role: 'Assignee', avatarTone: 'violet' },
+    { initials: 'PA', name: 'Priya A.', role: 'Reporter', avatarTone: 'amber' },
+  ] as PeopleRow[],
 };
 
 // Curator similar section
