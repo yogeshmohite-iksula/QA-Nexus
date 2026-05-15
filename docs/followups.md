@@ -2,11 +2,39 @@
 
 ---
 
-## [2026-05-14] (bw) P2 — FE+1 fix zod3↔zod4 + `@hookform/resolvers` compat in M1-era modals
+## [2026-05-15] (cz) P3 — Post-M4 zod-v4 + `@hookform/resolvers` v4 paired migration
+
+**Filed:** 2026-05-15 (Day-19 ~10:30 IST, after pinning `@hookform/resolvers` to `~3.9.1` to unblock FE+1 typecheck — see resolution of `(bw)` directly below).
+**Owner:** TBD — post-M4 hardening pass.
+**Priority:** P3 (no functional impact; FE form schemas work fine on zod v3 + resolvers 3.9.1; this is technical-debt cleanup).
+
+**Why deferred:** A coordinated bump is required:
+
+- `packages/shared` zod schemas: `^3.25.76` → `^4.x`
+- `apps/web` `@hookform/resolvers`: `~3.9.1` → `^4.x` (zod-v4 only)
+- `apps/api` zod imports: validate v4 schema-syntax compat (`.parse()` API mostly unchanged but `z.literal()`, `z.record()`, error-formatting all shifted slightly)
+- `.claude/locked-deps.json`: paired-major lock from `{ zod: "3", "@hookform/resolvers": "3" }` → `{ zod: "4", "@hookform/resolvers": "4" }`
+
+**Why not now:** M4 close is Sat May 16. Touching FE form schemas Day-19 risks form-validation regressions inside the pilot window. The current `~3.9.1` pin holds until the migration window opens.
+
+**Acceptance:**
+
+- `pnpm typecheck` green workspace-wide on zod v4 across packages/shared + apps/api + apps/web
+- All FE forms (invite-user-modal, founder-wizard, create-project-modal, plus any new M4 forms) submit + validate correctly against migrated schemas
+- BetterAuth `>zod` + `@better-auth/core>zod` overrides removed from root `pnpm.overrides` (no longer needed once everyone is on v4)
+
+**Cross-refs:** followup `(bw)` resolved 2026-05-15 (this fix's parent), followup `(c)` 2026-04-27 (original zod-coupling risk note).
+
+**Status:** OPEN — deferred post-M4.
+
+---
+
+## [2026-05-14] (bw) ✅ RESOLVED 2026-05-15 — FE+1 fix zod3↔zod4 + `@hookform/resolvers` compat in M1-era modals
 
 **Filed:** 2026-05-14 (Day-18 ~12:18 IST, surfaced during M4 doc-PR push)
+**Resolved:** 2026-05-15 (Day-19 ~10:30 IST) — pinned `@hookform/resolvers` to `~3.9.1` (last v3 release with stable zod-v3 internal-type shape; v3.10.0 introduced zod-v4 `$ZodTypeInternals` references prematurely, v4.x is zod-v4-only). See followup `(cz)` for the deferred zod-v4 + resolvers-v4 paired migration.
+**Resolved by:** PR (TBD — fix/be-hookform-resolvers-pin-v3 branch)
 **Owner:** FE+1 — tackle after F20 + F21 land tonight OR Day-19 morning
-**Priority:** P2 (blocking future docs PRs on M4 branches via pre-push typecheck gate)
 
 `pnpm typecheck` on `apps/web` currently fails with 3 `error TS2345` errors — `ZodObject<...>` not assignable to `ZodType<any, any, $ZodTypeInternals<any, any>>` — at:
 

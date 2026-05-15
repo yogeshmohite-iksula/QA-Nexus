@@ -16,7 +16,7 @@
     "test:visual:install-browsers": "playwright install --with-deps chromium"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "~3.9.1",
     "@qa-nexus/shared": "workspace:*",
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-query-devtools": "^5.100.9",
