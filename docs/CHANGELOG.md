@@ -13,7 +13,7 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
-### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment + frame-port skill v2 (ARIA-primary structural probe)
+### Changed — Day 19 AM — Hard Rule 18 Day-19 amendment Parts 1 + 2 + frame-port skill v2.1 (ARIA-primary probe + content-region pixel crop)
 
 **Closes structural false-positive on Tailwind React ports surfaced by F21 Day-19 Finding A. ARIA roles + labels are now the binding HTML ↔ React contract.**
 
@@ -28,7 +28,18 @@ The v1 `diff-probe.mjs` matched sections by class name (`.rail`, `.def-shell`). 
 
 **Smoke test (F08b canonical vs production /home/):** v2 PASS rate jumped from 2/5 → 4/5 selectors at every viewport (320/768/1024/1440). Remaining MISSING is real M2 drift (`stage` section in canonical wireframe, absent in production /home/) — diff-probe correctly identified real drift instead of false-positive. Pixel diff still 53-61% (real M2 wireframe-vs-production drift, expected calibration baseline).
 
-PR #158 force-pushed with the v2 amendment landing alongside the original v1 polish work.
+**v2.1 changes (added same PR):**
+
+- `diff-probe.mjs` `--scope content` (default) | `--scope full` (debug). Content scope crops both canonical + React port screenshots to the `<main>` region BEFORE pixel-diff, then applies strict 5% threshold (blocks). Full scope returns to 50% warning-only.
+- `measureContentBounds(page, vp)` helper queries the React port's AdminShell dimensions at runtime (rail width via 6 selector candidates, topbar height via 5 candidates) and returns a clamp-safe crop rectangle. Falls back to rail=0 + topbar=64 if AdminShell selectors don't resolve.
+- `comparePngs(canonical, port, vp, cropBounds)` extends to apply `sharp.extract()` with the same crop to both images before raw RGBA Manhattan-distance compare.
+- `report.json` envelope: top-level `scope` + `pixelThreshold` + `pixelBlocks` + `schemaVersion`; per-viewport entry includes `cropBounds` so reviewers can verify what was compared.
+- `CLAUDE.md` Hard Rule 18 — Day-19 amendment Part 2 inserted after Part 1: codifies the two-canonical model (SHELL canonicalized via F19 React per Rule 14, CONTENT canonicalized via v2 HTML per Rule 15), 3 new forbidden patterns (modify AdminShell to match a frame's custom shell, use --scope full to override the gate, re-baseline canonical from React port output), CLI surface docs.
+- `SKILL.md` Step 5 — content-region pixel diff explanation + two-canonical model footnote (v1 wireframes in `frame  html view/` need `--scope full` because they pre-date AdminShell).
+
+**v2.1 smoke test (F08b /home/):** rail=240px + topbar=56px detected correctly. F08b is a v1 wireframe so content-crop misaligns vs canonical (expected — v1 has no parallel shell layout). FE+1 will validate v2.1 against F21 (v2 frame, the real target — expected pixel diff drops from 38-40% → likely 5-15% as shell-substitution noise drops out and only real content drift remains).
+
+PR #158 force-pushed with the v2 + v2.1 amendments landing alongside the original v1 polish work.
 
 ### Added — Day 19 AM — VR baseline seed: 12 canonical PNGs + 3 frame specs + VR_BASELINES_READY flip
 

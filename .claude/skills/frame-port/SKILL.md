@@ -117,9 +117,11 @@ Probes at viewports 320 / 768 / 1024 / 1440. For each:
 
   Section is PRESENT on a page if ANY tier returns >0 matches. The output table shows which tier matched for each side (`C-tier` / `P-tier` columns) for diagnostic transparency. FAIL if a section is MISSING (present in canonical, absent in port) or EXTRA (in port but absent in canonical).
 
-- Pixel diff under sharp-based raw RGBA comparison. FAIL if >5% pixel diff at any viewport.
+- **Content-region pixel diff (v2.1, Day-19 amendment Part 2).** By default (`--scope content`), both canonical and React port screenshots are cropped to the `<main>` content area BEFORE pixel comparison — shell pixels (rail + topbar) are excluded because the SHELL is canonicalized via F19 React (Rule 14 Day-17 amendment) NOT via the per-frame v2 HTML's custom shell. Threshold: **5% (blocks)**. Crop bounds derived from the rendered AdminShell dimensions on the React port (rail width 240px expanded / 64px collapsed / 0px at viewport <1024px; topbar ~64px). For debug/v1-wireframe smoke tests with no AdminShell-equivalent canonical layout, use `--scope full` (50% threshold, warning-only, never blocks).
 
 **Exit 0 = clean; Exit 1 = drift.**
+
+**Two-canonical model footnote:** v2.1 content-crop assumes both canonical and React port have a parallel shell layout at the same pixel coordinates. This is true for v2 frames in `Redesign Frame by claude design/`. v1 wireframes in `frame  html view/` (e.g. F08a/b/c, F06, F07) pre-date the AdminShell and have no parallel shell — content-crop will misalign on those. For v1 wireframe smoke tests, invoke with `--scope full`.
 
 **Tailwind React port note (Day-19 amendment):** Tailwind utility classes (`className="flex shrink-0 flex-col"`) do NOT map to canonical BEM-style class tokens (`def-shell`, `rail`). This is by design per Hard Rule 5 + Tailwind convention. The probe matches via ARIA (PRIMARY tier) for this reason; class-name match is a SECONDARY fallback. If your React port has correct ARIA but Tailwind classes, the probe will pass via PRIMARY. If you find yourself reaching for `data-canonical-section` to patch a probe failure, STOP — fix the missing ARIA first; the data-attribute is a true escape hatch for decorative wrappers without semantic meaning.
 

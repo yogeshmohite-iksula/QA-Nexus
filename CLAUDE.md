@@ -216,7 +216,22 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Cross-references:** Rule 14 (AdminShell parity — uses ARIA naturally) · Rule 15 (v2 HTML port source-of-truth) · Rule 17 (canned-data verbatim) · F21 practice re-port Day-19 Finding A (the precedent) · PR #158 (skill v2 implementation).
 
-    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract).** The amendment closes a specific drift class: structural false-positive on Tailwind ports. Each addition to the policy stack closes a different drift class identified through actual practice.
+    **Day-19 amendment Part 2 (content-region pixel comparison).** Codified 2026-05-15 (Day-19 mid-morning) after F21 practice re-port surfaced a 38-40% pixel-diff floor at desktop viewports that traced not to port quality but to shell substitution: canonical v2 HTML uses each frame's own custom shell, while React ports use AdminShell per Rule 14 Day-17 amendment. The pixel real estate of the shell is by design non-comparable.
+
+    **Resolution — two-canonical model:**
+    - The SHELL (left rail + top utility bar) is canonicalized via F19 React per Rule 14 Day-17 amendment.
+    - The CONTENT (the page-specific `<main>` area) is canonicalized via v2 HTML per Rule 15.
+
+    These are both real canonicals serving different DOM regions. diff-probe v2.1 respects this boundary by cropping both canonical and React port screenshots to the content region BEFORE pixel-diffing. Crop bounds derive from the rendered AdminShell dimensions (rail width 240px expanded / 64px collapsed / 0px at mobile <1024px; topbar 64px fixed). Pixel-diff threshold returns to strict 5% with this scoping — the floor effect dissolves once we compare apples to apples.
+
+    **Forbidden:**
+    - Modifying the AdminShell to match a specific frame's custom shell design (regresses Rule 14)
+    - Using `--scope full` to override the content crop (theater gate)
+    - Re-baselining canonical from React port output (loses design intent)
+
+    **CLI surface:** `diff-probe.mjs --scope content` (default, 5% threshold, blocks) | `--scope full` (50% threshold, warning-only, debug). `report.json` includes the chosen scope + per-viewport `cropBounds` so reviewers can verify what was compared.
+
+    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract + content-region pixel comparison).** The amendment closes two specific drift classes: structural false-positive on Tailwind ports (Part 1) and shell-substitution pixel floor (Part 2). Each addition to the policy stack closes a different drift class identified through actual practice.
 
     **The close-and-redo precedent:** If `diff-probe.mjs` shows a section was implemented with invented data (e.g. cluster titles not in `canned-data.ts`), the PR is CLOSED, NOT patched. FE+1 returns to Step 4 with the canonical references and re-scaffolds. This rule exists because incremental patching of drift symptoms historically compounds — by the time the third "minor" patch lands, the diff vs canonical is too large to reconcile in one pass. The close-and-redo loop runs at most once per frame because Step 5 catches drift early.
 

@@ -17,6 +17,8 @@
 //     --frame F19 \
 //     --canonical "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F19 Run Console v2.html" \
 //     --port http://localhost:3000/runs/abc \
+//     [--scope content|full] \   # default: content (5% threshold, blocks);
+//                                # full: 50% warning-only (debug)
 //     [--spec .claude/skills/frame-port/specs/F19.spec.json] \
 //     [--out .claude/skills/frame-port/diffs/F19/]
 //
@@ -59,6 +61,17 @@ function parseArgs(rawArgs) {
 }
 
 const args = parseArgs(argv.slice(2));
+
+// v2.1 (Day-19 mid-morning) — content-region pixel crop scope.
+//   --scope content (default) → crop to <main> region (skip rail + topbar)
+//                              and pixel-diff cropped images. 5% threshold.
+//                              Resolves AdminShell-vs-canonical-shell pixel
+//                              floor surfaced by F21 practice re-port.
+//   --scope full              → v1/v2 behavior (full viewport pixel-diff).
+//                              50% threshold, warning-only — never blocks.
+const scope = args.scope === 'full' ? 'full' : 'content';
+const PIXEL_THRESHOLD = scope === 'content' ? 0.05 : 0.5;
+const PIXEL_BLOCKS = scope === 'content';
 
 if (!args.frame || !args.canonical || !args.port) {
   console.error(
@@ -335,12 +348,23 @@ for (const vp of VIEWPORTS) {
     });
   }
 
-  // Pixel diff (sharp-free, raw RGBA byte comparison)
-  // We resize port to match canonical's pixel dimensions before comparing.
+  // v2.1: measure AdminShell dims on the React port → derive content crop.
+  // The shell (rail + topbar) is canonicalized via F19 React per Rule 14
+  // Day-17 amendment, NOT via the per-frame v2 HTML's custom shell.
+  // Pixel-diffing the shell pixels would count shell substitution as drift,
+  // which is wrong per the two-canonical model (see CLAUDE.md Hard Rule 18
+  // Day-19 amendment Part 2). We crop both screenshots to <main> region only.
+  let cropBounds = null;
+  if (scope === 'content' && portLoadOk) {
+    cropBounds = await measureContentBounds(portPage, vp);
+  }
+
+  // Pixel diff (sharp raw RGBA, with optional content-region crop applied
+  // to BOTH images before compare).
   let pixelDiffPct = null;
   if (canonicalShotPath && portShotPath) {
     try {
-      pixelDiffPct = await comparePngs(canonicalShotPath, portShotPath, vp);
+      pixelDiffPct = await comparePngs(canonicalShotPath, portShotPath, vp, cropBounds);
     } catch (e) {
       console.warn(`  ⚠ pixel diff failed: ${e.message?.slice(0, 100)}`);
     }
@@ -360,15 +384,23 @@ for (const vp of VIEWPORTS) {
     );
   }
   if (pixelDiffPct !== null) {
-    const pixOk = pixelDiffPct < 0.05;
-    if (!pixOk) failed = true;
-    console.log(
-      `  pixel diff: ${(pixelDiffPct * 100).toFixed(2)}% ${pixOk ? '(PASS)' : '(FAIL — >5%)'}`,
-    );
+    const pixOk = pixelDiffPct < PIXEL_THRESHOLD;
+    if (!pixOk && PIXEL_BLOCKS) failed = true;
+    const tag = pixOk
+      ? `(PASS, scope=${scope})`
+      : PIXEL_BLOCKS
+        ? `(FAIL — >${(PIXEL_THRESHOLD * 100).toFixed(0)}%, scope=${scope})`
+        : `(WARN — >${(PIXEL_THRESHOLD * 100).toFixed(0)}%, scope=${scope}, non-blocking)`;
+    console.log(`  pixel diff: ${(pixelDiffPct * 100).toFixed(2)}% ${tag}`);
+    if (cropBounds) {
+      console.log(
+        `  crop bounds: x=${cropBounds.x} y=${cropBounds.y} w=${cropBounds.width} h=${cropBounds.height} (rail=${cropBounds._rail}px topbar=${cropBounds._topbar}px)`,
+      );
+    }
   }
   console.log('');
 
-  allResults.push({ viewport: vp.name, perSelector, pixelDiffPct });
+  allResults.push({ viewport: vp.name, perSelector, pixelDiffPct, cropBounds });
   await canonicalPage.close();
   await portPage.close();
 }
@@ -380,15 +412,24 @@ await browser.close();
 // 3. Summary
 // -----------------------------------------------------------------------------
 
-writeFileSync(join(outDir, 'report.json'), JSON.stringify(allResults, null, 2) + '\n', 'utf8');
+const reportEnvelope = {
+  frame: frameId,
+  scope,
+  pixelThreshold: PIXEL_THRESHOLD,
+  pixelBlocks: PIXEL_BLOCKS,
+  schemaVersion: spec?.schemaVersion ?? null,
+  generatedAt: new Date().toISOString(),
+  viewports: allResults,
+};
+writeFileSync(join(outDir, 'report.json'), JSON.stringify(reportEnvelope, null, 2) + '\n', 'utf8');
 
 console.log('══════════════════════════════════════════');
-console.log(`Summary for ${frameId}:`);
+console.log(`Summary for ${frameId} (scope=${scope}, threshold=${(PIXEL_THRESHOLD * 100).toFixed(0)}%):`);
 for (const r of allResults) {
   const fails = r.perSelector.filter((s) => s.status !== 'PASS').length;
   const pixDiff = r.pixelDiffPct !== null ? `pix=${(r.pixelDiffPct * 100).toFixed(1)}%` : 'pix=n/a';
   console.log(
-    `  viewport ${r.viewport}: ${r.perSelector.length - fails}/${r.perSelector.length} selectors PASS · ${pixDiff}`,
+    `  viewport ${r.viewport}: ${r.perSelector.length - fails}/${r.perSelector.length} sections PASS · ${pixDiff}`,
   );
 }
 console.log('');
@@ -412,15 +453,27 @@ if (failed) {
 // fraction of differing pixels in [0..1]. Uses pure-Node PNG decode via
 // dynamic import of 'sharp' (already in stack via ADR-009).
 //
+// v2.1 (Day-19): if cropBounds is provided, both images are first resized
+// to viewport dims then cropped to the same content rectangle BEFORE the
+// pixel-by-pixel compare. This implements the two-canonical model — shell
+// pixels (Rule 14 / F19 React canonical) are NOT comparable to per-frame
+// custom-shell pixels (Rule 15 / v2 HTML canonical), so we exclude them.
+//
 // Tolerance: pixels are considered "different" if Manhattan distance in
-// RGBA space > 24 (~10% per channel). Tuned to forgive font anti-aliasing
+// RGB space > 24 (~10% per channel). Tuned to forgive font anti-aliasing
 // jitter while still catching real layout shifts.
-async function comparePngs(canonicalPath, portPath, vp) {
+async function comparePngs(canonicalPath, portPath, vp, cropBounds = null) {
   const { default: sharp } = await import('sharp');
-  const [a, b] = await Promise.all([
-    sharp(canonicalPath).resize(vp.width, vp.height, { fit: 'cover' }).raw().toBuffer(),
-    sharp(portPath).resize(vp.width, vp.height, { fit: 'cover' }).raw().toBuffer(),
-  ]);
+  const baseA = sharp(canonicalPath).resize(vp.width, vp.height, { fit: 'cover' });
+  const baseB = sharp(portPath).resize(vp.width, vp.height, { fit: 'cover' });
+
+  if (cropBounds && cropBounds.width > 0 && cropBounds.height > 0) {
+    const safe = clampCrop(cropBounds, vp);
+    baseA.extract(safe);
+    baseB.extract(safe);
+  }
+
+  const [a, b] = await Promise.all([baseA.raw().toBuffer(), baseB.raw().toBuffer()]);
   const len = Math.min(a.length, b.length);
   let diffPixels = 0;
   // Sharp .raw() returns 3 bytes/pixel (RGB) unless we ensure() to RGBA
@@ -433,4 +486,85 @@ async function comparePngs(canonicalPath, portPath, vp) {
   }
   const totalPixels = len / stride;
   return diffPixels / totalPixels;
+}
+
+// v2.1 — Measure the rendered AdminShell rail width + topbar height on the
+// React port at the current viewport, derive content crop bounds.
+//
+// AdminShell rail behavior (per Hard Rule 14 Day-17 amendment):
+//   - desktop ≥1024px: 240px expanded (default) or 64px collapsed
+//   - <1024px: rail becomes hamburger drawer (overlays content, width=0)
+//
+// Topbar behavior: fixed 64px on F19 React canonical at all viewports.
+//
+// We try multiple selector candidates so the probe works whether the
+// AdminShell uses semantic tags (aside, header) or class hooks. Falls
+// back to conservative defaults (rail=0, topbar=64) so the probe never
+// crashes on a port that hasn't wired AdminShell yet.
+async function measureContentBounds(page, vp) {
+  // Try to find the rail. Multiple candidates because AdminShell may use
+  // any of these patterns; we take the first that resolves.
+  const railSelectors = [
+    'aside[data-testid="admin-shell-rail"]',
+    '[data-canonical-section="rail"]',
+    'aside[role="navigation"]',
+    'nav[aria-label*="primary" i]',
+    'aside.rail',
+    'aside',
+  ];
+  const topbarSelectors = [
+    'header[data-testid="admin-shell-topbar"]',
+    '[data-canonical-section="topbar"]',
+    'header[role="banner"]',
+    'header.shell-header',
+    'header',
+  ];
+
+  let railWidth = 0;
+  if (vp.width >= 1024) {
+    for (const sel of railSelectors) {
+      try {
+        const box = await page.locator(sel).first().boundingBox({ timeout: 800 });
+        if (box && box.width > 0 && box.width < vp.width / 2) {
+          railWidth = Math.round(box.width);
+          break;
+        }
+      } catch {
+        // selector not present, try next
+      }
+    }
+  } // else mobile: rail overlays as drawer, content occupies full width
+
+  let topbarHeight = 64;
+  for (const sel of topbarSelectors) {
+    try {
+      const box = await page.locator(sel).first().boundingBox({ timeout: 800 });
+      if (box && box.height > 0 && box.height < vp.height / 3) {
+        topbarHeight = Math.round(box.height);
+        break;
+      }
+    } catch {
+      // selector not present, try next
+    }
+  }
+
+  return {
+    x: railWidth,
+    y: topbarHeight,
+    width: Math.max(0, vp.width - railWidth),
+    height: Math.max(0, vp.height - topbarHeight),
+    _rail: railWidth,
+    _topbar: topbarHeight,
+  };
+}
+
+// Clamp a crop rect to safe viewport bounds. sharp.extract() is strict —
+// any out-of-bounds value throws. We never want a crash to swallow the
+// pixel-diff; clamp instead.
+function clampCrop(b, vp) {
+  const left = Math.max(0, Math.min(b.x, vp.width - 1));
+  const top = Math.max(0, Math.min(b.y, vp.height - 1));
+  const width = Math.max(1, Math.min(b.width, vp.width - left));
+  const height = Math.max(1, Math.min(b.height, vp.height - top));
+  return { left, top, width, height };
 }
