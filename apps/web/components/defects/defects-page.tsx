@@ -55,13 +55,14 @@ export function DefectsPage() {
               return (
                 <div key={header.priority} className="contents">
                   {/* Group separator banner — canonical .group-sep L335
-                   *  Day-19 Round-3 bg fix: canonical defines no background
-                   *  (inherits list-pane canvas). Was --base (wrong shade). */}
+                   *  Day-19 Round-5 bg fix per Yogesh: "P0/P1/P2 separator
+                   *  rows need bg different than black". --base lifts them
+                   *  off the --canvas list rows below for visual breakpoint. */}
                   <div
                     role="separator"
                     aria-label={`${header.pillLabel} ${header.label}`}
                     className="flex items-center gap-2 border-b px-3 py-2 sm:px-5 lg:px-7"
-                    style={{ borderColor: 'var(--border)' }}
+                    style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
                   >
                     <span
                       className="inline-flex items-center justify-center rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-bold tracking-[0.04em]"

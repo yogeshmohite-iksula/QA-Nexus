@@ -224,17 +224,23 @@ export function DefectRowItem({ row, isSelected, onSelect }: Props) {
         </span>
       </span>
 
-      {/* Age */}
-      <span className="inline-flex flex-col items-end font-mono text-[10.5px]">
-        <span style={{ color: 'var(--t2)' }}>{row.age}</span>
-        <span className="text-[9.5px]" style={{ color: 'var(--t4)' }}>
-          {row.opened}
+      {/* Right cluster: Age + Chevron
+       *  Day-19 Round-5 mobile fix per Yogesh: age + chevron were wrapping
+       *  to the LEFT of a new line when chips overflowed row 1. Wrap them
+       *  in a single right-aligned cluster with `ml-auto` (mobile-only;
+       *  on md+ they're separate grid cells so the wrapper is `contents`). */}
+      <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 md:contents">
+        {/* Age */}
+        <span className="inline-flex flex-col items-end font-mono text-[10.5px]">
+          <span style={{ color: 'var(--t2)' }}>{row.age}</span>
+          <span className="text-[9.5px]" style={{ color: 'var(--t4)' }}>
+            {row.opened}
+          </span>
         </span>
-      </span>
-
-      {/* "More" affordance — sentinel for keyboard focus */}
-      <span aria-hidden="true" style={{ color: 'var(--t4)' }}>
-        ›
+        {/* "More" affordance — sentinel for keyboard focus */}
+        <span aria-hidden="true" style={{ color: 'var(--t4)' }}>
+          ›
+        </span>
       </span>
     </button>
   );
