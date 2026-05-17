@@ -44,7 +44,7 @@ import { JiraSyncModule } from './jira-sync/jira-sync.module';
     TestCasesModule, // M3 Day-12 TASK BE-02 — test cases CRUD skeleton (501 stubs)
     RequirementsModule, // M3 Day-12 TASK BE-03 — requirements CRUD skeleton (501 stubs)
     TestRunsModule, // M4 Day-18 P3 — TestRun state-machine + audit + WS emit (PR #149)
-    DefectsModule, // M4 Day-19 P0 #2 — STUB (501); full impl Day-20+ alongside A4 RCA
+    DefectsModule, // M4 Day-19 P0 #2 → Day-20 P1 — POST :id/rca FUNCTIONAL (calls SherlockOrchestratorService); other endpoints stay 501 stubs
     JiraSyncModule, // M4 Day-19 P0 #2 — STUB (501); webhook + sync land Day-19/20
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)
     HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts

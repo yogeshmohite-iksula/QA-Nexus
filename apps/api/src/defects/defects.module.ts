@@ -1,12 +1,16 @@
-// QA Nexus PM1 — DefectsModule (M4 STUB — Day-19 P0 #2 wiring).
+// QA Nexus PM1 — DefectsModule.
 //
-// Minimal module — registers DefectsController (501 stubs). Full defect-
-// lifecycle implementation lands Day-20+ alongside A4 RCA service.
+// Day-19 P0 #2 (#157): scaffold (501 stubs).
+// Day-20 P1 (this PR): wires SherlockOrchestratorModule so the controller's
+//   POST :id/rca endpoint can call SherlockOrchestratorService.runRca().
+// Day-21+: DefectsService CRUD + full RcaReport persistence path.
 
 import { Module } from '@nestjs/common';
+import { SherlockOrchestratorModule } from '../agents/sherlock-orchestrator/sherlock-orchestrator.module';
 import { DefectsController } from './defects.controller';
 
 @Module({
+  imports: [SherlockOrchestratorModule],
   controllers: [DefectsController],
 })
 export class DefectsModule {}

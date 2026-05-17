@@ -2,6 +2,44 @@
 
 ---
 
+## [2026-05-17] (da) P1 — Sherlock RCA: 5-layer RcaReport persistence + async 202+WS pattern
+
+**Filed:** 2026-05-17 (Day-20, M4 close day) — during SherlockOrchestratorService promote PR for [M4 TASK A4-A8 complete].
+**Owner:** BE+1 — Day-21 hardening.
+**Priority:** P1 — needed for F21 RCA panel to show historical reports + real-time updates.
+
+**Context:** Day-20 P1 shipped SherlockOrchestratorService as a pure synchronous function that returns `{ runId, status, hypotheses }` inline. Two scope cuts vs. the original ADR-019 design:
+
+1. **No DB persistence.** Existing `RcaReport` prisma model (TB-016, migrated in PR #144 Day-17) uses the pre-ADR-019 5-layer JSON design (`layer1StackJson` through `layer5DataJson` + per-layer confidences + `topHypothesis` + `createdByAgentRunId` FK to `AgentRun` + `feedback` JSONB). The orchestrator's flat `SherlockHypothesis[]` array doesn't fit. Two paths forward:
+   - **(a) Adapt orchestrator output → 5-layer schema** at persistence time. Map: code→layer4_code_json, data→layer5_data_json, env→layer2_env_json + layer3_config_json, flake→layer1_stack_json. Pick top-confidence hypothesis as `topHypothesis`. Compute per-layer confidence from `okAgentCount` per bucket. **Pro:** zero migration. **Con:** schema doesn't map cleanly (flake→layer1 is forced; env splits across 2 layers).
+   - **(b) Migrate RcaReport to flat array + `agent` discriminator.** Add `hypotheses` JSONB column, deprecate the per-layer columns. **Pro:** matches ADR-019 cleanly. **Con:** breaks any F21 UI code already coded against the 5-layer shape; requires data migration if any reports exist.
+
+   Recommendation: option (a) for V1 (zero migration risk); option (b) revisit at M5 schema-cleanup pass.
+
+2. **No async + WS emit.** Day-20 controller calls orchestrator synchronously and returns hypotheses inline. p95 latency expected <5s in pilot ops but unverified. Day-21:
+   - Switch DefectsController.POST :id/rca to 202 + `{runId}` immediate ack
+   - Run orchestrator in `void fanOut().catch(...)` background
+   - Add `RealtimeGateway.emit(channel, payload)` public method (currently no public emit — only `@SubscribeMessage` handlers)
+   - Emit `rca.complete.{runId}` on completion with `{ runId, defectId, status, hypotheses }`
+   - DefectsController.GET :id/rca becomes functional (reads latest RcaReport row by createdAt DESC)
+   - Add audit-writes: `defects.rca_kicked_off` + `defects.rca_completed` via `AuditService.writeNonBlocking`
+
+**Acceptance:**
+
+- `RcaReport` row persisted per RCA run (5-layer or flat — pick during Day-21)
+- POST :id/rca returns 202 + runId within 100ms
+- WS subscribers on `rca.complete.{runId}` receive payload when fan-out completes
+- GET :id/rca returns the latest persisted report for a defect
+- Audit chain has rca_kicked_off + rca_completed rows
+
+**Cost-gate:** ~10 RCA runs/day at pilot scale = 10 RcaReport inserts/day. Negligible vs Neon 100 CU-hr/mo.
+
+**Cross-refs:** PR #144 (TB-016 RcaReport migration) · ADR-019 (Sherlock prompt strategy + ordering) · Day-20 SherlockOrchestrator PR · Day-19 P1 scratch design `.claude/scratch/sherlock-agent-1-design.md` · prisma schema `apps/api/prisma/schema.prisma` model `RcaReport`.
+
+**Status:** OPEN — Day-21 hardening.
+
+---
+
 ## [2026-05-15] (cz) P3 — Post-M4 zod-v4 + `@hookform/resolvers` v4 paired migration
 
 **Filed:** 2026-05-15 (Day-19 ~10:30 IST, after pinning `@hookform/resolvers` to `~3.9.1` to unblock FE+1 typecheck — see resolution of `(bw)` directly below).
