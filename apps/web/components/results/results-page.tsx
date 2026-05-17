@@ -31,20 +31,21 @@ export function ResultsPage() {
         className="run-shell flex min-h-0 flex-1 flex-col"
         style={{ background: 'var(--canvas)', color: 'var(--t1)' }}
       >
-        {/* Center pane + right rail — single grid on lg+, stacked on mobile */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
-          {/* Center pane */}
-          <div className="flex min-w-0 flex-col overflow-y-auto" data-canonical-section="run-body">
-            <RunSummary />
+        {/* Day-20 R4 visual gate fix: canonical L710-740 .run-summary sits
+         * ABOVE .run-body (the 2-pane grid). Must span full width across
+         * both center-pane AND ev-rail. Previously was inside center-pane. */}
+        <RunSummary />
+
+        {/* Center pane + right rail — canonical .run-body grid (L292 1fr 380px) */}
+        <div
+          data-canonical-section="run-body"
+          className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]"
+        >
+          {/* Center pane — canonical L297 padding:18px 16px + gap:16px */}
+          <div className="center-pane flex min-w-0 flex-col gap-4 overflow-y-auto p-4 sm:p-5 lg:p-7">
             <SherlockBlock />
-            {/* Cluster cards — 3 article.cluster siblings (high/med/mixed).
-             * Day-19 lesson: each carries data-canonical-section so diff-probe
-             * can verify the nested-sibling count (TERTIARY tier). */}
-            <div
-              data-canonical-section="cluster-list"
-              className="flex flex-col gap-3 border-b px-4 py-4 sm:px-5 lg:px-7"
-              style={{ borderColor: 'var(--border)' }}
-            >
+            {/* Cluster cards — 3 article.cluster siblings (high/med/mixed). */}
+            <div data-canonical-section="cluster-list" className="flex flex-col gap-3">
               {F20_CLUSTERS.map((cluster) => (
                 <ClusterCard key={cluster.num} cluster={cluster} />
               ))}

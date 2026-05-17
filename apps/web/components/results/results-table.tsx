@@ -41,87 +41,85 @@ export function ResultsTable() {
   const toggle = (name: string) => setCollapsed((c) => ({ ...c, [name]: !c[name] }));
 
   return (
-    // Day-20 R3 visual gate fix: canonical L442 .results-block has outer
-    // border + rounded corners + --base bg. Wrapped in horizontal container
-    // padding so border is visible inside center-pane.
-    <div className="px-4 py-4 sm:px-5 lg:px-7">
-      <section
-        aria-label={F20_RESULTS_HEAD.tableAriaLabel}
-        data-canonical-section="results-block"
-        className="flex flex-col overflow-hidden rounded-xl border"
-        style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
+    // Day-20 R4 visual gate fix: canonical L442 .results-block has outer
+    // border + rounded corners + --base bg. Center-pane now provides outer
+    // padding (R4 moved RunSummary out); no redundant wrapper needed.
+    <section
+      aria-label={F20_RESULTS_HEAD.tableAriaLabel}
+      data-canonical-section="results-block"
+      className="flex flex-col overflow-hidden rounded-xl border"
+      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
+    >
+      {/* rb-head */}
+      <header
+        className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 sm:px-5"
+        style={{ borderColor: 'var(--border)' }}
       >
-        {/* rb-head */}
-        <header
-          className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 sm:px-5"
-          style={{ borderColor: 'var(--border)' }}
+        <h2
+          className="m-0 text-[13px] font-semibold"
+          style={{
+            color: 'var(--t1)',
+            fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+          }}
         >
-          <h2
-            className="m-0 text-[13px] font-semibold"
-            style={{
-              color: 'var(--t1)',
-              fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
-            }}
-          >
-            {F20_RESULTS_HEAD.title}
-          </h2>
-          <div
-            role="tablist"
-            aria-label={F20_RESULTS_HEAD.filtersAriaLabel}
-            className="inline-flex items-center gap-0.5 rounded-md border p-0.5"
-            style={{ background: 'var(--raised)', borderColor: 'var(--border)' }}
-          >
-            {F20_RESULTS_FILTERS.map((f) => (
-              <button
-                key={f.label}
-                type="button"
-                role="tab"
-                aria-selected={f.active ? 'true' : 'false'}
-                onClick={() =>
-                  console.info('pattern-a:deferred:f20:results-filter', { filter: f.label })
-                }
-                className="inline-flex h-6 items-center px-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-                style={{
-                  borderRadius: '4px',
-                  background: f.active ? 'var(--overlay)' : 'transparent',
-                  color: f.active ? 'var(--t1)' : 'var(--t3)',
-                  fontWeight: f.active ? 600 : 500,
-                }}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <span className="min-w-2 flex-1" />
-          <button
-            type="button"
-            onClick={() => console.info('pattern-a:deferred:f20:results-sort')}
-            className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition-colors hover:bg-[var(--raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-            style={{
-              background: 'var(--canvas)',
-              borderColor: 'var(--border)',
-              color: 'var(--t2)',
-            }}
-          >
-            {F20_RESULTS_HEAD.sortLabel}
-            <ChevronDown size={11} aria-hidden="true" />
-          </button>
-        </header>
-
-        {/* Suites — canonical L463+ each suite is collapsible (chevron toggle)
-         * + .suite-counts header cells (T/P/F/Fl with separators). */}
-        <div className="flex flex-col">
-          {F20_RESULTS_SUITES.map((suite) => (
-            <SuiteGroup
-              key={suite.name}
-              suite={suite}
-              collapsed={!!collapsed[suite.name]}
-              onToggle={() => toggle(suite.name)}
-            />
+          {F20_RESULTS_HEAD.title}
+        </h2>
+        <div
+          role="tablist"
+          aria-label={F20_RESULTS_HEAD.filtersAriaLabel}
+          className="inline-flex items-center gap-0.5 rounded-md border p-0.5"
+          style={{ background: 'var(--raised)', borderColor: 'var(--border)' }}
+        >
+          {F20_RESULTS_FILTERS.map((f) => (
+            <button
+              key={f.label}
+              type="button"
+              role="tab"
+              aria-selected={f.active ? 'true' : 'false'}
+              onClick={() =>
+                console.info('pattern-a:deferred:f20:results-filter', { filter: f.label })
+              }
+              className="inline-flex h-6 items-center px-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+              style={{
+                borderRadius: '4px',
+                background: f.active ? 'var(--overlay)' : 'transparent',
+                color: f.active ? 'var(--t1)' : 'var(--t3)',
+                fontWeight: f.active ? 600 : 500,
+              }}
+            >
+              {f.label}
+            </button>
           ))}
         </div>
-      </section>
-    </div>
+        <span className="min-w-2 flex-1" />
+        <button
+          type="button"
+          onClick={() => console.info('pattern-a:deferred:f20:results-sort')}
+          className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition-colors hover:bg-[var(--raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+          style={{
+            background: 'var(--canvas)',
+            borderColor: 'var(--border)',
+            color: 'var(--t2)',
+          }}
+        >
+          {F20_RESULTS_HEAD.sortLabel}
+          <ChevronDown size={11} aria-hidden="true" />
+        </button>
+      </header>
+
+      {/* Suites — canonical L463+ each suite is collapsible (chevron toggle)
+       * + .suite-counts header cells (T/P/F/Fl with separators). */}
+      <div className="flex flex-col">
+        {F20_RESULTS_SUITES.map((suite) => (
+          <SuiteGroup
+            key={suite.name}
+            suite={suite}
+            collapsed={!!collapsed[suite.name]}
+            onToggle={() => toggle(suite.name)}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

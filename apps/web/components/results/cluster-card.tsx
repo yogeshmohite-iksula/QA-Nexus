@@ -29,10 +29,13 @@ const NUM_DOT: Record<ClusterTone, { bg: string; bd: string; fg: string }> = {
   mixed: { bg: 'var(--overlay)', bd: 'var(--border-strong)', fg: 'var(--t3)' },
 };
 
+// Day-20 R4 visual gate fix: canonical L371-373 .cl-conf colors —
+// .high=pass green, .med=warn amber, .mixed=fail RED. Previously had
+// high as fail-red (wrong) + mixed as overlay-grey (wrong). Both fixed.
 const CONF_PILL: Record<ClusterTone, { bg: string; bd: string; fg: string }> = {
-  high: { bg: 'var(--fail-soft)', bd: 'var(--fail-line)', fg: 'var(--fail)' },
+  high: { bg: 'var(--pass-soft)', bd: 'var(--pass-line)', fg: 'var(--pass)' },
   med: { bg: 'var(--warn-soft)', bd: 'var(--warn-line)', fg: 'var(--warn)' },
-  mixed: { bg: 'var(--overlay)', bd: 'var(--border-strong)', fg: 'var(--t3)' },
+  mixed: { bg: 'var(--fail-soft)', bd: 'var(--fail-line)', fg: 'var(--fail)' },
 };
 
 const CLASS_PILL: Record<

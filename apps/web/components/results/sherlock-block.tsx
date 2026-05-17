@@ -20,11 +20,20 @@ const CONF_PILL: Record<'high' | 'med' | 'low', { bg: string; bd: string; fg: st
 
 export function SherlockBlock() {
   return (
+    // Day-20 R4 visual gate fix: canonical L302 .sherlock-block{background:
+    // var(--overlay);border:1px solid var(--ai-line);border-radius:12px} +
+    // L305 ::before width:3px left stripe. Was --ai-soft with border-bottom
+    // only; now proper bordered card matching cluster cards.
     <section
       aria-label={F20_SHERLOCK_HEAD.ariaLabel}
       data-canonical-section="sherlock-block"
-      className="flex flex-col gap-2.5 border-b px-4 py-4 sm:px-5 lg:px-7"
-      style={{ background: 'var(--ai-soft)', borderColor: 'var(--ai-line)' }}
+      className="relative flex flex-col gap-3 overflow-hidden rounded-xl border p-5"
+      style={{
+        background: 'var(--overlay)',
+        borderColor: 'var(--ai-line)',
+        borderLeftWidth: '3px',
+        borderLeftColor: 'var(--secondary)',
+      }}
     >
       <div className="flex flex-wrap items-center gap-2">
         <span
