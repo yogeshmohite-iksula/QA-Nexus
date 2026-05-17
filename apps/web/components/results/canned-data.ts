@@ -85,6 +85,13 @@ export interface ResultsRow {
 
 export interface ResultsSuite {
   name: string;
+  /** Total / pass / fail / flaky counts for suite-counts header cells.
+   *  Day-20 R3 — canonical L464-468 .suite-counts shows 4 cells with
+   *  separators (T=t3 grey, P=pass, F=fail, Fl=warn). */
+  totalCount: number;
+  passCount: number;
+  failCount: number;
+  flakyCount: number;
   rows: ResultsRow[];
 }
 
@@ -393,6 +400,10 @@ export const F20_RESULTS_FILTERS = [
 export const F20_RESULTS_SUITES: ResultsSuite[] = [
   {
     name: 'Refund Core',
+    totalCount: 68,
+    passCount: 52,
+    failCount: 12,
+    flakyCount: 4,
     rows: [
       {
         caseId: 'TC-RET-0247',
@@ -433,6 +444,10 @@ export const F20_RESULTS_SUITES: ResultsSuite[] = [
   },
   {
     name: 'Auth & Session',
+    totalCount: 42,
+    passCount: 39,
+    failCount: 2,
+    flakyCount: 1,
     rows: [
       {
         caseId: 'TC-AUT-0089',
@@ -459,6 +474,10 @@ export const F20_RESULTS_SUITES: ResultsSuite[] = [
   },
   {
     name: 'Payments & Tender',
+    totalCount: 54,
+    passCount: 45,
+    failCount: 7,
+    flakyCount: 2,
     rows: [
       {
         caseId: 'TC-PAY-0211',
@@ -485,6 +504,10 @@ export const F20_RESULTS_SUITES: ResultsSuite[] = [
   },
   {
     name: 'Cart & Checkout',
+    totalCount: 54,
+    passCount: 51,
+    failCount: 2,
+    flakyCount: 1,
     rows: [
       {
         caseId: 'TC-CRT-0312',

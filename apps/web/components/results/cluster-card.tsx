@@ -15,9 +15,18 @@ import type {
 } from './canned-data';
 
 const TONE_BORDER: Record<ClusterTone, string> = {
-  high: 'var(--fail-line)',
+  high: 'var(--pass-line)',
   med: 'var(--warn-line)',
   mixed: 'var(--border-strong)',
+};
+
+// Day-20 R3 visual gate fix: canonical L359-360 .cluster.high .cl-num
+// .num-dot has pass-tone bg (green), .cluster.med has warn-tone bg
+// (amber). Number badge tone matches cluster confidence tone.
+const NUM_DOT: Record<ClusterTone, { bg: string; bd: string; fg: string }> = {
+  high: { bg: 'rgba(52,211,153,0.18)', bd: 'var(--pass-line)', fg: 'var(--pass)' },
+  med: { bg: 'rgba(251,191,36,0.18)', bd: 'var(--warn-line)', fg: 'var(--warn)' },
+  mixed: { bg: 'var(--overlay)', bd: 'var(--border-strong)', fg: 'var(--t3)' },
 };
 
 const CONF_PILL: Record<ClusterTone, { bg: string; bd: string; fg: string }> = {
@@ -63,8 +72,12 @@ export function ClusterCard({ cluster }: { cluster: Cluster }) {
         >
           <span
             aria-hidden="true"
-            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold"
-            style={{ background: 'var(--overlay)', color: 'var(--t2)' }}
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-bold"
+            style={{
+              background: NUM_DOT[cluster.tone].bg,
+              borderColor: NUM_DOT[cluster.tone].bd,
+              color: NUM_DOT[cluster.tone].fg,
+            }}
           >
             {cluster.num}
           </span>

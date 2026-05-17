@@ -114,17 +114,29 @@ export function EvRail() {
       {/* ev-body */}
       <div className="flex-1 overflow-y-auto px-4 py-3.5">
         <div className="flex flex-col gap-4">
-          {/* Selected case (Overview = case tab) */}
-          {(activeTab === 'case' || activeTab === 'related') && <SelectedCase />}
+          {/* Day-20 R3 visual gate fix: canonical shows Selected case +
+           * Screenshots + Stack trace + Env diff + Related defects ALL
+           * visible under the case tab (Overview). Previous R1/R2 hid
+           * Screenshots behind the shots tab — incorrect. */}
+          {activeTab === 'case' && (
+            <>
+              <SelectedCase />
+              <Screenshots />
+              <StackTrace />
+              <EnvDiff />
+              <RelatedDefects />
+            </>
+          )}
           {activeTab === 'shots' && <Screenshots />}
           {activeTab === 'console' && <StackTrace />}
           {activeTab === 'har' && <StackTrace />}
           {activeTab === 'env' && <EnvDiff />}
-          {activeTab === 'related' && <RelatedDefects />}
-          {/* Overview-style stack always under case tab */}
-          {activeTab === 'case' && <StackTrace />}
-          {activeTab === 'case' && <EnvDiff />}
-          {activeTab === 'case' && <RelatedDefects />}
+          {activeTab === 'related' && (
+            <>
+              <SelectedCase />
+              <RelatedDefects />
+            </>
+          )}
         </div>
       </div>
 

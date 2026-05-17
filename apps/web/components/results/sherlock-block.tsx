@@ -68,7 +68,16 @@ export function SherlockBlock() {
           {F20_SHERLOCK_HEAD.meta}
         </span>
       </div>
-      <h2 className="m-0 text-[13.5px] font-normal leading-[20px]" style={{ color: 'var(--t1)' }}>
+      {/* Day-20 R3 visual gate fix: canonical L321-323 — sb-headline is
+       * 17px DM Sans font-weight 600 with `<b>` styled as --secondary
+       * violet (700). Previously rendered as plain white bold. */}
+      <h2
+        className="m-0 text-[17px] font-semibold leading-[24px]"
+        style={{
+          color: 'var(--t1)',
+          fontFamily: 'var(--font-dm-sans), system-ui, sans-serif',
+        }}
+      >
         {F20_SHERLOCK_HEADLINE.map((seg, i) => (
           <NarrativeSpan key={i} seg={seg} />
         ))}
@@ -152,7 +161,10 @@ export function SherlockBlock() {
 }
 
 function NarrativeSpan({ seg }: { seg: NarrativeSegment }) {
-  if (seg.kind === 'bold') return <b style={{ color: 'var(--t1)' }}>{seg.value}</b>;
+  // Day-20 R3 visual gate fix: canonical L323 .sb-headline b{color:var(--secondary)}
+  // — bold keywords MUST be violet (--secondary), not white (--t1).
+  if (seg.kind === 'bold')
+    return <b style={{ color: 'var(--secondary)', fontWeight: 700 }}>{seg.value}</b>;
   if (seg.kind === 'mono')
     return (
       <code

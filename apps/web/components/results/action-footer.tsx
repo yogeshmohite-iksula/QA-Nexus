@@ -35,7 +35,9 @@ export function ActionFooter() {
   return (
     <footer
       data-canonical-section="action-footer"
-      className="flex flex-wrap items-center gap-2 border-t px-4 py-2.5 sm:px-5 lg:px-7"
+      // Day-20 R3 visual gate fix: canonical L591 .action-footer{position:sticky;bottom:0}
+      // — footer must remain locked at viewport bottom regardless of page scroll.
+      className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 border-t px-4 py-2.5 sm:px-5 lg:px-7"
       style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
       <div className="flex flex-wrap items-center gap-1.5">
