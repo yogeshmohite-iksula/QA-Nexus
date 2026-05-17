@@ -133,6 +133,16 @@ async function bootstrap() {
   // See followup (bb) for full RCA + (bc) for FE-side prefix coordination.
   expressApp.all('/auth/*', toNodeHandler(authService.auth));
 
+  // Raw-body middleware for Atlassian Jira webhook (Day-19 P2 / followup
+  // (bq) / docs/architecture/webhook-raw-body.md). MUST be installed BEFORE
+  // the global express.json() — Atlassian computes HMAC-SHA256 over RAW
+  // request bytes, so we cannot let JSON-parser consume the stream first.
+  // Identical pattern to the BetterAuth raw mount above (line 134).
+  // Type accepts anything Atlassian sends (almost always application/json,
+  // but we accept */* defensively). 5 MB cap matches our defect-attachment
+  // ceiling — Jira webhooks are typically <50 KB.
+  app.use('/api/jira/webhook', express.raw({ type: '*/*', limit: '5mb' }));
+
   // Body parsers for all other Nest controllers (incl. our wrapper auth endpoints).
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));

@@ -155,6 +155,45 @@ const merged = this.mergeHypotheses({ code, data, env, flake });
 
 **Cross-references:** ADR-019 (Sherlock prompt strategy) · `.claude/scratch/sherlock-agent-1-design.md` (full design scratch) · A1ScribeService (pattern source) · #157 (M4 stub controllers Sherlock will eventually wire to via DefectsController.rca).
 
+---
+
+### Added — Day 19 — Jira webhook receiver with HMAC-SHA256 signature validation [M4 TASK A6]
+
+**P2 per Day-19 plan + followup `(bq)` (filed Day-18).** Converts the Day-19 P0 #2 stub (PR #157) for `POST /api/jira/webhook` from 501 to functional. Atlassian sends issue-lifecycle webhooks with `X-Hub-Signature: sha256=<hex>` computed over RAW request bytes; this PR ships the receiver + verifier + audit-write end-to-end. `connect`/`sync` endpoints stay as 501 stubs — they land Day-20+ alongside DefectsService.createFromJira + WS emit.
+
+**Files (5 new + 3 modified, ~660 LOC):**
+
+- **NEW** `apps/api/src/jira-sync/hmac-verifier.ts` — pure-function `verifyHmacSha256(rawBody, sigHeader, secret) → {ok}|{ok:false, reason}` with constant-time compare (`crypto.timingSafeEqual`). Reusable for future Slack/GitHub/Stripe webhook receivers.
+- **NEW** `apps/api/src/jira-sync/jira-webhook.schema.ts` — Zod for the Atlassian webhook envelope (event discriminator + minimal issue ref + optional user). `passthrough()` so we don't reject unknown fields — Atlassian-shape evolution stays safe.
+- **NEW** `apps/api/src/jira-sync/jira-sync.service.ts` — `JiraSyncService` (+ `OnModuleInit` workspace-cache + `recordWebhookReceived` + `recordWebhookSignatureInvalid`). System workspace UUID cached at boot via single `prisma.workspace.findFirst` — **zero per-webhook DB hits** (Neon at 81.61/100 CU-hr respected).
+- **NEW** `apps/api/src/jira-sync/__tests__/hmac-verifier.spec.ts` — 10 unit tests (4 fail-reason buckets + happy + tamper + case-insensitive prefix).
+- **NEW** `apps/api/src/jira-sync/__tests__/jira-sync.service.spec.ts` — 7 tests via NestJS DI mocks (workspace caching + audit-call shape).
+- **NEW** `docs/architecture/webhook-raw-body.md` — design doc fulfilling followup `(bq)`. Reusable pattern table for Slack/GitHub/Stripe/Linear M5+ webhooks.
+- **MODIFIED** `apps/api/src/jira-sync/jira-sync.controller.ts` — webhook stub → functional (HMAC verify → JSON parse → Zod validate → fire-and-forget audit → 200 ack). `connect`/`sync` retained as 501 stubs.
+- **MODIFIED** `apps/api/src/jira-sync/jira-sync.module.ts` — adds `JiraSyncService` provider + `AuditModule` import.
+- **MODIFIED** `apps/api/src/jira-sync/__tests__/jira-sync.controller.spec.ts` — extended to 10 tests covering: 2 happy-path + 3 signature-failure (mismatch/missing-header/secret-missing) + 3 body-shape-failure (raw-body-missing/invalid-json/Zod-fail) + 2 retained stub-contract for connect/sync.
+- **MODIFIED** `apps/api/src/main.ts` — installs `app.use('/api/jira/webhook', express.raw({ type: '*/*', limit: '5mb' }))` BEFORE the global `express.json()`. Identical pattern to the BetterAuth `/auth/*` raw mount above it.
+
+**Critical contract (binding):**
+
+- HMAC verified over **raw request bytes** (not `JSON.stringify(req.body)`) — every webhook would fail in prod otherwise per followup `(bq)` rationale.
+- Constant-time compare via `crypto.timingSafeEqual` — defends against timing-attack signature recovery.
+- Fail-closed on missing secret: empty `JIRA_WEBHOOK_SECRET` env returns 401 `{reason: 'secret_missing'}`. No silent bypass.
+- Audit-write is **fire-and-forget** (`AuditService.writeNonBlocking`) so 200 ack returns in <50ms. System workspace UUID is cached at `OnModuleInit` (1 boot DB hit, 0 per-request).
+- Day-20 side-effects (defect upsert + WS emit + dead-letter retry) deferred to a separate PR.
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **538/538 jest** (514 baseline + 24 net-new: 10 hmac + 7 service + 10 controller − 3 retired stub-contract for webhook) · lint clean ✓ · CHANGELOG ✓.
+
+**Cost-gate:** zero new infra, zero per-request DB hit (cached workspace ID), $0/mo holds. Audit-row inserts are normal `audit_log` writes (existing table from MS0); not a hot-path issue at pilot scale (~10 webhooks/day expected).
+
+**Hard Rules check:** Rule 1 (no infra) · Rule 5 (no banned dep — uses `node:crypto` builtin) · Rule 6 (no env in repo — `JIRA_WEBHOOK_SECRET` lives in Render env vars, `.env.example` placeholder lands Day-20 with deploy-side rotation doc) · Rule 7 (audit-chain write on every receipt + every signature failure) · Rule 9 (no `any`) · Rule 11 (followup `(bq)` design honored — no improvisation).
+
+**M4 close cascade:** ships as part of M4 close (HOLD until Sat May 16). Joins #148 (WebSocket) + #149 (TestRun) + #161 (Sherlock A4) on the cascade.
+
+**Cross-references:** followup `(bq)` 2026-05-14 (the design note this PR fulfills) · `docs/architecture/webhook-raw-body.md` (the binding design doc) · #157 (M4 stub controllers — connect/sync retain stub contract from there) · #161 (Sherlock A4 sibling Day-19 BE deliverable).
+
+---
+
 ### Added — Day 19 AM — VR baseline seed: 12 canonical PNGs + 3 frame specs + VR_BASELINES_READY flip
 
 **Day-19 AM seed PR.** Activates BE+1's visual-regression Playwright suite (PR #153) by committing the 12 canonical baseline PNGs FE+1 captured Day-18 evening, writing 3 frame-specific specs, and flipping the `VR_BASELINES_READY` env gate in CI.
