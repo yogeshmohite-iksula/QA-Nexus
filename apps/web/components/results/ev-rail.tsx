@@ -30,7 +30,9 @@ export function EvRail() {
     <aside
       aria-label={F20_EV_HEAD.ariaLabel}
       data-canonical-section="ev-rail"
-      className="flex min-h-0 flex-col border-l"
+      // Day-20 R6 visual gate fix: mobile gets `border-t` to separate from
+      // center pane stacked above; lg+ uses `border-l` as side rail.
+      className="flex min-h-0 flex-col border-t lg:border-l lg:border-t-0"
       style={{ background: 'var(--canvas)', borderColor: 'var(--border)' }}
     >
       {/* ev-head */}

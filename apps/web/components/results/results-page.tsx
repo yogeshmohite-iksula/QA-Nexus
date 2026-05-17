@@ -53,8 +53,11 @@ export function ResultsPage() {
             <ResultsTable />
           </div>
 
-          {/* Right rail — Evidence (hidden on mobile per RWD) */}
-          <div className="hidden lg:block lg:min-h-0">
+          {/* Right rail — Evidence
+           * Day-20 R6 visual gate fix: was `hidden lg:block` (invisible on
+           * mobile). Now stacks below center-pane on mobile (grid-cols-1)
+           * and shows as right rail on lg+ (grid-cols-[1fr_380px]). */}
+          <div className="lg:min-h-0">
             <EvRail />
           </div>
         </div>
