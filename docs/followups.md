@@ -1804,6 +1804,87 @@ This pairs with the (a) ADR above — once the ADR formalizes the split, this sc
 
 ---
 
+## [2026-05-17] (m) F19 Run Console Pattern B re-port — DAY-21 09:00 AM P0
+
+After M4 close (Day-20), Day-21 morning starts with F19 re-port via frame-port skill v2.1.2. Pattern B = real-data scaffold deferred per M4 plan; this round is Pattern A clean scaffold + visual gate.
+
+**Why F19 first:** Day-18 audit (`docs/audits/2026-05-14-rule17-audit-day-18.md`) showed F19 had mostly false positives — fastest validation expected. F19 also has a Day-19 baseline canonical PNG in `apps/web/tests/visual/canonical/F19/` from PR #156.
+
+**Workflow:** Same 7-step skill flow proven across F21 (Day-19) + F20 (Day-20). Apply patterns from `feedback_f20_day_20_lessons.md`:
+
+- rs-stats horizontal-scroll if F19 has a similar stats row
+- 3-row button stack for primary CTA + 2 secondary + link
+- Mobile right-rail stacking (avoid `hidden lg:block`)
+- Header layout: title left, controls right
+- Code-block styling for any error/stack-trace display
+
+**ETA:** 3-4 hour visual gate cycle (faster than F20's 7 rounds given F19 false-positive profile).
+
+**Owner:** FE+1 chat.
+
+---
+
+## [2026-05-17] (n) F22 Defect Detail Pattern A — DAY-21 P1
+
+Pattern A scaffold for F22 Defect Detail page. NEW GROUND — no Day-18 seed exists. Clean scaffold via skill workflow.
+
+**Workflow:** 7-step skill flow. F22 v2 HTML canonical at `PM1_UI_v2/Redesign Frame by claude design/F22 Defect Detail v2.html`. Apply Day-21 patterns from F19 visual gate iterations.
+
+**ETA:** 4-5 hour visual gate cycle (new ground, expect 5-7 rounds).
+
+**Owner:** FE+1 chat.
+
+---
+
+## [2026-05-17] (o) Kimi HIGH FE triage — DAY-21 STRETCH
+
+4 Kimi HIGH FE items per Yogesh backlog. Triage to: keep (apply Day-21), defer (M5+), or close-out (no-op). Run after F19 + F22 if time permits.
+
+**Owner:** FE+1 chat.
+
+---
+
+## [2026-05-17] (p) Skill v2.2 — nested_section_count probe — MAIN ESCALATION
+
+Both F21 (Day-19) and F20 (Day-20) hit the same SECONDARY-tier gap on AdminShell-internal sections (`rail-content`, `rail-foot`). diff-probe SECONDARY class-match fails on Tailwind ports because canonical uses BEM class names but ports use Tailwind utilities. `data-canonical-section` TERTIARY attrs (PR #163) are present but SECONDARY check ignores them in this case.
+
+**Proposed amendment:** Add `nested_section_count` field to spec.json per parent region. Diff-probe walks both canonical + port DOM and verifies count matches. Mismatch → MISSING SECTIONS RED with specific counts.
+
+Filed for MAIN consideration. Day-21+ frame ports will continue hitting this gap until shipped.
+
+**Owner:** MAIN.
+
+---
+
+## [2026-05-17] (q) Pre-existing main prettier drift on diff-probe.mjs — MAIN HOUSEKEEPING
+
+Every new branch cut from origin/main hits a pre-push prettier gate failure on `.claude/skills/frame-port/diff-probe.mjs` (12+/16- whitespace-only from PR #158). Both F20 PR #169 (`f57837f`) and Day-20 EOD PR #171 (separate chore commit) had to carry the same `chore(skill): prettier-fix` commit.
+
+**Fix:** MAIN re-applies `pnpm exec prettier --write .claude/skills/frame-port/diff-probe.mjs` on `docs/main-skill-v1-polish` once, force-pushes the merged file. Or husky's prettier --write gate runs post-merge on `.claude/skills/**`.
+
+**Owner:** MAIN housekeeping.
+
+---
+
+## [2026-05-17] (r) Visual gate workflow refinement — 5-7 round cycle is steady-state — STRATEGIC
+
+F21 Day-19 = 5 rounds R1→R5. F20 Day-20 = 7 rounds R1→R7. Expected learning curve compression; got NONE. New drift classes surface per-frame.
+
+**Candidate:** Add a **designer-precision pre-gate step** between Step 5 (diff-probe) and Step 6 (Yogesh visual gate). Spec:
+
+- Headless Chrome opens canonical v2 HTML + React port side-by-side at exact 1440 viewport
+- Auto-screenshot both
+- Per-pixel diff to find drifted regions
+- FE+1 manually inspects diff regions before posting to Yogesh
+
+This MAY compress visual gate cycle from 5-7 rounds → 2-3 rounds. Trade-off: more time per round (manual diff inspection), fewer rounds total.
+
+**Status:** Day-21+ exploration. NOT blocking — current 5-7 round cycle works, just slow.
+
+**Owner:** MAIN + FE+1 explore Day-22+.
+
+---
+
 ## Cross-references
 
 - `docs/parallel-work/follow-ups.md` — parallel-chat coordination items (Day 1 P1.13/14/15/16 closures + Days 2–7 task pipeline)
@@ -1812,3 +1893,4 @@ This pairs with the (a) ADR above — once the ADR formalizes the split, this sc
 - `docs/audits/2026-04-27-permission-triage.md` — permission decision-tree origin
 - `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` §3 — canonical entity inventory (TB-001..TB-021)
 - `QA Nexus/PM1/PM1_milestone/M0/Milestone_M0_Setup_v8.md` — M0 backlog (35 tasks, 298h)
+- `docs/m4/retro/fe-day-20-perspective.md` — FE retro at M4 close (this batch of followups)
