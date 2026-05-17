@@ -23,14 +23,14 @@ const STAT_COLOR: Record<RunStat['variant'], string> = {
 
 export function RunSummary() {
   return (
-    // Day-20 R3 visual gate fix: canonical L238 .run-summary{display:flex;
-    // flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px}
-    // — compact single-line horizontal strip. All children inline; wraps
-    // only at narrow viewports.
+    // Day-20 R5 visual gate fix: canonical L240 @media(min-width:768px)
+    // {flex-wrap:nowrap} — at md+ the run-summary stays single line.
+    // Stats become horizontally scrollable per L268-270 .rs-stats
+    // {flex:1;min-width:0;overflow-x:auto} + hidden scrollbar.
     <div
       role="region"
       aria-label={F20_RUN_HEADER.ariaLabel}
-      className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b px-4 py-3 sm:px-5 lg:px-7"
+      className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b px-4 py-3 sm:px-5 md:flex-nowrap md:gap-y-0 lg:px-7"
       style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
       {/* rs-left inline: title + run id + done pill */}
@@ -67,37 +67,53 @@ export function RunSummary() {
         {F20_RUN_HEADER.doneLabel}
       </span>
 
-      {/* rs-stats inline — 6 numeric cells, baseline-aligned */}
+      {/* rs-stats — Day-20 R5 visual gate fix: canonical L268-275
+       * .rs-stats{flex:1;min-width:0;overflow-x:auto} + hidden scrollbar.
+       * .stat{padding:0 12px;border-right:1px solid --border;flex:none;
+       * white-space:nowrap} + .stat:last-child{border-right:0}. Stats now
+       * horizontally scrollable on overflow with bordered cell separators. */}
       <span
         aria-label={F20_RUN_STATS_ARIA}
-        className="inline-flex flex-wrap items-baseline gap-x-2.5 gap-y-1"
+        className="inline-flex min-w-0 flex-1 items-center overflow-x-auto"
+        style={{ scrollbarWidth: 'none' }}
       >
-        {F20_RUN_STATS.map((stat) => (
-          <span key={stat.label} className="inline-flex items-baseline gap-1 whitespace-nowrap">
-            <b
-              className="text-[15px] font-bold leading-[18px]"
-              style={{ color: STAT_COLOR[stat.variant] }}
-            >
-              {stat.count}
-            </b>
+        {F20_RUN_STATS.map((stat, i) => {
+          const isLast = i === F20_RUN_STATS.length - 1;
+          return (
             <span
-              className="text-[10px] uppercase tracking-[0.06em]"
-              style={{ color: 'var(--t3)' }}
+              key={stat.label}
+              className="inline-flex flex-none items-baseline gap-1.5 whitespace-nowrap px-3"
+              style={{
+                borderRight: isLast ? 'none' : '1px solid var(--border)',
+              }}
             >
-              {stat.label}
-            </span>
-            {stat.pct && (
-              <span className="font-mono text-[10px]" style={{ color: 'var(--t4)' }}>
-                {stat.pct}
+              <b
+                className="font-mono text-[13.5px] font-bold leading-[18px]"
+                style={{ color: STAT_COLOR[stat.variant] }}
+              >
+                {stat.count}
+              </b>
+              <span
+                className="text-[10.5px] font-semibold uppercase tracking-[0.06em]"
+                style={{ color: 'var(--t3)' }}
+              >
+                {stat.label}
               </span>
-            )}
-          </span>
-        ))}
+              {stat.pct && (
+                <span className="font-mono text-[10px]" style={{ color: 'var(--t4)' }}>
+                  {stat.pct}
+                </span>
+              )}
+            </span>
+          );
+        })}
       </span>
 
-      {/* rs-meta inline: Started X · by Y · duration Z · env-pill */}
+      {/* rs-meta inline: Started X · by Y · duration Z · env-pill
+       * Day-20 R5 fix: canonical L283 .rs-meta{white-space:nowrap;flex:none}
+       * so meta stays on one line and doesn't push stats overflow scroll. */}
       <span
-        className="ml-auto inline-flex flex-wrap items-center gap-1.5 text-[11px]"
+        className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px]"
         style={{ color: 'var(--t3)' }}
       >
         <span className="hidden whitespace-nowrap sm:inline">

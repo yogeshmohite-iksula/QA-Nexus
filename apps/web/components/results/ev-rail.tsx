@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Share2, BarChart2, CalendarClock, X } from 'lucide-react';
+import { BarChart2, CalendarClock, Download, Plus, Share2, X } from 'lucide-react';
 import {
   F20_EV_ENV,
   F20_EV_HEAD,
@@ -197,11 +197,12 @@ function SelectedCase() {
             </div>
           ))}
         </div>
-        {/* Day-20 R4 visual gate fix: action buttons polished to canonical
-         * sizing (h-8) — Open defect = full-width violet primary; Mark
-         * flaky / Re-run case = secondary outline; View in Run Console
-         * = tertiary text link with arrow. */}
-        <div className="flex flex-col gap-1.5">
+        {/* Day-20 R5 visual gate fix: exact canonical 3-row layout L1101-1119
+         * — Row 1: btn-violet 36px full-width with + icon. Row 2: 2-col grid
+         * btn-cluster-secondary 32px (Mark flaky | Re-run case). Row 3:
+         * full-width --primary teal text link "View in Run Console →" 32px. */}
+        <div className="mt-1 flex flex-col gap-1.5">
+          {/* Row 1: violet primary full-width with + icon */}
           {sc.actions
             .filter((a) => a.variant === 'primary')
             .map((a) => (
@@ -217,10 +218,12 @@ function SelectedCase() {
                   color: 'var(--secondary-ink)',
                 }}
               >
+                <Plus size={12} aria-hidden="true" strokeWidth={2.2} />
                 {a.label}
               </button>
             ))}
-          <div className="flex flex-wrap items-center gap-1.5">
+          {/* Row 2: 2-col grid of secondary outline buttons (canonical L1106-1115) */}
+          <div className="grid grid-cols-2 gap-1.5">
             {sc.actions
               .filter((a) => a.variant === 'secondary')
               .map((a) => (
@@ -230,7 +233,7 @@ function SelectedCase() {
                   onClick={() =>
                     console.info('pattern-a:deferred:f20:case-action', { action: a.label })
                   }
-                  className="inline-flex h-8 items-center rounded-md border px-2.5 text-[11px] font-medium transition-colors hover:bg-[var(--raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+                  className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-md border text-[11px] font-medium transition-colors hover:bg-[var(--raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
                   style={{
                     background: 'transparent',
                     borderColor: 'var(--border)',
@@ -241,6 +244,7 @@ function SelectedCase() {
                 </button>
               ))}
           </div>
+          {/* Row 3: full-width primary teal text link (canonical L1116-1118) */}
           {sc.actions
             .filter((a) => a.variant === 'tertiary')
             .map((a) => (
@@ -250,7 +254,7 @@ function SelectedCase() {
                 onClick={() =>
                   console.info('pattern-a:deferred:f20:case-action', { action: a.label })
                 }
-                className="inline-flex h-7 items-center text-[11px] font-medium transition-colors hover:text-[var(--t1)] focus-visible:outline-none"
+                className="inline-flex h-8 w-full items-center justify-center text-[11px] font-semibold transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
                 style={{
                   background: 'transparent',
                   color: 'var(--primary)',
