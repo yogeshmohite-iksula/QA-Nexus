@@ -160,11 +160,10 @@ function buildProbesFromSpec(s) {
         const sig = n.aria_signal || {};
         const role = sig.role ?? n.role ?? null;
         const aria_label = sig.aria_label ?? null;
-        const classes = sig.classes && sig.classes.length ? sig.classes : (n.classes || []);
+        const classes = sig.classes && sig.classes.length ? sig.classes : n.classes || [];
         const data_canonical_section = sig.data_canonical_section ?? null;
 
-        const label =
-          n.id || aria_label || role || (classes && classes[0]) || n.tag;
+        const label = n.id || aria_label || role || (classes && classes[0]) || n.tag;
 
         // Build the three-tier selector list (any match = PRESENT)
         const tiers = [];
@@ -183,9 +182,7 @@ function buildProbesFromSpec(s) {
           });
         // For semantic tags (header/main/aside/nav/footer/dialog) the tag
         // itself implies an ARIA landmark role — count tag-only as PRIMARY too.
-        if (
-          ['header', 'main', 'aside', 'nav', 'footer', 'dialog', 'section'].includes(n.tag)
-        ) {
+        if (['header', 'main', 'aside', 'nav', 'footer', 'dialog', 'section'].includes(n.tag)) {
           tiers.push({ tier: 'PRIMARY', selector: n.tag });
         }
         // SECONDARY: class-name substring (v1 fallback). Hard Rule 18 Day-19
@@ -374,8 +371,7 @@ for (const vp of VIEWPORTS) {
   let canonicalShellBounds = null;
   let portShellBounds = null;
   if (scope === 'content') {
-    if (canonicalLoadOk)
-      canonicalShellBounds = await measureContentBounds(canonicalPage, vp);
+    if (canonicalLoadOk) canonicalShellBounds = await measureContentBounds(canonicalPage, vp);
     if (portLoadOk) portShellBounds = await measureContentBounds(portPage, vp);
     cropBounds = unionShellCrop(canonicalShellBounds, portShellBounds, vp);
   }
@@ -395,7 +391,9 @@ for (const vp of VIEWPORTS) {
   console.log(
     `  ${'Section'.padEnd(28)} ${'Canon'.padStart(5)} ${'Port'.padStart(5)}  ${'C-tier'.padEnd(9)} ${'P-tier'.padEnd(9)} Status`,
   );
-  console.log(`  ${'-'.repeat(28)} ${'-'.repeat(5)} ${'-'.repeat(5)}  ${'-'.repeat(9)} ${'-'.repeat(9)} ${'-'.repeat(7)}`);
+  console.log(
+    `  ${'-'.repeat(28)} ${'-'.repeat(5)} ${'-'.repeat(5)}  ${'-'.repeat(9)} ${'-'.repeat(9)} ${'-'.repeat(7)}`,
+  );
   for (const r of perSelector) {
     const lbl = r.label.length > 28 ? r.label.slice(0, 25) + '...' : r.label.padEnd(28);
     const ct = (r.canonicalMatchedTier || '-').padEnd(9);
@@ -470,7 +468,9 @@ const reportEnvelope = {
 writeFileSync(join(outDir, 'report.json'), JSON.stringify(reportEnvelope, null, 2) + '\n', 'utf8');
 
 console.log('══════════════════════════════════════════');
-console.log(`Summary for ${frameId} (scope=${scope}, threshold=${(PIXEL_THRESHOLD * 100).toFixed(0)}%):`);
+console.log(
+  `Summary for ${frameId} (scope=${scope}, threshold=${(PIXEL_THRESHOLD * 100).toFixed(0)}%):`,
+);
 for (const r of allResults) {
   const fails = r.perSelector.filter((s) => s.status !== 'PASS').length;
   const pixDiff = r.pixelDiffPct !== null ? `pix=${(r.pixelDiffPct * 100).toFixed(1)}%` : 'pix=n/a';
@@ -522,12 +522,8 @@ async function comparePngs(canonicalPath, portPath, vp, cropBounds = null) {
 
   // Decode + resize. ensureAlpha() gives us RGBA (4 bytes/pixel), which
   // is what pixelmatch expects.
-  const baseA = sharp(canonicalPath)
-    .resize(vp.width, vp.height, { fit: 'cover' })
-    .ensureAlpha();
-  const baseB = sharp(portPath)
-    .resize(vp.width, vp.height, { fit: 'cover' })
-    .ensureAlpha();
+  const baseA = sharp(canonicalPath).resize(vp.width, vp.height, { fit: 'cover' }).ensureAlpha();
+  const baseB = sharp(portPath).resize(vp.width, vp.height, { fit: 'cover' }).ensureAlpha();
 
   let width = vp.width;
   let height = vp.height;
