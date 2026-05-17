@@ -12,7 +12,7 @@ Pilot week 3 closes with the agent-led drift-discipline tooling in place + the f
 ## Headline
 
 - **Frame-port skill v1 → v2.1.2** shipped + codified as **Hard Rule 18** with three Day-19 amendments (Parts 1 + 2 + 3). 6 iterations across Day-18 PM and Day-19 morning, each catching a real production failure mode through actual FE+1 validation. **First two ports built via the skill — F21 and F20** — both passed visual gate.
-- **BE+1 cascade landed 6 substantive M4 PRs** Day-19 + Day-20: BetterAuth alignment, AppModule stubs, VR scaffold, M4 module scaffolds, TestRun service, WebSocket gateway, Sherlock RCA agent #1, Jira webhook receiver. Plus the Sherlock orchestrator promoted Day-20.
+- **BE+1 cascade landed 8 substantive M4 PRs** Day-19 + Day-20: BetterAuth alignment (#155), AppModule M4 module-import gap (#157), VR Playwright scaffold (#156), TestRun service (#149), WebSocket gateway (#148), Sherlock RCA agent #1 (#161), Jira webhook receiver (#162), and Sherlock orchestrator + 3 sibling agents (#168). Together they implement ADR-019's 4-agent parallel fan-out RCA pattern end-to-end (synchronous contract for M4; async DB persistence deferred to Day-21 per followup `(da)`).
 - **AdminShell `data-canonical-section` attrs** shipped (PR #163) — shell-level work that unblocks TERTIARY-tier matching for every future authenticated page port (F19, F20, F22, F23, F25, F26, F28).
 - **Kimi review** CRIT + 1 HIGH closed: BetterAuth FE↔BE version mismatch + AppModule M4 module-import gap. Remaining 4 HIGH triaged to Day-21/22 hardening per `docs/STATUS.md`.
 - **4 Hard Rule 11 fires** across Day-19 + Day-20 caught discipline drift through BE+1 + FE+1 escalation — the "never guess, ask Yogesh" rail is working as designed across all layers.
@@ -63,9 +63,28 @@ Per M4 v2 plan (`QA Nexus/PM1/PM1_milestone/M4/Milestone_M4_Runs_Defects_Jira_v2
 - **#148** — WebSocket gateway for real-time run events (MS4-T009 — channels per §4.7 WebSocket event taxonomy)
 - **#161** — Sherlock RCA agent #1 (code-agent on `gpt-oss-120b`, MS4-T016 per ADR-019)
 - **#162** — Jira webhook receiver with HMAC-SHA256 signature validation (MS4-T012, raw-body middleware per followup `(bq)`)
-- **(Day-20)** — Sherlock orchestrator (combines #161 code-agent + remaining 3 agents — data / env / flake — + deterministic merge algorithm + Promise.all fan-out per ADR-019)
+- **#168** — Sherlock orchestrator + 3 sibling agents + `DefectsController.rca` (M4 TASK A4-A8). Chained-base to #161 (auto-retargets to main when #161 lands). 1281+/60- across 15 files. **543/543 jest pass.** Combines #161 code-agent + new `data-agent` (on `gpt-oss-120b`) + `env-agent` + `flake-agent` (both on `gpt-oss-20b`) per ADR-019 model assignment. Deterministic merge algorithm: group by category, max confidence per category, `+0.05` ensemble boost per duplicate agent (cap `+0.15`), top 5, cap `0.95`. `Promise.all` fan-out (NOT LangGraph). `DefectsController.rca` exposes `POST /api/projects/:projectId/defects/:defectId/sherlock` for synchronous on-demand RCA.
 
 Schema migration **0004** (already on main from Day-18 #144): `evidence` + `defect_history` + `jira_webhook_events` + `jira_sync_logs` tables + `jira_auth_method` enum extension (`oauth_3lo` + `api_token`).
+
+### Sherlock orchestrator delivery — Day-20 highlight
+
+PR #168 ships the full ADR-019 4-agent parallel fan-out pattern in production:
+
+- **4 specialist agents live:** `agent.code` (`gpt-oss-120b`, stack traces) + `agent.data` (`gpt-oss-120b`, fixtures/DB) + `agent.env` (`gpt-oss-20b`, config) + `agent.flake` (`gpt-oss-20b`, retry/timing). All resolve via `Promise.all`; aggregate-tolerance 2-of-4 OK before falling to degraded state.
+- **Deterministic merge** (no LLM call): group-by-category → max-confidence → ensemble boost → top 5 → cap 0.95.
+- **Retry chain per agent:** primary → 1-jitter retry → `gemini-2.5-flash` fallback → empty array + OpenTelemetry span with `outcome=fallback_exhausted`.
+- **OpenTelemetry shape live:** parent `sherlock.rca` span + 4 child agent spans with `provider`/`model`/`latency_ms`/`prompt_bytes`/`response_bytes`/`outcome`/`candidate_count` attributes.
+- **`DefectsController.rca` synchronous endpoint** returns ranked candidates + topConfidence + sherlockRunId.
+- **543/543 jest pass.** All 4 agent prompts unit-tested; merge algorithm exhaustively tested with synthetic candidate sets; retry-chain mocks cover all 3 failure modes.
+
+**Smart scope cuts (deferred to Day-21 hardening via followup `(da)`):**
+
+- DB persistence of orchestrator runs (Sherlock currently in-memory only) — Day-21 wires `sherlock_runs` table writes.
+- Per-agent audit-log rows (currently only the parent run gets an audit row) — Day-21 expands to per-agent rows for full traceability.
+- Queue-backed retry policy (currently in-process retries only) — Day-21 swaps to a BullMQ-free, single-instance pattern via NestJS `@nestjs/schedule` for periodic retry sweeps.
+
+**AC042 (≥40% top-2 hit rate on 50-defect corpus) eval Day-21 runs against the synchronous-only orchestrator.** No DB cost (in-memory results), no async dependency — the RCA quality bar is gated on the orchestrator behavior itself, not the persistence path. Estimated 200 LLM calls = 20% of `gpt-oss-120b` 1k RPD + minimal `gpt-oss-20b` 14.4k RPD. Well within free tier.
 
 ---
 
