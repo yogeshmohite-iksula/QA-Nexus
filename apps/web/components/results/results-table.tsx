@@ -64,6 +64,9 @@ export function ResultsTable() {
         >
           {F20_RESULTS_HEAD.title}
         </h2>
+        {/* Day-20 R7 visual gate fix: filter pills moved to RIGHT side
+         * (beside Sort) — title stays left, controls grouped on right. */}
+        <span className="min-w-2 flex-1" />
         <div
           role="tablist"
           aria-label={F20_RESULTS_HEAD.filtersAriaLabel}
@@ -91,7 +94,6 @@ export function ResultsTable() {
             </button>
           ))}
         </div>
-        <span className="min-w-2 flex-1" />
         <button
           type="button"
           onClick={() => console.info('pattern-a:deferred:f20:results-sort')}
