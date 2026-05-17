@@ -43,7 +43,7 @@ import { JiraSyncModule } from './jira-sync/jira-sync.module';
     ChunkingModule, // M2 Day-8 Step 5 — file → kb_chunks parser + persistence
     TestCasesModule, // M3 Day-12 TASK BE-02 — test cases CRUD skeleton (501 stubs)
     RequirementsModule, // M3 Day-12 TASK BE-03 — requirements CRUD skeleton (501 stubs)
-    TestRunsModule, // M4 Day-19 P0 #2 — STUB (501); full impl lands at M4 close via PR #149
+    TestRunsModule, // M4 Day-18 P3 — TestRun state-machine + audit + WS emit (PR #149)
     DefectsModule, // M4 Day-19 P0 #2 — STUB (501); full impl Day-20+ alongside A4 RCA
     JiraSyncModule, // M4 Day-19 P0 #2 — STUB (501); webhook + sync land Day-19/20
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)

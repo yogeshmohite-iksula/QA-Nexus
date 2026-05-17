@@ -307,6 +307,121 @@ Parallel mirror committed to `~/Claude Cowork Workspace /AI Based QA Platform/m4
 
 The v1.0 Apr 25 doc is fully superseded — only its v2.1 amendment block (lines 3-16) was binding and that's already locked in CLAUDE.md.
 
+---
+
+### Added — Day 18 — TestRun service skeleton: state machine + audit + WS emit (M4 TASK 3 P3)
+
+**M4 Day-18 PM TASK 3 complete.** Implements PM1_ERD §3.10 state machine on `test_runs.status` with HMAC-chained audit-log writes (Hard Rule 7) and `test_run.progress` WebSocket fan-out via the P2 RealtimeGateway (PR #148).
+
+**State machine (single source of truth: `ALLOWED_TRANSITIONS` table in `test-runs.service.ts`):**
+
+| From                                        | Allowed →                                   |
+| ------------------------------------------- | ------------------------------------------- |
+| `queued`                                    | `running`                                   |
+| `running`                                   | `passed` · `failed` · `blocked` · `aborted` |
+| `passed` / `failed` / `blocked` / `aborted` | **(terminal — no outbound)**                |
+
+The `Failed → Defected` path in ERD §3.10 is handled by a separate service in Day-19 (defect creation); this skeleton stays at the run-level status flip.
+
+**3 REST endpoints** (mounted at `/api/test-runs/`):
+
+| Route                       | Method | Role         | Transition                                                   |
+| --------------------------- | ------ | ------------ | ------------------------------------------------------------ |
+| `/api/test-runs/:id/start`  | PATCH  | any authed   | queued → running (stamps `startedAt`)                        |
+| `/api/test-runs/:id/result` | PATCH  | any authed   | running → passed \| failed \| blocked (stamps `completedAt`) |
+| `/api/test-runs/:id/abort`  | PATCH  | Admin / Lead | running → aborted (stamps `completedAt`)                     |
+
+`abort` is RBAC-gated to Admin/Lead — pulling the stop-cord on someone else's run is a supervisory action.
+
+**Per-transition pipeline (in `TestRunsService.transition()`):**
+
+1. Load existing run via `prisma.testRun.findUnique`; 404 if missing
+2. State-machine guard: throws `ConflictException` if `toStatus` not in `ALLOWED_TRANSITIONS[fromStatus]`
+3. Update `test_runs.status` + conditionally stamp `started_at` / `completed_at`
+4. **Audit BEFORE WS emit** (Hard Rule 7): `audit.write({ entityType: 'test_run', action: 'transition:<from>-><to>', payload: { from_status, to_status, transitioned_at, started_at, completed_at }})`. Audit failure throws — run state already updated but WS emit is **gated** behind audit success
+5. **Best-effort WS emit**: `gateway.emitTestRunProgress(runId, { status })` — if it throws, log + swallow (audit + state are already canonical; FE recovers via fetch)
+
+**Files changed:**
+
+- `apps/api/src/test-runs/test-runs.service.ts` (NEW, ~200 LOC) — state machine + transitions
+- `apps/api/src/test-runs/test-runs.controller.ts` (NEW, ~120 LOC) — 3 PATCH endpoints, ZodValidationPipe on body, ParseUUIDPipe on id
+- `apps/api/src/test-runs/test-runs.module.ts` (NEW) — wires PrismaModule + AuditModule + AuthModule + RealtimeModule
+- `apps/api/src/test-runs/__tests__/test-runs.service.spec.ts` (NEW, **17 tests**)
+- `apps/api/src/app.module.ts` — `+ TestRunsModule` import
+
+**Tests (17, beats brief's 8 minimum):**
+
+State machine (10):
+
+- `start` queued → running succeeds, stamps `startedAt`, returns updated row
+- `start` re-running (running → running) throws ConflictException
+- `start` from terminal `passed` throws ConflictException
+- `report` running → passed stamps `completedAt`
+- `report` running → failed
+- `report` running → blocked
+- `report` from queued throws (must transition through running first)
+- `abort` running → aborted stamps `completedAt`
+- `abort` from queued throws
+- missing runId → NotFoundException; no audit/WS side-effects
+
+Audit + WS contracts (4):
+
+- `audit.write` called with `entityType=test_run`, `action='transition:running->passed'`, full payload shape
+- `gateway.emitTestRunProgress(runId, { status })` called with right args
+- **WS emit failure is SWALLOWED** (audit + state canonical; missing frame recoverable)
+- **audit.write failure PROPAGATES** + WS emit is NOT fired (ordering invariant)
+
+Static helper (3):
+
+- `allowedTransitionsFrom('queued')` → `['running']`
+- `allowedTransitionsFrom('running')` → set `{passed, failed, blocked, aborted}`
+- All terminal states have empty outbound sets
+
+**Spec-mock pattern:** uses `jest.mock` at module boundary for `RealtimeGateway` + `AuthService` + `PrismaService` + `AuditService` to keep the better-auth ESM chain out of jest's CJS transformer (same pattern as Day-17 #138 + Day-18 #148).
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **530/530 jest** (513 baseline + 17 new) · lint clean ✓ · CHANGELOG ✓.
+
+**Prod-boot smoke (manual `(bj)` gate) ✓:**
+
+```
+[Nest] LOG [RoutesResolver] TestRunsController {/api/test-runs}:
+[Nest] LOG [RouterExplorer] Mapped {/api/test-runs/:id/start, PATCH} route
+[Nest] LOG [RouterExplorer] Mapped {/api/test-runs/:id/result, PATCH} route
+[Nest] LOG [RouterExplorer] Mapped {/api/test-runs/:id/abort, PATCH} route
+```
+
+Controller wired into AppModule, all 3 routes registered. Sister `/health` + WS routes (P2 #148) intact.
+
+**R2 presigned upload/download endpoints — already shipped:** the brief mentioned EP-013 (`POST /storage/presigned-upload`) + EP-014 (`POST /storage/presigned-download`). Both ALREADY exist at `apps/api/src/storage/storage.controller.ts` from MS0-T013 + ADR-005 — issuing presigned URLs with HMAC audit on the upload side. **No new BE code required for the R2 endpoints today.** R2 CORS `AllowedHeaders: "content-type"` (NOT `"*"`) is a Cloudflare-dashboard setting; flagged in followup queue for Day-19 R2-bucket config audit.
+
+**Hard Rules check:**
+
+- Rule 1 (cost): no new infra
+- Rule 5 (ban list): no banned deps; WS emit reuses single-instance per-process Map from #148
+- Rule 6 (secrets): no env changes
+- **Rule 7 (audit log):** every state transition writes a chained audit row BEFORE the WS emit; audit failure aborts the transition for the FE caller
+- Rule 9 (TS strict): no `any` types; Prisma client types power state-machine signatures
+- Rule 10 (Zod schemas in shared): controller uses inline Zod for `ReportRunResultSchema` since the M4 `TestExecutionUpdateInput` shape in `@qa-nexus/shared` is for per-execution updates (different surface — that's the runner's, not the run-level state flip). Tiny scope-specific schema lives at the controller boundary as M4 hardening; M5 retro can promote to shared if reused
+
+**HOLD merge** per Day-18 brief — gated on M4 close cascade. Depends on PR #148 (WebSocket gateway) which is also HOLD.
+
+**Acceptance gate (post-merge):**
+
+1. Render auto-redeploys (~2 min)
+2. `PATCH /api/test-runs/:id/start` on a queued run with valid session → 200 with `{ id, status: 'running', startedAt }`
+3. Replay same PATCH → 409 Conflict
+4. `PATCH /api/test-runs/:id/result` body `{ status: 'passed' }` → 200, stamps `completedAt`
+5. New audit_log row visible at `/api/audit?entityType=test_run&entityId=<id>` with `action=transition:running->passed`
+6. F19 Run Console FE (subscribed to `test_run.progress.<runId>`) receives `{ event: 'test_run.progress', data: { status: 'passed' } }` frame
+
+**Day-19 follow-ups (NOT in this PR):**
+
+- ProjectScopedRolesGuard on routes (per-runId → project membership check) — currently service-layer relies on global RBAC; tighten Day-19 alongside A4 RCA
+- Failed → Defected path: defect creation from failed test run + auto-link via `defect.triggered_by_run_id`
+- Per-case `test_run_results` writes from the runner itself (the run-level status flip is THIS PR's surface only)
+
+---
+
 ### Added — Day 18 — WebSocket gateway channel subscribe/unsubscribe + emit fanout (M4 TASK 2 P2)
 
 **M4 Day-18 PM TASK 2 complete.** Extends the M0-T026 `RealtimeGateway` scaffold (echo handler + BetterAuth session-cookie handshake on `/realtime` path) with the M4 channel-pub/sub surface F19 Run Console + A4 RCA + AgentRun handlers will use to push live updates to subscribed clients.

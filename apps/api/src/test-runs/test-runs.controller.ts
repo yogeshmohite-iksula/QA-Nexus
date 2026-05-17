@@ -1,60 +1,132 @@
-// QA Nexus PM1 — TestRunsController (M4 STUB — Day-19 P0 #2 wiring).
+// QA Nexus PM1 — TestRunsController (M4 P3 / Day-18 #149).
 //
-// 501 stub per Day-19 brief — AppModule surface exists so FE+1 + Yogesh
-// can hit endpoints (they'll return Not Implemented with the
-// `x-m4-stub: true` header for visibility) before the full state-machine
-// + audit + WS-emit implementation lands at M4 close cascade via PR #149.
+// Spec: PM1_ERD §3.10 state machine + M4 Day-18 PM TASK 3.
 //
-// State machine (PM1_ERD §3.10) — full impl in PR #149 (HOLD):
-//   queued → running → passed | failed | blocked | aborted
-//
-// Routes (subject to PR #149 replacement; route paths must match for the
-// rebase to drop in cleanly):
-//   PATCH /api/test-runs/:id/start    queued → running
-//   PATCH /api/test-runs/:id/result   running → passed | failed | blocked
+// Routes (all PATCH; no creates/lists in this skeleton — those are
+// the runner's responsibility in Day-19+):
+//   PATCH /api/test-runs/:id/start    queued → running   (any authed)
+//   PATCH /api/test-runs/:id/result   running → passed|failed|blocked
+//                                                       (any authed)
 //   PATCH /api/test-runs/:id/abort    running → aborted (Admin / Lead)
+//
+// Why those role gates:
+//   - start + result: any QA Engineer running the suite can drive
+//     state transitions for their own runs.
+//   - abort: pulling the stop-cord on someone else's run is a
+//     supervisory action. RBAC keeps it to Admin / Lead.
+//
+// Stretch-goal: project-scoped guard (ProjectScopedRolesGuard) wraps
+// the runId-→ project membership check. NOT applied here yet —
+// would need a request-time runId-→project_id lookup, which adds
+// latency to every PATCH. Day-19 will fold in the project membership
+// check inside the service layer (defence-in-depth) once the runner
+// is exercising real per-project data.
+//
+// Pattern A note: this controller is post-onboarding only. Onboarding
+// wizard never hits these endpoints.
 
 import {
+  Body,
   Controller,
-  HttpException,
-  HttpStatus,
+  HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
-  Res,
+  Req,
+  UseGuards,
+  UsePipes,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request } from 'express';
+import { z } from 'zod';
+import { Role } from '@qa-nexus/shared';
+import { Roles } from '../auth/rbac/roles.decorator';
+import { RolesGuard } from '../auth/rbac/roles.guard';
+import { AuthService } from '../auth/auth.service';
+import { ZodValidationPipe } from '../storage/zod-validation.pipe';
+import { TestRunsService, type TestRunActor } from './test-runs.service';
+
+/// PATCH /api/test-runs/:id/result body.
+/// Note: 'aborted' is NOT in this enum — abort has its own endpoint.
+/// 'queued' / 'running' are also rejected — those are not terminal results.
+const ReportRunResultSchema = z.object({
+  status: z.enum(['passed', 'failed', 'blocked']),
+});
+type ReportRunResult = z.infer<typeof ReportRunResultSchema>;
 
 @Controller('api/test-runs')
+@UseGuards(RolesGuard)
 export class TestRunsController {
+  constructor(
+    private readonly testRuns: TestRunsService,
+    private readonly auth: AuthService,
+  ) {}
+
+  /** PATCH /api/test-runs/:id/start — queued → running. */
   @Patch(':id/start')
-  start(@Param('id') _id: string, @Res() res: Response): void {
-    this.stub(res);
+  @HttpCode(200)
+  async start(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: Request,
+  ) {
+    const actor = await this.requireActor(req);
+    const run = await this.testRuns.start(id, actor);
+    return { id: run.id, status: run.status, startedAt: run.startedAt };
   }
 
+  /** PATCH /api/test-runs/:id/result — running → passed|failed|blocked. */
   @Patch(':id/result')
-  report(@Param('id') _id: string, @Res() res: Response): void {
-    this.stub(res);
+  @HttpCode(200)
+  @UsePipes(new ZodValidationPipe(ReportRunResultSchema))
+  async report(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: ReportRunResult,
+    @Req() req: Request,
+  ) {
+    const actor = await this.requireActor(req);
+    const run = await this.testRuns.report(id, body, actor);
+    return {
+      id: run.id,
+      status: run.status,
+      startedAt: run.startedAt,
+      completedAt: run.completedAt,
+    };
   }
 
+  /** PATCH /api/test-runs/:id/abort — running → aborted. Admin / Lead. */
   @Patch(':id/abort')
-  abort(@Param('id') _id: string, @Res() res: Response): void {
-    this.stub(res);
+  @Roles(Role.Admin, Role.Lead)
+  @HttpCode(200)
+  async abort(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: Request,
+  ) {
+    const actor = await this.requireActor(req);
+    const run = await this.testRuns.abort(id, actor);
+    return {
+      id: run.id,
+      status: run.status,
+      startedAt: run.startedAt,
+      completedAt: run.completedAt,
+    };
   }
 
-  private stub(res: Response): void {
-    res
-      .status(HttpStatus.NOT_IMPLEMENTED)
-      .header('x-m4-stub', 'true')
-      .json({
-        error: 'NotImplemented',
-        message:
-          'TestRuns endpoints are M4 stubs (Day-19 P0 #2 AppModule wiring). ' +
-          'Full state-machine + audit + WS-emit lands at M4 close cascade via PR #149.',
-        m4Stub: true,
-        landingPr: 149,
-      });
-    // Throwing keeps the controller signature aligned with the eventual
-    // PR #149 impl's promise return; resolve via response object only.
-    void HttpException;
+  /** Build a TestRunActor from the BetterAuth session. RolesGuard already
+   *  passed (so a session exists) — this just unpacks it into the service-
+   *  facing shape. Mirrors the pattern used by StorageController. */
+  private async requireActor(req: Request): Promise<TestRunActor> {
+    const headers = new Headers();
+    for (const [k, v] of Object.entries(req.headers)) {
+      if (Array.isArray(v)) v.forEach((vv) => headers.append(k, vv));
+      else if (v) headers.append(k, v);
+    }
+    const session = await this.auth.resolveSession(headers);
+    if (!session) {
+      // Defence-in-depth — RolesGuard should have rejected first.
+      throw new Error('session vanished between RolesGuard and handler');
+    }
+    return {
+      appUserId: session.appUser.id,
+      workspaceId: session.appUser.workspaceId,
+    };
   }
 }
