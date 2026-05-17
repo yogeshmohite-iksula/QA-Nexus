@@ -307,6 +307,78 @@ Parallel mirror committed to `~/Claude Cowork Workspace /AI Based QA Platform/m4
 
 The v1.0 Apr 25 doc is fully superseded — only its v2.1 amendment block (lines 3-16) was binding and that's already locked in CLAUDE.md.
 
+### Added — Day 18 — WebSocket gateway channel subscribe/unsubscribe + emit fanout (M4 TASK 2 P2)
+
+**M4 Day-18 PM TASK 2 complete.** Extends the M0-T026 `RealtimeGateway` scaffold (echo handler + BetterAuth session-cookie handshake on `/realtime` path) with the M4 channel-pub/sub surface F19 Run Console + A4 RCA + AgentRun handlers will use to push live updates to subscribed clients.
+
+**Hard Rule 5 single-instance discipline preserved:** Per-process `Map<channelKey, Set<ConnectedClient>>` for the channel registry. **NO Redis pub/sub**, NO socket.io. Single NestJS dyno, single WS process — pilot scale (8 users × 12 hr/day) fits comfortably.
+
+**Path note:** brief specified `path: '/ws'` but the existing M0-T026 gateway is mounted at `path: '/realtime'`. Preserved `/realtime` to avoid breaking pre-existing FE wiring + the echo sanity test. Functionally identical; path is cosmetic. ADR sidecar if Yogesh wants to rename in M5.
+
+**New channel pattern:**
+
+- `test_run.progress.<runId>` — F19 live updates, the only auth-gated subscriber today. Channel name regex-validated against UUID format. On subscribe, gateway queries `prisma.testRun.findFirst({ where: { id: runId, project: { members: { some: { userId } } } } })` — single round-trip; returns null when the user lacks project membership → `WsException('forbidden: run <id> not accessible')`. Defence-in-depth: DB-level RLS would also reject the query, but rejecting at the WS layer surfaces the error to the client cleanly.
+- Future `defect.<defectId>` + `agent_run.<agentRunId>` channels — emit-method skeletons added; subscribe-side auth dispatch lands in Day-19 follow-up alongside A4 RCA + AgentRun wiring.
+
+**New `@SubscribeMessage` handlers:**
+
+- `subscribe` → ack `{ event: 'subscribe:ack', data: { channel, ts } }`. Idempotent (Set semantics).
+- `unsubscribe` → ack `{ event: 'unsubscribe:ack', data: { channel, ts } }`. No auth check beyond connected — symmetric.
+
+**New public emit methods (called from TestRunService / A4 RCA / AgentRun handlers):**
+
+- `emitTestRunProgress(runId, payload)` → `event: 'test_run.progress'`. Returns count of clients receiving the frame.
+- `emitDefectRcaReady(defectId, payload)` → `event: 'defect.rca_ready'`. Skeleton; subscribers wire-up Day-19.
+- `emitAgentRunComplete(agentRunId, payload)` → `event: 'agent_run.complete'`. Skeleton; subscribers wire-up Day-19.
+- Internal `emitToChannel(channel, event, payload)` does the fan-out: skips clients whose `readyState !== 1` (defensive — `handleDisconnect` cleans up but races exist), JSON-serializes once, sends to each.
+
+**Disconnect cleanup:** `handleDisconnect` now iterates `client.qaNexusChannels` to remove the client from each channel's bucket; garbage-collects empty channel entries to keep the registry bounded.
+
+**Files changed:**
+
+- `apps/api/src/realtime/realtime.gateway.ts` — extended (172 → ~365 LOC). All M0-T026 wiring (handshake auth, echo, header building, IP extraction) preserved verbatim.
+- `apps/api/src/realtime/realtime.module.ts` — imports `PrismaModule` (gateway needs `prisma.testRun.findFirst` for subscribe auth); exports `RealtimeGateway` so TestRunService / A4 RCA / AgentRun can inject + call emit\*().
+- `apps/api/src/realtime/__tests__/realtime.gateway.spec.ts` (NEW, 10 tests):
+  1. `handleConnection` close 4401 when session null
+  2. `handleConnection` attaches qaNexus on success
+  3. `subscribe` ack-resolves when user has project access
+  4. `subscribe` REJECTS (WsException) when Prisma returns null
+  5. `subscribe` REJECTS on unsupported channel pattern (no DB call)
+  6. `subscribe` REJECTS on malformed payload
+  7. `emitTestRunProgress` sends ONLY to subscribed clients
+  8. `emitTestRunProgress` SKIPS clients whose readyState != 1 (OPEN)
+  9. `emitTestRunProgress` no-op (returns 0) when no subscribers
+  10. `handleDisconnect` clears all channel-bucket entries
+
+**Spec-mock pattern:** uses `jest.mock('../../auth/auth.service')` + `jest.mock('../../prisma/prisma.service')` at the module boundary so the `better-auth` ESM chain (auth.config.ts → better-auth) never evaluates inside the CJS jest transformer. Same workaround as Day-17 #138 + #139 better-auth-core-ip.spec.ts pattern.
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **513/513 jest** (503 baseline + 10 new realtime) · lint clean ✓ · CHANGELOG ✓.
+
+**Prod-boot smoke (manual `(bj)` gate) ✓:** boot log shows `RealtimeGateway subscribed to the "echo" message`, `"subscribe" message`, `"unsubscribe" message` — all three handlers registered. `/health` LIGHT + `/health/deep` both intact (#147 regression-pin holds).
+
+**Hard Rules check:**
+
+- Rule 1 (cost): no new infra. WS multiplexes onto the existing dyno's port.
+- **Rule 5 (ban list):** **NO Redis / Valkey / ioredis pub/sub.** Per-process Map only. Confirmed by grep on the gateway file.
+- Rule 6 (secrets): no env changes.
+- Rule 7 (audit log): subscribe/emit events are NOT individually audit-logged today (they're high-volume); gateway logs structured INFO lines per subscribe + per disconnect. Per-channel emit-count traceable via `emitTestRunProgress` return value if a future caller needs it.
+- Rule 11 (escalate): brief watchpoints all confirmed handled — cookie parsing on WS upgrade was already solved by M0-T026's `buildHeadersFromRequest`; no subprotocol negotiation needed; BetterAuth `getSession()` over WS context works via the same Headers object Express middleware passes.
+
+**Acceptance gate (post-merge, gated on M4 close cascade):**
+
+1. Render auto-redeploys
+2. WS handshake against `wss://qa-nexus-api.onrender.com/realtime` with valid session cookie → connection accepted
+3. Send `{ event: 'subscribe', data: { channel: 'test_run.progress.<real-runId>' } }` from authed FE → ack received
+4. Send same with a runId the user lacks access to → WsException close
+5. P3 (TestRun service) wires `emitTestRunProgress(...)` into state-transition handlers — F19 Run Console FE polls subscribe + receives live frames
+
+**Followups noted (NOT blockers for this PR):**
+
+- `defect.<defectId>` + `agent_run.<agentRunId>` channel subscribe-side auth dispatch (Day-19 alongside A4 RCA + AgentRun)
+- WS path rename `/realtime` → `/ws` if Yogesh wants brief-spec exact match (cosmetic; ADR sidecar)
+
+---
+
 ### Changed — Day 18 — `/health` decoupled from DB query (Neon free-tier compute optimization, PR #147 P1)
 
 **P1 cost-gate hold.** Project Neon usage was at **80.81/100 CU-hrs (May 14)** with the burn rate (~5.77 CU-hrs/day) projecting to hit the 100 CU-hr free-tier cap on **May 17** — well before the May-31 reset. Root cause: UptimeRobot 5-min keep-alive pings on `/health` triggered the full subsystem readout including `SELECT 1` against Postgres + `pg_database_size` quota query → kept Neon's compute warm during 9PM-9AM idle hours when no real user traffic. Hard Rule 1 ($0/mo) at risk.
