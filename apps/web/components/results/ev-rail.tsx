@@ -45,8 +45,21 @@ export function EvRail() {
         >
           {F20_EV_HEAD.title}
         </h2>
-        <span className="text-[10.5px]" style={{ color: 'var(--t4)' }}>
-          {F20_EV_HEAD.selectedLabel}
+        {/* Day-20 R2 visual gate fix: "Selected · TC-RET-0342" — case ID
+         * styled as violet chip per canonical (matches sel-id pattern). */}
+        <span className="inline-flex items-center gap-1.5 text-[10.5px]">
+          <span style={{ color: 'var(--t4)' }}>Selected</span>
+          <span style={{ color: 'var(--t4)' }}>·</span>
+          <span
+            className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.04em]"
+            style={{
+              background: 'var(--ai-soft)',
+              borderColor: 'var(--ai-line)',
+              color: 'var(--ai-accent)',
+            }}
+          >
+            TC-RET-0342
+          </span>
         </span>
         <button
           type="button"

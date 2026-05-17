@@ -177,6 +177,37 @@ export const F20_SHERLOCK_HEADLINE: NarrativeSegment[] = [
   { kind: 'text', value: ' pointing to the same upstream issue.' },
 ];
 
+// Day-20 Round-2 visual gate fix — canonical L750 sb-conf-row was missing
+// from Day-20 R1 port. "Per-cluster confidence" label + 3 sb-conf-pill
+// chips (high=pass/green, med=warn/amber, low=fail/red per L329-331).
+export const F20_SHERLOCK_CONF_ROW = {
+  label: 'Per-cluster confidence',
+  pills: [
+    { tone: 'high' as const, text: 'Cluster 1 · 87%' },
+    { tone: 'med' as const, text: 'Cluster 2 · 91% env' },
+    { tone: 'low' as const, text: 'Cluster 3 · 40–75% mixed' },
+  ],
+};
+
+// Day-20 Round-2 visual gate fix — canonical L754 sb-actions block was
+// missing entirely from Day-20 R1 port. Two buttons: violet primary +
+// ghost violet secondary (per L334-344 CSS).
+export const F20_SHERLOCK_ACTIONS = [
+  {
+    label: 'Create defects from clusters',
+    count: 3,
+    variant: 'violet' as const,
+    icon: 'plus' as const,
+    ariaLabel: 'Create defects from clusters',
+  },
+  {
+    label: 'Run Sherlock again',
+    count: 0,
+    variant: 'ghost-violet' as const,
+    icon: 'refresh' as const,
+  },
+];
+
 // -----------------------------------------------------------------------------
 // Clusters — canonical L771-913
 // -----------------------------------------------------------------------------
