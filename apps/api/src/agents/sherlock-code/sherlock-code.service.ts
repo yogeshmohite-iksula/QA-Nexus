@@ -134,7 +134,10 @@ export class SherlockCodeService {
       );
       span.setAttribute('hypotheses_count', hypotheses.length);
       span.end();
-      return hypotheses;
+      // Re-tag agent='code' regardless of what LLM returned. Symmetric with
+      // data/env/flake siblings; defends against LLM omitting the field or
+      // mis-tagging cross-agent (e.g. data-agent prompt drift returning 'code').
+      return hypotheses.map((h) => ({ ...h, agent: 'code' as const }));
     });
   }
 
