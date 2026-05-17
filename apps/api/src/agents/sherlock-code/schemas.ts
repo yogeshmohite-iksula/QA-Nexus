@@ -41,12 +41,19 @@ export const SHERLOCK_CATEGORIES = [
   'other',
 ] as const;
 
+/** Day-20 P1 widening — agent enum now spans all 4 Sherlock agents so
+ *  the orchestrator's mergeHypotheses() can type all sibling outputs
+ *  uniformly. Code-agent still re-tags its output with agent='code' via
+ *  .map() before returning so #161 spec assertions continue to hold. */
+export const SHERLOCK_AGENTS = ['code', 'data', 'env', 'flake'] as const;
+export type SherlockAgent = (typeof SHERLOCK_AGENTS)[number];
+
 export const SherlockHypothesisSchema = z.object({
   category: z.enum(SHERLOCK_CATEGORIES),
   hypothesis: z.string().min(10).max(2_000),
   confidence: z.number().min(0).max(1),
   evidence: z.array(z.string()).max(10),
-  agent: z.literal('code'),
+  agent: z.enum(SHERLOCK_AGENTS),
 });
 export type SherlockHypothesis = z.infer<typeof SherlockHypothesisSchema>;
 

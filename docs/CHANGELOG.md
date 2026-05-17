@@ -100,6 +100,52 @@ PR #158 force-pushed with the v2 + v2.1 amendments landing alongside the origina
 
 ---
 
+### Added — Day 20 — Sherlock RCA orchestrator + 3 sibling agents + DefectsController.rca [M4 TASK A4-A8]
+
+**P1 per Day-20 plan + ADR-019.** Completes the Sherlock RCA fan-out architecture begun by PR #161 (agent #1 code). Wires the orchestrator + 3 sibling agents (data on gpt-oss-120b for long-context; env + flake on gpt-oss-20b for fast classification) + functional `POST /api/defects/:id/rca` endpoint.
+
+**Files (10 new + 4 modified, ~1100 LOC + 19 net-new tests):**
+
+- **NEW** `apps/api/src/agents/sherlock-orchestrator/sherlock-orchestrator.service.ts` — `runRca(input)` Promise.all fan-out + 30s per-agent timeout + deterministic dedupe-by-(category, hypothesis-prefix-100) merge + 2-of-4 tolerance per ADR-019 §6. Returns `{ runId, status, okAgentCount, hypotheses }` synchronously.
+- **NEW** `apps/api/src/agents/sherlock-orchestrator/sherlock-orchestrator.module.ts` — wires all 4 agent services.
+- **NEW** `apps/api/src/agents/sherlock-data/sherlock-data.service.ts` — gpt-oss-120b · long-context for data-rooted defects (fixture drift, NULL fields, schema mismatch). Re-tags agent='data' on output.
+- **NEW** `apps/api/src/agents/sherlock-env/sherlock-env.service.ts` — gpt-oss-20b · fast env-config classification.
+- **NEW** `apps/api/src/agents/sherlock-flake/sherlock-flake.service.ts` — gpt-oss-20b · retry-pattern flake detection.
+- **NEW** `apps/api/src/agents/sherlock-orchestrator/__tests__/sherlock-orchestrator.service.spec.ts` — 9 tests (runId/status/okAgentCount return shape + invalid-input + deterministic merge × 4 + 2-of-4 tolerance × 4 including agent contract-violation defense).
+- **NEW** `apps/api/src/agents/sherlock-data/__tests__/sherlock-data.service.spec.ts` — 5 tests representative for siblings (happy path + gpt-oss-120b model assertion + retry exhaustion + malformed JSON + invalid input).
+- **MODIFIED** `apps/api/src/agents/sherlock-code/schemas.ts` — widened `agent: z.literal('code')` → `z.enum(['code','data','env','flake'])`. Added `SHERLOCK_AGENTS` export. Sibling agents reuse this schema for input + hypothesis output.
+- **MODIFIED** `apps/api/src/agents/sherlock-code/sherlock-code.service.ts` — re-tags output to `agent='code'` defensively (symmetric with siblings; defends against LLM prompt-drift mis-tagging).
+- **MODIFIED** `apps/api/src/defects/defects.controller.ts` — `POST :id/rca` becomes FUNCTIONAL: UUID validation → Zod body validation → orchestrator call → 200 + `{ defectId, runId, status, okAgentCount, hypotheses }` inline. Other 4 endpoints stay 501 stubs (DefectsService CRUD lands Day-21+).
+- **MODIFIED** `apps/api/src/defects/defects.module.ts` — imports `SherlockOrchestratorModule`.
+- **MODIFIED** `apps/api/src/defects/__tests__/defects.controller.spec.ts` — extends with 4 new tests for POST :id/rca (happy + invalid UUID + Zod body fail + degraded status propagation).
+- **MODIFIED** `apps/api/src/app.module.ts` — updated DefectsModule comment to reflect Day-20 partial-functional state.
+
+**Critical contract (binding):**
+
+- `runRca()` NEVER throws — all 4 agent services already never-throw by contract (ADR-019 §6). Timeouts collapse to empty arrays. Worst case: all 4 timeout → `{ status: 'degraded', hypotheses: [] }`.
+- Deterministic merge: dedupe by (category, hypothesis-prefix-100) keeping higher-confidence; sort by confidence DESC then category ASC; cap at MAX_HYPOTHESES=10.
+- Sibling agents inherit input schema from sherlock-code/schemas.ts (single source of truth). Each re-tags `agent` field on output to its own literal.
+
+**Scope cuts deferred to Day-21 (followup `(da)`):**
+
+- **NO DB persistence** — existing `RcaReport` prisma model (TB-016 from #144) uses pre-ADR-019 5-layer JSON design (`layer1StackJson..layer5DataJson` + per-layer confidences + `topHypothesis` + `createdByAgentRunId`). Flat hypothesis array doesn't map cleanly. Day-21 picks adapter strategy (5-layer mapping vs migration to flat array).
+- **NO async 202+WS** — orchestrator returns synchronously; controller returns inline. p95 latency expected <5s; Day-21 flips to 202+`{runId}` + background fan-out + WS emit if real ops show >5s. Requires `RealtimeGateway.emit()` public method (Day-21 addition).
+- **NO audit writes** — `defects.rca_kicked_off` + `defects.rca_completed` rows deferred to Day-21 (DefectsService CRUD landing).
+
+**Pre-push gates 5/5 ✓:** prettier ✓ · typecheck ✓ · **543/543 jest** (524 baseline on `feat/be-sherlock-code-agent` + 14 net-new orchestrator/sibling specs + 5 new functional defects-controller tests; some pre-existing stub-contract reused) · lint clean ✓ · CHANGELOG ✓.
+
+**Cost-gate:** zero new infra. ~40 LLM invocations/day at pilot scale (~10 defects × 4 agents) — 4% of Groq gpt-oss-120b RPD (1k/day) + <1% of gpt-oss-20b RPD (14.4k/day). **Neon CU-hr untouched** during the test run (orchestrator is pure-function this PR). $0/mo holds.
+
+**Branch dependency:** This PR is chained onto `feat/be-sherlock-code-agent` (PR #161). Cascade merge order: #161 → this PR. Once #161 lands on main, GitHub auto-retargets this PR's base to main (or BE+1 rebases on request).
+
+**Hard Rules check:** Rule 1 (no infra) · Rule 5 (no banned dep) · Rule 7 (audit deferred per scope-cut — followup `(da)` tracks) · Rule 9 (no `any`) · Rule 11 (scope cuts called out explicitly + followup filed — no scope creep into Day-20 timebox).
+
+**M4 close cascade:** ships as part of M4 close (Sun May 17). Joins #148 (WebSocket) + #149 (TestRun) + #161 (Sherlock #1) + #162 (Jira webhook) on the cascade.
+
+**Cross-references:** ADR-019 (Sherlock prompt strategy) · `.claude/scratch/sherlock-agent-1-design.md` (Day-19 design scratch) · `.claude/scratch/sherlock-orchestrator-impl/` (Day-19 P3 pre-draft — files promoted in this PR) · followup `(da)` (Day-21 hardening note for 5-layer persistence + async/WS) · PR #161 (chain parent) · PR #157 (DefectsController stub origin).
+
+---
+
 ### Added — Day 19 — Sherlock RCA agent #1 (`agent.code` on gpt-oss-120b) [M4 TASK A4]
 
 **P1 per Day-19 plan + ADR-019.** First of four parallel Sherlock RCA agents (code/data/env/flake) the Day-20 `SherlockOrchestratorService` will fan out via `Promise.all`. This PR ships agent #1 only — pure-function, fully unit-tested, NOT yet wired into AppModule (that flip lands Day-20 alongside the orchestrator + 3 sibling agents in a single AppModule-surface PR).

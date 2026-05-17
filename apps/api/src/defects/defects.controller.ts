@@ -1,14 +1,18 @@
-// QA Nexus PM1 — DefectsController (M4 STUB — Day-19 P0 #2 wiring).
+// QA Nexus PM1 — DefectsController.
 //
-// 501 stub per Day-19 brief. Full defect-lifecycle endpoints land
-// Day-20+ alongside the A4 RCA service (defect.rca_ready event chain).
+// Day-19 P0 #2 (PR #157): all 5 endpoints scaffolded as 501 stubs.
+// Day-20 P1 (this PR): POST /api/defects/:id/rca becomes FUNCTIONAL —
+//   calls SherlockOrchestratorService.runRca() synchronously and returns
+//   { runId, status, hypotheses } inline. Other 4 endpoints stay stubs.
 //
-// Routes (per PM1_ERD §6 EP-011..EP-015):
-//   POST   /api/defects                  create
-//   GET    /api/defects/:id              detail (incl. RCA)
-//   GET    /api/defects/:id/rca          fetch + (re)compute RCA
-//   POST   /api/defects/:id/jira         push to Jira (delegates to JiraSync)
-//   PATCH  /api/defects/:id/status       status change (state machine)
+// Day-21+: GET /api/defects/:id/rca becomes functional once 5-layer
+// RcaReport persistence lands (followup `(da)`); POST/GET/PATCH on the
+// defect itself land alongside DefectsService CRUD.
+//
+// Request body shape for POST :id/rca (Day-20):
+//   { stackTrace: string, failureMessage: string, component: string | null }
+// The defect identity comes from path param :id. Day-21 will switch to
+// DB lookup once DefectsService.findByIdOrThrow lands.
 
 import {
   Body,
@@ -21,9 +25,21 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { z } from 'zod';
+import { SherlockOrchestratorService } from '../agents/sherlock-orchestrator/sherlock-orchestrator.service';
+
+/** Request body for POST /api/defects/:id/rca. Failure context the
+ *  orchestrator's 4 agents need to do their analysis. */
+const RcaKickoffBodySchema = z.object({
+  stackTrace: z.string().min(1).max(50_000),
+  failureMessage: z.string().min(1).max(10_000),
+  component: z.string().min(1).max(120).nullable(),
+});
 
 @Controller('api/defects')
 export class DefectsController {
+  constructor(private readonly sherlock: SherlockOrchestratorService) {}
+
   @Post()
   create(@Body() _body: unknown, @Res() res: Response): void {
     this.stub(res, 'create defect');
@@ -34,9 +50,65 @@ export class DefectsController {
     this.stub(res, 'get defect detail');
   }
 
+  /**
+   * POST /api/defects/:id/rca — kick off Sherlock RCA fan-out.
+   *
+   * Day-20 contract: synchronous fan-out (all 4 agents in parallel via
+   * Promise.all + 30s timeout each). Returns the merged hypotheses
+   * inline. p95 latency expected <5s in pilot ops; Day-21 may flip to
+   * async 202+poll pattern if real ops show >5s.
+   */
+  @Post(':id/rca')
+  async kickoffRca(
+    @Param('id') defectId: string,
+    @Body() body: unknown,
+    @Res() res: Response,
+  ): Promise<void> {
+    // Validate path param is a UUID — fail fast on shape errors.
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        defectId,
+      )
+    ) {
+      res.status(HttpStatus.BAD_REQUEST).json({
+        error: 'InvalidDefectId',
+        message: 'Defect ID path param must be a UUID.',
+      });
+      return;
+    }
+
+    const parsed = RcaKickoffBodySchema.safeParse(body);
+    if (!parsed.success) {
+      res.status(HttpStatus.BAD_REQUEST).json({
+        error: 'InvalidRequestBody',
+        message: parsed.error.issues
+          .slice(0, 3)
+          .map((i) => `${i.path.join('.')}: ${i.message}`)
+          .join('; '),
+      });
+      return;
+    }
+
+    const result = await this.sherlock.runRca({
+      defectId,
+      stackTrace: parsed.data.stackTrace,
+      failureMessage: parsed.data.failureMessage,
+      component: parsed.data.component,
+      recentCommits: [],
+    });
+
+    res.status(HttpStatus.OK).json({
+      defectId,
+      runId: result.runId,
+      status: result.status,
+      okAgentCount: result.okAgentCount,
+      hypotheses: result.hypotheses,
+    });
+  }
+
   @Get(':id/rca')
   rca(@Param('id') _id: string, @Res() res: Response): void {
-    this.stub(res, 'fetch defect RCA');
+    this.stub(res, 'fetch defect RCA (GET — Day-21 once DB persistence lands)');
   }
 
   @Post(':id/jira')
@@ -63,9 +135,7 @@ export class DefectsController {
       .header('x-m4-stub', 'true')
       .json({
         error: 'NotImplemented',
-        message:
-          `Defects endpoint stub (Day-19 P0 #2 AppModule wiring). ` +
-          `Operation "${op}" lands Day-20+ alongside A4 RCA service.`,
+        message: `Defects endpoint stub. Operation "${op}" lands Day-20+ alongside DefectsService CRUD.`,
         m4Stub: true,
         op,
       });
