@@ -1,0 +1,403 @@
+{
+  "frame": "F20",
+  "sourceHtml": "/Users/yogeshmohite/AI_Tester_Project/Project10-QA_Nexus/QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F20 Run Results v2.html",
+  "extractedAt": "2026-05-17T09:30:35.479Z",
+  "schemaVersion": 2,
+  "generator": ".claude/skills/frame-port/extract-spec.mjs",
+  "sections": [
+    {
+      "tag": "div",
+      "id": "app",
+      "classes": ["app"],
+      "aria_signal": {
+        "role": null,
+        "aria_label": null,
+        "classes": ["app"],
+        "data_canonical_section": null
+      },
+      "sectionLike": false,
+      "children": [
+        {
+          "tag": "header",
+          "role": "banner",
+          "classes": ["topbar"],
+          "aria_signal": {
+            "role": "banner",
+            "aria_label": null,
+            "classes": ["topbar"],
+            "data_canonical_section": null
+          },
+          "sectionLike": true,
+          "children": [
+            {
+              "tag": "div",
+              "role": "tablist",
+              "classes": ["mode-toggle"],
+              "aria_signal": {
+                "role": "tablist",
+                "aria_label": null,
+                "classes": ["mode-toggle"],
+                "data_canonical_section": null
+              },
+              "sectionLike": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "aside",
+          "id": "rail",
+          "classes": ["rail"],
+          "aria_signal": {
+            "role": null,
+            "aria_label": "Primary navigation",
+            "classes": ["rail"],
+            "data_canonical_section": null
+          },
+          "sectionLike": true,
+          "children": [
+            {
+              "tag": "button",
+              "id": "railCollapseToggle",
+              "classes": ["rail-toggle"],
+              "aria_signal": {
+                "role": null,
+                "aria_label": "Collapse navigation",
+                "classes": ["rail-toggle"],
+                "data_canonical_section": null
+              },
+              "sectionLike": true,
+              "children": []
+            },
+            {
+              "tag": "div",
+              "classes": ["rail-content"],
+              "aria_signal": {
+                "role": null,
+                "aria_label": null,
+                "classes": ["rail-content"],
+                "data_canonical_section": null
+              },
+              "sectionLike": true,
+              "children": []
+            },
+            {
+              "tag": "div",
+              "classes": ["rail-foot"],
+              "aria_signal": {
+                "role": null,
+                "aria_label": null,
+                "classes": ["rail-foot"],
+                "data_canonical_section": null
+              },
+              "sectionLike": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "section",
+          "classes": ["main"],
+          "aria_signal": {
+            "role": null,
+            "aria_label": null,
+            "classes": ["main"],
+            "data_canonical_section": null
+          },
+          "sectionLike": true,
+          "children": [
+            {
+              "tag": "div",
+              "classes": ["run-shell"],
+              "aria_signal": {
+                "role": null,
+                "aria_label": null,
+                "classes": ["run-shell"],
+                "data_canonical_section": null
+              },
+              "sectionLike": true,
+              "children": [
+                {
+                  "tag": "div",
+                  "role": "region",
+                  "classes": ["run-summary"],
+                  "aria_signal": {
+                    "role": "region",
+                    "aria_label": "Run summary",
+                    "classes": ["run-summary"],
+                    "data_canonical_section": null
+                  },
+                  "sectionLike": true,
+                  "children": []
+                },
+                {
+                  "tag": "div",
+                  "classes": ["run-body"],
+                  "aria_signal": {
+                    "role": null,
+                    "aria_label": null,
+                    "classes": ["run-body"],
+                    "data_canonical_section": null
+                  },
+                  "sectionLike": false,
+                  "children": [
+                    {
+                      "tag": "div",
+                      "classes": ["center-pane"],
+                      "aria_signal": {
+                        "role": null,
+                        "aria_label": null,
+                        "classes": ["center-pane"],
+                        "data_canonical_section": null
+                      },
+                      "sectionLike": false,
+                      "children": [
+                        {
+                          "tag": "section",
+                          "classes": ["sherlock-block"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": "Sherlock root cause analysis summary",
+                            "classes": ["sherlock-block"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        },
+                        {
+                          "tag": "article",
+                          "classes": ["cluster", "high"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": null,
+                            "classes": ["cluster", "high"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        },
+                        {
+                          "tag": "article",
+                          "classes": ["cluster", "med"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": null,
+                            "classes": ["cluster", "med"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        },
+                        {
+                          "tag": "article",
+                          "classes": ["cluster", "mixed"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": null,
+                            "classes": ["cluster", "mixed"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        },
+                        {
+                          "tag": "section",
+                          "classes": ["results-block"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": "Results table grouped by suite",
+                            "classes": ["results-block"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "tag": "aside",
+                      "classes": ["ev-rail"],
+                      "aria_signal": {
+                        "role": null,
+                        "aria_label": "Evidence and actions",
+                        "classes": ["ev-rail"],
+                        "data_canonical_section": null
+                      },
+                      "sectionLike": true,
+                      "children": [
+                        {
+                          "tag": "header",
+                          "classes": ["ev-head"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": null,
+                            "classes": ["ev-head"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        },
+                        {
+                          "tag": "nav",
+                          "role": "tablist",
+                          "classes": ["ev-tabs"],
+                          "aria_signal": {
+                            "role": "tablist",
+                            "aria_label": "Evidence tabs",
+                            "classes": ["ev-tabs"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        },
+                        {
+                          "tag": "footer",
+                          "classes": ["run-actions"],
+                          "aria_signal": {
+                            "role": null,
+                            "aria_label": null,
+                            "classes": ["run-actions"],
+                            "data_canonical_section": null
+                          },
+                          "sectionLike": true,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "tag": "footer",
+                  "classes": ["action-footer"],
+                  "aria_signal": {
+                    "role": null,
+                    "aria_label": null,
+                    "classes": ["action-footer"],
+                    "data_canonical_section": null
+                  },
+                  "sectionLike": true,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tokens_used": [
+    "--ai-accent",
+    "--ai-line",
+    "--ai-soft",
+    "--base",
+    "--border",
+    "--border-strong",
+    "--canvas",
+    "--fail",
+    "--fail-line",
+    "--fail-soft",
+    "--info",
+    "--info-line",
+    "--info-soft",
+    "--overlay",
+    "--pass",
+    "--pass-line",
+    "--pass-soft",
+    "--primary",
+    "--primary-ink",
+    "--primary-line",
+    "--primary-soft",
+    "--rail-w",
+    "--raised",
+    "--secondary",
+    "--secondary-ink",
+    "--t1",
+    "--t2",
+    "--t3",
+    "--t4",
+    "--tap",
+    "--topbar-h",
+    "--warn",
+    "--warn-line",
+    "--warn-soft"
+  ],
+  "token_definitions": {
+    "--canvas": "#0B0F17",
+    "--base": "#111827",
+    "--raised": "#1A2233",
+    "--overlay": "#232C3F",
+    "--border": "#2A3347",
+    "--border-strong": "#3B4660",
+    "--t1": "#F1F5F9",
+    "--t2": "#C7D0DC",
+    "--t3": "#8A94A6",
+    "--t4": "#94A3B8",
+    "--primary": "#2DD4BF",
+    "--primary-ink": "#003732",
+    "--secondary": "#A78BFA",
+    "--secondary-ink": "#2E1065",
+    "--ai-accent": "#C4B5FD",
+    "--pass": "#34D399",
+    "--fail": "#F87171",
+    "--warn": "#FBBF24",
+    "--info": "#60A5FA",
+    "--primary-soft": "rgba(45,212,191,0.10)",
+    "--primary-line": "rgba(45,212,191,0.28)",
+    "--ai-soft": "rgba(167,139,250,0.12)",
+    "--ai-line": "rgba(167,139,250,0.30)",
+    "--pass-soft": "rgba(52,211,153,0.14)",
+    "--pass-line": "rgba(52,211,153,0.34)",
+    "--warn-soft": "rgba(251,191,36,0.14)",
+    "--warn-line": "rgba(251,191,36,0.34)",
+    "--fail-soft": "rgba(248,113,113,0.14)",
+    "--fail-line": "rgba(248,113,113,0.34)",
+    "--info-soft": "rgba(96,165,250,0.12)",
+    "--info-line": "rgba(96,165,250,0.30)",
+    "--rail-w": "240px",
+    "--topbar-h": "56px",
+    "--tap": "44px",
+    "--r-sm": "6px",
+    "--r-md": "8px",
+    "--r-lg": "12px"
+  },
+  "assets": [],
+  "canned_data_keys": {
+    "data_attributes": [
+      "data-case",
+      "data-kb",
+      "data-label",
+      "data-section",
+      "data-section-body",
+      "data-tone"
+    ],
+    "heading_exemplars": [
+      "Refund Flow — Sprint 42",
+      "23 failures clustered into 3 root-cause groups. Highest-confidence cluster has 8 cases pointing to the same upstream issue.",
+      "Payment gateway 503 timeout — race on retry",
+      "Calendar timezone drift — refund eligibility window",
+      "Distinct failures · 1 flagged flaky, 10 require triage",
+      "All cases · grouped by suite",
+      "Evidence"
+    ],
+    "aria_exemplars": [
+      "Open navigation",
+      "Quick create",
+      "Notifications",
+      "Theme",
+      "Primary navigation",
+      "Collapse navigation",
+      "Run summary",
+      "Result counts",
+      "Sherlock root cause analysis summary",
+      "Create defects from clusters",
+      "Cluster timing metrics",
+      "Results table grouped by suite",
+      "Filter",
+      "Evidence and actions",
+      "Close evidence rail",
+      "Evidence tabs",
+      "Re-run failed cases",
+      "File defects from clusters"
+    ]
+  }
+}
