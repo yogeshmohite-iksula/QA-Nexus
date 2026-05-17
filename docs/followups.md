@@ -2,6 +2,98 @@
 
 ---
 
+## [2026-05-17] (dd) P2 — Pre-push hook: grep for git conflict markers before push
+
+**Filed:** 2026-05-17 (Day-20, M4 close day) — during cascade rebase work, one stale `<<<<<<< HEAD` marker survived a CHANGELOG.md conflict resolution and passed all pre-push gates because prettier doesn't lint markdown markers and the CHANGELOG-guard checks entry presence (the entry IS present, just with garbage around it).
+**Owner:** BE+1 (M5 hardening pass)
+**Priority:** P2 (no production impact; catches a foot-gun during rebase work)
+
+**Context:** Day-20 cascade rebases hit this once: my prior #148 rebase left a `<<<<<<< HEAD` marker in `docs/CHANGELOG.md:16`. Prettier passed (markers are valid markdown text). CHANGELOG-guard passed (entry present). Pre-push 4/4 gates green → marker shipped to the branch → next downstream rebase (#149 onto #148) failed with `unresolved conflicts` because the marker re-conflicted on every replay.
+
+**Fix:** Add a tiny pre-push gate that greps for the three markers:
+
+```bash
+if git diff origin/main..HEAD --name-only --diff-filter=AM | xargs -I{} grep -lE '^(<<<<<<<|=======|>>>>>>>)' {} 2>/dev/null | grep .; then
+  echo "✗ pre-push gate: git conflict markers detected — resolve before pushing"
+  exit 1
+fi
+```
+
+Add to `.husky/pre-push` between gate 2 (prettier) and gate 3 (frozen-lockfile).
+
+**Acceptance:**
+
+- Pre-push fails fast with clear error on any `<<<<<<<` / `=======` / `>>>>>>>` in changed files
+- Zero false positives (e.g., on legitimate marker mentions inside code fences in docs — TBD: scope to code lines outside fences, OR accept the false-positive risk and rely on developer judgment)
+
+**Cross-refs:** Day-20 cascade rebase work · followup `(db)` (chained-base prevention) · followup `(dc)` (CHANGELOG fragment pattern).
+
+**Status:** OPEN — M5 hardening pass.
+
+---
+
+## [2026-05-17] (dc) P2 — CHANGELOG single-source-of-truth pattern (per-PR fragment files)
+
+**Filed:** 2026-05-17 (Day-20, M4 close day) — during cascade rebase work, 4 sibling BE PRs all added entries to `docs/CHANGELOG.md` `[Unreleased]` in the same chunk-relative position. Every cascade merge triggered a CHANGELOG conflict on every subsequent rebase. Six rebases × ~2 min of manual conflict resolution = ~12 min lost to mechanical work.
+**Owner:** BE+1 (M5 release-tooling pass)
+**Priority:** P2 (no production impact; productivity gain on parallel-merging sibling PRs)
+
+**Context:** Today's M4 close cascade had 4 parallel-merging BE PRs (#148, #149/172, #161, #162) plus the orchestrator chain (#168/173). Each touched CHANGELOG `[Unreleased]` at the top, so every cascade merge triggered a conflict. Pattern repeats every milestone-close week.
+
+**Fix (M5 release-tooling pass):** Adopt a per-PR fragment-file CHANGELOG pattern, similar to:
+
+- **scriv** (Python): `changelog.d/` directory with one TOML/MD file per PR; release script aggregates into CHANGELOG.md
+- **changesets** (npm): `.changeset/` directory with one MD file per PR; CLI aggregates at release
+
+Concrete proposal:
+
+- Each PR adds a fragment file to `docs/changelog-fragments/<branch-name>.md` (or `.scriv/`)
+- Fragment file is mini-template: title + body, no positional concerns
+- Release script (run at milestone-close) collates all fragments into CHANGELOG.md `[<version>]` section + deletes fragments
+- Pre-push hook ensures every src/ change has an accompanying fragment file (replaces current `CHANGELOG.md must be modified in push range` check)
+
+**Acceptance:**
+
+- Zero CHANGELOG conflicts on parallel-merging sibling PRs
+- Release script produces a CHANGELOG.md section that reads identical to the current hand-curated style
+- Existing `[Unreleased]` content migrated to fragments (one-time migration)
+
+**Trade-off:** loses chronological narrative order during in-flight work (fragments aren't auto-ordered until release script runs). Mitigation: timestamp prefix on fragment filenames OR sort by PR number at collate time.
+
+**Cross-refs:** Day-20 cascade work · followup `(dd)` (conflict-marker pre-push hook) · scriv docs · changesets docs.
+
+**Status:** OPEN — M5 release-tooling pass.
+
+---
+
+## [2026-05-17] (db) P2 — Chained-base + squash-merge gotcha prevention
+
+**Filed:** 2026-05-17 (Day-20, M4 close day) — hit twice: PR #149 (chained on #148) auto-closed when #148 squash-merged; PR #168 (chained on #161) auto-closed when #161 squash-merged. Recovery = open fresh PR with `base: main` against same head branch (#172, #173). ~5 min × 2 cycles = ~10 min lost to GitHub mechanics.
+**Owner:** BE+1 (M5 planning policy)
+**Priority:** P2 (process improvement, no code change required)
+
+**Context:** GitHub's "Squash and merge" deletes the source branch + auto-closes any PR whose `base_ref` was that branch. The orphaned PR cannot be reopened (`gh pr reopen` fails — base branch gone) nor retargeted (`gh pr edit --base` fails on closed PR). The only fix is opening a fresh PR with same head + `base: main`.
+
+**Options:**
+
+1. **Default to "Create a merge commit"** for parent PRs in a chain — preserves base branch, child PRs survive. Trade-off: noisier main history (merge commits vs squash commits per PR).
+2. **Retarget child PRs to main BEFORE parent squash-merges** — `gh pr edit <child> --base main` while parent is still open. Requires manual coordination at merge time.
+3. **Don't chain PRs at all** — each PR targets main, rebase order handled by reviewer. Trade-off: child PR's diff vs main is harder to review until parent merges.
+
+Recommendation: option 2 for milestone-close cascades (clear merge order known in advance); option 3 as default policy for day-to-day work.
+
+**Acceptance:**
+
+- M5 planning includes a "chained-PR retarget protocol" section
+- BE+1 + FE+1 + MAIN reference this protocol when opening chained PRs
+- Zero auto-close incidents during M5 close cascade
+
+**Cross-refs:** Day-20 #149→#172 + #168→#173 fast-replace cycles · GitHub squash-merge behavior docs · followup `(dc)` (CHANGELOG fragments would reduce chain-PR pressure too).
+
+**Status:** OPEN — M5 planning policy.
+
+---
+
 ## [2026-05-17] (da) P1 — Sherlock RCA: 5-layer RcaReport persistence + async 202+WS pattern
 
 **Filed:** 2026-05-17 (Day-20, M4 close day) — during SherlockOrchestratorService promote PR for [M4 TASK A4-A8 complete].
