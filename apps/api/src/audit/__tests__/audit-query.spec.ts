@@ -181,6 +181,10 @@ describe('AuditService.verifyChain()', () => {
   const ORIG = process.env.BETTER_AUTH_SECRET;
 
   beforeEach(async () => {
+    // Day-21 Kimi-K2 HIGH triage (c): secret is loaded at boot via
+    // onModuleInit(); env var must be set BEFORE construction. We call
+    // onModuleInit() explicitly because Test.createTestingModule().compile()
+    // does not run lifecycle hooks by default.
     process.env.BETTER_AUTH_SECRET = TEST_SECRET;
     prisma = {
       auditLog: { findMany: jest.fn(), count: jest.fn() },
@@ -191,6 +195,7 @@ describe('AuditService.verifyChain()', () => {
       providers: [AuditService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = moduleRef.get(AuditService);
+    service.onModuleInit();
   });
   afterAll(() => {
     if (ORIG === undefined) delete process.env.BETTER_AUTH_SECRET;
@@ -232,13 +237,24 @@ describe('AuditService.verifyChain()', () => {
     expect(out.brokenAtId).toBe('row-2');
   });
 
-  it('throws if BETTER_AUTH_SECRET missing', async () => {
+  it('onModuleInit throws if BETTER_AUTH_SECRET missing (Day-21 Kimi-c — boot-time fail-fast)', async () => {
     delete process.env.BETTER_AUTH_SECRET;
-    prisma.auditLog.count.mockResolvedValueOnce(0);
-    prisma.auditLog.findMany.mockResolvedValueOnce([]);
-    await expect(service.verifyChain('ws-1')).rejects.toThrow(
+    const moduleRef = await Test.createTestingModule({
+      providers: [AuditService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    const freshService = moduleRef.get(AuditService);
+    expect(() => freshService.onModuleInit()).toThrow(
       /BETTER_AUTH_SECRET missing/,
     );
+  });
+
+  it('onModuleInit throws if BETTER_AUTH_SECRET too short (<32 chars)', async () => {
+    process.env.BETTER_AUTH_SECRET = 'short';
+    const moduleRef = await Test.createTestingModule({
+      providers: [AuditService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    const freshService = moduleRef.get(AuditService);
+    expect(() => freshService.onModuleInit()).toThrow(/too short/);
   });
 
   it('truncated=true when totalRows > 10 000', async () => {

@@ -8,7 +8,7 @@
 // Spec source: MS0-T027. Replaces the inline `writeAuthAudit` shim
 // added in T021. The chain semantics are unchanged — same helper, same
 // HMAC, same per-workspace serialization via pg_advisory_xact_lock.
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { writeAuditRow } from './audit-helper';
@@ -56,10 +56,32 @@ export interface AuditWriteInput {
 }
 
 @Injectable()
-export class AuditService {
+export class AuditService implements OnModuleInit {
   private readonly logger = new Logger(AuditService.name);
+  /** Day-21 Kimi-K2 HIGH triage (c): boot-loaded HMAC secret. NEVER read
+   *  process.env directly elsewhere in this service — onModuleInit owns the
+   *  load + validate, then this field is read-only. */
+  private secret!: string;
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Boot-time secret load + validation. App MUST crash here on missing or
+   *  too-short secret — the audit chain MUST be signable (PM1_ERD §3.13 +
+   *  CLAUDE.md Hard Rule 7 are binding; a chain that can't sign is a
+   *  Sev-1 incident, not a degraded mode). */
+  onModuleInit(): void {
+    const secret = process.env.BETTER_AUTH_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        'AuditService.onModuleInit: BETTER_AUTH_SECRET missing or too short ' +
+          '(need ≥32 chars). Set in .env (dev) or Render env (prod).',
+      );
+    }
+    this.secret = secret;
+    this.logger.log(
+      `audit HMAC secret loaded at boot (len=${secret.length} chars)`,
+    );
+  }
 
   /**
    * Write an audit row synchronously. Returns the new row's id + thisHash.
@@ -77,6 +99,7 @@ export class AuditService {
       entityId: input.entityId,
       action: input.action,
       payload: input.payload,
+      secret: this.secret,
     });
     return { id: row.id, thisHash: row.thisHash };
   }
@@ -261,12 +284,8 @@ export class AuditService {
       },
     });
 
-    const secret = process.env.BETTER_AUTH_SECRET;
-    if (!secret || secret.length < 32) {
-      throw new Error(
-        'BETTER_AUTH_SECRET missing or too short — cannot verify chain.',
-      );
-    }
+    // Day-21 Kimi-K2 HIGH triage (c): boot-loaded secret (see onModuleInit).
+    const secret = this.secret;
 
     let prevExpected = GENESIS_HASH;
     let brokenAtId: string | null = null;
