@@ -24,18 +24,13 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { z } from 'zod';
+import { SignUpBodySchema, SignInBodySchema } from '@qa-nexus/shared';
 import { AuthService } from './auth.service';
 
-const SignUpBody = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(120).optional(),
-  callbackURL: z.string().optional(),
-});
-const SignInBody = z.object({
-  email: z.string().email(),
-  callbackURL: z.string().optional(),
-});
+// Day-21 Kimi-K2 HIGH triage (d): SignUp/SignIn body schemas extracted to
+// `packages/shared/src/schemas/auth.ts` so the FE form validation uses
+// the SAME Zod schema this controller uses for inbound body parsing.
+// Prevents drift where FE accepts inputs the BE rejects (or vice versa).
 
 function reqHeaders(req: Request): Headers {
   const h = new Headers();
@@ -53,7 +48,7 @@ export class AuthController {
   @Post('sign-up')
   @HttpCode(HttpStatus.OK)
   async signUp(@Body() body: unknown, @Req() req: Request) {
-    const parsed = SignUpBody.parse(body);
+    const parsed = SignUpBodySchema.parse(body);
     const result = await this.authService.sendMagicLink({
       email: parsed.email,
       name: parsed.name,
@@ -81,7 +76,7 @@ export class AuthController {
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() body: unknown, @Req() req: Request) {
-    const parsed = SignInBody.parse(body);
+    const parsed = SignInBodySchema.parse(body);
     const result = await this.authService.sendMagicLink({
       email: parsed.email,
       callbackURL: parsed.callbackURL,

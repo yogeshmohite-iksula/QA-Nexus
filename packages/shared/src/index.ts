@@ -22,6 +22,7 @@ export * from './schemas/defect';
 export * from './schemas/kb';
 export * from './schemas/llm';
 export * from './schemas/audit';
+export * from './schemas/auth';
 export * from './schemas/smtp-env';
 export * from './schemas/resend-env';
 // M4 (Day-18 #144) — namespaced to avoid collision with legacy
