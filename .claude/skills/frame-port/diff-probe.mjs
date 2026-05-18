@@ -5,12 +5,28 @@
 //
 // Runs Playwright against the canonical v2 HTML (file://) and the React
 // port (localhost). For each viewport (320/768/1024/1440), captures both
-// screenshots + section-by-section DOM presence checks. Emits a stdout
-// diff table. EXIT 0 = clean (visual gate green); EXIT 1 = drift (gate
+// screenshots + section-by-section DOM presence checks + nested
+// structural count inverse probe (v2.2, Day-21). Emits a stdout diff
+// table. EXIT 0 = clean (visual gate green); EXIT 1 = drift (gate
 // blocks; fix root cause and re-probe).
 //
 // This is the AUTOMATED gate that precedes manual visual review (Hard
 // Rule 13). Never screenshot for visual gate until this probe is clean.
+//
+// v2.2 (Day-21, Hard Rule 18 Part 4 amendment) — Nested structural count
+// inverse probe. The v2 per-section probe checks PRESENCE of every named
+// section, but it can't catch the "port is missing nested sd-section
+// siblings inside a parent" failure mode that bit F21 Day-19/20 (5
+// missing children inside right-rail groups never reached the probe
+// because the v2 isSectionLike() heuristic didn't surface them as
+// separate sections). The inverse probe is defense-in-depth: for every
+// parent section that PASSED on both sides AND has nested sectionLike
+// descendants per spec, count nested-section-like descendants on the
+// port DOM and compare:
+//   port == canonical : MATCH (structurally complete)
+//   port <  canonical : MISSING (BLOCKS gate, sets failed=true)
+//   port >  canonical : POTENTIAL_INVERSION (WARN only, Rule 17 spirit
+//                       violation candidate — port invented children)
 //
 // Usage:
 //   node .claude/skills/frame-port/diff-probe.mjs \
@@ -227,6 +243,81 @@ function escapeClass(s) {
   return String(s).replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1');
 }
 
+// v2.2 (Day-21) — nested-section-count inverse probe.
+//
+// Per CLAUDE.md Hard Rule 18 Day-21 Part 4 amendment: defense-in-depth for
+// the F21-class drift where extract-spec.mjs missed 5 BEM-class sections,
+// and the per-selector pass therefore had no probe to fail on. The nested
+// probe counts sectionLike descendants in BOTH spec (authoritative) and the
+// rendered port DOM (via NESTED_SECTION_SELECTOR), per matched parent.
+// Bidirectional comparison:
+//   MATCH              — counts equal; structural fidelity confirmed
+//   MISSING            — port < canonical; structural incomplete (BLOCKS)
+//   POTENTIAL_INVERSION — port > canonical; unverified extras, Rule 17 spirit
+//                        violation candidate (WARNS, does not block)
+const NESTED_SECTION_SELECTOR = [
+  'section',
+  'aside',
+  'nav',
+  'header',
+  'main',
+  'footer',
+  'dialog',
+  'article',
+  '[role="region"]',
+  '[role="navigation"]',
+  '[role="banner"]',
+  '[role="complementary"]',
+  '[role="main"]',
+  '[role="contentinfo"]',
+  '[role="dialog"]',
+  '[role="tablist"]',
+  '[role="tabpanel"]',
+  '[role="toolbar"]',
+  '[data-canonical-section]',
+].join(', ');
+
+// Walk spec tree once; for every sectionLike node, record (label →
+// nested-sectionLike-descendant count). If multiple nodes share a label
+// (rare — sibling sections with same first class), keep the LARGEST count
+// since that's the most informative for inverse comparison.
+function buildNestedCountMap(spec) {
+  const map = new Map();
+  if (!spec?.sections) return map;
+  function labelOf(n) {
+    const sig = n.aria_signal || {};
+    return (
+      n.id ||
+      sig.aria_label ||
+      sig.role ||
+      n.role ||
+      (n.classes && n.classes[0]) ||
+      (sig.classes && sig.classes[0]) ||
+      n.tag
+    );
+  }
+  function countDesc(children) {
+    let count = 0;
+    for (const c of children || []) {
+      if (c.sectionLike) count++;
+      count += countDesc(c.children);
+    }
+    return count;
+  }
+  function walk(nodes) {
+    for (const n of nodes || []) {
+      if (n.sectionLike) {
+        const label = labelOf(n);
+        const count = countDesc(n.children);
+        if (!map.has(label) || map.get(label) < count) map.set(label, count);
+      }
+      walk(n.children);
+    }
+  }
+  walk(spec.sections);
+  return map;
+}
+
 const DEFAULT_PROBES = [
   {
     label: 'page-header',
@@ -260,10 +351,17 @@ const DEFAULT_PROBES = [
 
 const probes = buildProbesFromSpec(spec) || DEFAULT_PROBES;
 const schemaVersion = spec?.schemaVersion ?? 1;
+// v2.2: per-parent nested-section-like counts from spec tree (authoritative).
+// Used in the viewport loop to detect MISSING / POTENTIAL_INVERSION drift.
+const nestedCountMap = buildNestedCountMap(spec);
+const nestedParentCount = [...nestedCountMap.values()].filter((c) => c > 0).length;
 
 console.log(
   `→ checking ${probes.length} section probes (3-tier OR semantics) per viewport · spec schema v${schemaVersion}`,
 );
+if (nestedParentCount > 0) {
+  console.log(`  + ${nestedParentCount} parents with nested sections (inverse probe active)`);
+}
 console.log('');
 
 // -----------------------------------------------------------------------------
@@ -353,7 +451,57 @@ for (const vp of VIEWPORTS) {
       canonical: inCanonical,
       port: inPort,
       canonicalMatchedTier: cRes.matchedTier,
+      canonicalMatchedSelector: cRes.matchedSelector,
       portMatchedTier: pRes.matchedTier,
+      portMatchedSelector: pRes.matchedSelector,
+      status,
+    });
+  }
+
+  // v2.2 (Day-21) — nested-section-count inverse probe pass.
+  //
+  // For each PARENT probe that PASSED (matched on both sides) AND has >0
+  // nested sections in canonical, count nested-section-like descendants on
+  // the port and compare. This catches the F21-class drift where the parent
+  // section was matched but its inner sections were dropped (or duplicated)
+  // in the React port. Hard Rule 18 Day-21 Part 4 amendment.
+  //
+  // Status:
+  //   MATCH               — counts equal; structural fidelity confirmed
+  //   MISSING             — port < canonical (BLOCKS, sets failed=true)
+  //   POTENTIAL_INVERSION — port > canonical (WARNS, does not block)
+  const nestedCounts = [];
+  for (const r of perSelector) {
+    if (r.status !== 'PASS') continue;
+    const canonicalNested = nestedCountMap.get(r.label) ?? 0;
+    if (canonicalNested === 0) continue;
+    let portNested = 0;
+    const parentSel = r.portMatchedSelector;
+    if (parentSel && portLoadOk) {
+      try {
+        portNested = await portPage
+          .locator(parentSel)
+          .first()
+          .locator(NESTED_SECTION_SELECTOR)
+          .count();
+      } catch {
+        portNested = -1;
+      }
+    }
+    const status =
+      portNested === -1
+        ? 'UNKNOWN'
+        : portNested === canonicalNested
+          ? 'MATCH'
+          : portNested < canonicalNested
+            ? 'MISSING'
+            : 'POTENTIAL_INVERSION';
+    if (status === 'MISSING') failed = true;
+    nestedCounts.push({
+      label: r.label,
+      parentSelector: parentSel,
+      canonicalNested,
+      portNested,
       status,
     });
   }
@@ -402,6 +550,20 @@ for (const vp of VIEWPORTS) {
       `  ${lbl} ${String(r.canonical).padStart(5)} ${String(r.port).padStart(5)}  ${ct} ${pt} ${r.status}`,
     );
   }
+  // Print nested-count table (v2.2) — only when we have entries to report.
+  if (nestedCounts.length > 0) {
+    console.log('');
+    console.log(
+      `  ${'Nested under'.padEnd(28)} ${'Canon'.padStart(5)} ${'Port'.padStart(5)}  Status`,
+    );
+    console.log(`  ${'-'.repeat(28)} ${'-'.repeat(5)} ${'-'.repeat(5)}  ${'-'.repeat(19)}`);
+    for (const n of nestedCounts) {
+      const lbl = n.label.length > 28 ? n.label.slice(0, 25) + '...' : n.label.padEnd(28);
+      console.log(
+        `  ${lbl} ${String(n.canonicalNested).padStart(5)} ${String(n.portNested).padStart(5)}  ${n.status}`,
+      );
+    }
+  }
   if (pixelDiffPct !== null) {
     const pixOk = pixelDiffPct < PIXEL_THRESHOLD;
     if (!pixOk && PIXEL_BLOCKS) failed = true;
@@ -439,6 +601,7 @@ for (const vp of VIEWPORTS) {
   allResults.push({
     viewport: vp.name,
     perSelector,
+    nestedCounts,
     pixelDiff: pixelDiffFinal,
     pixelDiffPct: pixelDiffFinal,
     cropBounds,
@@ -474,8 +637,13 @@ console.log(
 for (const r of allResults) {
   const fails = r.perSelector.filter((s) => s.status !== 'PASS').length;
   const pixDiff = r.pixelDiffPct !== null ? `pix=${(r.pixelDiffPct * 100).toFixed(1)}%` : 'pix=n/a';
+  const nestedTotal = (r.nestedCounts || []).length;
+  const nestedFails = (r.nestedCounts || []).filter(
+    (n) => n.status === 'MISSING' || n.status === 'POTENTIAL_INVERSION',
+  ).length;
+  const nestedTag = nestedTotal > 0 ? ` · nested=${nestedTotal - nestedFails}/${nestedTotal}` : '';
   console.log(
-    `  viewport ${r.viewport}: ${r.perSelector.length - fails}/${r.perSelector.length} sections PASS · ${pixDiff}`,
+    `  viewport ${r.viewport}: ${r.perSelector.length - fails}/${r.perSelector.length} sections PASS · ${pixDiff}${nestedTag}`,
   );
 }
 console.log('');

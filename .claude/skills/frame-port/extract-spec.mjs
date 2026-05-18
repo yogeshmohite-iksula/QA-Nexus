@@ -14,12 +14,14 @@
 //     --html "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F19 Run Console v2.html" \
 //     [--out .claude/skills/frame-port/specs/F19.spec.json]
 //
-// Output shape (v2, Day-19 — aria_signal added per CLAUDE.md Hard Rule 18 amendment):
+// Output shape (v2.2, Day-21 — schemaVersion bumped to 3 with BEM-class
+// section detection. v2 (Day-19) added aria_signal per CLAUDE.md Hard
+// Rule 18 amendment):
 //   {
 //     "frame": "F19",
 //     "sourceHtml": "<path>",
 //     "extractedAt": "<ISO>",
-//     "schemaVersion": 2,
+//     "schemaVersion": 3,
 //     "sections": [
 //       {
 //         "tag": "header",
@@ -47,9 +49,20 @@
 //     }
 //   }
 //
-// v2 schema is BACKWARD COMPATIBLE: existing fields preserved; aria_signal
-// is added per section. v1 spec.jsons remain valid input to v2 diff-probe
-// but produce less precise structural matching (class-name-only fallback).
+// v2.2 schema (Day-21) is BACKWARD COMPATIBLE with v2 (Day-19): existing
+// fields preserved; aria_signal is added per section; schemaVersion is
+// bumped to 3 to signal the BEM-class heuristic is live. v1/v2 spec.jsons
+// remain valid input to diff-probe but produce less precise structural
+// matching (class-name-only fallback for v1; no BEM-detected sections for
+// v2 specs).
+//
+// v2.2 amendment (Day-21, codified in CLAUDE.md Hard Rule 18 Part 4):
+// isSectionLike() now also returns true for <div> / <section> where the
+// first class matches BEM-style /^[a-z]+(-[a-z]+)+$/ AND the node has a
+// heading child OR ≥3 text-bearing children. Closes the F21 5-section
+// miss (sd-tabs, sr-layers, assignee-filter, PEOPLE group separators)
+// that the v2 heuristic could not see because none of those class names
+// matched the original STRUCTURAL_CLASS_HINTS regex list.
 //
 // (canned_data_keys is OBJECT form, not array. FE+1 cross-references each
 // sub-list against the strings FE+1 will import from canned-data.ts.
@@ -181,6 +194,55 @@ const STRUCTURAL_CLASS_HINTS = [
   /\bbody-area\b/,
 ];
 
+// v2.2 (Day-21) — BEM-class section detection. Per CLAUDE.md Hard Rule 18
+// Day-21 Part 4 amendment: per-frame v2 canonical HTML uses BEM-style class
+// tokens for sections (sd-tabs, sr-layers, def-shell, cl-class, rs-stats,
+// etc.). The generic STRUCTURAL_CLASS_HINTS list missed these because each
+// frame coins its own short prefix; we can't enumerate them all up-front.
+// BEM heuristic: classList[0] matches /^[a-z]+(-[a-z]+)+$/ AND the element
+// has structural meaningfulness (heading child OR ≥3 text-bearing children).
+// Surfaces the 5 F21 misses Day-19/20 (sd-tabs, sr-layers, group separators,
+// PEOPLE wrapper, Assignee filter) without re-listing each per-frame token.
+const BEM_CLASS_RE = /^[a-z]+(-[a-z]+)+$/;
+const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+// Exclude common Tailwind utility prefixes so a styling-only wrapper isn't
+// misclassified as a section. v2 canonical HTML files use BEM tokens for
+// sections and don't carry Tailwind utilities, so this is a safety net for
+// future mixed-mode files.
+const TAILWIND_UTIL_PREFIX_RE =
+  /^(bg|text|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|w|h|min|max|flex|grid|gap|space|border|rounded|ring|shadow|opacity|z|top|right|bottom|left|inset|order|col|row|justify|items|content|self|place|overflow|font|leading|tracking|whitespace|break|cursor|select|pointer|resize|list|transform|transition|duration|delay|ease|animate|origin|scale|rotate|translate|skew|backdrop|filter|blur|brightness|contrast|saturate|sepia|hue|invert)-/;
+
+function hasHeadingDescendant(node, depth = 0, max = 2) {
+  if (!node || node.nodeType !== 1 || depth > max) return false;
+  for (const child of node.children) {
+    const tag = child.tagName?.toLowerCase();
+    if (HEADING_TAGS.has(tag)) return true;
+    if (hasHeadingDescendant(child, depth + 1, max)) return true;
+  }
+  return false;
+}
+
+function textBearingChildCount(node) {
+  let count = 0;
+  for (const child of node.children) {
+    if (child.nodeType !== 1) continue;
+    const text = (child.textContent || '').replace(/\s+/g, ' ').trim();
+    if (text.length > 0) count++;
+  }
+  return count;
+}
+
+function hasBemSectionClass(node) {
+  const cls = (node.getAttribute?.('class') || '').trim();
+  if (!cls) return false;
+  const firstClass = cls.split(/\s+/)[0];
+  if (!firstClass || !BEM_CLASS_RE.test(firstClass)) return false;
+  if (TAILWIND_UTIL_PREFIX_RE.test(firstClass)) return false;
+  if (hasHeadingDescendant(node)) return true;
+  if (textBearingChildCount(node) >= 3) return true;
+  return false;
+}
+
 function isSectionLike(node) {
   if (node.nodeType !== 1) return false;
   const tag = node.tagName?.toLowerCase();
@@ -189,6 +251,9 @@ function isSectionLike(node) {
   if (role && STRUCTURAL_ROLES.has(role)) return true;
   const cls = node.getAttribute?.('class') || '';
   if (cls && STRUCTURAL_CLASS_HINTS.some((re) => re.test(cls))) return true;
+  // v2.2 (Day-21): BEM-class section heuristic — closes the per-frame BEM
+  // token gap that surfaced as the 5-section-miss on F21.
+  if (hasBemSectionClass(node)) return true;
   return false;
 }
 
@@ -351,7 +416,7 @@ const spec = {
   frame: frameId,
   sourceHtml: htmlPath,
   extractedAt: new Date().toISOString(),
-  schemaVersion: 2,
+  schemaVersion: 3,
   generator: '.claude/skills/frame-port/extract-spec.mjs',
   sections: sectionTree,
   tokens_used: [...tokenSet].sort(),
