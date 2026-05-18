@@ -25,6 +25,11 @@ export interface AuditWriteParams {
   entityId: string | null;
   action: string;
   payload: Record<string, unknown>;
+  /** Day-21 Kimi-K2 HIGH triage (c): HMAC secret. Loaded ONCE at boot by
+   *  AuditService.onModuleInit() and passed in per call. Was previously read
+   *  from process.env inside this helper on every write — slow + late-failing
+   *  if the env var was ever unset/rotated mid-process. Min 32 chars. */
+  secret: string;
 }
 
 const GENESIS_HASH = '0'.repeat(64);
@@ -48,26 +53,24 @@ function canonicalJson(obj: unknown): string {
   );
 }
 
-function getSecret(): string {
-  const secret = process.env.BETTER_AUTH_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error(
-      'BETTER_AUTH_SECRET missing or too short (need ≥32 chars). Set in .env or Render env.',
-    );
-  }
-  return secret;
-}
-
 /**
  * Append a row to audit_log with a correctly-computed HMAC chain link.
  * Caller is responsible for passing a Prisma client (so this can run inside
- * an outer transaction if the calling endpoint needs atomicity).
+ * an outer transaction if the calling endpoint needs atomicity) AND the
+ * boot-loaded HMAC secret (Day-21 Kimi-K2 HIGH triage (c) — no longer read
+ * from process.env on each call; AuditService.onModuleInit owns the load).
  */
 export async function writeAuditRow(
   prisma: PrismaClient,
   params: AuditWriteParams,
 ): Promise<{ id: string; prevHash: string; thisHash: string }> {
-  const secret = getSecret();
+  const { secret } = params;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'writeAuditRow: secret missing or too short (need ≥32 chars). ' +
+        'AuditService must inject boot-loaded BETTER_AUTH_SECRET.',
+    );
+  }
   // Serialize per-workspace by taking an advisory lock keyed on the workspace UUID's
   // first 8 hex chars (interpreted as int4). pg_advisory_xact_lock uses 64-bit but
   // we only need ~workspace-cardinality uniqueness — first 8 hex chars of UUID = 32 bits = plenty.

@@ -290,6 +290,9 @@ async function main(): Promise<void> {
       source: 'seed-llm-provider.ts (Path C bridge — ADR-015)',
       actor_email: cfg.adminEmail,
     },
+    // Day-21 Kimi-K2 HIGH triage (c): secret is now a writeAuditRow param.
+    // Seed script reads BETTER_AUTH_SECRET via readConfig() → cfg.betterAuthSecret.
+    secret: cfg.betterAuthSecret,
   });
 
   console.log('');

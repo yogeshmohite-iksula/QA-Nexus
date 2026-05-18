@@ -13,29 +13,35 @@
 // documented public contract without callers having to know BetterAuth's
 // internal route layout.
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
+  OnModuleInit,
   Post,
   Query,
   Req,
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { z } from 'zod';
+import { SignUpBodySchema, SignInBodySchema } from '@qa-nexus/shared';
 import { AuthService } from './auth.service';
+import { isTrustedCallbackUrl, parseTrustedOrigins } from './callback-url';
 
-const SignUpBody = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(120).optional(),
-  callbackURL: z.string().optional(),
-});
-const SignInBody = z.object({
-  email: z.string().email(),
-  callbackURL: z.string().optional(),
-});
+// Day-21 Kimi-K2 HIGH triage (d): SignUp/SignIn body schemas extracted to
+// `packages/shared/src/schemas/auth.ts` so the FE form validation uses
+// the SAME Zod schema this controller uses for inbound body parsing.
+// Prevents drift where FE accepts inputs the BE rejects (or vice versa).
+//
+// Day-21 Kimi-K2 HIGH triage (a): callbackURL is validated against an
+// allowlist (TRUSTED_CALLBACK_ORIGINS env var) at TWO points:
+//   1. sign-up/sign-in intake — reject 400 if untrusted (don't mint a
+//      magic link pointing at an attacker-controlled origin)
+//   2. callback redirect — rewrite to /home if untrusted (in case an
+//      attacker crafted the verify URL directly)
 
 function reqHeaders(req: Request): Headers {
   const h = new Headers();
@@ -47,13 +53,43 @@ function reqHeaders(req: Request): Headers {
 }
 
 @Controller('auth')
-export class AuthController {
+export class AuthController implements OnModuleInit {
+  private readonly logger = new Logger(AuthController.name);
+  /** Day-21 Kimi-K2 HIGH triage (a): boot-loaded trusted origins for
+   *  callbackURL validation. NEVER read process.env elsewhere in this
+   *  controller. */
+  private trustedOrigins!: Set<string>;
+
   constructor(private readonly authService: AuthService) {}
+
+  onModuleInit(): void {
+    this.trustedOrigins = parseTrustedOrigins(
+      process.env.TRUSTED_CALLBACK_ORIGINS,
+    );
+    this.logger.log(
+      `trusted callback origins loaded: ${[...this.trustedOrigins].join(', ')}`,
+    );
+  }
+
+  /** Validate callbackURL on intake (sign-up/sign-in). REJECTS with 400
+   *  rather than silently rewriting — the FE built the URL, so a mismatch
+   *  is a programming error worth surfacing. */
+  private assertTrustedCallback(callbackURL: string | undefined): void {
+    if (!isTrustedCallbackUrl(callbackURL, this.trustedOrigins)) {
+      throw new BadRequestException({
+        ok: false,
+        error: 'UntrustedCallbackURL',
+        message:
+          'callbackURL must be a same-origin path (/...) or match an entry in TRUSTED_CALLBACK_ORIGINS.',
+      });
+    }
+  }
 
   @Post('sign-up')
   @HttpCode(HttpStatus.OK)
   async signUp(@Body() body: unknown, @Req() req: Request) {
-    const parsed = SignUpBody.parse(body);
+    const parsed = SignUpBodySchema.parse(body);
+    this.assertTrustedCallback(parsed.callbackURL);
     const result = await this.authService.sendMagicLink({
       email: parsed.email,
       name: parsed.name,
@@ -81,7 +117,8 @@ export class AuthController {
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() body: unknown, @Req() req: Request) {
-    const parsed = SignInBody.parse(body);
+    const parsed = SignInBodySchema.parse(body);
+    this.assertTrustedCallback(parsed.callbackURL);
     const result = await this.authService.sendMagicLink({
       email: parsed.email,
       callbackURL: parsed.callbackURL,
@@ -112,11 +149,26 @@ export class AuthController {
       res.status(400).json({ ok: false, message: 'missing token query param' });
       return;
     }
+    // Day-21 Kimi-K2 HIGH triage (a) — open-redirect protection.
+    // If callbackURL is untrusted, REWRITE to /home instead of forwarding
+    // it through to BetterAuth's verifier (which would redirect there
+    // after setting the session cookie — an attacker's phishing chain).
+    // We rewrite (not reject) on the callback path because the user clicked
+    // a magic link in good faith; failing the redirect would lock them out.
+    let safeCallbackURL = callbackURL;
+    if (!isTrustedCallbackUrl(callbackURL, this.trustedOrigins)) {
+      this.logger.warn(
+        `rejected untrusted callbackURL on /auth/callback: ${callbackURL?.slice(0, 200)} — rewriting to /home`,
+      );
+      safeCallbackURL = '/home';
+    }
     // Reuse BetterAuth's native verifier. We forward to its canonical path
     // so cookies are set correctly.
     const verifyUrl =
       `/auth/magic-link/verify?token=${encodeURIComponent(token)}` +
-      (callbackURL ? `&callbackURL=${encodeURIComponent(callbackURL)}` : '');
+      (safeCallbackURL
+        ? `&callbackURL=${encodeURIComponent(safeCallbackURL)}`
+        : '');
     res.redirect(307, verifyUrl);
   }
 

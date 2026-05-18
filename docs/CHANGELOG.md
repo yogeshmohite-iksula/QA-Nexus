@@ -13,6 +13,20 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 21 — Kimi K2 HIGH triage (4 items): open-redirect, ws rate-limit, hmac-at-boot, zod-extract [m5 hardening]
+
+Closes all 4 HIGH-severity items from Kimi K2's Day-19 security review. Bundled as one PR with 4 independently-revertable commits.
+
+**(c) HMAC secret loaded at boot, not per-write.** `AuditService.onModuleInit()` loads + validates `BETTER_AUTH_SECRET` once at boot (min 32 chars, app crashes if missing — chain integrity is binding per PM1_ERD §3.13 + Hard Rule 7). Stored in `private readonly this.secret`. `writeAuditRow()` now takes secret as a required param. Previously read `process.env` on every write + every `verifyChain()` call — slow + late-failing + could silently sign half the chain with old secret + half with new during rotation.
+
+**(d) Auth Zod schemas extracted to `@qa-nexus/shared`.** New `packages/shared/src/schemas/auth.ts` exports `SignUpBodySchema` + `SignInBodySchema` (+ inferred types). FE can now use the same schema for react-hook-form + zodResolver, preventing drift where FE accepts inputs the BE rejects.
+
+**(a) callbackURL validated against trusted-origins allowlist.** Closes magic-link → phishing chain (`?callbackURL=https://evil.com`). New `apps/api/src/auth/callback-url.ts` with `parseTrustedOrigins()` + `isTrustedCallbackUrl()` helpers (14 unit tests). Defense-in-depth at two points: (1) sign-up/sign-in intake rejects 400 `UntrustedCallbackURL`; (2) callback redirect rewrites to `/home` (don't lock out legitimate users). Allowlist via `TRUSTED_CALLBACK_ORIGINS` env CSV. Same-origin relative paths (`/home`) always allowed; protocol-relative (`//evil.com`) always rejected.
+
+**(b) WS rate limit + connection ceiling.** `RealtimeGateway.handleConnection` adds two layers BEFORE the Prisma auth lookup: (1) global ceiling via `MAX_WS_CONNECTIONS` env (default 100) — close `4409 capacity exceeded`; (2) per-IP token bucket (capacity 10, refill 10/min) — close `4408 rate limited`. Per-IP buckets GC'd every 60s after 5min idle. `connectionCount` decremented in `handleDisconnect` with double-disconnect clamp. 8-user pilot has 12.5x headroom on ceiling + 60x on bucket — guards catch abuse, never normal traffic.
+
+**Test plan:** 51/51 test suites pass; 607 tests pass (+14 callback-url tests; 5 verifyChain tests reworked for boot pattern). Smoke once merged: untrusted callbackURL → 400 UntrustedCallbackURL; 11 rapid WS connects from one IP → 11th close 4408.
+
 ### Changed — Day 21 — Hard Rule 18 Day-21 amendment Part 4 + frame-port skill v2.2 (BEM-class section detection + nested-section-count inverse probe)
 
 **Part 4 — BEM-class section detection + nested-section-count inverse probe.** Codified 2026-05-18 (Day-21 AM) after F21 v2.1.2 closeout surfaced a structural-detection gap in extract-spec v2: per-frame v2 canonical HTML uses BEM-style class tokens for sections (`sd-tabs`, `sr-layers`, `def-shell`, `cl-class`, `rs-stats`, etc.) on plain `<div>` elements. The generic `STRUCTURAL_CLASS_HINTS` list missed these because each frame coins its own short prefix; we can't enumerate them all up-front. Result: 5 F21 sections silently dropped from `spec.json`; per-selector probes were blind because there was no probe to fail. Caught only by Yogesh manual visual gate during F21 Round-5.

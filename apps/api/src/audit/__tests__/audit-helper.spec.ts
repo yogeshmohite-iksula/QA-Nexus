@@ -49,15 +49,9 @@ function makePrisma(tx: any) {
 }
 
 describe('writeAuditRow — HMAC chain integrity', () => {
-  const ORIG_SECRET = process.env.BETTER_AUTH_SECRET;
-  beforeEach(() => {
-    process.env.BETTER_AUTH_SECRET = TEST_SECRET;
-  });
-  afterAll(() => {
-    if (ORIG_SECRET === undefined) delete process.env.BETTER_AUTH_SECRET;
-    else process.env.BETTER_AUTH_SECRET = ORIG_SECRET;
-  });
-
+  // Day-21 Kimi-K2 HIGH triage (c): secret is now passed by caller via params,
+  // not read from process.env. baseParams includes the test secret so the
+  // happy-path tests don't need to set it explicitly per call.
   const baseParams = {
     workspaceId: '11111111-2222-3333-4444-555555555555',
     actorId: 'actor-1',
@@ -65,6 +59,7 @@ describe('writeAuditRow — HMAC chain integrity', () => {
     entityId: 'p-1',
     action: 'project_created',
     payload: { hello: 'world', n: 1 },
+    secret: TEST_SECRET,
   };
 
   it('genesis row uses 0*64 as prevHash + correct HMAC over canonical(payload)', async () => {
@@ -129,27 +124,30 @@ describe('writeAuditRow — HMAC chain integrity', () => {
     const { tx: tx1, created: c1 } = makeTx({ previousThisHash: null });
     await writeAuditRow(makePrisma(tx1), baseParams);
 
-    process.env.BETTER_AUTH_SECRET = 'b'.repeat(64);
     const { tx: tx2, created: c2 } = makeTx({ previousThisHash: null });
-    await writeAuditRow(makePrisma(tx2), baseParams);
+    await writeAuditRow(makePrisma(tx2), {
+      ...baseParams,
+      secret: 'b'.repeat(64),
+    });
 
     expect(c1[0].thisHash).not.toBe(c2[0].thisHash);
   });
 
-  it('throws if BETTER_AUTH_SECRET is missing', async () => {
-    delete process.env.BETTER_AUTH_SECRET;
+  it('throws if secret param is missing (Day-21 Kimi-c — param, not env)', async () => {
     const { tx } = makeTx({ previousThisHash: null });
-    await expect(writeAuditRow(makePrisma(tx), baseParams)).rejects.toThrow(
-      /BETTER_AUTH_SECRET missing/,
-    );
+    await expect(
+      writeAuditRow(makePrisma(tx), {
+        ...baseParams,
+        secret: undefined as unknown as string,
+      }),
+    ).rejects.toThrow(/secret missing/);
   });
 
-  it('throws if BETTER_AUTH_SECRET is too short (<32 chars)', async () => {
-    process.env.BETTER_AUTH_SECRET = 'short';
+  it('throws if secret param is too short (<32 chars)', async () => {
     const { tx } = makeTx({ previousThisHash: null });
-    await expect(writeAuditRow(makePrisma(tx), baseParams)).rejects.toThrow(
-      /too short/,
-    );
+    await expect(
+      writeAuditRow(makePrisma(tx), { ...baseParams, secret: 'short' }),
+    ).rejects.toThrow(/too short/);
   });
 
   it('canonicalJson handles nested objects + arrays + null + non-object values', async () => {
