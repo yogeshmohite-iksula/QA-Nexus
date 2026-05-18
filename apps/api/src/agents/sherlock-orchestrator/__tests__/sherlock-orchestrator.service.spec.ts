@@ -1,9 +1,22 @@
-// Unit tests for SherlockOrchestratorService — Day-20 P1.
+// Unit tests for SherlockOrchestratorService — Day-20 P1 + Day-21 (da).
 //
 // Mocks all 4 agent services via NestJS DI useValue. ZERO real LLM calls,
-// ZERO real DB hits (orchestrator is pure-function — no prisma/audit/WS
-// deps this PR; Day-21 hardening re-introduces those once the 5-layer
-// schema adaptation + RealtimeGateway.emit() land).
+// ZERO real DB hits. Day-21 hardening added PrismaService + AuditService +
+// RealtimeGateway deps; this spec mocks all three.
+//
+// Module-boundary jest.mock on `realtime.gateway` is required because the
+// real RealtimeGateway imports AuthService → auth.config → better-auth
+// (ESM), which jest's CJS transformer can't load. Same Day-17 #138/#139
+// pattern (and #174 fix-forward).
+
+jest.mock('../../../realtime/realtime.gateway', () => ({
+  RealtimeGateway: class FakeRealtimeGateway {
+    emitRcaComplete = jest.fn();
+    emitTestRunProgress = jest.fn();
+    emitDefectRcaReady = jest.fn();
+    emitAgentRunComplete = jest.fn();
+  },
+}));
 
 import { Test } from '@nestjs/testing';
 import { SherlockOrchestratorService } from '../sherlock-orchestrator.service';
@@ -11,6 +24,9 @@ import { SherlockCodeService } from '../../sherlock-code/sherlock-code.service';
 import { SherlockDataService } from '../../sherlock-data/sherlock-data.service';
 import { SherlockEnvService } from '../../sherlock-env/sherlock-env.service';
 import { SherlockFlakeService } from '../../sherlock-flake/sherlock-flake.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { AuditService } from '../../../audit/audit.service';
+import { RealtimeGateway } from '../../../realtime/realtime.gateway';
 import type {
   SherlockCodeInput,
   SherlockHypothesis,
@@ -57,6 +73,30 @@ describe('SherlockOrchestratorService', () => {
         { provide: SherlockDataService, useValue: { analyze: dataAnalyze } },
         { provide: SherlockEnvService, useValue: { analyze: envAnalyze } },
         { provide: SherlockFlakeService, useValue: { analyze: flakeAnalyze } },
+        // Day-21 (da) — runAndPersist deps. runRca tests don't exercise these
+        // but the constructor requires them. Specific runAndPersist tests
+        // assert against these mocks via getter.
+        {
+          provide: PrismaService,
+          useValue: {
+            agentRun: {
+              create: jest.fn().mockResolvedValue({ id: 'mock-agent-run' }),
+              update: jest.fn().mockResolvedValue({}),
+            },
+            rcaReport: {
+              create: jest.fn().mockResolvedValue({ id: 'mock-rca-report-id' }),
+            },
+          },
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            write: jest
+              .fn()
+              .mockResolvedValue({ id: 'mock-audit', thisHash: 'h' }),
+          },
+        },
+        { provide: RealtimeGateway, useClass: RealtimeGateway },
       ],
     }).compile();
     service = moduleRef.get(SherlockOrchestratorService);

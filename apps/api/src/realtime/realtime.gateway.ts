@@ -412,6 +412,29 @@ export class RealtimeGateway
     return this.emitToChannel(channel, 'agent_run.complete', payload);
   }
 
+  /** Emit an `rca.complete` event when the Sherlock orchestrator finishes
+   *  its 4-agent fan-out + DB persistence. Subscribers (F22 Defect Detail,
+   *  F21 Defects Hub) subscribe to channel `rca.complete.<runId>` to be
+   *  notified that the RcaReport is durable + ready to fetch.
+   *
+   *  Day-21 P0 followup (da) — async 202+WS pattern flip. Payload mirrors
+   *  the synchronous-path response shape so FE handlers can use the same
+   *  reducer for both sync (legacy) + async (new) modes during rollout. */
+  emitRcaComplete(
+    runId: string,
+    payload: {
+      defectId: string;
+      status: 'completed' | 'degraded';
+      okAgentCount: number;
+      topHypothesis: string;
+      rcaReportId: string;
+      durationMs: number;
+    },
+  ): number {
+    const channel = `rca.complete.${runId}`;
+    return this.emitToChannel(channel, 'rca.complete', payload);
+  }
+
   /** Internal fanout. Returns number of clients the message was sent to.
    *  Skips clients whose socket is not OPEN (defensive; disconnect hook
    *  should have cleaned them out but races exist). */
