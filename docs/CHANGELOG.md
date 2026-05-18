@@ -13,6 +13,12 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+_Day-21+ work lands here. Roll to [M5] section at next milestone close._
+
+---
+
+## [M4] - 2026-05-17
+
 ### Changed — Day 19 — Hard Rule 18 Day-19 amendment Parts 1 + 2 + 3 + frame-port skill v2.1.2 (final — ARIA-primary + UNION crop + AA tolerance + GREEN/AMBER/RED band system)
 
 **Part 3 — GREEN / AMBER / RED band system** (Day-19 late afternoon, after F21 v2.1.2 validation reached the renderer-noise floor).
