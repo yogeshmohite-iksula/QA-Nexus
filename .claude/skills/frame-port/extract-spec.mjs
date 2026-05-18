@@ -257,7 +257,12 @@ function isSectionLike(node) {
   return false;
 }
 
-function buildSectionTree(node, depth = 0, max = 5) {
+// v2.2 (Day-21): depth cap raised from 5 → 7 to reach BEM sections that
+// canonical v2 HTML nests inside agent-specific containers (e.g.
+// sherlock-rca > sr-layers at depth ~7 inside F21's right-rail RCA card).
+// max=7 is generous enough for the typical canonical 5-7 nesting depth
+// without exploding spec size in pathological cases.
+function buildSectionTree(node, depth = 0, max = 7) {
   if (!node || node.nodeType !== 1 || depth > max) return null;
   const sectionLike = isSectionLike(node);
   const tag = node.tagName.toLowerCase();
