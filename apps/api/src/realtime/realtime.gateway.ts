@@ -42,11 +42,31 @@ import {
   WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import type { IncomingMessage } from 'http';
 import type { WebSocket, WebSocketServer as WsServer } from 'ws';
 import { AuthService } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+// Day-21 Kimi-K2 HIGH triage (b) — WS rate limit + connection ceiling.
+//
+// Without these guards, a single misbehaving client (or attacker) could:
+//   - Open arbitrarily many WS connections (memory pressure, fd exhaustion
+//     on the Render free dyno which has ~1 GB RAM + limited fd count)
+//   - Hammer the upgrade endpoint with auth attempts that each trigger a
+//     Prisma session lookup (DB CU-hr burn + amplifies any auth slowness)
+//
+// Token bucket: per-IP, capacity 10, refill 10/min (i.e. 1 token every 6s).
+// Connection ceiling: global cap on concurrent connections; configurable
+// via MAX_WS_CONNECTIONS env var, default 100 (well above 8-user pilot but
+// catches runaway clients before they exhaust the dyno).
+const WS_TOKEN_BUCKET_CAPACITY = 10;
+const WS_TOKEN_REFILL_PER_MS = 10 / 60_000; // 10 tokens / 60 s
+
+interface IpBucket {
+  tokens: number;
+  lastRefillMs: number;
+}
 
 interface ConnectedClient extends WebSocket {
   /** Attached on successful handshake — used for per-message auditing. */
@@ -76,7 +96,7 @@ const TEST_RUN_PROGRESS_CHANNEL_RE =
   path: '/realtime',
 })
 export class RealtimeGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit
 {
   private readonly logger = new Logger(RealtimeGateway.name);
   @WebSocketServer() server!: WsServer;
@@ -84,24 +104,127 @@ export class RealtimeGateway
    *  single-instance NestJS dyno). Cleared on client disconnect. */
   private readonly channels = new Map<string, Set<ConnectedClient>>();
 
+  // Day-21 Kimi-K2 HIGH triage (b) — rate limit + connection ceiling.
+  /** Global cap on concurrent WS connections. Loaded at boot from
+   *  MAX_WS_CONNECTIONS env var (default 100). */
+  private maxWsConnections = 100;
+  /** Current open connections (including unauthenticated mid-handshake).
+   *  Incremented in handleConnection, decremented in handleDisconnect. */
+  private connectionCount = 0;
+  /** Per-IP token bucket. Map is unbounded but each bucket is small; we
+   *  GC stale buckets after 5 min idle to keep size bounded. */
+  private readonly ipBuckets = new Map<string, IpBucket>();
+  /** Last GC sweep epoch ms — runs lazily on each handleConnection. */
+  private lastIpBucketsGcMs = 0;
+
   constructor(
     private readonly authService: AuthService,
     private readonly prisma: PrismaService,
   ) {}
 
+  onModuleInit(): void {
+    const raw = process.env.MAX_WS_CONNECTIONS;
+    if (raw) {
+      const parsed = parseInt(raw, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        this.maxWsConnections = parsed;
+      } else {
+        this.logger.warn(
+          `MAX_WS_CONNECTIONS="${raw}" is not a positive integer — using default ${this.maxWsConnections}`,
+        );
+      }
+    }
+    this.logger.log(
+      `WS rate limit + ceiling loaded: max_connections=${this.maxWsConnections}, ` +
+        `per_ip_bucket_capacity=${WS_TOKEN_BUCKET_CAPACITY}, ` +
+        `refill_rate=10/min`,
+    );
+  }
+
+  /** Refill the per-IP bucket based on elapsed time, then consume 1 token.
+   *  Returns true if the connection is allowed; false if the IP is throttled. */
+  private consumeIpToken(ip: string): boolean {
+    const now = Date.now();
+    let bucket = this.ipBuckets.get(ip);
+    if (!bucket) {
+      bucket = { tokens: WS_TOKEN_BUCKET_CAPACITY, lastRefillMs: now };
+      this.ipBuckets.set(ip, bucket);
+    } else {
+      const elapsed = now - bucket.lastRefillMs;
+      const refill = elapsed * WS_TOKEN_REFILL_PER_MS;
+      bucket.tokens = Math.min(
+        WS_TOKEN_BUCKET_CAPACITY,
+        bucket.tokens + refill,
+      );
+      bucket.lastRefillMs = now;
+    }
+    if (bucket.tokens < 1) return false;
+    bucket.tokens -= 1;
+    return true;
+  }
+
+  /** GC stale IP buckets to keep the Map bounded. Runs lazily; sweeps
+   *  at most once per 60s. Removes buckets idle >5 min (= bucket fully
+   *  refilled, no recent attempts). */
+  private gcIpBucketsIfDue(): void {
+    const now = Date.now();
+    if (now - this.lastIpBucketsGcMs < 60_000) return;
+    this.lastIpBucketsGcMs = now;
+    const staleAfter = now - 5 * 60_000;
+    for (const [ip, bucket] of this.ipBuckets) {
+      if (bucket.lastRefillMs < staleAfter) this.ipBuckets.delete(ip);
+    }
+  }
+
   /** Validate the session at handshake. Reject (close 4401) if no
    *  resolvable session — the client sees a normal close-with-code, not
-   *  a generic 1006, so they can react with "please re-auth". */
+   *  a generic 1006, so they can react with "please re-auth".
+   *
+   *  Day-21 Kimi-K2 HIGH triage (b): rate-limit + capacity checks run
+   *  BEFORE the auth resolve. This is intentional — auth resolve hits
+   *  Prisma (DB cost) so we reject runaway / DoS clients before spending
+   *  CU-hr on them. Order: capacity → IP rate-limit → auth → success.
+   *
+   *  Close codes (per RFC 6455 §7.4 + our 4xxx app-codes):
+   *    4408 — per-IP rate limit exceeded
+   *    4409 — global capacity exceeded
+   *    4401 — unauthenticated (no resolvable session)
+   *    4500 — server handshake error */
   async handleConnection(
     client: ConnectedClient,
     req: IncomingMessage,
   ): Promise<void> {
+    const ip = this.ipOf(req);
+    this.gcIpBucketsIfDue();
+
+    // Capacity check (cheapest — just compare counts).
+    if (this.connectionCount >= this.maxWsConnections) {
+      this.logger.warn(
+        `WS connection rejected: capacity ${this.connectionCount}/${this.maxWsConnections} (ip=${ip})`,
+      );
+      client.close(4409, 'capacity exceeded');
+      return;
+    }
+
+    // Per-IP rate limit (token bucket).
+    if (!this.consumeIpToken(ip)) {
+      this.logger.warn(
+        `WS connection rejected: per-IP rate limit (ip=${ip}, capacity=${WS_TOKEN_BUCKET_CAPACITY}/min)`,
+      );
+      client.close(4408, 'rate limited');
+      return;
+    }
+
+    // Count this connection now so handleDisconnect's decrement is balanced
+    // even if auth resolve crashes mid-flight.
+    this.connectionCount += 1;
+
     try {
       const headers = this.buildHeadersFromRequest(req);
       const session = await this.authService.resolveSession(headers);
       if (!session) {
         this.logger.warn(
-          `WS connection rejected: no resolvable session (ip=${this.ipOf(req)})`,
+          `WS connection rejected: no resolvable session (ip=${ip})`,
         );
         client.close(4401, 'unauthenticated');
         return;
@@ -115,7 +238,8 @@ export class RealtimeGateway
       };
       this.logger.log(
         `WS connected: ${session.appUser.email} (${session.appUser.role}) ` +
-          `workspace=${session.appUser.workspaceId.slice(0, 8)}`,
+          `workspace=${session.appUser.workspaceId.slice(0, 8)} ` +
+          `(${this.connectionCount}/${this.maxWsConnections})`,
       );
     } catch (err) {
       this.logger.error(
@@ -135,9 +259,14 @@ export class RealtimeGateway
       }
       client.qaNexusChannels.clear();
     }
+    // Day-21 Kimi-K2 HIGH triage (b): decrement connection count. Clamp to
+    // 0 to guard against double-disconnect races (ws sends 'close' then
+    // 'error' in some failure modes).
+    if (this.connectionCount > 0) this.connectionCount -= 1;
     if (client.qaNexus) {
       this.logger.log(
-        `WS disconnected: ${client.qaNexus.appUserEmail} (${client.qaNexus.role})`,
+        `WS disconnected: ${client.qaNexus.appUserEmail} (${client.qaNexus.role}) ` +
+          `(${this.connectionCount}/${this.maxWsConnections})`,
       );
     } else {
       this.logger.log('WS disconnected: <unauthenticated>');
