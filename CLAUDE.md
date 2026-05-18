@@ -255,6 +255,31 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 (skill-mandatory workflow) **+ Rule 18 Day-19 amendment (ARIA-primary structural contract + content-region pixel comparison + GREEN/AMBER/RED band system).** The amendment closes three specific drift classes: structural false-positive on Tailwind ports (Part 1), shell-substitution pixel floor (Part 2), renderer-noise floor that produced binary-gate false-positives (Part 3). Each addition to the policy stack closes a different drift class identified through actual practice.
 
+    **Day-21 amendment Part 4 (BEM-class section detection + nested-section-count inverse probe).** Codified 2026-05-18 (Day-21 morning) after F21 v2.1.2 closeout surfaced a structural-detection gap in extract-spec v2: per-frame v2 canonical HTML uses BEM-style class tokens for sections (`sd-tabs`, `sr-layers`, `def-shell`, `cl-class`, `rs-stats`, etc.) on plain `<div>` elements. The generic `STRUCTURAL_CLASS_HINTS` list missed these because each frame coins its own short prefix — `sd-` (Suite Detail), `sr-` (Sherlock Report), `def-` (Defect), `cl-` (Cluster), `rs-` (Run Stats) — and we can't enumerate them all up-front. Result: 5 F21 sections (sd-tabs L490-499, PEOPLE L1180-1186, sr-layers L1199-1204, group separators L819+L944+L1063, Assignee filter L778) silently dropped from `spec.json`; per-selector probes were blind to the miss because there was no probe to fail. Drift caught only by Yogesh manual visual gate inspection during F21 Round-5.
+
+    **The extract-spec gap fix (v2.2):** `isSectionLike()` expands to detect `<div>` / `<section>` elements where:
+    - `classList[0]` matches BEM regex `/^[a-z]+(-[a-z]+)+$/` AND
+    - the element has either a heading child (h1-h6) OR ≥3 text-bearing children (children with non-empty trimmed `textContent`)
+
+    Text-bearing threshold prevents false positives on decorative wrappers (icon clusters, badges, separators). Tailwind utility prefixes (`bg-`, `text-`, `p-`, `m-`, `w-`, `h-`, etc.) are explicitly excluded — canonical v2 HTML files don't use Tailwind, so the exclusion is a safety net for future mixed-mode files.
+
+    **The diff-probe nested-section-count inverse probe (v2.2):** Per-parent bidirectional aggregate sanity check that runs ALONGSIDE per-selector probes. For each PARENT probe that PASSED (matched on both canonical + port), count nested-section-like descendants on BOTH sides via the matched parent selector:
+    - **MATCH** — counts equal; structural fidelity confirmed
+    - **MISSING** — port < canonical; structural incomplete (BLOCKS, sets `failed = true`)
+    - **POTENTIAL_INVERSION** — port > canonical; Rule 17 spirit violation candidate (WARNS, does not block)
+
+    Why per-parent nested count on top of per-selector probes: per-selector probes only catch sections that EXIST in `spec.json`. If extract-spec missed a section (e.g. pre-v2.2 BEM-class gap), per-selector probes can't catch the miss because there's no probe for it. The nested count compares structural-mass under each matched parent and surfaces drift the per-selector approach is blind to.
+
+    **Why MISSING blocks but POTENTIAL_INVERSION only warns:** MISSING means the React port DROPPED canonical content — a defect, structural incomplete. POTENTIAL_INVERSION means the React port ADDED unverified extras — worth investigating (Rule 17 spirit: canonical HTML is source-of-truth for content) but not necessarily wrong (wrapper divs for React state management are legitimate). Yogesh visual gate (Rule 13) remains authoritative for both.
+
+    **Forbidden:**
+    - Silencing the nested-count probe by inflating React-side noise (adding decorative wrappers without semantic meaning)
+    - Inventing canonical sections in `spec.json` to satisfy the nested count (Rule 17 violation in spirit)
+    - Treating the nested-count probe as authoritative — Rule 13 visual gate remains the binding approval
+    - Skipping spec regeneration on existing frames after skill v2.2 lands (open ports must re-run extract-spec to pick up newly-detected BEM sections)
+
+    **Policy stack update:** Rules 3+12+13+14+15+16+17 above + Rule 18 + Day-19 Parts 1+2+3 **+ Day-21 amendment Part 4 (BEM-class section detection + nested-section-count inverse probe).** Closes the structural-detection blind-spot identified through F21 practice. Each addition to the policy stack closes a different drift class identified through actual practice.
+
     **The close-and-redo precedent:** If `diff-probe.mjs` shows a section was implemented with invented data (e.g. cluster titles not in `canned-data.ts`), the PR is CLOSED, NOT patched. FE+1 returns to Step 4 with the canonical references and re-scaffolds. This rule exists because incremental patching of drift symptoms historically compounds — by the time the third "minor" patch lands, the diff vs canonical is too large to reconcile in one pass. The close-and-redo loop runs at most once per frame because Step 5 catches drift early.
 
     **Forbidden in Step 4:**
@@ -266,7 +291,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
     **Cross-references:** Rule 12 (RWD) · Rule 13 (visual gate) · Rule 14 (shell parity) · Rule 15 (v2 HTML source-of-truth) · Rule 16 (canonical-first workflow) · Rule 17 (canned-data extraction) · `.claude/skills/frame-port/SKILL.md` · PR #145 → #150 precedent · M4 v2 plan §7.5 progress log entries.
 
-    **Policy stack:** Rules 3+12+13+14+15+16+17 above + **Rule 18 (skill-mandatory workflow)**. Together: structure + responsiveness + visual gate + shell + v2-source + canonical-first + verbatim-extraction + automated-enforcement. Rule 18 is the layer that makes the previous seven rules executable, not just aspirational. Each rule closes a different drift class; Rule 18 closes the discipline-drift class (humans forgetting to run the checks).
+    **Policy stack:** Rules 3+12+13+14+15+16+17 above + **Rule 18 (skill-mandatory workflow) + Day-19 amendments Parts 1+2+3 + Day-21 amendment Part 4**. Together: structure + responsiveness + visual gate + shell + v2-source + canonical-first + verbatim-extraction + automated-enforcement + ARIA-primary contract + content-region pixel crop + GREEN/AMBER/RED bands + BEM-class section detection + nested-count inverse probe. Rule 18 is the layer that makes the previous seven rules executable, not just aspirational. Each rule (and each amendment) closes a different drift class; the policy stack grows through actual practice, not speculation.
 
 ## Locked tech stack (PM1)
 

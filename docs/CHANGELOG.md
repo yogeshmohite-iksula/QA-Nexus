@@ -13,7 +13,23 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
-_Day-21+ work lands here. Roll to [M5] section at next milestone close._
+### Changed — Day 21 — Hard Rule 18 Day-21 amendment Part 4 + frame-port skill v2.2 (BEM-class section detection + nested-section-count inverse probe)
+
+**Part 4 — BEM-class section detection + nested-section-count inverse probe.** Codified 2026-05-18 (Day-21 AM) after F21 v2.1.2 closeout surfaced a structural-detection gap in extract-spec v2: per-frame v2 canonical HTML uses BEM-style class tokens for sections (`sd-tabs`, `sr-layers`, `def-shell`, `cl-class`, `rs-stats`, etc.) on plain `<div>` elements. The generic `STRUCTURAL_CLASS_HINTS` list missed these because each frame coins its own short prefix; we can't enumerate them all up-front. Result: 5 F21 sections silently dropped from `spec.json`; per-selector probes were blind because there was no probe to fail. Caught only by Yogesh manual visual gate during F21 Round-5.
+
+**`extract-spec.mjs` v2.2 gap fix:** `isSectionLike()` adds BEM heuristic — `<div>` / `<section>` where `classList[0]` matches `/^[a-z]+(-[a-z]+)+$/` AND has either a heading child (h1-h6) OR ≥3 text-bearing children. Tailwind utility prefixes explicitly excluded (`bg-`, `text-`, `p-`, `m-`, `w-`, `h-`, etc.) — canonical v2 HTML doesn't use Tailwind; the exclusion is a safety net for future mixed-mode files. Surfaces the 5 F21 misses (sd-tabs L490-499, PEOPLE L1180-1186, sr-layers L1199-1204, group separators L819+L944+L1063, Assignee filter L778) without re-listing each per-frame token.
+
+**`diff-probe.mjs` v2.2 nested-count inverse probe:** Per-parent bidirectional aggregate sanity check on top of per-selector probes. For each PASSED parent probe with >0 nested sections in canonical, count nested-section-like descendants on BOTH sides via the matched parent selector:
+
+- **MATCH** — counts equal; structural fidelity confirmed
+- **MISSING** — port < canonical; structural incomplete (BLOCKS, sets `failed = true`)
+- **POTENTIAL_INVERSION** — port > canonical; Rule 17 spirit violation candidate (WARNS, does not block)
+
+Why per-parent nested count on top of per-selector probes: per-selector probes only catch sections that EXIST in `spec.json`. If extract-spec missed a section, per-selector probes can't catch the miss. The nested count compares structural-mass under each matched parent and surfaces drift the per-selector approach is blind to. MISSING blocks (React port dropped canonical content — defect); POTENTIAL_INVERSION warns only (React port added unverified extras — worth investigating but not necessarily wrong).
+
+**CLAUDE.md amendment:** Hard Rule 18 Day-21 Part 4 codifies both contracts + adds 4 new forbidden patterns (silencing via React noise, inventing canonical sections, treating nested-count as authoritative, skipping spec regeneration on existing frames).
+
+**Skill arc Day-18 → Day-21:** v1 → v2 → v2.1 → v2.1.1 → v2.1.2 → v2.2. Each iteration < 60 min, each catching a real failure mode (Finding A on Tailwind class-only false-positive, Finding B on shell-substitution pixel floor, Bug A on asymmetric crop, Bug B on v1-spec backward-compat, Case C on AA inflation, Case AMBER on renderer-noise floor, **Part 4 on BEM-class detection gap**). Close-and-redo loop applied at tool layer, not at PR layer.
 
 ---
 
