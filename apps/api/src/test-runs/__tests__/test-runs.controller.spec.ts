@@ -1,44 +1,37 @@
-// QA Nexus PM1 — TestRunsController smoke test.
+// QA Nexus PM1 — TestRunsController smoke test (Day-20 post-cascade).
 //
 // Originally a 501 stub-contract spec from Day-19 P0 #2 (PR #157).
-// Day-20 cascade rebase: the stub controller was superseded by PR #149's
-// real impl (TestRunsService + AuthService injected). The 17-test coverage
-// for state machine + audit + WS emit lives in `test-runs.service.spec.ts`.
+// Day-20 cascade rebase: stub controller was superseded by PR #172 (née #149)
+// real impl. The 17-test state-machine coverage lives in `test-runs.service.spec.ts`.
 //
-// This file now serves as a thin "controller-wiring smoke": confirms the
-// controller class instantiates cleanly with mocked deps so that any future
-// constructor-shape drift surfaces here BEFORE jest tries to load the
-// service spec. Minimal coverage by design.
+// This file = thin "controller-wiring smoke": confirms the controller class
+// instantiates cleanly with mocked deps. Mock pattern: jest.mock at module
+// boundary on AuthService (transitively pulls better-auth ESM which breaks
+// jest's CJS transformer — same workaround as Day-17 #138/#139 specs).
 
-import { Test } from '@nestjs/testing';
+jest.mock('../../auth/auth.service', () => ({
+  AuthService: class FakeAuthService {
+    resolveSession = jest.fn();
+  },
+}));
+jest.mock('../../auth/rbac/roles.guard', () => ({
+  RolesGuard: class FakeRolesGuard {
+    canActivate = () => true;
+  },
+}));
+
 import { TestRunsController } from '../test-runs.controller';
 import { TestRunsService } from '../test-runs.service';
 import { AuthService } from '../../auth/auth.service';
 
 describe('TestRunsController (wiring smoke — Day-20 cascade)', () => {
-  let ctrl: TestRunsController;
-
-  beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({
-      controllers: [TestRunsController],
-      providers: [
-        {
-          provide: TestRunsService,
-          useValue: {
-            transition: jest.fn(),
-            allowedTransitionsFrom: jest.fn(() => []),
-          },
-        },
-        {
-          provide: AuthService,
-          useValue: { resolveSession: jest.fn() },
-        },
-      ],
-    }).compile();
-    ctrl = moduleRef.get(TestRunsController);
-  });
-
   it('instantiates with TestRunsService + AuthService injected', () => {
+    const testRuns = {
+      transition: jest.fn(),
+      allowedTransitionsFrom: jest.fn(() => []),
+    } as unknown as TestRunsService;
+    const auth = { resolveSession: jest.fn() } as unknown as AuthService;
+    const ctrl = new TestRunsController(testRuns, auth);
     expect(ctrl).toBeDefined();
     expect(ctrl).toBeInstanceOf(TestRunsController);
   });
