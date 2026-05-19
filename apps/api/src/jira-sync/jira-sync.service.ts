@@ -117,6 +117,70 @@ export class JiraSyncService implements OnModuleInit {
     });
   }
 
+  /**
+   * Day-22 P1 (ADR-020 §7 ratified) — persist the inbound webhook to the
+   * `jira_webhook_events` staging table BEFORE returning 200 OK. The
+   * AFTER-INSERT trigger then fires `pg_notify('webhook_received', id)`
+   * which the WebhookProcessorService listens for + drives async.
+   *
+   * Idempotency: `event_id` is UNIQUE. Atlassian retries (which use the
+   * SAME X-Atlassian-Webhook-Identifier value per delivery cycle) are
+   * absorbed as 'duplicate' — caller returns 200 OK so Atlassian stops
+   * retrying instead of escalating to dead-letter.
+   *
+   * Hot-path budget per ADR-020 §7: <500ms p95 from receive → 200 ack.
+   * The INSERT itself is ~30-80ms on Neon free tier; trigger NOTIFY is
+   * negligible (Postgres in-process pub/sub). Well within budget after
+   * HMAC verify (~5-15ms) + JSON parse + Zod validate (~5-10ms).
+   */
+  async persistWebhookEvent(input: {
+    eventId: string;
+    payload: JiraWebhookPayload;
+    signatureValid: boolean;
+  }): Promise<'inserted' | 'duplicate'> {
+    try {
+      await this.prisma.jiraWebhookEvent.create({
+        data: {
+          eventId: input.eventId,
+          jiraIssueKey: input.payload.issue?.key ?? null,
+          eventType: input.payload.webhookEvent,
+          payload: input.payload as object,
+          signatureValid: input.signatureValid,
+          // processed=false (default), retryCount=0 (default), processedAt=null
+        },
+      });
+      return 'inserted';
+    } catch (err) {
+      // Prisma P2002 = unique constraint violation on event_id.
+      // Atlassian retries deliver the same X-Atlassian-Webhook-Identifier,
+      // so this is the expected duplicate-absorption path.
+      const code = (err as { code?: string }).code;
+      if (code === 'P2002') return 'duplicate';
+      throw err;
+    }
+  }
+
+  /**
+   * Day-22 P1 — fetch + mark a single webhook event as processed. Called
+   * by WebhookProcessorService on receipt of a `webhook_received` NOTIFY.
+   * The actual side-effect logic (defect upsert, WS emit, etc) lands
+   * Day-23 wire-up; this stub just toggles processed=true so the table
+   * doesn't accumulate during testing.
+   */
+  async markWebhookProcessed(
+    id: string,
+    error: string | null = null,
+  ): Promise<void> {
+    await this.prisma.jiraWebhookEvent.update({
+      where: { id },
+      data: {
+        processed: true,
+        processedAt: new Date(),
+        processingError: error,
+      },
+    });
+  }
+
   /** Test seam — exposed only for spec injection of the cached value
    *  without booting the whole NestJS lifecycle. NEVER call from app
    *  code; if you need the value, depend on OnModuleInit ordering. */
