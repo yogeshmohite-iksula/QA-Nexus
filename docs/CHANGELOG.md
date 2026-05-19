@@ -13,6 +13,32 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 22 — xlsx → exceljs swap (CVE remediation, Kimi K2 HIGH followup) [m5]
+
+Day-22 P0c (followup to Kimi K2's Day-19 HIGH triage) — replaced abandoned `xlsx` (SheetJS CE 0.18.5) with actively-maintained `exceljs@^4.4.0` (Apache 2.0, ~1.9M weekly DLs).
+
+**Live HIGH advisories closed:**
+
+- `GHSA-4r6h-8v6p-xvw6` — Prototype Pollution in sheetJS (`<0.19.3`, no patched version)
+- `GHSA-5pgg-2g8v-p4x9` — Regular Expression Denial of Service / ReDoS (`<0.20.2`, no patched version)
+
+Both showed in `pnpm audit --prod` with patched versions `<0.0.0` — SheetJS maintainer moved fixes to paid model. Override pinning was not viable; library swap was the only path.
+
+**Surface:** 2 callsites only (`apps/api/src/chunking/parsers/xlsx-parser.ts:17` + `__tests__/parsers.spec.ts:11`) — direct refactor; no `lib/spreadsheet.ts` adapter needed (below 3-callsite threshold per HURDLE-1 mitigation).
+
+**API mapping:**
+
+- `XLSX.read(buffer, {type:'buffer'})` → `new Workbook(); await wb.xlsx.load(buffer as ArrayBuffer)` (parseXlsx now async)
+- `workbook.SheetNames` + `XLSX.utils.sheet_to_json(sheet, {header:1, defval:null})` → `wb.eachSheet((ws) => ws.eachRow({includeEmpty:true}, row => row.values.slice(1)))`
+- `XLSX.utils.book_new/aoa_to_sheet/book_append_sheet + XLSX.write` (test fixture) → `new Workbook(); ws.addWorksheet/addRow + await wb.xlsx.writeBuffer()`
+- New `stringify()` branches handle ExcelJS rich-text (`{richText:[]}`), formula (`{formula, result}`), and hyperlink (`{text, hyperlink}`) cell shapes so embeddings see rendered values.
+
+**pdf-parse:** NOT in audit output → confirmed clean → deferred to M6 hygiene followup (saves ~2 hr of Day-22 budget — see `.claude/scratch/day-22-p0a-cve-triage-memo.md`).
+
+**Test plan:** 51/51 test suites pass; 610 tests pass. 4 parseXlsx tests rewritten as async; output shape (chunk count, metadata.sheet, lineRange, idempotency) byte-equivalent to xlsx behavior.
+
+**Cost gate:** Zero new DB calls, zero new env requirements. ExcelJS bundle ~1.7 MB unpacked vs xlsx ~1.4 MB — negligible on Render Hobby. Neon CU-hr untouched.
+
 ### Added — Day 21 — Sherlock orchestrator hardening: DB persistence + async/WS + audit [m5 da]
 
 Day-21 P0 followup `(da)` — closes the 3 hardening gaps left from PR #173 (synchronous-only Day-20 path).

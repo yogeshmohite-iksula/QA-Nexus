@@ -61,6 +61,7 @@
     "better-auth": "~1.6.11",
     "cors": "^2.8.6",
     "csv-parse": "^6.2.1",
+    "exceljs": "^4.4.0",
     "express": "^5.0.0",
     "groq-sdk": "^0.7.0",
     "nodemailer": "^8.0.7",
@@ -69,7 +70,6 @@
     "resend": "^4.0.0",
     "rxjs": "^7.8.1",
     "ws": "^8.18.0",
-    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

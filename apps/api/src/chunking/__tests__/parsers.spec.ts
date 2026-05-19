@@ -3,12 +3,16 @@
 // Strategy: build small in-memory buffers (no fixture files), call each
 // parser, assert chunk shape + metadata + idempotency (parsing the same
 // input twice returns identical output).
+//
+// Day-22 (2026-05-19) — m5 CVE remediation / Kimi K2 HIGH triage:
+// xlsx (sheetjs CE 0.18.5) → exceljs swap. parseXlsx() is now async; the
+// in-memory buildXlsx() helper uses ExcelJS Workbook + writeBuffer.
 
 import { parseTxt } from '../parsers/txt-parser';
 import { parseCsv } from '../parsers/csv-parser';
 import { parseXlsx } from '../parsers/xlsx-parser';
 import { detectFormat } from '../parsers/types';
-import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
 
 describe('Chunking parsers', () => {
   describe('detectFormat()', () => {
@@ -42,7 +46,6 @@ describe('Chunking parsers', () => {
       ].join('\n');
       const chunks = parseTxt(Buffer.from(text, 'utf8'));
       expect(chunks.length).toBeGreaterThan(0);
-      // Each chunk has the right shape
       for (const c of chunks) {
         expect(c.metadata.pageNo).toBeNull();
         expect(c.metadata.lineRange[0]).toBeGreaterThanOrEqual(1);
@@ -58,12 +61,10 @@ describe('Chunking parsers', () => {
     });
 
     it('groups paragraphs near 2000-char target', () => {
-      // 5 paragraphs × ~600 chars = ~3000 chars total → expect 2 chunks
-      const para = 'word '.repeat(120); // 600 chars
+      const para = 'word '.repeat(120);
       const text = Array(5).fill(para).join('\n\n');
       const chunks = parseTxt(Buffer.from(text, 'utf8'));
       expect(chunks.length).toBeGreaterThanOrEqual(2);
-      // No single chunk wildly over target (some flex for paragraph boundaries).
       for (const c of chunks) {
         expect(c.chunkText.length).toBeLessThan(3000);
       }
@@ -92,7 +93,6 @@ describe('Chunking parsers', () => {
       expect(chunks[0].chunkText).toContain('Akshay');
       expect(chunks[0].chunkText).toContain('Kishor');
       expect(chunks[0].metadata.pageNo).toBeNull();
-      // 3 data rows + 1 header → lineRange [2, 4]
       expect(chunks[0].metadata.lineRange).toEqual([2, 4]);
     });
 
@@ -108,9 +108,9 @@ describe('Chunking parsers', () => {
       const lines = ['col1,col2'];
       for (let i = 0; i < 60; i++) lines.push(`v${i}a,v${i}b`);
       const chunks = parseCsv(Buffer.from(lines.join('\n'), 'utf8'));
-      expect(chunks).toHaveLength(3); // 25 + 25 + 10
-      expect(chunks[0].metadata.lineRange).toEqual([2, 26]); // 25 data rows
-      expect(chunks[2].metadata.lineRange).toEqual([52, 61]); // 10 data rows
+      expect(chunks).toHaveLength(3);
+      expect(chunks[0].metadata.lineRange).toEqual([2, 26]);
+      expect(chunks[2].metadata.lineRange).toEqual([52, 61]);
     });
 
     it('idempotent', () => {
@@ -122,25 +122,33 @@ describe('Chunking parsers', () => {
   });
 
   describe('parseXlsx()', () => {
-    /** Build a minimal in-memory XLSX with given sheets. */
-    function buildXlsx(sheets: Record<string, unknown[][]>): Buffer {
-      const wb = XLSX.utils.book_new();
+    /** Build a minimal in-memory XLSX with given sheets using ExcelJS.
+     *  Day-22 swap: was xlsx (sheetjs) — now exceljs. Same surface
+     *  (sheet-name → array-of-arrays); per-test bodies are now async. */
+    async function buildXlsx(
+      sheets: Record<string, unknown[][]>,
+    ): Promise<Buffer> {
+      const wb = new Workbook();
       for (const [name, rows] of Object.entries(sheets)) {
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        XLSX.utils.book_append_sheet(wb, ws, name);
+        const ws = wb.addWorksheet(name);
+        for (const row of rows) {
+          ws.addRow(row);
+        }
       }
-      return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      // ExcelJS writeBuffer returns ArrayBuffer in @4.x — wrap for Node Buffer.
+      const ab = await wb.xlsx.writeBuffer();
+      return Buffer.from(ab as ArrayBuffer);
     }
 
-    it('happy path — single sheet with header + data', () => {
-      const buf = buildXlsx({
+    it('happy path — single sheet with header + data', async () => {
+      const buf = await buildXlsx({
         Policy: [
           ['section', 'description'],
           ['1.1', 'Returns within 30 days'],
           ['1.2', 'Refunds in 5-7 days'],
         ],
       });
-      const chunks = parseXlsx(buf);
+      const chunks = await parseXlsx(buf);
       expect(chunks).toHaveLength(1);
       expect(chunks[0].metadata.sheet).toBe('Policy');
       expect(chunks[0].metadata.pageNo).toBeNull();
@@ -148,8 +156,8 @@ describe('Chunking parsers', () => {
       expect(chunks[0].chunkText).toContain('Returns within 30 days');
     });
 
-    it('multi-sheet → chunks per sheet, sheet name in metadata', () => {
-      const buf = buildXlsx({
+    it('multi-sheet → chunks per sheet, sheet name in metadata', async () => {
+      const buf = await buildXlsx({
         Policy: [
           ['s', 'd'],
           ['1', 'a'],
@@ -159,35 +167,35 @@ describe('Chunking parsers', () => {
           ['How long?', '30 days'],
         ],
       });
-      const chunks = parseXlsx(buf);
+      const chunks = await parseXlsx(buf);
       expect(chunks).toHaveLength(2);
       const sheets = chunks.map((c) => c.metadata.sheet).sort();
       expect(sheets).toEqual(['FAQ', 'Policy']);
     });
 
-    it('empty sheet (header only) → skipped', () => {
-      const buf = buildXlsx({
+    it('empty sheet (header only) → skipped', async () => {
+      const buf = await buildXlsx({
         Empty: [['col1', 'col2']],
         WithData: [
           ['a', 'b'],
           ['1', '2'],
         ],
       });
-      const chunks = parseXlsx(buf);
+      const chunks = await parseXlsx(buf);
       expect(chunks).toHaveLength(1);
       expect(chunks[0].metadata.sheet).toBe('WithData');
     });
 
-    it('idempotent', () => {
-      const buf = buildXlsx({
+    it('idempotent', async () => {
+      const buf = await buildXlsx({
         Sheet1: [
           ['a', 'b'],
           ['1', '2'],
           ['3', '4'],
         ],
       });
-      const a = parseXlsx(buf);
-      const b = parseXlsx(buf);
+      const a = await parseXlsx(buf);
+      const b = await parseXlsx(buf);
       expect(a).toEqual(b);
     });
   });
