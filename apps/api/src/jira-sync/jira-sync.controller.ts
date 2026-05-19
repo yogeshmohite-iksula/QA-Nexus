@@ -21,6 +21,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { createHash } from 'node:crypto';
 import { verifyHmacSha256 } from './hmac-verifier';
 import { JiraWebhookPayloadSchema } from './jira-webhook.schema';
 import { JiraSyncService } from './jira-sync.service';
@@ -31,11 +32,16 @@ export class JiraSyncController {
 
   /// POST /api/jira/webhook — Atlassian → us. HMAC-SHA256 over raw body.
   ///
-  /// Day-19 contract: verify signature → Zod-parse payload → fire-and-
-  /// forget audit → 200 ack. Day-20 will add the side-effects (defect
-  /// upsert + WS emit + retry-queue dead-letter on parse fail).
+  /// Day-22 contract (ADR-020 §7 ratified): verify signature → parse +
+  /// Zod-validate → INSERT into `jira_webhook_events` staging row (with
+  /// the X-Atlassian-Webhook-Identifier as UNIQUE event_id) →
+  /// fire-and-forget audit → 200 ack in <500ms p95. The AFTER-INSERT
+  /// trigger emits `pg_notify('webhook_received', id)`; WebhookProcessor-
+  /// Service listens and drives async (Day-23 wire-up adds defect upsert
+  /// + WS emit). Duplicate Atlassian retries collapse on the UNIQUE
+  /// constraint and ack 200 with `duplicate: true`.
   @Post('jira/webhook')
-  webhook(@Req() req: Request, @Res() res: Response): void {
+  async webhook(@Req() req: Request, @Res() res: Response): Promise<void> {
     // 1. Pull raw body bytes. Express's raw middleware delivers Buffer.
     //    If something else (or nothing) parsed the body, fail closed —
     //    we cannot recompute HMAC over a JSON-stringified shape.
@@ -86,10 +92,36 @@ export class JiraSyncController {
       return;
     }
 
-    // 4. Audit-write (fire-and-forget). 200 ack — Day-20 side-effects deferred.
+    // 4. Day-22 P1 (ADR-020 §7) — INSERT staging row; this gates the 200
+    //    ack so the row is durable before Atlassian gets a response.
+    //    Atlassian's per-delivery `X-Atlassian-Webhook-Identifier` header
+    //    is the natural UNIQUE key — retries reuse the same value and
+    //    collapse to a single row via UNIQUE constraint. Fallback to a
+    //    body-hash if the header is absent (some routing modes omit it).
+    const atlassianId = this.firstHeaderValue(
+      req.headers['x-atlassian-webhook-identifier'],
+    );
+    const eventId =
+      atlassianId && atlassianId.length > 0
+        ? atlassianId
+        : `synthesized:${createHash('sha256')
+            .update(rawBody)
+            .digest('hex')
+            .slice(0, 32)}`;
+
+    const persistResult = await this.jiraSync.persistWebhookEvent({
+      eventId,
+      payload: validated.data,
+      signatureValid: true,
+    });
+
+    // 5. Audit-write (fire-and-forget). The async pipeline picks up via
+    //    pg-listen NOTIFY emitted by the AFTER-INSERT trigger.
     this.jiraSync.recordWebhookReceived(validated.data);
     res.status(HttpStatus.OK).json({
       ack: true,
+      duplicate: persistResult === 'duplicate',
+      eventId,
       eventType: validated.data.webhookEvent,
       issueKey: validated.data.issue?.key ?? null,
     });

@@ -1044,9 +1044,17 @@ model JiraWebhookEvent {
   processingError String?   @map("processing_error")
   receivedAt      DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
   processedAt     DateTime? @map("processed_at") @db.Timestamptz(6)
+  /// Day-22 P1 (ADR-020 §7 ratified) — incremented by the pg-listen
+  /// subscriber's retry-with-backoff loop on transient failures. Reaching
+  /// MAX_RETRIES (Day-23 wire-up) pushes the row to a DLQ via
+  /// processed=true + processingError set.
+  retryCount      Int       @default(0) @map("retry_count")
 
   @@index([receivedAt])
   @@index([jiraIssueKey])
+  /// Day-22 — fallback "find unprocessed" scan if the LISTEN/NOTIFY
+  /// subscriber misses an event (process crash, etc).
+  @@index([processed, receivedAt])
   @@map("jira_webhook_events")
 }
 
