@@ -13,6 +13,31 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 22 — Jira webhook receiver scaffold per ADR-020 §7 ratified [m5 PARTIAL — wire-up Day-23]
+
+Day-22 P1 — implements the async webhook pipeline mandated by ADR-020 §7 (≤500ms p95 hot-path budget; LISTEN/NOTIFY for fan-out per Hard Rule 5 no-Redis).
+
+**Migration** (`20260519080000_jira_webhook_retry_count_and_notify_trigger`):
+
+- `jira_webhook_events.retry_count INT NOT NULL DEFAULT 0` — populated by Day-23 retry-with-backoff loop
+- `(processed, received_at)` index — fallback unprocessed-queue scan if the LISTEN subscriber misses an event (process crash)
+- `notify_webhook_received()` plpgsql function → `pg_notify('webhook_received', NEW.id::text)`
+- AFTER INSERT trigger on `jira_webhook_events` invoking the function. Channel `webhook_received` is generic so future webhook sources can reuse the fan-out pattern.
+
+**`JiraSyncService.persistWebhookEvent(input)`** (new): INSERTs the staging row inside the request handler before returning 200. Atlassian's `X-Atlassian-Webhook-Identifier` header becomes the UNIQUE `event_id`; retries collapse on the UNIQUE constraint and return `'duplicate'` for absorbing-200-OK semantics. Body-hash fallback when the header is absent.
+
+**`JiraSyncController.webhook()`** (flipped to async): HMAC verify → JSON parse → Zod validate → `persistWebhookEvent()` → audit fire-and-forget → 200 OK with `{ ack, duplicate, eventId, eventType, issueKey }`. The AFTER-INSERT trigger fires `pg_notify` to reach the processor — the controller never awaits the LLM/Sherlock work.
+
+**`WebhookProcessorService`** (new — pg-listen subscriber): boots in `OnModuleInit` (skipped in `NODE_ENV=test`), connects via `pg-listen@^1.7.0` on a dedicated Postgres connection (separate from Prisma pool), listens to `webhook_received`. On notification: fetches the row, logs the stub, marks `processed=true` via `markWebhookProcessed`. Day-23 wire-up replaces the stub with handler logic.
+
+**Robustness:** `pg-listen` auto-reconnects on connection drop. Per-notification handler wrapped in try/catch so a bad event can't crash the subscriber loop. `OnModuleDestroy` closes cleanly.
+
+**Tests:** 52/52 suites pass; **617 tests pass** (+7 vs Day-22 start: 4 for WebhookProcessor.handleNotification + 3 for persistWebhookEvent). Existing `jira-sync.controller.spec.ts` updated for the async signature + new response shape.
+
+**Cost gate:** +1 row/webhook to `jira_webhook_events`. At 8-user × ~10 webhook/min sustained pilot peak = ~5k rows/day. Neon CU-hr impact <0.5/day. Well under 100/cap.
+
+**Scope cut (PARTIAL tag):** Day-23 wire-up adds: routing per `webhookEvent` (jira:issue_created → DefectsService.createFromJira; jira:issue_updated → status sync), Sherlock trigger on relevant events, sync-state delta writes, WebSocket `defect.updated` emit, retry-with-backoff (with `retryCount` increment + DLQ at MAX_RETRIES).
+
 ### Added — Day 21 — Sherlock orchestrator hardening: DB persistence + async/WS + audit [m5 da]
 
 Day-21 P0 followup `(da)` — closes the 3 hardening gaps left from PR #173 (synchronous-only Day-20 path).
