@@ -1,7 +1,7 @@
 # ADR-020: Jira sync architecture — webhook-first + REST backfill, single-puller idempotency, QNT seed corpus
 
-- **Status:** Draft (Day-21 PM 2026-05-18 — to be ratified Day-22 AM before BE+1 starts MS5-T0xx Jira wire-up Wed Day-23)
-- **Date:** 2026-05-18
+- **Status:** **Ratified** (Day-22 2026-05-19 11:30 IST by Yogesh + BE+1 + MAIN, before BE+1 starts MS5-T0xx Jira wire-up Wed Day-23). Draft amended in-place; 5 open questions answered + a 7th binding decision added (webhook async-write pattern). Implementation may proceed.
+- **Date:** 2026-05-18 (drafted) · 2026-05-19 (ratified)
 - **Deciders:** Yogesh Mohite (Admin), BE+1 (implementer), MAIN (planner)
 - **Related:** PM1_ERD §3.7 (Jira 2-way sync sequence) · PM1_ERD §TB-013 `jira_connection` · PM1_ERD §TB-014 `jira_issue` · PM1_ERD §TB-015 `defect` · PR #162 (Jira webhook receiver, Day-19 P2) · PR #157 (jira-sync module scaffold, Day-19) · PR #146 (M4 v2 plan §6, Jira ingestion notes) · ADR-015 (runtime LLM config bridge — config-token pattern reused here) · ADR-018 (Resend HTTPS migration — same outbound-HTTPS-only constraint applies)
 - **Supersedes:** none
@@ -13,7 +13,7 @@
 
 M4 shipped the webhook receiver half of 2-way Jira sync (PR #162 + scaffold #157). The inbound HMAC-verified payload path is live; the outbound `defect → Jira` create path is wired in `DefectsController` but not exercised end-to-end. M5 needs the full sync working against real Jira data so the pilot's three AI agents (Composer, Curator, Sherlock) can reason over actual ticket context, not stubs.
 
-Six coupled decisions need locking before BE+1 starts MS5 Jira wire-up Wednesday Day-23:
+Seven coupled decisions need locking before BE+1 starts MS5 Jira wire-up Wednesday Day-23:
 
 1. **Ingestion topology** — webhook receiver alone is insufficient: it only fires on live events. We need a **REST backfill puller** to seed history (74 QNT tickets, then daily reconciliation pulls).
 2. **QNT seed data flow** — the 74 fictional Iksula Returns tickets in `ybmohite.atlassian.net` (Yogesh's personal Atlassian Cloud free-tier instance, set up Day-18 per kickoff §6) need a one-time bulk ingest. This is the M5 demo dataset; later pilot users connect their own instances.
@@ -21,6 +21,7 @@ Six coupled decisions need locking before BE+1 starts MS5 Jira wire-up Wednesday
 4. **Composer / Curator / Sherlock data access patterns** — the agents read `jira_issue` rows, NOT the Jira REST API directly. This isolates LLM call cost from network rate-limit cost and lets Sherlock's `Promise.all` fan-out run without contending for the 350/hr budget.
 5. **Sync state machine** — every defect ↔ Jira issue link has a sync state. We need explicit states for `pending` (queued for outbound create) / `syncing` (REST call in flight) / `synced` (mirrored) / `failed` (last attempt errored) so the retry pipeline + audit log are coherent.
 6. **Idempotency** — both webhook events and REST puller results MUST be idempotent on replay (Atlassian retries failed webhook deliveries up to 5×; REST puller reconciliation runs daily). The `jira_issue.id` (UUID) + `jira_key` (text) + `jira_connection_id` natural-composite is the idempotency key.
+7. **Webhook response-time budget + async-write contract** _(added Day-22 ratification; see §7 below)_ — Atlassian Jira Cloud enforces a 5s connection + 20s response timeout on webhook deliveries. Sherlock's LLM call latency (4-12s) plus DB writes routinely blow that budget under synchronous processing → cascading retry storms. Synchronous Sherlock-on-webhook is **rejected**. The receiver MUST persist the raw payload to a `webhook_event` staging table and return `200 OK` within **≤500ms p95**, then dispatch async processing via Postgres `LISTEN/NOTIFY`.
 
 Binding constraints:
 
@@ -154,6 +155,63 @@ CREATE UNIQUE INDEX jira_issue_natural_key
 
 (`jira_id` is Atlassian's `issue.id`, distinct from our `jira_issue.id` UUID PK; schema migration adds the `jira_id` column to TB-014 in M5.)
 
+### 7. Webhook response-time budget + async-write contract (BINDING)
+
+**Decision** _(added Day-22 ratification 2026-05-19 — supersedes the implicit "synchronous OK" of the §1 webhook path)_:
+
+Atlassian Jira Cloud enforces a **5s connection + 20s response timeout** on every webhook delivery. Late `200 OK` → Atlassian marks the delivery FAILED → enters its 5× retry-with-backoff schedule. Under synchronous processing, Sherlock's `Promise.all`-fan-out LLM call (4-12s p95 per ADR-019) plus DB writes routinely blow the 20s budget on heavy frames, triggering cascading retry storms that compound Neon CU-hr burn (Hard Rule 1 violation risk) and audit-log noise.
+
+**Binding contract for the inbound `/webhooks/jira` handler:**
+
+```
+1. Verify HMAC signature                              ≤ 50ms   (BLOCKING; reject 401 on fail)
+2. INSERT into `webhook_event` staging table          ≤ 100ms  (raw payload + processed=false)
+3. Postgres NOTIFY 'webhook_event:new', <event_id>    ≤ 10ms   (in same Tx as step 2)
+4. Return 200 OK to Atlassian                         target < 500ms p95 total
+   ── ASYNC BOUNDARY ──
+5. NestJS @OnEvent listener (subscribed via pg-listen) picks up the NOTIFY
+6. Listener runs the heavy work: Zod-parse → idempotency check → jira_issue upsert
+   → audit_log write → optional Sherlock trigger (via existing orchestrator,
+   NOT in the webhook hot path)
+7. Listener sets webhook_event.processed=true + processed_at=now() on success
+```
+
+**New schema (M5 migration, additive — does not change locked TB-013/14/15):**
+
+```sql
+CREATE TABLE webhook_event (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  jira_connection_id  UUID NOT NULL REFERENCES jira_connection(id),
+  atlassian_event_id  TEXT NOT NULL,                    -- from X-Atlassian-Webhook-Identifier header
+  webhook_event       TEXT NOT NULL,                    -- e.g. 'jira:issue_updated'
+  raw_payload         JSONB NOT NULL,                   -- full Atlassian body (≤256KB enforced)
+  received_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  processed           BOOLEAN NOT NULL DEFAULT false,
+  processed_at        TIMESTAMPTZ,
+  error_message       TEXT,                             -- last processor failure (if any)
+  retry_count         SMALLINT NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX webhook_event_atlassian_dedup
+  ON webhook_event (jira_connection_id, atlassian_event_id);
+CREATE INDEX webhook_event_processing_queue
+  ON webhook_event (processed, received_at) WHERE processed = false;
+```
+
+**Idempotency lift:** the UNIQUE INDEX on `(jira_connection_id, atlassian_event_id)` absorbs duplicate webhook deliveries from Atlassian's retry storm. A repeated INSERT raises a unique-violation that the handler catches and converts to a fast `200 OK` (no NOTIFY fired the second time). Atlassian sees success; processor never re-runs.
+
+**Why Postgres `LISTEN/NOTIFY` (not BullMQ / not Redis):** Redis is ban-list per Hard Rule 5. Postgres ships with `LISTEN/NOTIFY` natively + the `pg-listen` npm package gives us a clean NestJS lifecycle hook around it. Single-instance Render Free dyno satisfies the "single consumer" guarantee. Failover semantics: if the dyno restarts mid-processing, the cron job that already exists for `sync_state = 'pending'` reconciliation (§5) re-picks `webhook_event.processed = false AND received_at < now() - INTERVAL '5 min'` rows the next cycle. No event lost.
+
+**Cold-dyno-window handling:** Render Free dynos sleep after 15min idle. If a webhook arrives DURING the cold-start window, Atlassian's 5s connection timeout will fire (dyno takes 10-20s to wake on Free tier). Atlassian retries 5× with exponential backoff (typically lands on a warm dyno by retry 2 or 3). For the rare full-window miss, the daily reconciliation cron (§1) catches the gap via REST puller. UptimeRobot's 5min keep-alive (already deployed Day-18) makes the cold-dyno-window practically negligible at pilot scale, but the layered defense holds.
+
+**Forbidden patterns (rejection triggers at code review):**
+
+- Calling `LLMGateway` / `Sherlock` / any external HTTP from inside the `/webhooks/jira` handler (synchronous coupling = 20s budget violation)
+- Skipping the `webhook_event` INSERT and processing inline ("just for `jira:issue_deleted` events because they're small")
+- Returning 200 OK from the handler BEFORE the `webhook_event` INSERT commits (data loss on crash between ACK and persist)
+- Implementing the async dispatch via in-memory `EventEmitter` instead of Postgres `LISTEN/NOTIFY` (loses cross-restart durability)
+
+**Observability:** OTel span `jira.webhook.receive` covers steps 1-4 with target p95 < 500ms. OTel span `jira.webhook.process` covers steps 5-7 with target p95 < 8s (Sherlock LLM call upper bound). Two-span pattern lets us monitor handler latency separately from processor latency.
+
 ## Consequences
 
 - **Predictable rate budget** — total Atlassian usage capped at 60% of the 350/hr free-tier limit under steady state. Headroom absorbs unforeseen growth without a paid-tier upgrade (Hard Rule 1).
@@ -172,14 +230,19 @@ CREATE UNIQUE INDEX jira_issue_natural_key
 - **Two separate ADRs (one per direction)** — rejected. Inbound + outbound share the same `jira_issue` table, same idempotency strategy, same rate-limit budget. Splitting would force cross-ADR coordination overhead for marginal clarity gain.
 - **Real-time bidirectional CRDT sync** — rejected. Atlassian doesn't expose CRDT primitives; the operational complexity (last-write-wins conflict resolution + per-field merge) far exceeds the pilot's needs. Pilot uses last-write-wins on whole-row sync with `last_synced_at` ordering.
 
-## Open questions (for Day-22 ratification meeting)
+## Ratification decisions (Day-22 2026-05-19 11:30 IST)
 
-1. **`jira_comment` table in M5 schema migration — yes/no?** Sherlock's `agent.code` benefits but degrades gracefully without it. BE+1 decides based on M5 timeline pressure.
-2. **F28 "Resync now" admin action — M5 or M6?** Out of M5 acceptance scope but a 1-day add. Yogesh decides priority vs other M5 hardening items.
-3. **Webhook receiver rate-limiting** — currently unlimited. Should we cap inbound bursts (>50 events/min from a misconfigured Jira automation)? Probably yes for M5 hardening, but blast-radius is low (HMAC-verify + upsert is idempotent).
-4. **OAuth 3LO token refresh** — TB-013 has `oauth_expires_at`. M5 needs the refresh flow wired; out of this ADR's scope but a known follow-up.
-5. **QNT seed corpus growth** — 74 tickets is M5 demo scope. Should we double to 150 for stress-testing the agents' top-2 hit rate at scale? Yogesh decides.
+The 5 open questions filed at draft time + the Q6 surfaced by Day-22 research addendum (webhook async-write) were decided as follows by Yogesh + BE+1 + MAIN. Decisions are binding for MS5 wire-up Day-23.
+
+1. **`jira_comment` table in M5 schema migration — DEFERRED to M6.** BE+1's estimate (1.5 days for table + sync wire + pagination + idempotency) exceeds the M5 timeline window (Sat 2026-05-23 close, 5 working days from ratification). Sherlock's `agent.code` degrades gracefully without it; AC042 corpus eval will validate that degradation is acceptable at pilot scale. Re-evaluate in M6 if Sherlock top-2 hit-rate underperforms.
+2. **F28 "Resync now" admin action — DEFERRED to M6.** Not on M5 critical path. Daily reconciliation cron (§1) + webhook real-time covers steady-state. Admin Resync is a rare-misconfiguration recovery affordance; pilot's 8-user × QA-only scope doesn't justify the 1-day cost at launch.
+3. **Webhook receiver inbound rate-limit — DEFERRED to M6.** Pilot scale (8 users × 1 connected Jira instance) makes >50 events/min extremely unlikely. HMAC-verify + idempotent UPSERT on `webhook_event` (new §7) absorbs duplicate storms safely. M6 if any pilot user reports a thundering-herd from misconfigured Jira automation.
+4. **OAuth 3LO token refresh wiring — DEFERRED to M6, with M5 manual-fallback.** Atlassian Cloud OAuth: 1h access token + 90d refresh token. 18-week pilot fires ~2-3 refreshes total per `jira_connection`. M5 ships a one-click F28 "Reconnect Jira" affordance as fallback when a token expires mid-window. M6 properly automates the refresh path via background job.
+5. **QNT seed corpus size — KEEP at 74.** AC042 corpus uses 50; 74 = 1.5× the eval set. Curator dedup eval (M5 close-gate) measures duplicate-cluster precision; expanding tickets ≠ expanding dedup signal unless the new tickets include deliberately-similar pairs. **Conditional escalation rule:** if Day-23 Curator dedup eval shows <60% precision, expand to 150 Day-24-25 with hand-curated near-duplicate pairs. Don't expand pre-emptively.
+6. **Webhook response-time budget + async-write contract — ADOPTED as new §7 (BINDING).** See §7 above. Atlassian's 20s timeout + Sherlock's 4-12s LLM latency = guaranteed retry storms under synchronous processing. The `webhook_event` staging table + Postgres `LISTEN/NOTIFY` processor pattern is the M5 contract. Synchronous Sherlock-on-webhook is explicitly **rejected**.
+
+**Implementation gate:** BE+1 may proceed Day-23 with MS5 Jira wire-up tasks against this ratified design. If any sub-decision needs revisiting during implementation, amend this ADR in-place (single ADR, multiple ratifications) rather than spawning a parallel ADR.
 
 ---
 
-**Ratification gate:** Yogesh + BE+1 review Day-22 AM. If green, BE+1 starts MS5 Jira wire-up Wed Day-23 against this design. If a sub-decision needs revisiting, this ADR amends in-place (single ADR, multiple drafts) rather than spawning ADR-021.
+**Ratification record:** Day-22 2026-05-19 11:30 IST · Yogesh (Admin) + BE+1 (implementer) + MAIN (planner) · 5 questions + 1 new contract decided · 0 deferred to a future ADR.
