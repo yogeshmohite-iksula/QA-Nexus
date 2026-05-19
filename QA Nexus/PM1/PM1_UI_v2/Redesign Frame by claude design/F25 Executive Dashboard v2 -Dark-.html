@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>QA Nexus — Executive Dashboard · R-2026-04-PaymentV2 · Dark</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  F25 Executive Dashboard v2 (Dark) — boardroom prove-mode surface, dark canvas
+  ────────────────────────────────────────────────────────────────
+  Built per PM1_UI_v2/_DESIGN_RULES.md (Hard Rule 14 shell parity,
+  Hard Rule 15 named-agent UI, Hard Rule 18 prove-mode ivory canvas).
+  Shell + collapse JS lifted verbatim from F22 v2. Main canvas
+  stays dark (--canvas #0B0F17) for prove-mode dark variant.
+  All --p-* tokens remapped to dark equivalents below.
+  Mode toggle locked to Prove.
+  Sections: release header + Go/No-Go · ROI value tile · quality
+  posture (3 cards) · risk posture (2 cards) · 4-week trends ·
+  Sherlock pre-ship recommendations · approval & sign-off.
+  Active rail: Executive Dashboard (under ANALYSE, secondary tone,
+  Lead+ badge). ANALYSE auto-expands.
+  Demo data: R-2026-04-PaymentV2 release · Iksula Returns canon.
+  Agent names: Sherlock (RCA narrator) · Curator (dedup) · Composer
+  (drafts). NO A1/A2/A4 in UI text per Hard Rule 15.
+-->
+<style>
+/* =====================================================================
+   F20 Run Results v2 — tokens (verbatim with F19 v2)
+   ===================================================================== */
+:root{
+  --canvas:#0B0F17; --base:#111827; --raised:#1A2233; --overlay:#232C3F;
+  --border:#2A3347; --border-strong:#3B4660;
+  --t1:#F1F5F9; --t2:#C7D0DC; --t3:#8A94A6; --t4:#94A3B8;
+  --primary:#2DD4BF; --primary-ink:#003732;
+  --secondary:#A78BFA; --secondary-ink:#2E1065; --ai-accent:#C4B5FD;
+  --pass:#34D399; --fail:#F87171; --warn:#FBBF24; --info:#60A5FA;
+  --primary-soft:rgba(45,212,191,0.10); --primary-line:rgba(45,212,191,0.28);
+  --ai-soft:rgba(167,139,250,0.12); --ai-line:rgba(167,139,250,0.30);
+  --pass-soft:rgba(52,211,153,0.14); --pass-line:rgba(52,211,153,0.34);
+  --warn-soft:rgba(251,191,36,0.14); --warn-line:rgba(251,191,36,0.34);
+  --fail-soft:rgba(248,113,113,0.14); --fail-line:rgba(248,113,113,0.34);
+  --info-soft:rgba(96,165,250,0.12); --info-line:rgba(96,165,250,0.30);
+  --rail-w:240px; --topbar-h:56px; --tap:44px;
+  --r-sm:6px; --r-md:8px; --r-lg:12px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--canvas);color:var(--t1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:22px;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-height:100vh}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.display{font-family:"DM Sans","Inter",ui-sans-serif;letter-spacing:-0.02em}
+button{font-family:inherit;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--secondary);outline-offset:2px;border-radius:4px}
+::selection{background:rgba(167,139,250,0.4);color:var(--t1)}
+input,textarea{font-family:inherit;color:inherit}
+
+/* SYS-17 scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;transition:background 180ms ease-out}
+::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+::-webkit-scrollbar-corner{background:transparent}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+@media (hover:none) and (pointer:coarse){
+  ::-webkit-scrollbar{width:6px;height:6px}
+}
+
+/* ───────── App shell (lifted verbatim from F19 v2) ───────── */
+.app{min-height:100vh;display:grid;grid-template-columns:1fr;grid-template-rows:auto 1fr}
+@media (min-width:1024px){
+  .app{grid-template-columns:var(--rail-w) 1fr;grid-template-rows:1fr;
+       transition:grid-template-columns 220ms cubic-bezier(.4,0,.2,1)}
+}
+.app[data-rail="collapsed"]{--rail-w:64px}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:40;height:var(--topbar-h);
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:var(--base);border-bottom:1px solid var(--border)}
+@media (min-width:1024px){
+  .topbar{grid-column:1 / -1;padding:0 16px;gap:12px}
+}
+.brand{display:inline-flex;align-items:center;gap:8px}
+.brand-mark{width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;
+  font-family:'DM Sans';font-weight:700;font-size:14px}
+.brand-word{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--t1)}
+@media (max-width:1023px){.brand-word{display:none}}
+
+.menu-btn{width:var(--tap);height:var(--tap);border-radius:8px;background:none;border:0;color:var(--t2);
+  display:inline-flex;align-items:center;justify-content:center}
+.menu-btn:hover{background:var(--raised);color:var(--t1)}
+@media (min-width:1024px){.menu-btn{display:none}}
+
+.proj-pill{display:none;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:6px;
+  background:var(--raised);border:1px solid var(--border);color:var(--t1);font-size:13px;font-weight:500}
+.proj-pill .dot{width:18px;height:18px;border-radius:4px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  display:inline-flex;align-items:center;justify-content:center;color:#0B0F17;font-size:9px;font-weight:700}
+.proj-pill .meta{color:var(--t3);font-family:'JetBrains Mono';font-size:11px}
+@media (min-width:768px){.proj-pill{display:inline-flex}}
+
+.global-search{flex:1;min-width:0;height:36px;border-radius:6px;background:var(--raised);
+  border:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--t3);font-size:13px}
+.global-search .kbd{margin-left:auto;font-family:'JetBrains Mono';font-size:10.5px;
+  border:1px solid var(--border);background:var(--base);color:var(--t3);padding:1px 5px;border-radius:4px}
+@media (max-width:767px){.global-search .label,.global-search .kbd{display:none}}
+
+.icon-btn{width:var(--tap);height:var(--tap);border-radius:6px;background:none;border:0;color:var(--t3);
+  display:inline-flex;align-items:center;justify-content:center;flex:none;position:relative}
+.icon-btn:hover{background:var(--raised);color:var(--t1)}
+.icon-btn .pip{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:999px;background:var(--secondary)}
+@media (min-width:1024px){.icon-btn{width:36px;height:36px}}
+
+.mode-toggle{display:none;height:32px;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:2px}
+.mode-toggle button{height:26px;padding:0 10px;border-radius:4px;background:none;border:0;color:var(--t3);
+  font-size:11px;font-weight:500;font-family:inherit}
+.mode-toggle button.on{background:var(--overlay);color:var(--t1);font-weight:600}
+@media (min-width:1024px){.mode-toggle{display:inline-flex}}
+
+.user-pill{display:inline-flex;align-items:center;gap:8px;height:36px;padding:3px 10px 3px 3px;
+  border-radius:999px;background:var(--raised);border:1px solid var(--border)}
+.user-av{width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,var(--primary),var(--secondary));
+  color:#0B0F17;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.user-pill .name{font-size:12.5px;color:var(--t1);font-weight:500}
+@media (max-width:767px){.user-pill .name{display:none}}
+
+/* Left rail */
+.rail{display:none;background:var(--base);border-right:1px solid var(--border);
+  flex-direction:column;padding:0;overflow:hidden;
+  height:calc(100vh - var(--topbar-h));position:sticky;top:var(--topbar-h)}
+@media (min-width:1024px){.rail{display:flex}}
+.rail.mobile-open{display:flex;position:fixed;top:var(--topbar-h);left:0;bottom:0;width:280px;z-index:50;
+  height:calc(100vh - var(--topbar-h));box-shadow:0 0 0 9999px rgba(0,0,0,0.5)}
+
+/* Single-scrollbar middle area — entire nav scrolls as one (per Demo Collapsible Nav Sections) */
+.rail-content{flex:1;min-height:0;overflow-y:auto;padding:0 8px 8px}
+.rail-content::-webkit-scrollbar{width:6px}
+.rail-content::-webkit-scrollbar-track{background:transparent}
+.rail-content::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+.rail-content::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
+
+.rail-toggle{min-height:44px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;
+  color:var(--t3);font-size:11px;font-family:'JetBrains Mono';font-weight:600;letter-spacing:0.08em;
+  margin:14px 8px 8px;flex:none;border:1px solid transparent;cursor:pointer;background:none}
+.rail-toggle:hover{background:var(--raised);color:var(--t1);border-color:var(--border)}
+.rail-toggle .rt-icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--t3)}
+.rail-toggle:hover .rt-icon{color:var(--t1)}
+.rail-toggle .rt-icon svg{width:16px;height:16px;transition:transform 220ms cubic-bezier(.4,0,.2,1)}
+.rail-toggle .rt-label{flex:1;text-align:left;text-transform:uppercase;white-space:nowrap}
+[data-rail="collapsed"] .rail-toggle{width:44px;height:44px;min-height:44px;padding:10px;justify-content:center;margin:6px auto 10px}
+[data-rail="collapsed"] .rail-toggle .rt-label{display:none}
+[data-rail="collapsed"] .rail-toggle .rt-icon svg{transform:scaleX(-1)}
+
+/* Section header — clickable, with chevron + underline divider (per Demo Collapsible Nav Sections) */
+.nav-section{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 10px;
+  cursor:pointer;user-select:none;transition:background 150ms;position:relative;
+  border-bottom:1px solid var(--border);margin:0 4px 6px}
+.nav-section:hover{background:rgba(255,255,255,0.02)}
+.nav-section .sec-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t2);
+  font-weight:700;font-family:'JetBrains Mono'}
+.nav-section .sec-chevron{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--t3);transition:transform 220ms cubic-bezier(.4,0,.2,1);flex:none}
+.nav-section:hover .sec-chevron{color:var(--t1)}
+.nav-section .sec-chevron svg{width:12px;height:12px}
+.nav-section.collapsed .sec-chevron{transform:rotate(-90deg)}
+
+/* Items list (collapsible body) — large max-height so multi-item sections never overlap */
+.nav-items{display:flex;flex-direction:column;gap:0;
+  max-height:2000px;overflow:hidden;
+  transition:max-height 280ms cubic-bezier(.4,0,.2,1),opacity 200ms ease,padding 220ms ease,margin 220ms ease}
+.nav-items.collapsed{max-height:0;opacity:0;pointer-events:none;padding:0;margin:0}
+
+/* Collapsed-rail (240→64px) compatibility — hide chevron + label, keep underline as visual divider */
+[data-rail="collapsed"] .nav-section{padding:10px 0 8px;margin:6px 4px 4px;cursor:default;
+  justify-content:center;border-bottom:1px solid var(--border)}
+[data-rail="collapsed"] .nav-section .sec-label,
+[data-rail="collapsed"] .nav-section .sec-chevron{display:none}
+[data-rail="collapsed"] .nav-items{max-height:none !important;opacity:1 !important;pointer-events:auto !important;padding:0 !important;margin:0 !important}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--t2);
+  font-size:13px;line-height:18px;min-height:36px;position:relative;white-space:nowrap;text-decoration:none}
+.nav-item:hover{background:var(--raised);color:var(--t1)}
+.nav-item.active{background:var(--overlay);color:var(--t1);font-weight:500}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:6px;bottom:6px;width:3px;
+  background:var(--secondary);border-radius:0 2px 2px 0}
+.nav-item.disabled{color:var(--t4);opacity:0.55;cursor:not-allowed}
+
+.nav-icon{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;background:var(--raised);border:1px solid var(--border);color:var(--t3);transition:all 180ms ease}
+.nav-icon svg{width:14px;height:14px}
+.nav-item:hover .nav-icon{transform:scale(1.05)}
+.nav-item.active .nav-icon{box-shadow:0 0 0 1px currentColor inset}
+.nav-item[data-tone="home"]      .nav-icon{background:var(--raised);border-color:var(--border-strong);color:var(--t1)}
+.nav-item[data-tone="primary"]   .nav-icon{background:var(--primary-soft);border-color:var(--primary-line);color:var(--primary)}
+.nav-item[data-tone="secondary"] .nav-icon{background:var(--ai-soft);border-color:var(--ai-line);color:var(--ai-accent)}
+.nav-item[data-tone="info"]      .nav-icon{background:var(--info-soft);border-color:var(--info-line);color:var(--info)}
+.nav-item[data-tone="warn"]      .nav-icon{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.nav-item[data-tone="pass"]      .nav-icon{background:var(--pass-soft);border-color:var(--pass-line);color:var(--pass)}
+.nav-item[data-tone="fail"]      .nav-icon{background:var(--fail-soft);border-color:var(--fail-line);color:var(--fail)}
+
+.nav-count{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--t3)}
+.nav-item.active .nav-count{color:var(--secondary)}
+.nav-pill{margin-left:auto;font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:0.06em;
+  padding:2px 6px;border-radius:3px;background:var(--raised);color:var(--t4);border:1px solid var(--border)}
+
+[data-rail="collapsed"] .rail-content{padding:0 4px 8px}
+[data-rail="collapsed"] .nav-item{justify-content:center;padding:6px;gap:0}
+[data-rail="collapsed"] .nav-item > :not(.nav-icon){display:none}
+[data-rail="collapsed"] .nav-item.active::before{display:none}
+[data-rail="collapsed"] .nav-item.active .nav-icon{box-shadow:0 0 0 1.5px var(--secondary),0 0 0 4px var(--ai-soft)}
+[data-rail="collapsed"] .nav-item::after{content:attr(data-label);position:absolute;left:calc(100% + 12px);top:50%;
+  transform:translateY(-50%) translateX(-4px);background:var(--overlay);color:var(--t1);
+  font-size:12px;font-weight:500;padding:6px 10px;border-radius:6px;border:1px solid var(--border-strong);
+  white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 140ms,transform 140ms;
+  z-index:50;box-shadow:0 4px 12px rgba(0,0,0,0.4);font-family:'Inter'}
+[data-rail="collapsed"] .nav-item:hover::after{opacity:1;transform:translateY(-50%) translateX(0)}
+[data-rail="collapsed"] .rail-foot{padding:12px 4px;justify-content:center}
+[data-rail="collapsed"] .rail-foot .who,
+[data-rail="collapsed"] .rail-foot > svg{display:none}
+
+.rail-foot{margin-top:auto;border-top:1px solid var(--border);padding:12px 10px;display:flex;align-items:center;gap:10px}
+.rail-foot .av{width:28px;height:28px;border-radius:999px;
+  background:linear-gradient(135deg,var(--primary),var(--secondary));color:#0B0F17;font-size:11px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center}
+.rail-foot .who{flex:1;min-width:0}
+.rail-foot .who .n{font-size:12.5px;font-weight:600;color:var(--t1)}
+.rail-foot .who .r{font-family:'JetBrains Mono';font-size:9.5px;color:var(--secondary);letter-spacing:0.05em;font-weight:600}
+
+/* ═════════════════════════════════════════════════════════════════════
+   F25 PAGE — Executive Dashboard (Prove-mode ivory canvas)
+   ═════════════════════════════════════════════════════════════════════ */
+:root{
+  /* F25 Dark — --p-* tokens remapped to dark canvas (#0B0F17 family).
+     Single-line change: switch this block to the ivory variant in the
+     light file to keep the rest of the CSS identical. */
+  --p-canvas:#0B0F17;
+  --p-card:#111827;
+  --p-card-soft:#1A2233;
+  --p-border:#2A3347;
+  --p-border-strong:#3B4660;
+  --p-text-1:#F1F5F9;
+  --p-text-2:#C7D0DC;
+  --p-text-3:#8A94A6;
+  --p-text-4:#64748B;
+  --p-pass:#34D399;
+  --p-pass-bg:rgba(52,211,153,0.14);
+  --p-pass-line:rgba(52,211,153,0.34);
+  --p-warn:#FBBF24;
+  --p-warn-bg:rgba(251,191,36,0.14);
+  --p-warn-line:rgba(251,191,36,0.34);
+  --p-fail:#F87171;
+  --p-fail-bg:rgba(248,113,113,0.14);
+  --p-fail-line:rgba(248,113,113,0.34);
+  --p-info:#60A5FA;
+  --p-info-bg:rgba(96,165,250,0.12);
+  --p-secondary:#A78BFA;
+  --p-secondary-bg:rgba(167,139,250,0.12);
+  --p-secondary-line:rgba(167,139,250,0.30);
+  --p-primary:#2DD4BF;
+  --p-primary-bg:rgba(45,212,191,0.12);
+}
+
+.main{min-width:0;display:flex;flex-direction:column;flex:1;overflow:hidden}
+
+/* Locked Prove pill in topbar */
+.mode-toggle .lock-glyph{width:9px;height:9px;flex:none}
+
+/* Ivory prove-mode canvas */
+.prove{flex:1;background:var(--p-canvas);overflow-y:auto;padding:0;color:var(--p-text-1);
+  font-family:"Inter",ui-sans-serif,system-ui,sans-serif}
+.prove::-webkit-scrollbar{width:8px}
+.prove::-webkit-scrollbar-track{background:transparent}
+.prove::-webkit-scrollbar-thumb{background:var(--p-border-strong);border-radius:4px}
+.prove::-webkit-scrollbar-thumb:hover{background:var(--p-text-3)}
+
+.prove-inner{padding:18px 14px 40px;display:flex;flex-direction:column;gap:18px;max-width:1320px;margin:0 auto}
+@media (min-width:480px){.prove-inner{padding:22px 18px 48px;gap:18px}}
+@media (min-width:768px){.prove-inner{padding:26px 24px 56px;gap:20px}}
+@media (min-width:1024px){.prove-inner{padding:28px 32px 56px;gap:20px}}
+
+/* ───── SECTION 1 — Release header + Go/No-Go ───── */
+.release-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding-bottom:16px;border-bottom:1px solid var(--p-border);flex-wrap:wrap}
+.rh-left{flex:1;min-width:0}
+.rh-eyebrow{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--p-text-3);
+  font-weight:700;margin-bottom:6px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prove-badge{font-family:'JetBrains Mono';font-size:9.5px;color:var(--p-secondary);
+  background:var(--p-secondary-bg);border:1px solid var(--p-secondary-line);
+  padding:2px 6px;border-radius:3px;letter-spacing:0.04em;font-weight:700;text-transform:uppercase;line-height:1}
+.rh-name{font-family:'DM Sans';font-size:22px;line-height:28px;font-weight:700;color:var(--p-text-1);
+  margin:0;letter-spacing:-0.01em;text-wrap:pretty}
+@media (min-width:640px){.rh-name{font-size:26px;line-height:32px}}
+@media (min-width:1024px){.rh-name{font-size:30px;line-height:36px}}
+.rh-meta{font-size:13px;line-height:20px;color:var(--p-text-2);margin-top:6px}
+.rh-meta b{color:var(--p-text-1);font-weight:600;font-family:'JetBrains Mono'}
+.rh-meta .sep{color:var(--p-text-4);margin:0 8px}
+
+.gng{display:inline-flex;flex-direction:column;align-items:flex-end;gap:8px;flex:none}
+.gng-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;
+  font-family:'DM Sans';font-size:18px;font-weight:700;line-height:1;border:2px solid;letter-spacing:-0.01em}
+.gng-pill.go{background:var(--p-pass-bg);color:var(--p-pass);border-color:var(--p-pass)}
+.gng-pill.nogo{background:var(--p-fail-bg);color:var(--p-fail);border-color:var(--p-fail)}
+.gng-pill svg{width:18px;height:18px;flex:none}
+.gng-meta{font-size:11px;color:var(--p-text-3);font-family:'JetBrains Mono';font-weight:500}
+
+/* Timeframe selector */
+.tf-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tf-group{display:inline-flex;background:var(--p-card);border:1px solid var(--p-border);border-radius:6px;padding:2px;height:34px}
+.tf-group button{height:28px;padding:0 11px;border-radius:4px;background:transparent;border:0;color:var(--p-text-3);
+  font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:0.02em;min-height:28px}
+.tf-group button.on{background:var(--p-secondary-bg);color:var(--p-secondary)}
+.tf-group button:hover:not(.on){color:var(--p-text-1)}
+.tf-icon{width:34px;height:34px;border-radius:6px;background:var(--p-card);border:1px solid var(--p-border);
+  color:var(--p-text-3);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.tf-icon:hover{color:var(--p-text-1);background:var(--p-card-soft);border-color:var(--p-border-strong)}
+.tf-icon svg{width:13px;height:13px}
+@media (hover:none) and (pointer:coarse){.tf-icon{min-width:44px;min-height:44px;width:44px;height:44px}}
+
+/* Scope row */
+.scope-row{display:flex;align-items:center;gap:0;flex-wrap:wrap;padding:6px 0 0}
+.scope-stat{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border-right:1px solid var(--p-border);
+  font-size:12.5px;color:var(--p-text-2)}
+.scope-stat:first-child{padding-left:0}
+.scope-stat:last-child{border-right:0}
+.scope-stat .v{color:var(--p-text-1);font-weight:600;font-family:'JetBrains Mono'}
+.scope-chips{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;width:100%}
+@media (min-width:768px){.scope-chips{margin-left:auto;margin-top:0;width:auto}}
+.scope-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:5px;
+  line-height:1;height:24px;border:1px solid;font-family:'Inter'}
+.scope-chip.ok{background:var(--p-pass-bg);color:var(--p-pass);border-color:var(--p-pass-line)}
+.scope-chip.warn{background:var(--p-warn-bg);color:var(--p-warn);border-color:var(--p-warn-line)}
+.scope-chip svg{width:11px;height:11px}
+.scope-chip .arrow{font-family:'JetBrains Mono'}
+
+/* ───── SECTION 2 — Value tile / ROI ───── */
+.value-tile{background:var(--p-card);border:2px solid var(--p-primary);border-radius:14px;padding:20px;
+  display:grid;grid-template-columns:1fr;gap:20px;box-shadow:0 1px 0 0 rgba(13,148,136,0.06)}
+@media (min-width:768px){.value-tile{padding:24px}}
+@media (min-width:1024px){.value-tile{padding:28px;grid-template-columns:1.4fr 1fr;gap:32px}}
+
+.vt-left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.vt-eyebrow{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--p-primary);
+  font-weight:700;display:inline-flex;align-items:center;gap:8px}
+.vt-eyebrow svg{width:11px;height:11px}
+.vt-hero{font-family:'JetBrains Mono';font-size:42px;line-height:48px;font-weight:700;color:var(--p-text-1);
+  letter-spacing:-0.02em;margin:0;word-break:break-word}
+@media (min-width:640px){.vt-hero{font-size:48px;line-height:54px}}
+@media (min-width:1024px){.vt-hero{font-size:54px;line-height:60px}}
+.vt-hero .pct{color:var(--p-primary)}
+.vt-sub{font-size:14px;line-height:21px;color:var(--p-text-2);margin:0;max-width:520px}
+.vt-sub b{color:var(--p-text-1);font-weight:600}
+
+.vt-formula{background:var(--p-card-soft);border:1px solid var(--p-border);border-radius:8px;
+  padding:12px 14px;font-family:'JetBrains Mono';font-size:11.5px;line-height:18px;color:var(--p-text-2);margin-top:6px}
+.vt-formula .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:1px 0}
+.vt-formula .row.sep{border-top:1px solid var(--p-border);margin-top:6px;padding-top:6px}
+.vt-formula .row.bold{color:var(--p-text-1);font-weight:700}
+.vt-formula .label{flex:1}
+.vt-formula .v{color:var(--p-text-1);font-weight:600;text-align:right}
+.vt-formula .roi-line{color:var(--p-primary);font-weight:700;font-size:12.5px}
+.vt-note{font-size:11px;line-height:15px;color:var(--p-text-3);font-style:italic;margin-top:6px}
+.vt-note b{color:var(--p-text-2);font-weight:600;font-style:normal;font-family:'JetBrains Mono'}
+
+.vt-right{display:flex;flex-direction:column;justify-content:center;gap:14px;padding-left:0;border-left:0;
+  padding-top:20px;border-top:1px solid var(--p-border)}
+@media (min-width:1024px){.vt-right{padding-left:28px;padding-top:0;border-left:1px solid var(--p-border);border-top:0}}
+.vt-cto-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--p-text-3);
+  font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.vt-cto-label svg{width:11px;height:11px}
+.vt-cto-text{font-size:14px;line-height:21px;color:var(--p-text-1);font-weight:500;font-style:italic;margin:0}
+@media (min-width:1024px){.vt-cto-text{font-size:15px;line-height:22px}}
+.vt-cto-text b{color:var(--p-primary);font-weight:700;font-style:normal}
+.vt-cto-attribution{font-size:11px;color:var(--p-text-3);font-family:'JetBrains Mono';margin-top:4px}
+
+/* Sherlock/Curator/Composer agent name w/ tooltip */
+.agent-name{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:var(--p-secondary);font-family:'DM Sans';line-height:1.2}
+.agent-info{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:13px;height:13px;border-radius:999px;color:var(--p-secondary);background:var(--p-secondary-bg);
+  border:1px solid var(--p-secondary-line);font-size:9px;font-weight:700;cursor:help;font-family:'Inter';font-style:italic;flex:none;vertical-align:middle}
+.agent-info::before{content:"i"}
+.agent-info::after{content:attr(data-tip);position:absolute;top:calc(100% + 8px);left:50%;
+  transform:translateX(-50%) translateY(-4px);background:var(--p-text-1);color:#fff;
+  font-size:11px;font-weight:500;font-style:normal;font-family:'Inter';padding:7px 10px;border-radius:6px;
+  pointer-events:none;opacity:0;transition:opacity 160ms,transform 160ms;
+  z-index:50;box-shadow:0 6px 18px rgba(15,23,42,0.18);width:max-content;max-width:240px;line-height:16px;white-space:normal;text-align:center}
+.agent-info:hover::after,.agent-info:focus::after{opacity:1;transform:translateX(-50%) translateY(0)}
+.agent-info:hover,.agent-info:focus{color:#fff;background:var(--p-secondary);outline:none}
+
+/* ───── Generic prove section ───── */
+.sec-title{font-family:'DM Sans';font-size:12.5px;line-height:18px;font-weight:700;color:var(--p-text-1);
+  margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.08em;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sec-title .count{font-family:'JetBrains Mono';font-size:10.5px;font-weight:600;color:var(--p-text-3);
+  background:var(--p-card);padding:2px 7px;border-radius:999px;line-height:1;border:1px solid var(--p-border);
+  text-transform:none;letter-spacing:0}
+
+.three-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:640px){.three-grid{grid-template-columns:repeat(2,1fr);gap:14px}}
+@media (min-width:1024px){.three-grid{grid-template-columns:repeat(3,1fr);gap:16px}}
+
+.two-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:768px){.two-grid{grid-template-columns:1fr 1fr;gap:16px}}
+
+.p-card{background:var(--p-card);border:1px solid var(--p-border);border-radius:12px;padding:16px;
+  display:flex;flex-direction:column;gap:10px;min-height:160px}
+@media (min-width:768px){.p-card{padding:20px;min-height:180px}}
+.p-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.p-card-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--p-text-3);font-weight:700}
+.p-card-trend{font-family:'JetBrains Mono';font-size:11px;font-weight:600;display:inline-flex;align-items:center;
+  gap:3px;padding:3px 7px;border-radius:4px;line-height:1;height:22px;border:1px solid;white-space:nowrap}
+.p-card-trend.up{background:var(--p-pass-bg);color:var(--p-pass);border-color:var(--p-pass-line)}
+.p-card-trend.down-good{background:var(--p-pass-bg);color:var(--p-pass);border-color:var(--p-pass-line)}
+.p-card-trend.flat{background:var(--p-card-soft);color:var(--p-text-3);border-color:var(--p-border)}
+
+.p-metric{font-family:'JetBrains Mono';font-size:30px;line-height:36px;font-weight:700;color:var(--p-text-1);
+  letter-spacing:-0.02em;margin:0}
+@media (min-width:768px){.p-metric{font-size:36px;line-height:42px}}
+.p-metric .unit{font-size:16px;color:var(--p-text-3);font-weight:500;margin-left:4px}
+@media (min-width:768px){.p-metric .unit{font-size:18px}}
+.p-card-sub{font-size:13px;line-height:18px;color:var(--p-text-2);font-weight:500;margin:0}
+
+/* Coverage breakdown bar */
+.cov-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--p-card-soft);border:1px solid var(--p-border);margin-top:4px}
+.cov-bar .seg{height:100%}
+.cov-bar .seg.auto{background:var(--p-primary)}
+.cov-bar .seg.manual{background:var(--p-text-3)}
+.cov-bar .seg.uncov{background:var(--p-border)}
+.cov-legend{display:flex;align-items:center;gap:10px;font-size:10.5px;color:var(--p-text-3);margin-top:6px;font-family:'Inter';flex-wrap:wrap}
+.cov-legend .key{display:inline-flex;align-items:center;gap:5px}
+.cov-legend .swatch{width:10px;height:10px;border-radius:2px;flex:none}
+.cov-legend .swatch.auto{background:var(--p-primary)}
+.cov-legend .swatch.manual{background:var(--p-text-3)}
+.cov-legend .swatch.uncov{background:var(--p-border)}
+.cov-legend .v{color:var(--p-text-1);font-family:'JetBrains Mono';font-weight:600;margin-left:2px}
+
+.benchmark{font-size:11px;color:var(--p-text-3);background:var(--p-card-soft);border:1px solid var(--p-border);
+  border-radius:5px;padding:6px 10px;margin-top:auto;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.benchmark svg{width:10px;height:10px;color:var(--p-pass);flex:none}
+.benchmark b{color:var(--p-text-2);font-family:'JetBrains Mono';font-weight:600}
+
+.severity-rows{display:flex;flex-direction:column;gap:5px;margin-top:auto}
+.sev-row{display:grid;grid-template-columns:70px 1fr 36px;align-items:center;gap:8px;font-size:11px;color:var(--p-text-2)}
+.sev-row .label{font-weight:500}
+.sev-row .bar{height:5px;background:var(--p-card-soft);border-radius:999px;border:1px solid var(--p-border);overflow:hidden}
+.sev-row .fill{height:100%;background:var(--p-primary)}
+.sev-row .pct{font-family:'JetBrains Mono';font-weight:600;color:var(--p-text-1);text-align:right;font-size:11px}
+
+/* Open defects */
+.defect-block{background:var(--p-warn-bg);border:1px solid var(--p-warn-line);border-radius:8px;
+  padding:10px 12px;display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.def-pill{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono';font-size:13px;font-weight:700;
+  padding:5px 10px;border-radius:5px;line-height:1;height:26px;border:1px solid}
+.def-pill.p0{background:var(--p-fail-bg);color:var(--p-fail);border-color:var(--p-fail-line)}
+.def-pill.p1{background:rgba(249,115,22,0.15);color:#FB923C;border-color:rgba(249,115,22,0.40)}
+.def-pill.p2{background:var(--p-warn-bg);color:var(--p-warn);border-color:var(--p-warn-line)}
+.def-pill .ct{font-size:15px;font-weight:800;margin-right:1px}
+.def-pill .lvl{font-size:10px;letter-spacing:0.06em}
+.def-target{font-size:11.5px;color:var(--p-text-2);margin-top:auto;line-height:16px;font-family:'Inter'}
+.def-target b{color:var(--p-text-1);font-weight:600;font-family:'JetBrains Mono'}
+.def-target .arrow{color:var(--p-pass);font-weight:700}
+.def-link{font-size:12px;color:var(--p-secondary);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;
+  gap:4px;margin-top:6px;min-height:24px}
+.def-link:hover{color:var(--p-text-1)}
+.def-link svg{width:11px;height:11px}
+
+/* Readiness gates */
+.gates-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.gate-row{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--p-text-1);line-height:17px;flex-wrap:wrap}
+.gate-icon{width:18px;height:18px;border-radius:999px;background:var(--p-pass-bg);color:var(--p-pass);
+  border:1.5px solid var(--p-pass);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.gate-icon svg{width:9px;height:9px}
+.gate-name{font-weight:600;color:var(--p-text-1);flex:1;min-width:120px}
+.gate-detail{font-size:11px;color:var(--p-text-3);text-align:right;font-family:'Inter'}
+.gates-summary{font-size:12px;color:var(--p-text-2);background:var(--p-pass-bg);border:1px solid var(--p-pass-line);
+  border-radius:6px;padding:6px 10px;margin-top:8px;display:inline-flex;align-items:center;gap:6px;font-family:'Inter'}
+.gates-summary svg{width:11px;height:11px;color:var(--p-pass);flex:none}
+.gates-summary b{color:var(--p-pass);font-weight:700;font-family:'JetBrains Mono'}
+
+/* Mini-charts */
+.mini-chart{margin-top:auto;height:96px;width:100%;position:relative}
+.mini-chart svg{width:100%;height:100%;display:block}
+.annotation{font-size:10.5px;color:var(--p-text-3);font-style:italic;line-height:14px;margin-top:8px;font-family:'Inter'}
+
+/* Recommendations panel */
+.rec-panel{background:var(--p-secondary-bg);border:1px solid var(--p-secondary-line);border-radius:12px;
+  padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+@media (min-width:768px){.rec-panel{padding:20px 22px}}
+.rec-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rec-glyph{width:28px;height:28px;border-radius:7px;background:rgba(167,139,250,0.20);color:var(--p-secondary);
+  border:1px solid rgba(167,139,250,0.40);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.rec-glyph svg{width:14px;height:14px}
+.rec-title{font-family:'DM Sans';font-size:15px;font-weight:700;color:var(--p-text-1);margin:0}
+.rec-tag{font-family:'JetBrains Mono';font-size:9.5px;color:var(--p-secondary);background:rgba(167,139,250,0.14);
+  border:1px solid rgba(167,139,250,0.40);padding:2px 6px;border-radius:3px;letter-spacing:0.04em;font-weight:700;
+  text-transform:uppercase;line-height:1;height:18px;display:inline-flex;align-items:center;margin-left:auto}
+
+.rec-list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.rec-list li{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:19px;color:var(--p-text-1)}
+.rec-list li::before{content:"";width:6px;height:6px;border-radius:999px;background:var(--p-secondary);flex:none;margin-top:7px}
+.rec-list li b{color:var(--p-text-1);font-weight:600}
+.rec-list li .pos{color:var(--p-pass);font-weight:600}
+.rec-list li .code{font-family:'JetBrains Mono';font-size:12px;color:var(--p-secondary);
+  background:rgba(124,58,237,0.10);padding:1px 5px;border-radius:3px}
+
+/* Approval section */
+.approval{background:var(--p-card-soft);border:1px solid var(--p-border);border-radius:12px;
+  padding:18px 20px;display:grid;grid-template-columns:1fr;gap:18px;align-items:flex-start}
+@media (min-width:768px){.approval{grid-template-columns:1fr 1fr 1fr;gap:24px;padding:20px 24px}}
+@media (min-width:1280px){.approval{grid-template-columns:1fr 1fr 1fr auto;gap:24px;align-items:center}}
+.ap-col{display:flex;flex-direction:column;gap:4px;padding-right:0;border-right:0;border-bottom:1px solid var(--p-border);padding-bottom:14px}
+@media (min-width:768px){
+  .ap-col{border-right:1px solid var(--p-border);border-bottom:0;padding-right:18px;padding-bottom:0}
+  .ap-col:last-of-type{border-right:0;padding-right:0}
+}
+@media (min-width:1280px){.ap-col:nth-of-type(3){border-right:0;padding-right:0}}
+.ap-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--p-text-3);font-weight:700}
+.ap-name{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--p-text-1)}
+.ap-av{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:700;flex:none;font-family:'JetBrains Mono'}
+.ap-av.green{background:var(--p-primary-bg);color:var(--p-primary);border:1px solid var(--p-primary)}
+.ap-av.amber{background:var(--p-warn-bg);color:var(--p-warn);border:1px solid var(--p-warn-line)}
+.ap-av.violet{background:var(--p-secondary-bg);color:var(--p-secondary);border:1px solid var(--p-secondary-line)}
+.ap-role{font-size:11px;color:var(--p-text-3);font-family:'Inter'}
+.ap-status{font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;padding:3px 8px;
+  border-radius:5px;border:1px solid;line-height:1;height:22px;font-family:'Inter';width:fit-content;margin-top:4px}
+.ap-status.approved{background:var(--p-pass-bg);color:var(--p-pass);border-color:var(--p-pass-line)}
+.ap-status.pending{background:var(--p-warn-bg);color:var(--p-warn);border-color:var(--p-warn-line)}
+.ap-status svg{width:10px;height:10px}
+
+.ap-actions{display:flex;flex-direction:row;gap:8px;align-items:center;flex-wrap:wrap}
+@media (min-width:1280px){.ap-actions{flex-direction:column;align-items:flex-end}}
+.ap-btn{height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--p-border-strong);background:var(--p-card);
+  color:var(--p-text-1);font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;
+  gap:6px;font-family:inherit;line-height:1;min-height:36px}
+.ap-btn:hover{background:var(--p-card-soft);border-color:var(--p-text-3)}
+.ap-btn.primary{background:var(--p-primary);color:#FFFFFF;border-color:var(--p-primary)}
+.ap-btn.primary:hover{background:#0F766E;border-color:#0F766E}
+.ap-btn svg{width:12px;height:12px}
+@media (hover:none) and (pointer:coarse){.ap-btn{min-height:44px;height:auto;padding-top:8px;padding-bottom:8px}}
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- TOP BAR (verbatim from F19 v2) -->
+  <header class="topbar" role="banner">
+    <button class="menu-btn" id="railToggle" aria-label="Open navigation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <div class="brand"><span class="brand-mark">Q</span><span class="brand-word">QA Nexus</span></div>
+    <button class="proj-pill" type="button">
+      <span class="dot">IR</span><span>Iksula Returns</span><span class="meta">· main</span>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <div class="global-search" role="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span class="label">Search everything…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+    <button class="icon-btn" aria-label="Quick create"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" aria-label="Notifications"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 0 0-4 4v3L3 11h10l-1-2V6a4 4 0 0 0-4-4z" stroke="currentColor" stroke-width="1.5"/></svg><span class="pip"></span></button>
+    <button class="icon-btn" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <div class="mode-toggle" role="tablist" title="Mode locked to Prove for executive dashboard">
+      <button role="tab">Operate</button>
+      <button role="tab">Review</button>
+      <button class="on" role="tab" aria-selected="true"><svg class="lock-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Prove</button>
+    </div>
+    <div class="user-pill"><span class="user-av">YM</span><span class="name">Yogesh M.</span></div>
+  </header>
+
+  <!-- LEFT RAIL (verbatim from F19 v2; active = Run Results under ANALYSE) -->
+  <aside class="rail" id="rail" aria-label="Primary navigation">
+    <button class="rail-toggle" id="railCollapseToggle" type="button" aria-label="Collapse navigation" title="Collapse">
+      <span class="rt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span>
+      <span class="rt-label">Collapse</span>
+    </button>
+
+    <div class="rail-content">
+
+    <a class="nav-item" data-tone="home" data-label="Home" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 7L8 2.5 13.5 7V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V7z"/></svg></span><span class="nav-label">Home</span></a>
+
+    <div class="nav-section" data-section="plan">
+      <span class="sec-label">Plan</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="plan">
+      <a class="nav-item" data-tone="info" data-label="Requirements" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M5 7h6M5 10h4" stroke-linecap="round"/></svg></span><span class="nav-label">Requirements</span><span class="nav-count">142</span></a>
+      <a class="nav-item" data-tone="primary" data-label="Test Plans &amp; Cycles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v3M11 2v3" stroke-linecap="round"/></svg></span><span class="nav-label">Test Plans &amp; Cycles</span></a>
+      <a class="nav-item" data-tone="pass" data-label="Test Cases" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3z"/><path d="M6 8l1.5 1.5L11 6" stroke-linecap="round"/></svg></span><span class="nav-label">Test Cases</span><span class="nav-count">1,284</span></a>
+    </div>
+
+    <div class="nav-section" data-section="author">
+      <span class="sec-label">Author</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="author">
+      <a class="nav-item" data-tone="warn" data-label="Test Suites" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H9zM9 9h4v4H9z"/></svg></span><span class="nav-label">Test Suites</span><span class="nav-count">18</span></a>
+      <a class="nav-item" data-tone="secondary" data-label="Knowledge Base" href="#" data-kb="1"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 2.5h10v11l-5-2-5 2v-11z"/></svg></span><span class="nav-label">Knowledge Base</span><span class="nav-count">1.2K <span style="color:var(--t4);font-weight:400">chunks</span></span></a>
+      <a class="nav-item disabled" data-label="Automation Studio" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l3 3 7-7" stroke-linecap="round"/></svg></span><span class="nav-label">Automation Studio</span><span class="nav-pill">v1.5</span></a>
+      <a class="nav-item disabled" data-label="Data &amp; Mocks" title="Coming in v1.5 (PM2)"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4"/></svg></span><span class="nav-label">Data &amp; Mocks</span><span class="nav-pill">v1.5</span></a>
+    </div>
+
+    <div class="nav-section" data-section="run">
+      <span class="sec-label">Run</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="run">
+      <a class="nav-item" data-tone="primary" data-label="Runs &amp; Sessions" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3l8 5-8 5V3z"/></svg></span><span class="nav-label">Runs &amp; Sessions</span><span class="nav-count">3</span></a>
+      <a class="nav-item" data-tone="info" data-label="Environments" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="12" height="8" rx="1"/><path d="M5 8h6" stroke-linecap="round"/></svg></span><span class="nav-label">Environments</span></a>
+    </div>
+
+    <div class="nav-section" data-section="analyse">
+      <span class="sec-label">Analyse</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="analyse">
+      <a class="nav-item" data-tone="info" data-label="Run Results" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 13h12M4 10v3M7 6v7M10 8v5M13 3v10" stroke-linecap="round"/></svg></span><span class="nav-label">Run Results</span></a>
+      <a class="nav-item active" data-tone="secondary" data-label="Executive Dashboard" href="#" aria-current="page"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="3" rx="1"/><rect x="9" y="7" width="5" height="7" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/></svg></span><span class="nav-label">Executive Dashboard</span></a>
+      <a class="nav-item" data-tone="fail" data-label="Defects / Failures" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2L2 13h12L8 2z"/><path d="M8 7v3M8 12h.01" stroke-linecap="round"/></svg></span><span class="nav-label">Defects / Failures</span><span class="nav-count" style="color:var(--fail)">14</span></a>
+      <a class="nav-item" data-tone="warn" data-label="Reports" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="10" height="10" rx="1"/><path d="M6 10V7M8 10V5M10 10V8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+    </div>
+
+    <div class="nav-section" data-section="govern">
+      <span class="sec-label">Govern</span>
+      <span class="sec-chevron"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="nav-items" data-section-body="govern">
+      <a class="nav-item" data-tone="secondary" data-label="Agents" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2l1.4 3.5L13 7l-3.6 1.5L8 12l-1.4-3.5L3 7l3.6-1.5z"/></svg></span><span class="nav-label">Agents</span></a>
+      <a class="nav-item" data-tone="info" data-label="Integrations" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 14v-3M6 4V2M10 4V2M4 8.5V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 1-2.5 2.5h-3A2.5 2.5 0 0 1 4 8.5z"/></svg></span><span class="nav-label">Integrations</span></a>
+      <a class="nav-item" data-tone="primary" data-label="Users &amp; Roles" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 13v-1.3A2.7 2.7 0 0 0 8.3 9H4.7A2.7 2.7 0 0 0 2 11.7V13"/><circle cx="6.5" cy="5" r="2.5"/></svg></span><span class="nav-label">Users &amp; Roles</span></a>
+      <a class="nav-item" data-tone="home" data-label="Settings &amp; Audit" href="#"><span class="nav-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2"/><path d="M12.7 9.7a1.1 1.1 0 0 0 .22 1.21l.04.04a1.33 1.33 0 1 1-1.88 1.88l-.04-.04a1.1 1.1 0 0 0-1.21-.22 1.1 1.1 0 0 0-.66 1V14a1.33 1.33 0 1 1-2.66 0v-.06a1.1 1.1 0 0 0-.66-1 1.1 1.1 0 0 0-1.21.22l-.04.04a1.33 1.33 0 1 1-1.88-1.88l.04-.04a1.1 1.1 0 0 0 .22-1.21 1.1 1.1 0 0 0-1-.66H2A1.33 1.33 0 1 1 2 6.66h.06a1.1 1.1 0 0 0 1-.66 1.1 1.1 0 0 0-.22-1.21l-.04-.04a1.33 1.33 0 1 1 1.88-1.88l.04.04a1.1 1.1 0 0 0 1.21.22h0a1.1 1.1 0 0 0 .66-1V2a1.33 1.33 0 1 1 2.66 0v.06a1.1 1.1 0 0 0 .66 1 1.1 1.1 0 0 0 1.21-.22l.04-.04a1.33 1.33 0 1 1 1.88 1.88l-.04.04a1.1 1.1 0 0 0-.22 1.21h0a1.1 1.1 0 0 0 1 .66H14A1.33 1.33 0 1 1 14 9.34h-.06a1.1 1.1 0 0 0-1 .66z"/></svg></span><span class="nav-label">Settings &amp; Audit</span></a>
+    </div>
+
+    </div><!-- end .rail-content -->
+
+    <div class="rail-foot">    <div class="rail-foot">
+      <span class="av">YM</span>
+      <div class="who"><div class="n">Yogesh Mohite</div><div class="r">SR_QA · ADMIN</div></div>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--t3)"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg>
+    </div>
+  </aside>
+
+  <!-- MAIN: defects hub -->
+  <section class="main">
+    <div class="prove" data-canonical-section="prove-canvas">
+      <div class="prove-inner">
+
+        <!-- ════════ SECTION 1 — Release header + Go/No-Go ════════ -->
+        <section class="release-head" data-canonical-section="release-header" aria-label="Release header">
+          <div class="rh-left">
+            <div class="rh-eyebrow">
+              <span class="prove-badge">Prove · Boardroom</span>
+              <span>Release · Quality &amp; Value Snapshot</span>
+            </div>
+            <h1 class="rh-name">R-2026-04-PaymentV2 · Iksula Returns</h1>
+            <p class="rh-meta">Sprint 42 · Day <b>13</b> of 14 <span class="sep">·</span> Target ship <b>Apr 28, 2026</b> <span class="sep">·</span> <b>5 days</b> remaining</p>
+          </div>
+          <div class="gng">
+            <div class="gng-pill go" role="status" aria-label="Go decision">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              GO
+            </div>
+            <span class="gng-meta">Updated 2026-05-18 09:42 IST</span>
+          </div>
+        </section>
+
+        <!-- Timeframe controls + scope -->
+        <div class="tf-controls" role="toolbar" aria-label="Timeframe and export">
+          <div class="tf-group" role="tablist" aria-label="Timeframe">
+            <button class="on" role="tab" aria-selected="true">Sprint</button>
+            <button role="tab">Last 7d</button>
+            <button role="tab">Last 30d</button>
+            <button role="tab">Last 90d</button>
+          </div>
+          <button class="tf-icon" aria-label="Export dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+          <button class="tf-icon" aria-label="Refresh data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+        </div>
+
+        <div class="scope-row" role="region" aria-label="Release scope">
+          <span class="scope-stat"><span class="v">89</span>tickets</span>
+          <span class="scope-stat"><span class="v">156</span>test cases</span>
+          <span class="scope-stat"><span class="v">23&nbsp;/&nbsp;28</span>stories · <span class="v" style="color:var(--p-primary);margin-left:4px">82%</span>velocity</span>
+          <div class="scope-chips">
+            <span class="scope-chip ok">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Stable · last 50 runs <span style="font-family:'JetBrains Mono';font-weight:700;margin-left:3px">87%</span> pass
+            </span>
+            <span class="scope-chip warn">
+              <span style="font-family:'JetBrains Mono';font-weight:700">2</span> P0 · <span style="font-family:'JetBrains Mono';font-weight:700">8</span> P1
+              <span class="arrow" style="color:var(--p-pass);font-weight:700;margin-left:4px">↓ 3</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- ════════ SECTION 2 — ROI value tile ════════ -->
+        <section class="value-tile" data-canonical-section="roi-value" aria-label="Release ROI">
+          <div class="vt-left">
+            <div class="vt-eyebrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 7l7-5 7 5M5 17l7 5 7-5"/></svg>
+              ROI · This release
+            </div>
+            <p class="vt-hero"><span class="pct">342%</span> ROI</p>
+            <p class="vt-sub">QA &amp; AI generated <b>342% return</b> on AI infrastructure investment for this release. Conservative net is <b>242%</b> (excluding indirect benefits).</p>
+
+            <div class="vt-formula" aria-label="ROI formula breakdown">
+              <div class="row"><span class="label">Time saved</span><span class="v">184 h <span style="color:var(--p-text-3);font-weight:400">(23 human-days)</span></span></div>
+              <div class="row"><span class="label">Blended QA rate</span><span class="v">₹8,000 / hour</span></div>
+              <div class="row"><span class="label">Time value</span><span class="v">₹14.72 L · ~$18K</span></div>
+              <div class="row sep"><span class="label">+ Defects caught</span><span class="v">23 (21 pre-prod · 2 staging)</span></div>
+              <div class="row"><span class="label">+ Stage multiplier</span><span class="v">avg 50× (PRD cost model)</span></div>
+              <div class="row"><span class="label">+ Cost avoided</span><span class="v">₹9.2 L · defect + rework</span></div>
+              <div class="row sep bold"><span class="label">= Total QA value</span><span class="v">₹23.92 L · ~$29.5K</span></div>
+              <div class="row"><span class="label">− AI infra cost</span><span class="v">₹7 L · LLM + vector DB + compute</span></div>
+              <div class="row sep bold"><span class="label">= Net benefit</span><span class="v">₹16.92 L · ~$20.8K</span></div>
+              <div class="row roi-line"><span class="label">= Net ROI</span><span class="v">(16.92L / 7L) × 100 = 242%</span></div>
+            </div>
+            <p class="vt-note"><b>Note:</b> Headline 342% ROI includes indirect benefits (faster TTM, reduced hiring need, improved product quality perception — conservatively valued at <b>₹8.92 L</b>).</p>
+          </div>
+
+          <div class="vt-right">
+            <span class="vt-cto-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              One-line CTO summary
+            </span>
+            <p class="vt-cto-text">"AI-generated test cases cut authoring time by <b>50%</b>, caught <b>23 shipping defects</b> pre-release. <b>Justifies AI investment 3× over.</b>"</p>
+            <span class="vt-cto-attribution">— <span class="agent-name">Sherlock <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span></span> narrative · approved by Akshay Panchal (QA Lead)</span>
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 3 — Quality posture ════════ -->
+        <section data-canonical-section="quality-posture" aria-label="Quality posture">
+          <h2 class="sec-title">Quality posture <span class="count">3 metrics</span></h2>
+          <div class="three-grid">
+
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Test pass rate</span>
+                <span class="p-card-trend up">▲ 2% sprint</span>
+              </div>
+              <p class="p-metric">87.2<span class="unit">%</span></p>
+              <p class="p-card-sub">187 / 218 cases passed last 24h</p>
+              <div class="severity-rows">
+                <div class="sev-row"><span class="label">Smoke</span><div class="bar"><span class="fill" style="width:95%"></span></div><span class="pct">95%</span></div>
+                <div class="sev-row"><span class="label">Regression</span><div class="bar"><span class="fill" style="width:91%"></span></div><span class="pct">91%</span></div>
+                <div class="sev-row"><span class="label">Feature</span><div class="bar"><span class="fill" style="width:79%"></span></div><span class="pct">79%</span></div>
+              </div>
+            </article>
+
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Test coverage</span>
+                <span class="p-card-trend up">▲ 3% sprint</span>
+              </div>
+              <p class="p-metric">74<span class="unit">%</span></p>
+              <p class="p-card-sub">Automated coverage across 156 cases</p>
+              <div class="cov-bar" role="img" aria-label="Coverage breakdown: 74% automated, 21% manual, 5% untested">
+                <span class="seg auto" style="width:74%"></span>
+                <span class="seg manual" style="width:21%"></span>
+                <span class="seg uncov" style="width:5%"></span>
+              </div>
+              <div class="cov-legend">
+                <span class="key"><span class="swatch auto"></span>Automated <span class="v">74%</span></span>
+                <span class="key"><span class="swatch manual"></span>Manual <span class="v">21%</span></span>
+                <span class="key"><span class="swatch uncov"></span>Untested <span class="v">5%</span></span>
+              </div>
+            </article>
+
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Defect density</span>
+                <span class="p-card-trend down-good">▼ 0.8 vs prior</span>
+              </div>
+              <p class="p-metric">2.3<span class="unit">/ 1k LOC</span></p>
+              <p class="p-card-sub">Healthy zone · trending down</p>
+              <span class="benchmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+                Industry: <b>1–5</b> per 1k LOC · in healthy zone
+              </span>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 4 — Risk posture ════════ -->
+        <section data-canonical-section="risk-posture" aria-label="Risk posture">
+          <h2 class="sec-title">Risk posture <span class="count">2 dimensions</span></h2>
+          <div class="two-grid">
+
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Open defects</span>
+                <span class="p-card-trend down-good">▼ 3 P1s resolved this week</span>
+              </div>
+              <div class="defect-block">
+                <span class="def-pill p0"><span class="ct">2</span><span class="lvl">P0</span></span>
+                <span class="def-pill p1"><span class="ct">8</span><span class="lvl">P1</span></span>
+                <span class="def-pill p2"><span class="ct">18</span><span class="lvl">P2</span></span>
+                <span class="def-pill" style="background:var(--p-card-soft);color:var(--p-text-3);border-color:var(--p-border)"><span class="ct">13</span><span class="lvl">P3</span></span>
+              </div>
+              <p class="def-target">
+                Target by ship: <b>0 P0</b><span style="color:var(--p-text-4);margin:0 5px">·</span><b>≤ 3 P1</b>
+                <span class="arrow" style="margin-left:6px">▼ on track</span>
+              </p>
+              <a class="def-link" href="#F21">View P0/P1 list<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            </article>
+
+            <article class="p-card">
+              <div class="p-card-head">
+                <span class="p-card-label">Release readiness gates</span>
+                <span class="p-card-trend up">5 of 5 passed</span>
+              </div>
+              <div class="gates-list">
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Core e2e tested</span><span class="gate-detail">Payment · Settlement · Reporting</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Jira sync healthy</span><span class="gate-detail">2-way · 0 orphaned</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">AI rails active</span><span class="gate-detail">Composer · Curator · Sherlock &gt; 80% conf</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">Weekly report queued</span><span class="gate-detail">Exec report · Apr 27</span></div>
+                <div class="gate-row"><span class="gate-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg></span><span class="gate-name">QA Value dashboard live</span><span class="gate-detail">F24 ready</span></div>
+              </div>
+              <span class="gates-summary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+                <b>5 of 5 gates passed.</b> Release-ready.
+              </span>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 5 — 4-week trends ════════ -->
+        <section data-canonical-section="trends" aria-label="Four-week trends">
+          <h2 class="sec-title">4-week trends <span class="count">last 4 weeks</span></h2>
+          <div class="three-grid">
+
+            <article class="p-card">
+              <div class="p-card-head"><span class="p-card-label">Defect trend</span><span class="p-card-trend down-good">▼ healthy</span></div>
+              <p class="p-metric" style="font-size:22px;line-height:28px">28 → <span style="color:var(--p-pass)">9</span></p>
+              <p class="p-card-sub">Resolution outpacing findings</p>
+              <div class="mini-chart" role="img" aria-label="Defect count W1 to W4: 28, 22, 14, 9">
+                <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+                  <line x1="0" y1="14" x2="300" y2="14" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <line x1="0" y1="42" x2="300" y2="42" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <polyline points="20,12 110,24 200,46 280,58" fill="none" stroke="#2DD4BF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                  <circle cx="20" cy="12" r="3.5" fill="#2DD4BF"/>
+                  <circle cx="110" cy="24" r="3.5" fill="#2DD4BF"/>
+                  <circle cx="200" cy="46" r="3.5" fill="#2DD4BF"/>
+                  <circle cx="280" cy="58" r="4.5" fill="#2DD4BF" stroke="#0B0F17" stroke-width="2"/>
+                  <text x="20" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W1·28</text>
+                  <text x="110" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W2·22</text>
+                  <text x="200" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W3·14</text>
+                  <text x="280" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W4·9</text>
+                </svg>
+                <p class="annotation">Downward trend — resolution outpaces new findings.</p>
+              </div>
+            </article>
+
+            <article class="p-card">
+              <div class="p-card-head"><span class="p-card-label">Pass rate trend</span><span class="p-card-trend up">▲ stable</span></div>
+              <p class="p-metric" style="font-size:22px;line-height:28px">82% → <span style="color:var(--p-pass)">87%</span></p>
+              <p class="p-card-sub">Suite reliable, improving</p>
+              <div class="mini-chart" role="img" aria-label="Pass rate W1 to W4: 82%, 85%, 87%, 87%">
+                <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+                  <line x1="0" y1="14" x2="300" y2="14" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <line x1="0" y1="42" x2="300" y2="42" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <rect x="15" y="42" width="50" height="20" fill="#2DD4BF" rx="2"/>
+                  <rect x="85" y="34" width="50" height="28" fill="#2DD4BF" rx="2"/>
+                  <rect x="155" y="24" width="50" height="38" fill="#2DD4BF" rx="2"/>
+                  <rect x="225" y="24" width="50" height="38" fill="#2DD4BF" rx="2"/>
+                  <text x="40" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W1·82%</text>
+                  <text x="110" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W2·85%</text>
+                  <text x="180" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W3·87%</text>
+                  <text x="250" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W4·87%</text>
+                </svg>
+                <p class="annotation">Stable and improving — test suite reliable.</p>
+              </div>
+            </article>
+
+            <article class="p-card">
+              <div class="p-card-head"><span class="p-card-label">Velocity trend</span><span class="p-card-trend flat">expected taper</span></div>
+              <p class="p-metric" style="font-size:22px;line-height:28px">156 → 89</p>
+              <p class="p-card-sub">Stabilization phase</p>
+              <div class="mini-chart" role="img" aria-label="Stories per week W1 to W4: 140, 156, 134, 89">
+                <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+                  <line x1="0" y1="14" x2="300" y2="14" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <line x1="0" y1="42" x2="300" y2="42" stroke="#2A3347" stroke-width="0.5" stroke-dasharray="2,3"/>
+                  <rect x="15" y="22" width="50" height="40" fill="#2DD4BF" rx="2"/>
+                  <rect x="85" y="14" width="50" height="48" fill="#2DD4BF" rx="2"/>
+                  <rect x="155" y="26" width="50" height="36" fill="#2DD4BF" rx="2"/>
+                  <rect x="225" y="40" width="50" height="22" fill="#2DD4BF" rx="2" opacity="0.7"/>
+                  <text x="40" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W1·140</text>
+                  <text x="110" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W2·156</text>
+                  <text x="180" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W3·134</text>
+                  <text x="250" y="92" fill="#64748B" font-family="Inter" font-size="9" text-anchor="middle">W4·89</text>
+                </svg>
+                <p class="annotation">Velocity ramping down — expected as release stabilizes.</p>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- ════════ SECTION 6 — Sherlock pre-ship recommendations ════════ -->
+        <section class="rec-panel" data-canonical-section="recommendations" aria-labelledby="rec-heading">
+          <div class="rec-head">
+            <span class="rec-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M21 21l-5-5"/></svg></span>
+            <h3 id="rec-heading" class="rec-title">Pre-ship recommendations</h3>
+            <span class="rec-tag"><span class="agent-name" style="font-size:9.5px;letter-spacing:0.04em;color:var(--p-secondary)">Sherlock</span> <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span> · v1.4</span>
+          </div>
+          <ul class="rec-list">
+            <li><span><b>Flaky test stabilization complete.</b> Flake rate <span class="code">7% → 2%</span>. <span class="code">payment_retry</span> and <span class="code">checkout_timeout</span> now use 8-second timeout. <b>No further action.</b></span></li>
+            <li><span><b>P1 admin_cache_clear occasionally hangs.</b> Root cause: stale cache in environment. Recommendation: clear test env cache <b>1 hour before smoke test Apr 28</b>. Patch ready for v2.1.</span></li>
+            <li><span><b>Coverage gap.</b> 5% untested (legacy error handlers). Risk <b>low</b>. Recommendation: add coverage in v2.1 sprint. <b>Does not block release.</b></span></li>
+            <li><span><span class="pos">+ Positive signal:</span> <span class="agent-name" style="color:var(--p-secondary)">Curator <span class="agent-info" data-tip="Duplicate Detection agent" tabindex="0"></span></span> caught <b>24 duplicate test cases</b>, preventing <b>12 hours</b> of redundant test runs. Recommend expanding Curator across projects.</span></li>
+          </ul>
+        </section>
+
+        <!-- ════════ SECTION 7 — Approval & Sign-off ════════ -->
+        <section class="approval" data-canonical-section="approval" aria-label="Approval and sign-off">
+          <div class="ap-col">
+            <span class="ap-label">QA Lead approval</span>
+            <span class="ap-name"><span class="ap-av green">AP</span>Akshay Panchal</span>
+            <span class="ap-role">QA Lead · Iksula Returns</span>
+            <span class="ap-status approved">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Approved · 2026-05-17
+            </span>
+          </div>
+          <div class="ap-col">
+            <span class="ap-label">Engineering sign-off</span>
+            <span class="ap-name"><span class="ap-av green">YM</span>Yogesh Mohite</span>
+            <span class="ap-role">Sr QA / Admin · Iksula</span>
+            <span class="ap-status approved">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>
+              Approved · 2026-05-17
+            </span>
+          </div>
+          <div class="ap-col">
+            <span class="ap-label">Product owner</span>
+            <span class="ap-name"><span class="ap-av amber">RN</span>Riya Nair</span>
+            <span class="ap-role">Backend Dev · Payment Squad</span>
+            <span class="ap-status pending">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l3 2"/></svg>
+              Pending · awaiting review
+            </span>
+          </div>
+          <div class="ap-actions">
+            <button class="ap-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export PDF</button>
+            <button class="ap-btn primary" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L22 7"/></svg>Approve release</button>
+          </div>
+        </section>
+
+        <!-- Footer band -->
+        <footer style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0 0;border-top:1px solid var(--p-border);font-size:11px;color:var(--p-text-3);font-family:'Inter';flex-wrap:wrap">
+          <span>Last updated · <span style="font-family:'JetBrains Mono';color:var(--p-text-2)">2026-05-18 09:42 IST</span></span>
+          <span>Powered by <span class="agent-name" style="font-size:11px;color:var(--p-secondary)">Sherlock <span class="agent-info" data-tip="Defect Intelligence agent (5-layer Root Cause Analysis)" tabindex="0"></span></span> + <span class="agent-name" style="font-size:11px;color:var(--p-secondary)">Composer <span class="agent-info" data-tip="Test Case Generator agent" tabindex="0"></span></span> agents</span>
+          <a href="#F20" style="color:var(--p-secondary);text-decoration:none;font-weight:600;min-height:24px;display:inline-flex;align-items:center">Permalink · Run Results →</a>
+        </footer>
+
+      </div>
+    </div>
+  </section><!-- /main -->
+
+</div><!-- /app -->
+
+<script>
+/* ─── Rail collapse + persistence (key: f21.rail) ─── */
+(function(){
+  var app = document.getElementById('app');
+  var btn = document.getElementById('railCollapseToggle');
+  if(!app || !btn) return;
+  try{
+    if(localStorage.getItem('f21.rail') === 'collapsed') app.dataset.rail = 'collapsed';
+  }catch(e){}
+  function setState(state){
+    if(state === 'collapsed') app.dataset.rail = 'collapsed';
+    else delete app.dataset.rail;
+    try{ localStorage.setItem('f21.rail', state); }catch(e){}
+    btn.setAttribute('aria-label', state === 'collapsed' ? 'Expand navigation' : 'Collapse navigation');
+    btn.title = state === 'collapsed' ? 'Expand' : 'Collapse';
+  }
+  btn.addEventListener('click', function(){
+    setState(app.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
+  });
+  document.addEventListener('keydown', function(e){
+    if((e.metaKey || e.ctrlKey) && (e.key === 'j' || e.key === 'J')){
+      e.preventDefault();
+      setState(app.dataset.rail === 'collapsed' ? 'expanded' : 'collapsed');
+    }
+  });
+})();
+
+/* ─── Section collapse/expand (per Demo Collapsible Nav Sections — DO NOT MODIFY LOGIC) ─── */
+(function(){
+  var STORAGE_PREFIX = 'qa-nexus.shell.section-';
+  var sections = document.querySelectorAll('.nav-section[data-section]');
+  if (!sections.length) return;
+
+  // Identify the section that contains the active nav-item.
+  var activeItem = document.querySelector('.nav-item.active');
+  var activeBody = activeItem ? activeItem.closest('.nav-items[data-section-body]') : null;
+  var activeSectionName = activeBody ? activeBody.getAttribute('data-section-body') : null;
+
+  sections.forEach(function(section){
+    var name = section.getAttribute('data-section');
+    var body = document.querySelector('[data-section-body="' + name + '"]');
+    if (!body) return;
+    var storageKey = STORAGE_PREFIX + name + '-collapsed';
+
+    // Restore saved state
+    var saved = false;
+    try { saved = localStorage.getItem(storageKey) === 'true'; } catch(e) {}
+
+    // Override: section containing the active item must always render expanded.
+    // Don't write back — preserve user's preference for next visit.
+    if (saved && name !== activeSectionName) {
+      section.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+
+    section.addEventListener('click', function(){
+      var isCollapsed = section.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+      try { localStorage.setItem(storageKey, isCollapsed); } catch(e) {}
+    });
+  });
+})();
+
+/* ─── Mobile rail toggle (hamburger) ─── */
+(function(){
+  var rail = document.getElementById('rail');
+  var menuBtn = document.getElementById('railToggle');
+  if(!rail || !menuBtn) return;
+  menuBtn.addEventListener('click', function(){
+    rail.classList.toggle('mobile-open');
+  });
+  document.addEventListener('click', function(e){
+    if(!rail.classList.contains('mobile-open')) return;
+    if(rail.contains(e.target) || menuBtn.contains(e.target)) return;
+    rail.classList.remove('mobile-open');
+  });
+})();
+
+/* ─── Suite group expand/collapse ─── */
+(function(){
+  document.querySelectorAll('.suite-head').forEach(function(head){
+    head.addEventListener('click', function(){
+      var suite = head.parentElement;
+      suite.classList.toggle('collapsed');
+      head.setAttribute('aria-expanded', suite.classList.contains('collapsed') ? 'false' : 'true');
+    });
+  });
+})();
+
+/* ─── Cluster expand toggle (visual only) ─── */
+(function(){
+  document.querySelectorAll('.cl-expand').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var cluster = btn.closest('.cluster');
+      if(!cluster) return;
+      cluster.classList.toggle('expanded');
+      btn.setAttribute('aria-expanded', cluster.classList.contains('expanded') ? 'true' : 'false');
+    });
+  });
+})();
+
+/* ─── Case row selection (updates evidence rail context) ─── */
+(function(){
+  var rows = document.querySelectorAll('.case-row');
+  var contextName = document.querySelector('.ev-context .name');
+  rows.forEach(function(row){
+    row.addEventListener('click', function(){
+      rows.forEach(function(r){ r.classList.remove('selected'); r.removeAttribute('aria-current'); });
+      row.classList.add('selected');
+      row.setAttribute('aria-current','true');
+      if(contextName){
+        contextName.textContent = row.dataset.case || '—';
+      }
+    });
+  });
+})();
+
+/* ─── Filter + sort (visual toggle only) ─── */
+(function(){
+  var filters = document.querySelectorAll('.rb-filters button');
+  filters.forEach(function(b){
+    b.addEventListener('click', function(){
+      filters.forEach(function(x){ x.classList.remove('on'); x.setAttribute('aria-selected','false'); });
+      b.classList.add('on'); b.setAttribute('aria-selected','true');
+    });
+  });
+})();
+
+
+/* ─── F22 RCA card collapse ─── */
+(function(){
+  document.querySelectorAll('[data-rca-toggle]').forEach(function(h){
+    h.addEventListener('click', function(){
+      h.parentElement.classList.toggle('collapsed');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

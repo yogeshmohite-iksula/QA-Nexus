@@ -99,3 +99,9 @@ node-compile-cache/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .claude/scratch/
+
+# ───── Cowork sandbox dirs (Day-22) ─────
+# Local-only chat-session sandboxes that the cowork harness drops into
+# the worktree root. Not source-of-truth; prettier --check . tripped on
+# these Day-22 EOD (handoff.md). Keep ignored repo-wide.
+sessions/
