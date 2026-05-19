@@ -66,6 +66,11 @@ describe('JiraSyncController', () => {
     recordInvalid = jest.fn();
     process.env.JIRA_WEBHOOK_SECRET = TEST_SECRET;
 
+    // Day-22 P1 (ADR-020 §7) — controller now INSERTs the staging row
+    // via persistWebhookEvent() before returning 200. Default mock
+    // returns 'inserted'; the new "duplicate absorbed" test overrides.
+    const persistWebhookEvent = jest.fn().mockResolvedValue('inserted');
+
     const moduleRef = await Test.createTestingModule({
       controllers: [JiraSyncController],
       providers: [
@@ -74,6 +79,7 @@ describe('JiraSyncController', () => {
           useValue: {
             recordWebhookReceived: recordReceived,
             recordWebhookSignatureInvalid: recordInvalid,
+            persistWebhookEvent,
           },
         },
       ],
@@ -90,7 +96,7 @@ describe('JiraSyncController', () => {
   });
 
   describe('POST /api/jira/webhook — happy path', () => {
-    it('returns 200 + audit-records when signature is valid', () => {
+    it('returns 200 + audit-records when signature is valid', async () => {
       const body = JSON.stringify({
         webhookEvent: 'jira:issue_created',
         issue: { id: '10001', key: 'RET-42' },
@@ -99,11 +105,12 @@ describe('JiraSyncController', () => {
       const { res, captured } = fakeRes();
       const req = fakeReq(buf, { 'x-hub-signature': signBody(body) });
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(200);
-      expect(captured.body).toEqual({
+      expect(captured.body).toMatchObject({
         ack: true,
+        duplicate: false,
         eventType: 'jira:issue_created',
         issueKey: 'RET-42',
       });
@@ -111,13 +118,13 @@ describe('JiraSyncController', () => {
       expect(recordInvalid).not.toHaveBeenCalled();
     });
 
-    it('handles event without an issue ref (system event)', () => {
+    it('handles event without an issue ref (system event)', async () => {
       const body = JSON.stringify({ webhookEvent: 'jira:user_created' });
       const buf = Buffer.from(body, 'utf8');
       const { res, captured } = fakeRes();
       const req = fakeReq(buf, { 'x-hub-signature': signBody(body) });
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(200);
       const respBody = captured.body as { issueKey: string | null };
@@ -127,7 +134,7 @@ describe('JiraSyncController', () => {
   });
 
   describe('POST /api/jira/webhook — signature failures', () => {
-    it('returns 401 + audit-records invalid when signature mismatches', () => {
+    it('returns 401 + audit-records invalid when signature mismatches', async () => {
       const body = JSON.stringify({ webhookEvent: 'jira:issue_created' });
       const buf = Buffer.from(body, 'utf8');
       const { res, captured } = fakeRes();
@@ -135,7 +142,7 @@ describe('JiraSyncController', () => {
         'x-hub-signature': signBody(body, 'attacker-secret'),
       });
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(401);
       expect(captured.body).toEqual({
@@ -146,18 +153,18 @@ describe('JiraSyncController', () => {
       expect(recordReceived).not.toHaveBeenCalled();
     });
 
-    it('returns 401 when X-Hub-Signature header is missing', () => {
+    it('returns 401 when X-Hub-Signature header is missing', async () => {
       const body = JSON.stringify({ webhookEvent: 'jira:issue_created' });
       const { res, captured } = fakeRes();
       const req = fakeReq(Buffer.from(body), {});
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(401);
       expect(recordInvalid).toHaveBeenCalledWith('missing_header');
     });
 
-    it('returns 401 when JIRA_WEBHOOK_SECRET env is unset (fail-closed)', () => {
+    it('returns 401 when JIRA_WEBHOOK_SECRET env is unset (fail-closed)', async () => {
       delete process.env.JIRA_WEBHOOK_SECRET;
       const body = JSON.stringify({ webhookEvent: 'jira:issue_created' });
       const { res, captured } = fakeRes();
@@ -165,7 +172,7 @@ describe('JiraSyncController', () => {
         'x-hub-signature': signBody(body),
       });
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(401);
       expect(recordInvalid).toHaveBeenCalledWith('secret_missing');
@@ -173,7 +180,7 @@ describe('JiraSyncController', () => {
   });
 
   describe('POST /api/jira/webhook — body shape failures', () => {
-    it('returns 400 when raw body is missing (middleware mis-mounted)', () => {
+    it('returns 400 when raw body is missing (middleware mis-mounted)', async () => {
       const { res, captured } = fakeRes();
       // Body parsed as object instead of Buffer = the failure mode.
       const req = fakeReq(
@@ -183,7 +190,7 @@ describe('JiraSyncController', () => {
         },
       );
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(400);
       const body = captured.body as { error: string };
@@ -192,26 +199,26 @@ describe('JiraSyncController', () => {
       expect(recordInvalid).not.toHaveBeenCalled();
     });
 
-    it('returns 400 when body is valid HMAC but invalid JSON', () => {
+    it('returns 400 when body is valid HMAC but invalid JSON', async () => {
       const body = 'not json at all';
       const buf = Buffer.from(body, 'utf8');
       const { res, captured } = fakeRes();
       const req = fakeReq(buf, { 'x-hub-signature': signBody(body) });
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(400);
       const respBody = captured.body as { error: string };
       expect(respBody.error).toBe('InvalidJson');
     });
 
-    it('returns 400 when payload fails Zod validation', () => {
+    it('returns 400 when payload fails Zod validation', async () => {
       const body = JSON.stringify({ wrongKey: 'no-webhookEvent-field' });
       const buf = Buffer.from(body, 'utf8');
       const { res, captured } = fakeRes();
       const req = fakeReq(buf, { 'x-hub-signature': signBody(body) });
 
-      ctrl.webhook(req as never, res as never);
+      await ctrl.webhook(req as never, res as never);
 
       expect(captured.status).toBe(400);
       const respBody = captured.body as { error: string };
