@@ -1,15 +1,34 @@
 // QA Nexus PM1 — DefectsController spec.
 //
 // Day-19 P0 #2 (#157): stub-contract tests for 5 endpoints.
-// Day-20 P1 (this PR): POST :id/rca becomes functional (calls Sherlock
-//                       orchestrator). Tests cover happy + 2 sad paths +
-//                       retains stub-contract for other 4 endpoints + GET :id/rca.
+// Day-20 P1 (#173): POST :id/rca becomes functional (sync 200+inline).
+// Day-21 P0 (this PR, followup `(da)`): POST :id/rca flips to async
+//   202+WS pattern. Spec covers happy + 3 sad paths + retains stub-contract
+//   for other 4 endpoints + GET :id/rca.
+//
+// jest.mock at module boundary on sherlock-orchestrator service path —
+// the real orchestrator imports RealtimeGateway → AuthService → better-auth
+// (ESM) which jest's CJS transformer can't load. Same Day-17 #138/#139
+// pattern + #174 fix-forward precedent.
+
+jest.mock(
+  '../../agents/sherlock-orchestrator/sherlock-orchestrator.service',
+  () => ({
+    SherlockOrchestratorService: class FakeOrchestrator {
+      runRca = jest.fn();
+      runAndPersist = jest.fn();
+    },
+  }),
+);
 
 import { Test } from '@nestjs/testing';
 import { DefectsController } from '../defects.controller';
 import { SherlockOrchestratorService } from '../../agents/sherlock-orchestrator/sherlock-orchestrator.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../../audit/audit.service';
 
 const TEST_DEFECT_ID = '11111111-2222-3333-4444-555555555555';
+const TEST_WORKSPACE_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 function fakeRes() {
   const captured: {
@@ -36,18 +55,47 @@ function fakeRes() {
   return { res, captured };
 }
 
+/** Wait for setImmediate-queued microtasks to drain so we can assert
+ *  the orchestrator was invoked AFTER the 202 response was returned. */
+async function flushSetImmediate(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 describe('DefectsController', () => {
   let ctrl: DefectsController;
-  let sherlockRunRca: jest.Mock;
+  let runAndPersist: jest.Mock;
+  let runRca: jest.Mock;
+  let defectFindUnique: jest.Mock;
+  let auditWrite: jest.Mock;
 
   beforeEach(async () => {
-    sherlockRunRca = jest.fn();
+    runAndPersist = jest.fn().mockResolvedValue({
+      rcaReportId: 'rca-report-id-1',
+      status: 'completed',
+      topHypothesis: 'mock top hypothesis',
+      okAgentCount: 3,
+      durationMs: 1234,
+    });
+    runRca = jest.fn();
+    defectFindUnique = jest.fn().mockResolvedValue({
+      project: { workspaceId: TEST_WORKSPACE_ID },
+    });
+    auditWrite = jest.fn().mockResolvedValue({ id: 'audit-1', thisHash: 'h' });
+
     const moduleRef = await Test.createTestingModule({
       controllers: [DefectsController],
       providers: [
         {
           provide: SherlockOrchestratorService,
-          useValue: { runRca: sherlockRunRca },
+          useValue: { runRca, runAndPersist },
+        },
+        {
+          provide: PrismaService,
+          useValue: { defect: { findUnique: defectFindUnique } },
+        },
+        {
+          provide: AuditService,
+          useValue: { write: auditWrite },
         },
       ],
     }).compile();
@@ -56,47 +104,70 @@ describe('DefectsController', () => {
 
   afterEach(() => jest.restoreAllMocks());
 
-  describe('POST /api/defects/:id/rca — functional Day-20', () => {
+  describe('POST /api/defects/:id/rca — Day-21 async 202+WS pattern', () => {
     const validBody = {
       stackTrace: 'TypeError: Cannot read properties of null',
       failureMessage: 'Refund failed for order RET-1042',
       component: 'apps/api/src/refunds',
     };
 
-    it('returns 200 + orchestrator result inline (happy path)', async () => {
-      sherlockRunRca.mockResolvedValueOnce({
-        runId: 'run-uuid-1',
-        status: 'completed',
-        okAgentCount: 3,
-        hypotheses: [
-          {
-            agent: 'code',
-            category: 'code-bug',
-            hypothesis: 'Null deref ten chars ok',
-            confidence: 0.85,
-            evidence: [],
-          },
-        ],
-      });
+    it('returns 202 + { runId, accepted, wsChannel } (happy path)', async () => {
       const { res, captured } = fakeRes();
       await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
-      expect(captured.status).toBe(200);
+      expect(captured.status).toBe(202);
       const body = captured.body as {
+        defectId: string;
         runId: string;
-        status: string;
-        hypotheses: unknown[];
+        accepted: boolean;
+        wsChannel: string;
       };
-      expect(body.runId).toBe('run-uuid-1');
-      expect(body.status).toBe('completed');
-      expect(body.hypotheses).toHaveLength(1);
-      expect(sherlockRunRca).toHaveBeenCalledWith(
+      expect(body.defectId).toBe(TEST_DEFECT_ID);
+      expect(body.runId).toMatch(/^[0-9a-f]{8}-/);
+      expect(body.accepted).toBe(true);
+      expect(body.wsChannel).toBe(`rca.complete.${body.runId}`);
+    });
+
+    it('writes rca_kicked_off audit row SYNCHRONOUSLY before returning 202', async () => {
+      const { res, captured } = fakeRes();
+      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      expect(auditWrite).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: TEST_WORKSPACE_ID,
+          entityType: 'defect',
+          entityId: TEST_DEFECT_ID,
+          action: 'rca_kicked_off',
+        }),
+      );
+      // Audit row was written BEFORE 202 was sent.
+      expect(captured.status).toBe(202);
+    });
+
+    it('spawns orchestrator.runAndPersist via setImmediate (NOT inline-awaited)', async () => {
+      const { res } = fakeRes();
+      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      // Not invoked yet — setImmediate hasn't fired
+      expect(runAndPersist).not.toHaveBeenCalled();
+      await flushSetImmediate();
+      expect(runAndPersist).toHaveBeenCalledWith(
         expect.objectContaining({
           defectId: TEST_DEFECT_ID,
           stackTrace: validBody.stackTrace,
-          failureMessage: validBody.failureMessage,
-          component: validBody.component,
+        }),
+        expect.objectContaining({
+          workspaceId: TEST_WORKSPACE_ID,
+          actorId: null,
         }),
       );
+    });
+
+    it('returns 404 when defect not found', async () => {
+      defectFindUnique.mockResolvedValueOnce(null);
+      const { res, captured } = fakeRes();
+      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      expect(captured.status).toBe(404);
+      expect((captured.body as { error: string }).error).toBe('DefectNotFound');
+      expect(auditWrite).not.toHaveBeenCalled();
+      expect(runAndPersist).not.toHaveBeenCalled();
     });
 
     it('returns 400 when defect ID path param is not a UUID', async () => {
@@ -106,7 +177,9 @@ describe('DefectsController', () => {
       expect((captured.body as { error: string }).error).toBe(
         'InvalidDefectId',
       );
-      expect(sherlockRunRca).not.toHaveBeenCalled();
+      expect(defectFindUnique).not.toHaveBeenCalled();
+      expect(auditWrite).not.toHaveBeenCalled();
+      expect(runAndPersist).not.toHaveBeenCalled();
     });
 
     it('returns 400 when request body fails Zod validation', async () => {
@@ -120,20 +193,21 @@ describe('DefectsController', () => {
       expect((captured.body as { error: string }).error).toBe(
         'InvalidRequestBody',
       );
-      expect(sherlockRunRca).not.toHaveBeenCalled();
+      expect(defectFindUnique).not.toHaveBeenCalled();
+      expect(auditWrite).not.toHaveBeenCalled();
+      expect(runAndPersist).not.toHaveBeenCalled();
     });
 
-    it('propagates degraded status from orchestrator', async () => {
-      sherlockRunRca.mockResolvedValueOnce({
-        runId: 'run-uuid-2',
-        status: 'degraded',
-        okAgentCount: 0,
-        hypotheses: [],
-      });
+    it('logs error but does NOT crash when runAndPersist rejects (response already sent)', async () => {
+      runAndPersist.mockRejectedValueOnce(new Error('orchestrator boom'));
       const { res, captured } = fakeRes();
       await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
-      expect(captured.status).toBe(200);
-      expect((captured.body as { status: string }).status).toBe('degraded');
+      expect(captured.status).toBe(202);
+      // Drain setImmediate; the orchestrator's reject is caught and logged.
+      await flushSetImmediate();
+      // Promise rejection → .catch handler should run without throwing.
+      // (Jest would otherwise log unhandled rejection.)
+      expect(runAndPersist).toHaveBeenCalled();
     });
   });
 

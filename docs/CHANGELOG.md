@@ -13,6 +13,20 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 21 — Sherlock orchestrator hardening: DB persistence + async/WS + audit [m5 da]
+
+Day-21 P0 followup `(da)` — closes the 3 hardening gaps left from PR #173 (synchronous-only Day-20 path).
+
+**(a) 5-layer RcaReport schema adapter.** New `SherlockOrchestratorService.runAndPersist(input, ctx)` method: AgentRun row (kind=A4, status=running) → 4-agent fan-out → RcaReport persistence with 5-layer JSONB mapping (flake→L1_stack, env→L2_env, L3_config empty for future env-config split, code→L4_code, data→L5_data) → AgentRun complete → audit row → WS emit. Failure path marks AgentRun failed + writes `rca_failed` audit row, does NOT emit WS (subscribers detect via AgentRun status). Refactored 4-agent fan-out into private `runFanout()` so sync `runRca()` (Day-20 path, preserved) and async `runAndPersist()` share fan-out logic.
+
+**(b) Async 202+WS pattern.** `DefectsController.kickoffRca` flipped: validates UUID+body, resolves workspaceId via defect→project lookup (doubles as 404 check), pre-allocates runId, spawns orchestrator via `setImmediate`, returns `202 + { defectId, runId, accepted: true, wsChannel: "rca.complete.<runId>" }`. `RealtimeGateway.emitRcaComplete(runId, payload)` — new public emit method on existing channel-fanout pattern. FE subscribes to `rca.complete.<runId>` BEFORE firing the request.
+
+**(c) Audit writes (HMAC chain per ERD §3.13).** `rca_kicked_off` written SYNC before 202 (a failed audit fails the request per `.claude/rules/api.md`). `rca_completed` / `rca_failed` written SYNC within orchestrator scope, before WS emit (durable-before-notify).
+
+**Test plan:** 49/50 suites pass at PR-open time (1 pre-existing test-runs ESM trap fixed by PR #174). 12 new defects.controller tests for async contract + new jest.mock pattern for orchestrator.service spec. Smoke once merged: POST `/api/defects/:id/rca` → 202 + runId; FE subscribes to wsChannel; receives `rca.complete` event when persistence + audit + 5-layer RcaReport row are all durable.
+
+**Cost gate (Hard Rule 1):** +0.5-1 CU-hr/day at 8-user pilot load (2 Prisma writes + 1 RcaReport row + 1-2 audit rows + 1 WS emit per RCA). Neon ~82/100 CU-hr — safely under cap.
+
 ### Fixed — Day 21 — Kimi K2 HIGH triage (4 items): open-redirect, ws rate-limit, hmac-at-boot, zod-extract [m5 hardening]
 
 Closes all 4 HIGH-severity items from Kimi K2's Day-19 security review. Bundled as one PR with 4 independently-revertable commits.
