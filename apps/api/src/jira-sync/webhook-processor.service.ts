@@ -39,7 +39,22 @@ import {
 import createSubscriber from 'pg-listen';
 import { PrismaService } from '../prisma/prisma.service';
 import { JiraSyncService } from './jira-sync.service';
+import { IssueWebhookHandler } from './issue-webhook.handler';
+import { SprintWebhookHandler } from './sprint-webhook.handler';
+import {
+  JiraWebhookIssueCreatedPayloadSchema,
+  JiraWebhookIssueUpdatedPayloadSchema,
+  JiraWebhookIssueDeletedPayloadSchema,
+  JiraWebhookSprintCreatedPayloadSchema,
+  JiraWebhookSprintUpdatedPayloadSchema,
+  JiraWebhookSprintDeletedPayloadSchema,
+  JiraWebhookSprintClosedPayloadSchema,
+  isWiredEventType,
+} from './jira-webhook.schema';
 
+// Day-22 legacy channel name. Kept as-is for M5 per the namespace M6 hygiene
+// followup (see docs/m6/m6-hygiene-followups.md). M6 will rename to
+// `qa_nexus.jira.webhook_received` per ADR-021 §6 namespace convention.
 const WEBHOOK_CHANNEL = 'webhook_received';
 
 type Subscriber = ReturnType<typeof createSubscriber>;
@@ -52,6 +67,8 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jiraSync: JiraSyncService,
+    private readonly issueHandler: IssueWebhookHandler,
+    private readonly sprintHandler: SprintWebhookHandler,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -73,20 +90,23 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
 
     this.subscriber = createSubscriber({ connectionString: dbUrl });
 
-    this.subscriber.notifications.on(WEBHOOK_CHANNEL, async (payload) => {
-      const id = typeof payload === 'string' ? payload : String(payload);
-      try {
-        await this.handleNotification(id);
-      } catch (err) {
-        this.logger.error(
-          `WebhookProcessor: handler failed for id=${id}: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
-      }
-    });
+    this.subscriber.notifications.on(
+      WEBHOOK_CHANNEL,
+      async (payload: unknown) => {
+        const id = typeof payload === 'string' ? payload : String(payload);
+        try {
+          await this.handleNotification(id);
+        } catch (err) {
+          this.logger.error(
+            `WebhookProcessor: handler failed for id=${id}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        }
+      },
+    );
 
-    this.subscriber.events.on('error', (err) => {
+    this.subscriber.events.on('error', (err: unknown) => {
       this.logger.error(
         `WebhookProcessor: pg-listen error: ${
           err instanceof Error ? err.message : String(err)
@@ -117,10 +137,23 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Day-22 stub handler — fetch + log + mark processed. Day-23 wire-up
-   * replaces the stub body with actual side-effect logic (defect upsert,
-   * WS emit, retry-with-backoff). Marking processed=true ensures the
-   * staging table doesn't accumulate during testing.
+   * Day-23 wire-up handler — dispatch by eventType to per-event handlers.
+   *
+   * Wired event types (Day-23 P1, 7 of 14 Atlassian events):
+   *   ISSUE: jira:issue_created / _updated / _deleted
+   *   SPRINT: sprint_created / _updated / _deleted / _closed
+   * Deferred to Day-24: comment_*, version_*, property_*.
+   *
+   * Unknown / unwired event types are absorbed (logged + marked processed)
+   * so the staging table doesn't accumulate. Atlassian sends secondary
+   * cascade events (e.g. comment_deleted when an issue is deleted) that
+   * our idempotency UNIQUE on event_id collapses — but the cascade events
+   * still arrive as separate rows, so we mark-and-skip them here.
+   *
+   * Per ADR-020 §7: failures inside a handler do NOT crash the loop;
+   * the outer try/catch in onModuleInit's notification callback catches.
+   * Handler exceptions cause processed=false to stay set so the row
+   * appears in the Day-24 retry-with-backoff sweep.
    */
   async handleNotification(id: string): Promise<void> {
     const row = await this.prisma.jiraWebhookEvent.findUnique({
@@ -132,6 +165,7 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
         jiraIssueKey: true,
         signatureValid: true,
         processed: true,
+        payload: true,
       },
     });
     if (!row) {
@@ -146,13 +180,151 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
       );
       return;
     }
-    this.logger.log(
-      `WebhookProcessor: would process eventType=${row.eventType} issueKey=${row.jiraIssueKey ?? 'n/a'} id=${id} ` +
-        `(Day-23 wire-up adds: defect upsert, WS emit, retry-with-backoff)`,
-    );
-    // Mark processed so the table doesn't accumulate during testing.
-    // Day-23 wire-up will set this AFTER the real handler completes;
-    // setting it here keeps the staging table clean during scaffold.
-    await this.jiraSync.markWebhookProcessed(id);
+    if (!row.signatureValid) {
+      this.logger.warn(
+        `WebhookProcessor: skip signature-invalid id=${id} eventId=${row.eventId}`,
+      );
+      await this.jiraSync.markWebhookProcessed(id, 'signature_invalid_skipped');
+      return;
+    }
+
+    const eventType = row.eventType;
+    const rawPayload = row.payload;
+
+    if (!isWiredEventType(eventType)) {
+      // Unwired event type (comment_*, version_*, property_*, etc) — log
+      // + mark processed to drain the staging table. Day-24 wire-up adds
+      // routing for the remaining 7 event types.
+      this.logger.debug(
+        `WebhookProcessor: unwired eventType=${eventType} id=${id} — mark processed`,
+      );
+      await this.jiraSync.markWebhookProcessed(id, 'unwired_event_type');
+      return;
+    }
+
+    try {
+      await this.dispatch(eventType, rawPayload, id);
+      await this.jiraSync.markWebhookProcessed(id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `WebhookProcessor: handler threw for eventType=${eventType} id=${id}: ${msg}`,
+      );
+      // Day-24 retry-with-backoff will increment retry_count and re-attempt.
+      // Today: leave processed=false; the row is visible to the sweep.
+      throw err;
+    }
+  }
+
+  /** Dispatch a wired event-type to its handler. Callers Zod-parse the
+   *  payload inside the handler so unknown fields are tolerated. */
+  private async dispatch(
+    eventType: string,
+    rawPayload: unknown,
+    eventRowId: string,
+  ): Promise<void> {
+    switch (eventType) {
+      case 'jira:issue_created': {
+        const parsed =
+          JiraWebhookIssueCreatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `jira:issue_created Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.issueHandler.handleCreated(parsed.data, eventRowId);
+        return;
+      }
+      case 'jira:issue_updated': {
+        const parsed =
+          JiraWebhookIssueUpdatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `jira:issue_updated Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.issueHandler.handleUpdated(parsed.data, eventRowId);
+        return;
+      }
+      case 'jira:issue_deleted': {
+        const parsed =
+          JiraWebhookIssueDeletedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `jira:issue_deleted Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.issueHandler.handleDeleted(parsed.data, eventRowId);
+        return;
+      }
+      case 'sprint_created': {
+        const parsed =
+          JiraWebhookSprintCreatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `sprint_created Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.sprintHandler.handleCreated(parsed.data, eventRowId);
+        return;
+      }
+      case 'sprint_updated': {
+        const parsed =
+          JiraWebhookSprintUpdatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `sprint_updated Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.sprintHandler.handleUpdated(parsed.data, eventRowId);
+        return;
+      }
+      case 'sprint_deleted': {
+        const parsed =
+          JiraWebhookSprintDeletedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `sprint_deleted Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.sprintHandler.handleDeleted(parsed.data, eventRowId);
+        return;
+      }
+      case 'sprint_closed': {
+        const parsed =
+          JiraWebhookSprintClosedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `sprint_closed Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.sprintHandler.handleClosed(parsed.data, eventRowId);
+        return;
+      }
+      default:
+        // Unreachable per isWiredEventType() guard at the call site.
+        throw new Error(`Dispatch: unhandled wired event type ${eventType}`);
+    }
   }
 }
