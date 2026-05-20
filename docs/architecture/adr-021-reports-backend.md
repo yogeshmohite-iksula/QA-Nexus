@@ -1,7 +1,7 @@
 # ADR-021: Reports backend — flexible query API, hybrid pre-compute + lru-cache, three-track export
 
-- **Status:** Draft (Day-22 PM 2026-05-19 — to be ratified Day-23 AM before BE+1 starts MS5 Reports backend implementation)
-- **Date:** 2026-05-19
+- **Status:** **Ratified** (Day-23 2026-05-20 11:50 IST by Yogesh + BE+1 + MAIN, after PR #179/#184/#187 merge wave landed; PR #186 wire-up resolves separately under BE+1). All 5 sub-decisions ratified as drafted; 2 amendments adopted (cron 02:30 IST + `is_stale` column); namespace convention `qa_nexus.<domain>.<event>` adopted as binding M5+ contract; sequencing risk locked (ADR-020 Day-23 wire-up merges before ADR-021 implementation migration); 3 open questions all deferred to M6 per pre-positions. Implementation may proceed Day-23 PM after PR #186 wire-up lands.
+- **Date:** 2026-05-19 (drafted) · 2026-05-20 (ratified)
 - **Deciders:** Yogesh Mohite (Admin), BE+1 (implementer), MAIN (planner)
 - **Related:** PM1_PRD §6 (Reports + Executive Dashboard scope) · PM1_ERD §TB-016 `rca_report` · PM1_UI_v2 Redesign Frame F23 Reports Studio v2 + F25 Executive Dashboard v2 · ADR-009 (pnpm + sharp Render deploy pattern — same stack constraint applies) · ADR-010 (pdf-parser choice — pdfkit already in stack for emitter, this ADR reuses it) · ADR-015 (runtime LLM config bridge — config-token pattern reused for report kinds) · ADR-020 (Jira sync architecture, ratified Day-22 — Reports may surface synced Jira ticket data)
 - **Supersedes:** none
@@ -106,7 +106,7 @@ const ReportResponseSchema = z.object({
 ┌────────────────────────────────────────────────────────────────────┐
 │  TIER 1 — pre-computed (report_aggregate table)                    │
 │  - 6-8 most-queried KPIs (cycle pass rate, defect age, agent cost) │
-│  - Daily refresh via @nestjs/schedule cron 02:00 IST               │
+│  - Daily refresh via @nestjs/schedule cron 02:30 IST               │
 │  - Event-triggered refresh on `defect.*` / `run.*` WS event burst  │
 │  - Freshness: ≤24h (cron) OR ≤5min (event-triggered subset)        │
 │  - Use when: F25 dashboard tiles + F23 "stale OK" report kinds     │
@@ -137,7 +137,8 @@ CREATE TABLE report_aggregate (
   bucket_kind         TEXT NOT NULL,                              -- 'sprint' | 'day' | 'week'
   values              JSONB NOT NULL,                             -- {pass: 87, fail: 12, blocked: 3}
   computed_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  source_row_count    INTEGER NOT NULL                            -- diagnostic; how many event rows aggregated
+  source_row_count    INTEGER NOT NULL,                           -- diagnostic; how many event rows aggregated
+  is_stale            BOOLEAN NOT NULL DEFAULT false              -- Day-23 ratification Amendment B: event-triggered invalidation marks rows stale; next read OR next cron tick recomputes
 );
 CREATE UNIQUE INDEX report_aggregate_natural_key
   ON report_aggregate (workspace_id, COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid), kind, bucket_kind, bucket_key);
@@ -155,7 +156,7 @@ CREATE INDEX report_aggregate_freshness
 
 ```ts
 // apps/api/src/reports/refresh.cron.ts
-@Cron('0 2 * * *', { timeZone: 'Asia/Kolkata' })  // 02:00 IST daily
+@Cron('30 2 * * *', { timeZone: 'Asia/Kolkata' })  // 02:30 IST daily — avoids Render Free nightly restart window per Day-23 ratification Amendment A
 async dailyRefresh() {
   for (const kind of TIER_1_KINDS) {
     for (const project of activeProjects) {
@@ -168,8 +169,11 @@ async dailyRefresh() {
 
 @OnEvent('defect.created') @OnEvent('defect.status_changed')
 async invalidateDefectAggregates(event: DefectEvent) {
-  // Mark stale; refresh fires lazily on next read OR via event-driven re-compute
+  // Day-23 Amendment B: mark rows stale (is_stale=true), don't delete.
+  // Refresh fires lazily on next read OR at next 02:30 IST cron tick — whichever first.
+  // This defers compute cost without losing the stale signal.
   await this.markStale(event.projectId, ['defect_age', 'defect_status_flow']);
+  // markStale impl: UPDATE report_aggregate SET is_stale=true WHERE project_id=$1 AND kind=ANY($2)
 }
 ```
 
@@ -315,6 +319,42 @@ CREATE INDEX report_export_expiry_purge
   ON report_export (expires_at) WHERE expires_at < now();
 ```
 
+### 6. Postgres LISTEN/NOTIFY channel naming convention (BINDING M5+)
+
+_(Added Day-23 ratification per BE+1 review §3 — applies to ALL future LISTEN/NOTIFY channels across all domains.)_
+
+**Convention:** `qa_nexus.<domain>.<event>` — three-segment dot-separated namespace.
+
+| Source                                          | Channel name                                                                                               |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Jira webhook receiver (PR #186)                 | `qa_nexus.webhook.jira.received` _(M6 rename; legacy `webhook_received` retained M5 — see migration plan)_ |
+| Report cache invalidate (this ADR M6 extension) | `qa_nexus.cache.report.invalidate`                                                                         |
+| Defect change events (M6+)                      | `qa_nexus.defect.changed`                                                                                  |
+| Run state change (M6+)                          | `qa_nexus.run.state_changed`                                                                               |
+| Slack webhook receiver (M6 candidate)           | `qa_nexus.webhook.slack.received`                                                                          |
+| Stripe webhook receiver (M7 candidate)          | `qa_nexus.webhook.stripe.received`                                                                         |
+
+**Rationale:**
+
+- Collision-free namespace across N domains × M event types
+- `qa_nexus.` prefix prevents collision with shared-DB consumers (M6+ multi-tenant)
+- Grep-able + visually consistent
+- Matches the `pg-listen` `.notifications.on('<channel>', ...)` API without escaping
+
+**Migration plan for legacy `webhook_received` (PR #186):**
+
+- **M5: NO RENAME.** Keep `webhook_received` as-is to avoid churn on already-shipped scaffold. ADR-020 §7 channel name reconciliation moves from "amend ADR to match shipped code" to "amend ADR to reference the M6 rename target".
+- **M6 hygiene followup:** rename `webhook_received` → `qa_nexus.webhook.jira.received` via one trigger function recreation migration + one constant rename in `webhook-processor.service.ts`. Tracked at `docs/m6/m6-hygiene-followups.md`.
+
+**Forbidden patterns (visual review FAIL triggers from Day-23+):**
+
+- Channel names without the `qa_nexus.` prefix (collision risk)
+- Two-segment names (`<domain>.<event>` without root prefix)
+- Underscore-separated bare names (`webhook_received` style) — LEGACY ONLY; all new channels MUST use the namespaced convention
+- Channel name containing the project key (e.g., `qa_nexus.RET.webhook.received`) — channels are per-instance, not per-project
+
+**Cross-references:** `feedback_jira_webhook_20s_budget.md` (top-section addendum forthcoming) · `docs/m6/m6-hygiene-followups.md` (legacy rename entry) · BE+1 PR #183 review comment id `4487421841` §3.
+
 ## Consequences
 
 - **Predictable Neon CU-hr budget** — Tier 1 pre-compute absorbs the 80% query mass (F25 dashboard tiles); Tier 2 live queries are rate-limited by lru-cache hit rate. Worst-case 20% above Day-22 baseline (~98/100 CU-hr month-end projection).
@@ -335,23 +375,47 @@ CREATE INDEX report_export_expiry_purge
 - **MaterializedView per report kind** — rejected for M5; revisit M6. MVs are good for "always-fresh" pre-compute but the refresh-on-write semantics (`REFRESH MATERIALIZED VIEW CONCURRENTLY`) require per-kind tuning + risk N×refresh-cost during burst events. Cron + on-event-invalidation pattern is simpler for M5 scale.
 - **Server-side report PDF generation in a separate worker** — rejected. Render Free single-dyno; Playwright launch cost (2-4s) is acceptable inline given the lru-cache absorbs repeat requests.
 
-## Ratification gate
+## Ratification decisions (Day-23 2026-05-20 11:50 IST)
 
-5 sub-decisions to confirm at Day-23 AM with Yogesh + BE+1 (~30 min):
+The 5 sub-decisions + 2 amendments + 3 open questions filed at draft time + the namespace convention surfaced by BE+1 review comment id `4487421841` were decided as follows by Yogesh + BE+1 + MAIN. Decisions are binding for MS5 Reports backend implementation.
 
-1. **Single endpoint with Zod-discriminated-union** — RECOMMEND yes (rationale: §1)
-2. **Hybrid Tier-1/Tier-2/Tier-3 aggregation** — RECOMMEND yes; specifically lock the 6-8 Tier-1 kinds (BE+1 owns the list based on F25 dashboard tile spec)
-3. **`lru-cache` in-process @ 50MB** — RECOMMEND yes; confirm the 6 per-kind TTL values (especially `agent_cost = 1hr` — too cold? too warm?)
-4. **Four canonical windows + bounded custom range** — RECOMMEND yes; verify `sprint_current()` fallback to "14 days" is acceptable when no Jira connected
-5. **Three-track export + per-kind layout assignment** — RECOMMEND yes; lock the layout assignment table per §5
+**5 sub-decisions — all RATIFIED as drafted:**
 
-**Open questions for Day-23 meeting:**
+1. **Single endpoint with Zod-discriminated-union** — RATIFIED. BE+1 cost estimate: 4-6 hr (controller + Zod variants + `ReportResponse` envelope in `@qa-nexus/shared` + RBAC guard). Zero Neon CU-hr impact.
+2. **Hybrid Tier-1/Tier-2/Tier-3 aggregation** — RATIFIED. BE+1 owns Tier-1 kinds list cross-referenced against F25 dashboard tile spec (Day-23 PM scope).
+3. **`lru-cache@^11.x` in-process @ 50MB heap, RBAC-salted** — RATIFIED. Per-kind TTLs ratified as drafted (5 min cycle_pass_rate / 15 min defect_age / 1 hr agent_cost / 5 min run_throughput / 1 hr sherlock_hit_rate / 15 min defect_status_flow). Re-evaluate `agent_cost = 1hr` if pilot users report stale-cost surprise.
+4. **Four canonical windows + bounded custom range (≤365d)** — RATIFIED. `sprint_current()` PL/pgSQL helper depends on `jira_issue.sprint_*` columns from ADR-020 wire-up (see Sequencing risk below).
+5. **Three-track export + per-kind layout assignment** — RATIFIED as drafted in §5 table. R2 storage + content-hash idempotency + 7-day signed-URL expiry locked.
 
-1. **Report scheduling — M5 or M6?** F23 spec includes "schedule recurring runs". The cron infra exists (`@nestjs/schedule`); scheduling UI + state machine adds ~1 day. M5 if BE+1 has budget.
-2. **Shared report state — workspace-scoped or per-user?** Save a report → who can view it? RECOMMEND project-scoped (matches RBAC model). Yogesh confirms.
-3. **Embed-in-Slack** — pilot stakeholders may want a "post this report to Slack" affordance. Out of M5; flag for M6 if pilot demand surfaces.
+**2 amendments — both ADOPTED:**
 
-**Implementation gate:** if green Day-23 AM, BE+1 starts MS5 Reports backend tasks the same day. ADR amends in-place on revisions (same pattern as ADR-020).
+- **Amendment A** (refresh cron 02:00 → 02:30 IST): adopted to avoid Render Free dyno nightly restart window. §2 cron block updated in-place above.
+- **Amendment B** (`is_stale BOOLEAN NOT NULL DEFAULT false` on `report_aggregate`): adopted. Schema patched in §2 above. Invalidation logic narrative updated to `is_stale=true` semantics (refresh fires lazily on next read OR next 02:30 IST cron tick — defers compute cost without losing the stale signal).
+
+**§6 namespace convention — ADOPTED as BINDING M5+:**
+
+`qa_nexus.<domain>.<event>` namespace for ALL future LISTEN/NOTIFY channels. Legacy `webhook_received` from PR #186 retained M5; M6 hygiene followup recreates the trigger under `qa_nexus.webhook.jira.received` (tracked at `docs/m6/m6-hygiene-followups.md`). 4 forbidden patterns codified in §6.
+
+**3 open questions — all DEFERRED to M6 per pre-positions:**
+
+1. **Report scheduling — M5 or M6?** → **DEFERRED to M6.** F23 spec includes "schedule recurring runs"; cron infra exists but the scheduling UI + state machine adds ~1 day BE+1 estimate. M5 budget already absorbed by ADR-020 wire-up + Reports backend implementation. M6 picks it up.
+2. **Shared report state scope — workspace or project?** → **PROJECT-SCOPED.** Matches RBAC isolation pattern (ADR-020 §4 Composer/Curator/Sherlock data access; ADR-021 §3 cache key `actor.projectId` salting).
+3. **Embed-in-Slack — M5 or M6?** → **DEFERRED to M6.** Pilot stakeholder demand uncertain; surfaces only if pilot users request post-launch. Hygiene tracked at `docs/m6/m6-hygiene-followups.md`.
+
+**Sequencing risk locked (BE+1 review §4):**
+
+ADR-021's `sprint_current(project_uuid)` PL/pgSQL helper depends on `jira_issue.sprint_id` + `jira_issue.sprint_name` columns added by ADR-020 Day-23 wire-up (successor PR to #186 PARTIAL). **Migration merge order MATTERS:**
+
+1. **First:** ADR-020 Day-23 wire-up PR — adds `jira_issue.sprint_*` columns
+2. **Second:** ADR-021 implementation PR — adds `report_aggregate` table + `sprint_current()` helper
+
+If reversed, `prisma migrate deploy` throws `column does not exist`. BE+1 acknowledges via review comment + this section.
+
+**Implementation gate:** BE+1 may proceed Day-23 PM with MS5 Reports backend implementation against this ratified design AFTER PR #186 wire-up PR merges. If any sub-decision needs revisiting during implementation, amend this ADR in-place (single ADR, multiple ratifications) rather than spawning a parallel ADR.
+
+---
+
+**Ratification record:** Day-23 2026-05-20 11:50 IST · Yogesh (Admin) + BE+1 (implementer, via PR #183 review comment `4487421841`) + MAIN (planner) · 5 sub-decisions ratified + 2 amendments adopted + namespace convention BINDING M5+ + sequencing risk locked + 3 open questions all M6 deferred · 0 deferred to a future ADR.
 
 ---
 
