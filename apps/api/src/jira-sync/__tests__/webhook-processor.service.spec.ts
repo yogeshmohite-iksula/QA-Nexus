@@ -1,13 +1,19 @@
-// Unit tests for WebhookProcessorService + JiraSyncService.persistWebhookEvent
-// — Day-22 P1 (ADR-020 §7 ratified). Stub the pg-listen connect path
-// (NODE_ENV=test branch) so we don't need a live Postgres for the unit
-// run. handleNotification is exercised directly with mocked Prisma.
+// Day-22 + Day-23 wire-up tests for WebhookProcessorService + persistWebhookEvent.
+//
+// Day-22 (PR #186): pg-listen subscriber + stub handleNotification
+// Day-23 (this PR): handleNotification dispatches by eventType to
+// IssueWebhookHandler / SprintWebhookHandler. Unwired events absorbed.
+//
+// NODE_ENV=test skips the live pg-listen connection — we exercise
+// handleNotification directly with mocked Prisma + handlers.
 
 import { Test } from '@nestjs/testing';
 import { WebhookProcessorService } from '../webhook-processor.service';
 import { JiraSyncService } from '../jira-sync.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
+import { IssueWebhookHandler } from '../issue-webhook.handler';
+import { SprintWebhookHandler } from '../sprint-webhook.handler';
 
 jest.mock('../../audit/audit.service', () => ({
   AuditService: class FakeAuditService {
@@ -16,148 +22,210 @@ jest.mock('../../audit/audit.service', () => ({
   },
 }));
 
-describe('WebhookProcessorService.handleNotification', () => {
+jest.mock('../issue-webhook.handler', () => ({
+  IssueWebhookHandler: class FakeIssueHandler {
+    handleCreated = jest.fn();
+    handleUpdated = jest.fn();
+    handleDeleted = jest.fn();
+  },
+}));
+
+jest.mock('../sprint-webhook.handler', () => ({
+  SprintWebhookHandler: class FakeSprintHandler {
+    handleCreated = jest.fn();
+    handleUpdated = jest.fn();
+    handleDeleted = jest.fn();
+    handleClosed = jest.fn();
+  },
+}));
+
+const minimalIssuePayload = (eventType: string, key = 'RET-42') => ({
+  webhookEvent: eventType,
+  issue: { id: '10001', key },
+});
+
+const minimalSprintPayload = (eventType: string, sprintId = '42') => ({
+  webhookEvent: eventType,
+  sprint: { id: sprintId, name: 'Sprint 42', state: 'active' as const },
+});
+
+describe('WebhookProcessorService.handleNotification (Day-23 dispatch)', () => {
   let processor: WebhookProcessorService;
+  let issueHandler: jest.Mocked<IssueWebhookHandler>;
+  let sprintHandler: jest.Mocked<SprintWebhookHandler>;
   let prismaFindUnique: jest.Mock;
   let prismaUpdate: jest.Mock;
+  let jiraSyncMarkProcessed: jest.Mock;
 
   beforeEach(async () => {
     process.env.NODE_ENV = 'test';
     prismaFindUnique = jest.fn();
     prismaUpdate = jest.fn().mockResolvedValue({});
+    jiraSyncMarkProcessed = jest.fn().mockResolvedValue(undefined);
     const prisma = {
-      jiraWebhookEvent: {
-        findUnique: prismaFindUnique,
-        update: prismaUpdate,
-        create: jest.fn(),
-      },
+      jiraWebhookEvent: { findUnique: prismaFindUnique, update: prismaUpdate },
       workspace: { findFirst: jest.fn().mockResolvedValue({ id: 'ws-1' }) },
     };
     const moduleRef = await Test.createTestingModule({
       providers: [
         WebhookProcessorService,
-        JiraSyncService,
+        {
+          provide: JiraSyncService,
+          useValue: { markWebhookProcessed: jiraSyncMarkProcessed },
+        },
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: { writeNonBlocking: jest.fn() } },
+        IssueWebhookHandler,
+        SprintWebhookHandler,
       ],
     }).compile();
     processor = moduleRef.get(WebhookProcessorService);
+    issueHandler = moduleRef.get(
+      IssueWebhookHandler,
+    ) as jest.Mocked<IssueWebhookHandler>;
+    sprintHandler = moduleRef.get(
+      SprintWebhookHandler,
+    ) as jest.Mocked<SprintWebhookHandler>;
   });
 
-  it('happy path — fetches row + logs + marks processed', async () => {
-    prismaFindUnique.mockResolvedValueOnce({
-      id: 'row-1',
-      eventId: 'atl-evt-abc',
-      eventType: 'jira:issue_created',
-      jiraIssueKey: 'RET-42',
-      signatureValid: true,
-      processed: false,
-    });
-    await processor.handleNotification('row-1');
-    expect(prismaFindUnique).toHaveBeenCalledWith({
-      where: { id: 'row-1' },
-      select: expect.any(Object),
-    });
-    expect(prismaUpdate).toHaveBeenCalledWith({
-      where: { id: 'row-1' },
-      data: expect.objectContaining({ processed: true }),
-    });
-  });
-
-  it('row not found → logs warn, does NOT call update', async () => {
+  // ─── Guard-condition tests ──────────────────────────────────────────────
+  it('row not found → warn, no handler called, no markProcessed', async () => {
     prismaFindUnique.mockResolvedValueOnce(null);
     await processor.handleNotification('row-missing');
-    expect(prismaUpdate).not.toHaveBeenCalled();
+    expect(jiraSyncMarkProcessed).not.toHaveBeenCalled();
+    expect(issueHandler.handleCreated).not.toHaveBeenCalled();
   });
 
-  it('already processed → skips update (idempotent)', async () => {
+  it('already processed → skips (idempotent)', async () => {
     prismaFindUnique.mockResolvedValueOnce({
-      id: 'row-2',
-      eventId: 'atl-evt-xyz',
-      eventType: 'jira:issue_updated',
-      jiraIssueKey: 'RET-99',
+      id: 'r2',
+      eventType: 'jira:issue_created',
       signatureValid: true,
       processed: true,
+      payload: minimalIssuePayload('jira:issue_created'),
     });
-    await processor.handleNotification('row-2');
-    expect(prismaUpdate).not.toHaveBeenCalled();
+    await processor.handleNotification('r2');
+    expect(issueHandler.handleCreated).not.toHaveBeenCalled();
+    expect(jiraSyncMarkProcessed).not.toHaveBeenCalled();
   });
 
-  it('onModuleInit skips subscriber boot in NODE_ENV=test', async () => {
-    process.env.NODE_ENV = 'test';
-    // Calling onModuleInit shouldn't try to open pg-listen connection.
-    await expect(processor.onModuleInit()).resolves.toBeUndefined();
-  });
-});
-
-describe('JiraSyncService.persistWebhookEvent', () => {
-  let service: JiraSyncService;
-  let prismaCreate: jest.Mock;
-
-  beforeEach(async () => {
-    prismaCreate = jest.fn();
-    const prisma = {
-      jiraWebhookEvent: {
-        create: prismaCreate,
-        findUnique: jest.fn(),
-        update: jest.fn(),
-      },
-      workspace: { findFirst: jest.fn().mockResolvedValue({ id: 'ws-1' }) },
-    };
-    const moduleRef = await Test.createTestingModule({
-      providers: [
-        JiraSyncService,
-        { provide: PrismaService, useValue: prisma },
-        { provide: AuditService, useValue: { writeNonBlocking: jest.fn() } },
-      ],
-    }).compile();
-    service = moduleRef.get(JiraSyncService);
+  it('signature invalid → marks processed with reason, no handler called', async () => {
+    prismaFindUnique.mockResolvedValueOnce({
+      id: 'r3',
+      eventType: 'jira:issue_created',
+      signatureValid: false,
+      processed: false,
+      payload: minimalIssuePayload('jira:issue_created'),
+    });
+    await processor.handleNotification('r3');
+    expect(issueHandler.handleCreated).not.toHaveBeenCalled();
+    expect(jiraSyncMarkProcessed).toHaveBeenCalledWith(
+      'r3',
+      'signature_invalid_skipped',
+    );
   });
 
-  const samplePayload = {
-    webhookEvent: 'jira:issue_created',
-    issue: { id: '10042', key: 'RET-42' },
-  };
-
-  it('inserts new row → returns "inserted"', async () => {
-    prismaCreate.mockResolvedValueOnce({ id: 'row-1' });
-    const result = await service.persistWebhookEvent({
-      eventId: 'atl-evt-001',
-      payload: samplePayload,
+  it('unwired event type → marks processed + skip (no handler dispatch)', async () => {
+    prismaFindUnique.mockResolvedValueOnce({
+      id: 'r4',
+      eventType: 'comment_created',
       signatureValid: true,
+      processed: false,
+      payload: { webhookEvent: 'comment_created' },
     });
-    expect(result).toBe('inserted');
-    expect(prismaCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        eventId: 'atl-evt-001',
-        eventType: 'jira:issue_created',
-        jiraIssueKey: 'RET-42',
-        signatureValid: true,
-      }),
-    });
+    await processor.handleNotification('r4');
+    expect(issueHandler.handleCreated).not.toHaveBeenCalled();
+    expect(sprintHandler.handleCreated).not.toHaveBeenCalled();
+    expect(jiraSyncMarkProcessed).toHaveBeenCalledWith(
+      'r4',
+      'unwired_event_type',
+    );
   });
 
-  it('duplicate event_id (P2002) → returns "duplicate" (Atlassian retry absorbed)', async () => {
-    const p2002 = Object.assign(new Error('UNIQUE constraint'), {
-      code: 'P2002',
-    });
-    prismaCreate.mockRejectedValueOnce(p2002);
-    const result = await service.persistWebhookEvent({
-      eventId: 'atl-evt-001',
-      payload: samplePayload,
+  // ─── Issue event dispatch tests ─────────────────────────────────────────
+  it.each([
+    ['jira:issue_created', 'handleCreated'],
+    ['jira:issue_updated', 'handleUpdated'],
+    ['jira:issue_deleted', 'handleDeleted'],
+  ])(
+    'dispatches %s to IssueWebhookHandler.%s',
+    async (eventType, methodName) => {
+      const payload = minimalIssuePayload(eventType);
+      prismaFindUnique.mockResolvedValueOnce({
+        id: 'row-issue',
+        eventType,
+        signatureValid: true,
+        processed: false,
+        payload,
+      });
+      await processor.handleNotification('row-issue');
+      expect(
+        (issueHandler as unknown as Record<string, jest.Mock>)[methodName],
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ webhookEvent: eventType }),
+        'row-issue',
+      );
+      expect(jiraSyncMarkProcessed).toHaveBeenCalledWith('row-issue');
+    },
+  );
+
+  // ─── Sprint event dispatch tests ────────────────────────────────────────
+  it.each([
+    ['sprint_created', 'handleCreated'],
+    ['sprint_updated', 'handleUpdated'],
+    ['sprint_deleted', 'handleDeleted'],
+    ['sprint_closed', 'handleClosed'],
+  ])(
+    'dispatches %s to SprintWebhookHandler.%s',
+    async (eventType, methodName) => {
+      const payload = minimalSprintPayload(eventType);
+      prismaFindUnique.mockResolvedValueOnce({
+        id: 'row-sprint',
+        eventType,
+        signatureValid: true,
+        processed: false,
+        payload,
+      });
+      await processor.handleNotification('row-sprint');
+      expect(
+        (sprintHandler as unknown as Record<string, jest.Mock>)[methodName],
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ webhookEvent: eventType }),
+        'row-sprint',
+      );
+      expect(jiraSyncMarkProcessed).toHaveBeenCalledWith('row-sprint');
+    },
+  );
+
+  // ─── Failure path tests ─────────────────────────────────────────────────
+  it('handler throw → rethrows + does NOT mark processed (Day-24 retry candidate)', async () => {
+    prismaFindUnique.mockResolvedValueOnce({
+      id: 'row-fail',
+      eventType: 'jira:issue_updated',
       signatureValid: true,
+      processed: false,
+      payload: minimalIssuePayload('jira:issue_updated'),
     });
-    expect(result).toBe('duplicate');
+    issueHandler.handleUpdated.mockRejectedValueOnce(new Error('DB conn lost'));
+    await expect(processor.handleNotification('row-fail')).rejects.toThrow(
+      /DB conn lost/,
+    );
+    expect(jiraSyncMarkProcessed).not.toHaveBeenCalled();
   });
 
-  it('non-P2002 error → rethrows (transient failure surfaces to caller)', async () => {
-    prismaCreate.mockRejectedValueOnce(new Error('connection lost'));
-    await expect(
-      service.persistWebhookEvent({
-        eventId: 'atl-evt-002',
-        payload: samplePayload,
-        signatureValid: true,
-      }),
-    ).rejects.toThrow(/connection lost/);
+  it('malformed payload → Zod validation error rethrown', async () => {
+    prismaFindUnique.mockResolvedValueOnce({
+      id: 'row-bad',
+      eventType: 'jira:issue_created',
+      signatureValid: true,
+      processed: false,
+      // Missing required `issue` field for jira:issue_created.
+      payload: { webhookEvent: 'jira:issue_created' },
+    });
+    await expect(processor.handleNotification('row-bad')).rejects.toThrow(
+      /Zod validation failed/,
+    );
+    expect(issueHandler.handleCreated).not.toHaveBeenCalled();
+    expect(jiraSyncMarkProcessed).not.toHaveBeenCalled();
   });
 });
