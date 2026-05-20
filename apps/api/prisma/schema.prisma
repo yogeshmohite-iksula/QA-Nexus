@@ -314,6 +314,7 @@ model Project {
   testSuites             TestSuite[]
   testRuns               TestRun[]
   jiraConnections        JiraConnection[]
+  jiraSprints            JiraSprint[]
   defects                Defect[]
   kbDocuments            KbDocument[]
   testCaseGenerationRuns TestCaseGenerationRun[]
@@ -628,14 +629,57 @@ model JiraIssue {
   linkedRequirementId String?  @map("linked_requirement_id") @db.Uuid
   lastSyncedAt        DateTime @map("last_synced_at") @db.Timestamptz(6)
 
+  // Day-23 ADR-020 wire-up — sprint denormalization + delta-tracking + soft-delete.
+  // Sprint fields cached so ADR-021 tier-1 precompute dashboards skip the JOIN.
+  // priority/assignee/resolution/labels cached so the jira:issue_updated handler
+  // can compute changedFields[] for sync-state delta writes.
+  // deleted_at: jira:issue_deleted handler sets this (soft-delete per Hard Rule 7).
+  sprintId            String?   @map("sprint_id")
+  sprintName          String?   @map("sprint_name")
+  sprintState         String?   @map("sprint_state")
+  sprintStartDate     DateTime? @map("sprint_start_date") @db.Timestamptz(6)
+  sprintEndDate       DateTime? @map("sprint_end_date") @db.Timestamptz(6)
+  sprintCompleteDate  DateTime? @map("sprint_complete_date") @db.Timestamptz(6)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
+  priority            String?
+  assigneeAccountId   String?   @map("assignee_account_id")
+  resolution          String?
+  labels              Json?
+
   jiraConnection    JiraConnection @relation(fields: [jiraConnectionId], references: [id], onDelete: Cascade)
   linkedDefect      Defect?        @relation("JiraIssueDefect", fields: [linkedDefectId], references: [id], onDelete: SetNull)
   linkedRequirement Requirement?   @relation("JiraIssueRequirement", fields: [linkedRequirementId], references: [id], onDelete: SetNull)
+  sprint            JiraSprint?    @relation(fields: [sprintId], references: [id], onDelete: SetNull)
 
   @@unique([jiraConnectionId, jiraKey])
   @@index([linkedDefectId])
   @@index([linkedRequirementId])
+  @@index([sprintId])
+  @@index([deletedAt])
   @@map("jira_issues")
+}
+
+/// Day-23 ADR-020 wire-up — Jira Sprint object. Atlassian sprint id is a
+/// numeric int serialized as TEXT in webhook payloads (matches our storage).
+/// deleted_at supports the sprint_deleted handler's soft-delete semantics.
+model JiraSprint {
+  id            String      @id // Atlassian sprint id (numeric, stored as text)
+  projectId     String      @map("project_id") @db.Uuid
+  name          String
+  state         String      // 'active' | 'closed' | 'future' (DB CHECK enforces)
+  startDate     DateTime?   @map("start_date") @db.Timestamptz(6)
+  endDate       DateTime?   @map("end_date") @db.Timestamptz(6)
+  completeDate  DateTime?   @map("complete_date") @db.Timestamptz(6)
+  boardId       String?     @map("board_id")
+  deletedAt     DateTime?   @map("deleted_at") @db.Timestamptz(6)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jiraIssues    JiraIssue[]
+
+  @@index([projectId, state])
+  @@map("jira_sprints")
 }
 
 /// TB-015 — bug records (PM1 defect lifecycle).

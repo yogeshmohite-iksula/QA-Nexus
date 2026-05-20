@@ -73,7 +73,7 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
 
     this.subscriber = createSubscriber({ connectionString: dbUrl });
 
-    this.subscriber.notifications.on(WEBHOOK_CHANNEL, async (payload) => {
+    this.subscriber.notifications.on(WEBHOOK_CHANNEL, async (payload: unknown) => {
       const id = typeof payload === 'string' ? payload : String(payload);
       try {
         await this.handleNotification(id);
@@ -86,7 +86,7 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    this.subscriber.events.on('error', (err) => {
+    this.subscriber.events.on('error', (err: unknown) => {
       this.logger.error(
         `WebhookProcessor: pg-listen error: ${
           err instanceof Error ? err.message : String(err)
