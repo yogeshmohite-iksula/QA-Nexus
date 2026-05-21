@@ -1,0 +1,93 @@
+/* F25 Executive Dashboard — Prove-mode CSS token definitions.
+ *
+ * The component tree references --p-* tokens throughout (e.g.
+ * `bg-[color:var(--p-canvas)]`). Those tokens are defined here and
+ * scoped to the `.f25-shell` wrapper so they never leak into the
+ * AdminShell rail/topbar.
+ *
+ * Two themes share the same classNames; only the token values swap.
+ */
+
+.f25-shell {
+  background: var(--p-canvas);
+  color: var(--p-text-1);
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* Defensive: prevent any descendant from forcing horizontal scroll on the
+   * page document. Any individual row that needs to scroll should opt-in via
+   * its own `overflow-x-auto`. */
+  overflow-x: hidden;
+}
+.f25-shell * {
+  min-width: 0;
+}
+
+.f25-shell[data-theme='light'] {
+  --p-canvas: #fafaf8;
+  --p-card: #ffffff;
+  --p-card-soft: #f4f4f0;
+  --p-border: #e5e7eb;
+  --p-border-strong: #cbd5e1;
+  --p-text-1: #0f172a;
+  --p-text-2: #475569;
+  --p-text-3: #64748b;
+  --p-text-4: #94a3b8;
+  --p-pass: #10b981;
+  --p-pass-bg: #d1fae5;
+  --p-pass-line: #a7f3d0;
+  --p-warn: #d97706;
+  --p-warn-bg: #fef3c7;
+  --p-warn-line: #fcd34d;
+  --p-fail: #dc2626;
+  --p-fail-bg: #fee2e2;
+  --p-fail-line: #fca5a5;
+  --p-info: #2563eb;
+  --p-info-bg: #dbeafe;
+  --p-secondary: #7c3aed;
+  --p-secondary-bg: #ede9fe;
+  --p-secondary-line: #ddd6fe;
+  --p-primary: #0d9488;
+  --p-primary-bg: #ccfbf1;
+}
+
+.f25-shell[data-theme='dark'] {
+  --p-canvas: #0b0f17;
+  --p-card: #111827;
+  --p-card-soft: #1a2233;
+  --p-border: #2a3347;
+  --p-border-strong: #3b4660;
+  --p-text-1: #f1f5f9;
+  --p-text-2: #c7d0dc;
+  --p-text-3: #8a94a6;
+  --p-text-4: #64748b;
+  --p-pass: #34d399;
+  --p-pass-bg: rgba(52, 211, 153, 0.14);
+  --p-pass-line: rgba(52, 211, 153, 0.34);
+  --p-warn: #fbbf24;
+  --p-warn-bg: rgba(251, 191, 36, 0.14);
+  --p-warn-line: rgba(251, 191, 36, 0.34);
+  --p-fail: #f87171;
+  --p-fail-bg: rgba(248, 113, 113, 0.14);
+  --p-fail-line: rgba(248, 113, 113, 0.34);
+  --p-info: #60a5fa;
+  --p-info-bg: rgba(96, 165, 250, 0.12);
+  --p-secondary: #a78bfa;
+  --p-secondary-bg: rgba(167, 139, 250, 0.12);
+  --p-secondary-line: rgba(167, 139, 250, 0.3);
+  --p-primary: #2dd4bf;
+  --p-primary-bg: rgba(45, 212, 191, 0.12);
+}
+
+/* Scrollbar — track on canvas, thumb on border-strong, hover on text-3 */
+.f25-shell::-webkit-scrollbar {
+  width: 8px;
+}
+.f25-shell::-webkit-scrollbar-track {
+  background: transparent;
+}
+.f25-shell::-webkit-scrollbar-thumb {
+  background: var(--p-border-strong);
+  border-radius: 4px;
+}
+.f25-shell::-webkit-scrollbar-thumb:hover {
+  background: var(--p-text-3);
+}
