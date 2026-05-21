@@ -41,6 +41,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { JiraSyncService } from './jira-sync.service';
 import { IssueWebhookHandler } from './issue-webhook.handler';
 import { SprintWebhookHandler } from './sprint-webhook.handler';
+import { CommentWebhookHandler } from './comment-webhook.handler';
+import { VersionWebhookHandler } from './version-webhook.handler';
+import { PropertyWebhookHandler } from './property-webhook.handler';
 import {
   JiraWebhookIssueCreatedPayloadSchema,
   JiraWebhookIssueUpdatedPayloadSchema,
@@ -48,6 +51,13 @@ import {
   JiraWebhookSprintCreatedPayloadSchema,
   JiraWebhookSprintUpdatedPayloadSchema,
   JiraWebhookSprintDeletedPayloadSchema,
+  JiraWebhookCommentCreatedPayloadSchema,
+  JiraWebhookCommentUpdatedPayloadSchema,
+  JiraWebhookCommentDeletedPayloadSchema,
+  JiraWebhookVersionCreatedPayloadSchema,
+  JiraWebhookVersionReleasedPayloadSchema,
+  JiraWebhookVersionUnreleasedPayloadSchema,
+  JiraWebhookPropertyPayloadSchema,
   JiraWebhookSprintClosedPayloadSchema,
   isWiredEventType,
 } from './jira-webhook.schema';
@@ -69,6 +79,9 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
     private readonly jiraSync: JiraSyncService,
     private readonly issueHandler: IssueWebhookHandler,
     private readonly sprintHandler: SprintWebhookHandler,
+    private readonly commentHandler: CommentWebhookHandler,
+    private readonly versionHandler: VersionWebhookHandler,
+    private readonly propertyHandler: PropertyWebhookHandler,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -320,6 +333,109 @@ export class WebhookProcessorService implements OnModuleInit, OnModuleDestroy {
           );
         }
         await this.sprintHandler.handleClosed(parsed.data, eventRowId);
+        return;
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // Day-24 P1 — Comment + Version + Property event families.
+      // ADR-020 wire-up now COMPLETE (14 of 14 Atlassian event types).
+      // ─────────────────────────────────────────────────────────────────
+      case 'comment_created': {
+        const parsed =
+          JiraWebhookCommentCreatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `comment_created Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.commentHandler.handleCreated(parsed.data, eventRowId);
+        return;
+      }
+      case 'comment_updated': {
+        const parsed =
+          JiraWebhookCommentUpdatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `comment_updated Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.commentHandler.handleUpdated(parsed.data, eventRowId);
+        return;
+      }
+      case 'comment_deleted': {
+        const parsed =
+          JiraWebhookCommentDeletedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `comment_deleted Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.commentHandler.handleDeleted(parsed.data, eventRowId);
+        return;
+      }
+      case 'jira:version_created': {
+        const parsed =
+          JiraWebhookVersionCreatedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `jira:version_created Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.versionHandler.handleCreated(parsed.data, eventRowId);
+        return;
+      }
+      case 'jira:version_released': {
+        const parsed =
+          JiraWebhookVersionReleasedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `jira:version_released Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.versionHandler.handleReleased(parsed.data, eventRowId);
+        return;
+      }
+      case 'jira:version_unreleased': {
+        const parsed =
+          JiraWebhookVersionUnreleasedPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `jira:version_unreleased Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.versionHandler.handleUnreleased(parsed.data, eventRowId);
+        return;
+      }
+      case 'issue_property_set':
+      case 'issue_property_deleted': {
+        const parsed = JiraWebhookPropertyPayloadSchema.safeParse(rawPayload);
+        if (!parsed.success) {
+          throw new Error(
+            `${eventType} Zod validation failed: ${parsed.error.issues
+              .slice(0, 2)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; ')}`,
+          );
+        }
+        await this.propertyHandler.handle(parsed.data, eventRowId);
         return;
       }
       default:
