@@ -31,6 +31,9 @@ export * from './schemas/resend-env';
 // then `m4.DefectSchema`, `m4.EvidenceSchema`, `m4.JiraIntegrationSchema`,
 // etc. M5 retro will dedupe the legacy variants.
 export * as m4 from './schemas/m4';
+// M5 (Day-24 P0 #189-derived) — namespaced. Currently covers ADR-021
+// Reports backend (ReportRequest/Response, 6 kind data shapes, ReportTemplate).
+export * as m5 from './schemas/m5';
 export * from './auth/role.enum';
 export * from './storage';
 // UI-facing seed/display types — extends the BE schemas with denormalized

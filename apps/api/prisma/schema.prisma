@@ -247,6 +247,9 @@ model Workspace {
   agentModelAssignments AgentModelAssignment[]
   auditLogs             AuditLog[]
   agentRuns             AgentRun[]
+  /// Day-24 P0 ADR-021 Reports backend
+  reportAggregates      ReportAggregate[]
+  reportTemplates       ReportTemplate[]
 
   @@map("workspaces")
 }
@@ -290,6 +293,8 @@ model User {
   /// M4 (Day-18 #144)
   evidenceCreated                 Evidence[]              @relation("EvidenceCreator")
   defectHistoryActions            DefectHistory[]         @relation("DefectHistoryActor")
+  /// Day-24 P0 ADR-021 Reports backend
+  reportTemplatesOwned            ReportTemplate[]        @relation("ReportTemplateOwner")
 
   @@index([workspaceId])
   @@map("users")
@@ -318,6 +323,9 @@ model Project {
   defects                Defect[]
   kbDocuments            KbDocument[]
   testCaseGenerationRuns TestCaseGenerationRun[]
+  /// Day-24 P0 ADR-021 Reports backend
+  reportAggregates       ReportAggregate[]
+  reportTemplates        ReportTemplate[]
 
   @@unique([workspaceId, key])
   @@index([workspaceId])
@@ -634,17 +642,17 @@ model JiraIssue {
   // priority/assignee/resolution/labels cached so the jira:issue_updated handler
   // can compute changedFields[] for sync-state delta writes.
   // deleted_at: jira:issue_deleted handler sets this (soft-delete per Hard Rule 7).
-  sprintId            String?   @map("sprint_id")
-  sprintName          String?   @map("sprint_name")
-  sprintState         String?   @map("sprint_state")
-  sprintStartDate     DateTime? @map("sprint_start_date") @db.Timestamptz(6)
-  sprintEndDate       DateTime? @map("sprint_end_date") @db.Timestamptz(6)
-  sprintCompleteDate  DateTime? @map("sprint_complete_date") @db.Timestamptz(6)
-  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
-  priority            String?
-  assigneeAccountId   String?   @map("assignee_account_id")
-  resolution          String?
-  labels              Json?
+  sprintId           String?   @map("sprint_id")
+  sprintName         String?   @map("sprint_name")
+  sprintState        String?   @map("sprint_state")
+  sprintStartDate    DateTime? @map("sprint_start_date") @db.Timestamptz(6)
+  sprintEndDate      DateTime? @map("sprint_end_date") @db.Timestamptz(6)
+  sprintCompleteDate DateTime? @map("sprint_complete_date") @db.Timestamptz(6)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(6)
+  priority           String?
+  assigneeAccountId  String?   @map("assignee_account_id")
+  resolution         String?
+  labels             Json?
 
   jiraConnection    JiraConnection @relation(fields: [jiraConnectionId], references: [id], onDelete: Cascade)
   linkedDefect      Defect?        @relation("JiraIssueDefect", fields: [linkedDefectId], references: [id], onDelete: SetNull)
@@ -663,20 +671,20 @@ model JiraIssue {
 /// numeric int serialized as TEXT in webhook payloads (matches our storage).
 /// deleted_at supports the sprint_deleted handler's soft-delete semantics.
 model JiraSprint {
-  id            String      @id // Atlassian sprint id (numeric, stored as text)
-  projectId     String      @map("project_id") @db.Uuid
-  name          String
-  state         String      // 'active' | 'closed' | 'future' (DB CHECK enforces)
-  startDate     DateTime?   @map("start_date") @db.Timestamptz(6)
-  endDate       DateTime?   @map("end_date") @db.Timestamptz(6)
-  completeDate  DateTime?   @map("complete_date") @db.Timestamptz(6)
-  boardId       String?     @map("board_id")
-  deletedAt     DateTime?   @map("deleted_at") @db.Timestamptz(6)
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String    @id // Atlassian sprint id (numeric, stored as text)
+  projectId    String    @map("project_id") @db.Uuid
+  name         String
+  state        String // 'active' | 'closed' | 'future' (DB CHECK enforces)
+  startDate    DateTime? @map("start_date") @db.Timestamptz(6)
+  endDate      DateTime? @map("end_date") @db.Timestamptz(6)
+  completeDate DateTime? @map("complete_date") @db.Timestamptz(6)
+  boardId      String?   @map("board_id")
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  jiraIssues    JiraIssue[]
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jiraIssues JiraIssue[]
 
   @@index([projectId, state])
   @@map("jira_sprints")
@@ -1133,4 +1141,60 @@ model JiraSyncLog {
   @@index([defectId])
   @@index([occurredAt])
   @@map("jira_sync_logs")
+}
+
+/// M5 (Day-24 P0 — ADR-021 Reports backend) — pre-computed tier-1 aggregate
+/// cache. UPSERT on (project_id, report_kind, time_range_key). Service layer
+/// reads via lru-cache SWR (stale-while-revalidate) wrapper; is_stale flag
+/// supports ADR-021 Amendment B event-triggered invalidation.
+model ReportAggregate {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  /// 'cycle_pass_rate' | 'defect_age' | 'agent_cost' | 'sprint_progress'
+  /// | 'test_coverage' | 'requirement_coverage' (DB CHECK enforces).
+  reportKind   String   @map("report_kind")
+  /// Canonical UPSERT key — e.g. 'sprint', '7d', '30d', '90d',
+  /// 'custom:<startISO>..<endISO>'. Service-layer computed.
+  timeRangeKey String   @map("time_range_key")
+  /// Structured shape: { kind: 'sprint'|'7d'|'30d'|'90d'|'custom', start?, end? }
+  timeRange    Json     @map("time_range") @db.JsonB
+  aggregatedAt DateTime @default(now()) @map("aggregated_at") @db.Timestamptz(6)
+  /// Kind-shaped payload (see migration.sql header for shapes).
+  data         Json     @db.JsonB
+  /// Amendment B sentinel — true = needs recompute; cron + lazy refresh both clear.
+  isStale      Boolean  @default(false) @map("is_stale")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, reportKind, timeRangeKey], map: "uq_report_aggregate_project_kind_window")
+  @@index([projectId, reportKind, aggregatedAt(sort: Desc)], map: "idx_report_aggregate_lookup")
+  @@index([workspaceId], map: "idx_report_aggregate_workspace")
+  @@map("report_aggregate")
+}
+
+/// M5 (Day-24 P0 — ADR-021 Reports backend) — saved user report configs.
+/// is_shared = true makes the template visible to project members beyond
+/// the owner (FE renders a small chip in F23 Reports Studio).
+model ReportTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  ownerUserId String   @map("owner_user_id") @db.Uuid
+  name        String
+  /// ReportRequest shape: { kind, timeRange, filters?, groupBy? }.
+  config      Json     @db.JsonB
+  isShared    Boolean  @default(false) @map("is_shared")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner     User      @relation("ReportTemplateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, ownerUserId], map: "idx_report_template_project_user")
+  @@map("report_template")
 }
