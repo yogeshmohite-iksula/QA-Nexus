@@ -69,7 +69,9 @@ export interface CaseRow {
   id: string; // 'TC-RET-0339'
   seq: string; // '139/218'
   title: string;
-  titleMonoToken?: string; // optional inline-mono snippet
+  titleMonoToken?: string; // optional inline-mono snippet (renders after title)
+  titleSuffix?: string; // optional plain-text suffix AFTER the mono token
+  // (canonical pattern: 'Refund webhook receives <code>refund.retry.exhausted</code> event')
   status: CaseStatus;
   isActive?: boolean; // exactly one row should be active at a time
 }
@@ -96,8 +98,14 @@ export const CASE_ROWS: CaseRow[] = [
   {
     id: 'TC-RET-0342',
     seq: '142/218',
-    title: 'Refund webhook receives event',
+    // Day-25 fix: canonical word order is
+    //   'Refund webhook receives <code>refund.retry.exhausted</code> event'
+    // Day-17 OLD shipped 'Refund webhook receives event' + trailing mono
+    // → rendered as 'Refund webhook receives event refund.retry.exhausted'.
+    // Restored via titleSuffix to match canonical v2 HTML.
+    title: 'Refund webhook receives',
     titleMonoToken: 'refund.retry.exhausted',
+    titleSuffix: 'event',
     status: 'fail',
   },
   {
@@ -334,5 +342,5 @@ export const EV_KBD_HINTS: { key: string; label: string }[] = [
   { key: 'B', label: 'Block' },
   { key: 'S', label: 'Skip' },
   { key: 'N', label: 'Next' },
-  { key: '⌘J', label: 'Toggle rail' },
+  { key: '⌘J', label: 'Open navigation' },
 ];
