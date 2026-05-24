@@ -13,6 +13,50 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 23 — ADR-020 Jira webhook wire-up: Issue + Sprint event routing [m5 PARTIAL — Day-24 adds Comment+Version+Property]
+
+Day-23 P1 — implements 7 of 14 Atlassian webhook event types per ADR-020 ratified. Replaces PR #186's stub handler with real per-event-type dispatch + Sherlock trigger logic + soft-delete semantics + audit chain integrity per Hard Rule 7.
+
+**Migration `20260520120000_jira_sync_sprint_columns`:**
+
+- New `jira_sprints` table — TEXT id (Atlassian numeric serialized as string) + `project_id` FK + state CHECK(active/closed/future) + dates + board_id + `deleted_at` for soft-delete
+- New columns on `jira_issues` — `sprint_*` denormalization (6 cols), `deleted_at`, `priority`, `assignee_account_id`, `resolution`, `labels JSONB` for delta-tracking
+- 4 partial indexes — `idx_jira_sprints_project_active` (ADR-021 `sprint_current()` dependency), `idx_jira_sprints_project_state`, `idx_jira_issues_sprint_active`, `idx_jira_issues_deleted_at`
+
+**`IssueWebhookHandler`** (new, 3 events):
+
+- `handleCreated` — UPSERT row with denormalized sprint + priority + audit `jira_issue.created`
+- `handleUpdated` — UPDATE delta-tracked fields + audit `jira_issue.updated` with `changedFields[]` + **Sherlock trigger** IF (prev status≠Done && new status==Done) OR (priority bumped on `Lowest<Low<Medium<High<Highest` ladder); only when linkedDefectId present
+- `handleDeleted` — SOFT-DELETE (`deleted_at`=NOW; never hard delete per Hard Rule 7) + audit
+
+**`SprintWebhookHandler`** (new, 4 events):
+
+- `handleCreated` / `handleUpdated` / `handleDeleted` / `handleClosed` — UPSERT/UPDATE/soft-delete + audit
+- `sprint_updated` future→active transition logs cache-invalidation hook (M6 LISTEN/NOTIFY `qa_nexus.cache.report.invalidate` channel per ADR-021 §3 ratified)
+- `sprint_closed` logs sprint-summary aggregation hook (M6 ADR-021 tier-1 precompute)
+- **Critical:** Sprint events filter by `project_id` APP-SIDE — Atlassian webhook subscription does NOT support JQL filtering per ADR-020 §6
+
+**`WebhookProcessorService` refactor:**
+
+- `handleNotification` now fetches full `payload` JSONB + dispatches by `eventType`
+- 7 wired event types; unwired (comment*\*, version*\_, property\_\_) absorbed with `markProcessed(id, 'unwired_event_type')` to drain staging table — Day-24 wires the rest
+- Signature-invalid rows marked + skipped
+- Handler exception rethrows (leaves `processed=false` for Day-24 retry-with-backoff sweep)
+
+**Zod schemas** (`jira-webhook.schema.ts`):
+
+- 7 event-specific payload schemas with discriminator `webhookEvent` literals
+- `JiraWebhookSprintRefSchema` + `extractCurrentSprint()` helper (active > most-recent-closed > NULL precedence per Atlassian multi-valued sprint semantics)
+- `isWiredEventType()` type guard + `WIRED_EVENT_TYPES` constant for dispatcher safety
+
+**Module wiring:** `JiraSyncModule` imports `SherlockOrchestratorModule`; registers both handlers as providers.
+
+**Tests:** 54/54 suites pass; **636 tests pass** (+19 vs Day-22: 10 dispatch + 7 IssueHandler + 6 SprintHandler). Sherlock trigger logic specifically covered: status→Done, priority bump, no-trigger on routine update, no-trigger without linked defect, no-trigger on downgrade, no-trigger on create.
+
+**Cost gate:** Migration adds 1 table + 10 cols + 4 partial indexes (~15KB at pilot scale, <0.1 CU-hr/day). No new deps. Sherlock trigger uses existing `runAndPersist` (#178) async pipeline — zero added LLM cost until pilot Atlassian connection (Day-24 P2).
+
+**Scope cut (PARTIAL):** Day-24 adds the remaining 7 Atlassian event types (comment_created/updated/deleted, version_created/released/unreleased, property_set/deleted) + retry-with-backoff scanner via `@nestjs/schedule` + DLQ at MAX_RETRIES + ADR-021 reports backend implementation start.
+
 ### Fixed — Day 22 — xlsx → exceljs swap (CVE remediation, Kimi K2 HIGH followup) [m5]
 
 Day-22 P0c (followup to Kimi K2's Day-19 HIGH triage) — replaced abandoned `xlsx` (SheetJS CE 0.18.5) with actively-maintained `exceljs@^4.4.0` (Apache 2.0, ~1.9M weekly DLs).
