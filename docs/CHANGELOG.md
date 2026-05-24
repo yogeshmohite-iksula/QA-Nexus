@@ -48,6 +48,21 @@ Day-25 Sun P1 — built the AC042 eval harness that was missing pre-Day-25. `app
 
 (See PR #201 for full detail — this entry duplicates intentionally so the two AC042 PRs each carry their own CHANGELOG entry; merge cascade will combine.)
 
+### Changed — Day 25 (Sun) — sync apps/api/.env.example: add 21 missing var declarations [m5 deploy-readiness]
+
+Day-25 Sun deploy-readiness followup. `.claude/scratch/m5-deployment-readiness.md` investigation found `apps/api/.env.example` declared 19 vars but code references 42 distinct `process.env.X` across `apps/api/src/`. This PR closes the gap with 21 new placeholder entries (4 of the 25 "missing" were already present as commented OTel instructions — kept as-is).
+
+**Added (grouped + commented per existing file convention):**
+
+- **Direct provider keys** (3): `GROQ_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_API_KEY` — parallel to `LLM_PRIMARY_API_KEY`; some code paths read provider keys directly vs through the ADR-015 runtime-config path
+- **CORS / trusted origins** (4): `AUTH_TRUSTED_ORIGINS`, `ALLOWED_WS_ORIGINS`, `TRUSTED_CALLBACK_ORIGINS`, `FRONTEND_BASE_URL`
+- **Email config** (7): `INVITATION_ACCEPT_URL_BASE`, `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, `RESEND_REPLY_TO`, `RESEND_BCC_EMAIL`, `SMTP_HOST`, `SMTP_USER` (last two legacy fallbacks per ADR-018)
+- **WebSocket** (1): `MAX_WS_CONNECTIONS`
+- **Jira webhook** (1): `JIRA_WEBHOOK_SECRET`
+- **Feature flags** (5): `LLM_DEBUG`, `COMPOSER_OFFLINE`, `CURATOR_OFFLINE`, `EMAIL_TEST_CAPTURE`, `ALLOW_ADMIN_OTEL_TEST`
+
+All values are PLACEHOLDERS per `.claude/rules/security.md` — real values live ONLY in Render dashboard (production) and the gitignored local `apps/api/.env` (dev).
+
 ### Added — Day 24 — ADR-021 Reports backend: 6 report kinds + SWR cache + 02:30 IST aggregation cron [m5 day-24]
 
 Day-24 P0 — ratified ADR-021 Reports backend impl. POST /api/reports endpoint with 6 report kinds (cycle_pass_rate, defect_age, agent_cost, sprint_progress, test_coverage, requirement_coverage), in-process LRU SWR cache (no Redis per Hard Rule 5), per-kind TTLs (5min/15min/30min/1hr), is_stale Amendment B sentinel, 02:30 IST daily aggregation cron + 15-min stale sweep.
