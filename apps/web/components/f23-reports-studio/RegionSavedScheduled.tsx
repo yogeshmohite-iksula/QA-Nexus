@@ -92,44 +92,77 @@ type SavedReport = (typeof f23CannedData.saved_reports)[number];
 function SavedCard({ report, onClick }: { report: SavedReport; onClick: () => void }) {
   const isNew = 'is_new' in report && report.is_new === true;
   const isDraft = 'draft' in report && report.draft === true;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-h-[64px] flex-col items-start gap-1 rounded-md border px-3 py-2.5 text-left transition-colors hover:bg-[var(--overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-      style={{
-        background: isNew ? 'var(--primary-soft)' : 'var(--base)',
-        borderColor: isNew ? 'var(--primary-line)' : 'var(--border)',
-        borderStyle: isNew ? 'dashed' : 'solid',
-      }}
-    >
-      <span
-        className="text-[12.5px] font-semibold"
-        style={{ color: isNew ? 'var(--primary)' : 'var(--t1)' }}
+  if (isNew) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-md border border-dashed p-3 text-center transition-colors hover:bg-[var(--overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+        style={{
+          background: 'var(--primary-soft)',
+          borderColor: 'var(--primary-line)',
+          color: 'var(--primary)',
+        }}
       >
+        <span aria-hidden="true" className="text-[18px] font-bold leading-none">
+          +
+        </span>
+        <span className="text-[12px] font-semibold">New from blank</span>
+      </button>
+    );
+  }
+  return (
+    <div
+      className="flex min-h-[88px] flex-col gap-2 rounded-md border p-3 transition-colors hover:bg-[var(--overlay)]"
+      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
+    >
+      <span className="line-clamp-2 text-[12.5px] font-semibold" style={{ color: 'var(--t1)' }}>
         {report.title}
       </span>
-      {!isNew && (
-        <span
-          className="flex items-center gap-1.5 font-mono text-[10.5px]"
-          style={{ color: 'var(--t4)' }}
-        >
-          {report.owner_initials && <span>{report.owner_initials}</span>}
-          {report.schedule && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span>{report.schedule}</span>
-            </>
-          )}
-          {isDraft && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span style={{ color: 'var(--warn)' }}>draft</span>
-            </>
-          )}
+      <div className="flex items-center gap-1.5">
+        {report.owner_initials && (
+          <span
+            aria-hidden="true"
+            className="inline-flex h-5 w-5 flex-none items-center justify-center rounded-full font-mono text-[9px] font-bold"
+            style={{
+              background: 'var(--ai-soft)',
+              color: 'var(--secondary)',
+              border: '1px solid var(--ai-line)',
+            }}
+            title={report.owner ?? undefined}
+          >
+            {report.owner_initials}
+          </span>
+        )}
+        <span className="truncate font-mono text-[10px]" style={{ color: 'var(--t4)' }}>
+          {report.schedule}
         </span>
-      )}
-    </button>
+        {isDraft && (
+          <span
+            className="ml-auto rounded border px-1.5 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-wider"
+            style={{
+              background: 'var(--warn-soft)',
+              borderColor: 'var(--warn-line)',
+              color: 'var(--warn)',
+            }}
+          >
+            draft
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onClick}
+        className="mt-auto inline-flex min-h-[28px] items-center justify-center rounded border px-2 text-[10.5px] font-semibold transition-colors hover:bg-[var(--primary-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+        style={{
+          background: 'var(--canvas)',
+          borderColor: 'var(--primary-line)',
+          color: 'var(--primary)',
+        }}
+      >
+        Run
+      </button>
+    </div>
   );
 }
 

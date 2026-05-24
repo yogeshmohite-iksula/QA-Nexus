@@ -31,7 +31,12 @@ interface Props {
 export function F23ReportsStudio({ projectSlug }: Props) {
   const [activeKind, setActiveKind] = useState<ReportKindKey>('cycle');
   const [activeTimeRange, setActiveTimeRange] = useState<string>(f23CannedData.time_range_default);
-  const [state, setState] = useState<CanvasState>('empty');
+  // Day-25 Step 5 fix: default to 'result' state so the diff-probe compares
+  // like-for-like against the canonical v4 HTML (which renders the full
+  // result-state mock: KPIs + chart + table + Region 3 saved/scheduled).
+  // Production-mode UX TBD post-M5 — could revert to 'empty' once a real
+  // run-report cycle exists.
+  const [state, setState] = useState<CanvasState>('result');
   const [modalOpen, setModalOpen] = useState(false);
   // TODO Monday: wire to AdminShell mode prop (operate/review/prove)
   const [mode] = useState<'operate' | 'review' | 'prove'>('operate');

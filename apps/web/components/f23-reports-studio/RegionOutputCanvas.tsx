@@ -1,10 +1,19 @@
-// F23 Reports Studio — Region 2: Report output canvas (5 states).
-// Source: handoff/F23/spec.json §sections[region-2-output-canvas] + canned-data.
+// F23 Reports Studio — Region 2: Report output canvas (5 states, 6 chart kinds).
+// Source: handoff/F23/design.html L770-1180 + canned-data.ts.
 //
-// States: empty (default) · loading · result · no-data · error.
-// Tonight's scaffold = structural skeleton + Empty state + Result state stub
-// with KPI cards + chart placeholder + table skeleton.
-// TODO Monday: loading skeleton · no-data · error · real chart render.
+// Day-25 Sun re-port after Yogesh REJECTED the Day-25-PM scaffold for being a
+// "render Monday" placeholder. This iteration ports:
+//   • REAL Cycle Pass-Rate stacked-area SVG chart (Pass/Fail/Blocked over Sprint
+//     42 weeks + TODAY marker + forecast segment, faithful to design.html L868-896)
+//   • Polished KPI cards (big mono value + colored delta + tone-coded text)
+//   • Polished Cycle data table with colored Pass/Fail/Blocked cells +
+//     status badges (Complete · Running · Closed)
+//   • All 5 states (Empty / Loading skeleton / Result / No-data / Error)
+//
+// Monday continues:
+//   • Defect Age stacked-bar chart (design.html L900-940)
+//   • Agent Cost line+area, Sprint burndown, Coverage hbar, ReqCov hbar
+//   • Per-kind KPI/table data (currently only `cycle` has full table rows)
 
 'use client';
 
@@ -35,6 +44,10 @@ export function RegionOutputCanvas({ state, activeKind, onStarterClick, onRetry 
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// EMPTY STATE
+// ─────────────────────────────────────────────────────────────────────────
+
 function EmptyState({ onStarterClick }: { onStarterClick: (s: string) => void }) {
   const c = f23CannedData.states.empty;
   return (
@@ -43,6 +56,25 @@ function EmptyState({ onStarterClick }: { onStarterClick: (s: string) => void })
       className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border p-8 text-center"
       style={{ borderColor: 'var(--border)', background: 'var(--base)' }}
     >
+      <div
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 items-center justify-center rounded-lg"
+        style={{ background: 'var(--ai-soft)', color: 'var(--secondary)' }}
+      >
+        <svg
+          width={22}
+          height={22}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 17l6-6 4 4 8-8" />
+          <path d="M14 7h7v7" />
+        </svg>
+      </div>
       <h2
         className="m-0 text-[18px] font-semibold"
         style={{ color: 'var(--t1)', fontFamily: 'var(--font-dm-sans), system-ui' }}
@@ -72,32 +104,49 @@ function EmptyState({ onStarterClick }: { onStarterClick: (s: string) => void })
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// LOADING STATE — skeleton chart + 6 KPIs + table rows
+// ─────────────────────────────────────────────────────────────────────────
+
 function LoadingState() {
-  // TODO Monday: skeleton chart + 6 skeleton KPIs + skeleton table 5 rows per spec.
   return (
-    <div
-      data-view="loading"
-      className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border p-8"
-      style={{ borderColor: 'var(--border)', background: 'var(--base)' }}
-    >
-      <p className="m-0 text-[13px]" style={{ color: 'var(--t3)' }}>
+    <div data-view="loading" className="flex flex-col gap-4">
+      <div
+        className="h-7 w-full max-w-[480px] animate-pulse rounded"
+        style={{ background: 'var(--overlay)' }}
+      />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-[3/2] animate-pulse rounded-md"
+            style={{ background: 'var(--base)' }}
+          />
+        ))}
+      </div>
+      <div
+        className="aspect-[800/240] w-full animate-pulse rounded-lg"
+        style={{ background: 'var(--base)' }}
+      />
+      <div className="flex flex-col gap-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-9 animate-pulse rounded"
+            style={{ background: 'var(--base)' }}
+          />
+        ))}
+      </div>
+      <p className="text-center text-[11.5px]" style={{ color: 'var(--t3)' }}>
         {f23CannedData.states.loading.hint}
       </p>
-      <div
-        className="h-2 w-40 overflow-hidden rounded-full"
-        style={{ background: 'var(--overlay)' }}
-      >
-        <div
-          className="h-full w-1/3"
-          style={{
-            background: 'var(--primary)',
-            animation: 'f23LoadingPulse 1.2s ease-in-out infinite',
-          }}
-        />
-      </div>
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// NO-DATA STATE
+// ─────────────────────────────────────────────────────────────────────────
 
 function NoDataState({ onRetry }: { onRetry: () => void }) {
   const c = f23CannedData.states.nodata;
@@ -105,24 +154,43 @@ function NoDataState({ onRetry }: { onRetry: () => void }) {
     <div
       data-view="nodata"
       className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border p-8 text-center"
-      style={{ borderColor: 'var(--warn-line)', background: 'var(--warn-soft)' }}
+      style={{ borderColor: 'var(--border)', background: 'var(--base)' }}
     >
-      <h2 className="m-0 text-[16px] font-semibold" style={{ color: 'var(--warn)' }}>
+      <div
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 items-center justify-center rounded-lg"
+        style={{ background: 'var(--warn-soft)', color: 'var(--warn)' }}
+      >
+        <svg
+          width={22}
+          height={22}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M8 2v4M16 2v4M3 10h18" />
+        </svg>
+      </div>
+      <h2 className="m-0 text-[16px] font-semibold" style={{ color: 'var(--t1)' }}>
         {c.title}
       </h2>
-      <p className="m-0 max-w-[60ch] text-[12.5px]" style={{ color: 'var(--t2)' }}>
+      <p className="m-0 max-w-[60ch] text-[12.5px]" style={{ color: 'var(--t3)' }}>
         {c.copy}
       </p>
       <div className="flex flex-wrap gap-2">
-        {c.actions.map((a) => (
+        {c.actions.map((a, i) => (
           <button
             key={a}
             onClick={onRetry}
-            className="inline-flex min-h-[36px] items-center rounded-md border px-3 text-[12px] font-semibold transition-colors"
+            className="inline-flex min-h-[36px] items-center rounded-md border px-3 text-[12px] font-semibold transition-colors hover:bg-[var(--overlay)]"
             style={{
-              background: 'var(--canvas)',
-              borderColor: 'var(--border)',
-              color: 'var(--t2)',
+              background: i === 0 ? 'var(--primary)' : 'var(--canvas)',
+              borderColor: i === 0 ? 'var(--primary-line)' : 'var(--border)',
+              color: i === 0 ? 'var(--primary-ink)' : 'var(--t2)',
             }}
           >
             {a}
@@ -132,6 +200,10 @@ function NoDataState({ onRetry }: { onRetry: () => void }) {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// ERROR STATE
+// ─────────────────────────────────────────────────────────────────────────
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   const c = f23CannedData.states.error;
@@ -139,8 +211,27 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
     <div
       data-view="error"
       className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border p-8 text-center"
-      style={{ borderColor: 'var(--fail-line)', background: 'var(--fail-soft)' }}
+      style={{ borderColor: 'var(--fail-line)', background: 'var(--base)' }}
     >
+      <div
+        aria-hidden="true"
+        className="inline-flex h-12 w-12 items-center justify-center rounded-lg"
+        style={{ background: 'var(--fail-soft)', color: 'var(--fail)' }}
+      >
+        <svg
+          width={22}
+          height={22}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <path d="M12 9v4M12 17h.01" />
+        </svg>
+      </div>
       <h2 className="m-0 text-[16px] font-semibold" style={{ color: 'var(--fail)' }}>
         {c.title}
       </h2>
@@ -148,15 +239,15 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         {c.copy}
       </p>
       <div className="flex flex-wrap gap-2">
-        {c.actions.map((a) => (
+        {c.actions.map((a, i) => (
           <button
             key={a}
             onClick={onRetry}
-            className="inline-flex min-h-[36px] items-center rounded-md border px-3 text-[12px] font-semibold transition-colors"
+            className="inline-flex min-h-[36px] items-center rounded-md border px-3 text-[12px] font-semibold transition-colors hover:bg-[var(--overlay)]"
             style={{
-              background: 'var(--canvas)',
-              borderColor: 'var(--border)',
-              color: 'var(--t2)',
+              background: i === 0 ? 'var(--primary)' : 'var(--canvas)',
+              borderColor: i === 0 ? 'var(--primary-line)' : 'var(--border)',
+              color: i === 0 ? 'var(--primary-ink)' : 'var(--t2)',
             }}
           >
             {a}
@@ -167,12 +258,15 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// RESULT STATE
+// ─────────────────────────────────────────────────────────────────────────
+
 function ResultState({ activeKind }: { activeKind: ReportKindKey }) {
   const title = f23CannedData.result.title[activeKind] ?? 'Report';
   const kpis = f23CannedData.kpis[activeKind] ?? [];
   return (
     <div data-view="result" className="flex flex-col gap-4">
-      {/* Result head */}
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h2
           className="m-0 text-[18px] font-semibold"
@@ -181,11 +275,11 @@ function ResultState({ activeKind }: { activeKind: ReportKindKey }) {
           {title}
         </h2>
         <span className="font-mono text-[10.5px]" style={{ color: 'var(--t4)' }}>
-          {f23CannedData.result.run_attribution} · {f23CannedData.result.run_time_ms}
+          {f23CannedData.result.run_attribution} · {f23CannedData.result.run_timestamp} ·{' '}
+          {f23CannedData.result.run_time_ms}
         </span>
       </header>
 
-      {/* KPI grid */}
       <div
         role="group"
         aria-label="Key metrics"
@@ -196,23 +290,16 @@ function ResultState({ activeKind }: { activeKind: ReportKindKey }) {
         ))}
       </div>
 
-      {/* Chart placeholder — TODO Monday: real chart render per activeKind */}
-      <div
-        role="img"
-        aria-label="Report chart"
-        className="flex h-[260px] items-center justify-center rounded-lg border"
-        style={{ background: 'var(--base)', borderColor: 'var(--border)', color: 'var(--t4)' }}
-      >
-        <span className="font-mono text-[11px] uppercase tracking-wider">
-          chart · {activeKind} · scaffold placeholder · Monday: render shape from spec
-        </span>
-      </div>
+      {activeKind === 'cycle' ? <CycleChart /> : <ChartPlaceholder activeKind={activeKind} />}
 
-      {/* Data table — TODO Monday: full thead + sticky + scroll behavior */}
-      <DataTableStub activeKind={activeKind} />
+      <DataTable activeKind={activeKind} />
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// KPI CARD
+// ─────────────────────────────────────────────────────────────────────────
 
 interface Kpi {
   lbl: string;
@@ -223,7 +310,7 @@ interface Kpi {
 }
 
 function KpiCard({ kpi }: { kpi: Kpi }) {
-  const toneColor =
+  const tone =
     kpi.delta_tone === 'pass'
       ? 'var(--pass)'
       : kpi.delta_tone === 'fail'
@@ -242,16 +329,16 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
       >
         {kpi.lbl}
       </span>
-      <span className="text-[20px] font-bold" style={{ color: 'var(--t1)' }}>
+      <span className="font-mono text-[22px] font-bold leading-none" style={{ color: 'var(--t1)' }}>
         {kpi.v}
         {kpi.u && (
-          <span className="ml-1 font-mono text-[12px]" style={{ color: 'var(--t3)' }}>
+          <span className="ml-1 text-[12px]" style={{ color: 'var(--t3)' }}>
             {kpi.u}
           </span>
         )}
       </span>
       {kpi.delta && (
-        <span className="font-mono text-[10.5px]" style={{ color: toneColor }}>
+        <span className="font-mono text-[10.5px]" style={{ color: tone }}>
           {kpi.delta}
         </span>
       )}
@@ -259,9 +346,186 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
   );
 }
 
-function DataTableStub({ activeKind }: { activeKind: ReportKindKey }) {
-  // Only the cycle kind has full table data in canned-data tonight.
-  // TODO Monday: render per-kind table where applicable; for now show columns + first rows for cycle.
+// ─────────────────────────────────────────────────────────────────────────
+// CYCLE PASS-RATE CHART — port of design.html L859-897
+// ─────────────────────────────────────────────────────────────────────────
+
+function CycleChart() {
+  return (
+    <div
+      className="flex flex-col gap-3 rounded-lg border p-4"
+      style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
+    >
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-[12px] font-semibold" style={{ color: 'var(--t2)' }}>
+          Pass / Fail / Blocked over Sprint 42 weeks
+        </span>
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px]">
+          <Legend swatch="var(--pass)" label="Pass" />
+          <Legend swatch="var(--fail)" label="Fail" />
+          <Legend swatch="var(--warn)" label="Blocked" />
+        </span>
+      </header>
+
+      <div role="img" aria-label="Cycle Pass-Rate stacked area chart" className="w-full">
+        <svg viewBox="0 0 800 240" preserveAspectRatio="none" className="aspect-[800/240] w-full">
+          <defs>
+            <linearGradient id="f23-gP" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor="#34D399" stopOpacity={0.55} />
+              <stop offset="1" stopColor="#34D399" stopOpacity={0.04} />
+            </linearGradient>
+            <linearGradient id="f23-gF" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor="#F87171" stopOpacity={0.55} />
+              <stop offset="1" stopColor="#F87171" stopOpacity={0.04} />
+            </linearGradient>
+            <linearGradient id="f23-gB" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor="#FBBF24" stopOpacity={0.55} />
+              <stop offset="1" stopColor="#FBBF24" stopOpacity={0.04} />
+            </linearGradient>
+          </defs>
+          {[48, 96, 144, 192].map((y) => (
+            <line
+              key={y}
+              x1={0}
+              y1={y}
+              x2={800}
+              y2={y}
+              stroke="var(--border)"
+              strokeWidth={0.5}
+              strokeDasharray="2,3"
+            />
+          ))}
+          <path
+            d="M40,200 L240,200 L440,200 L640,200 L760,200 L760,180 L640,170 L440,182 L240,194 L40,200 Z"
+            fill="url(#f23-gB)"
+          />
+          <path
+            d="M40,200 L240,194 L440,182 L640,170 L760,180 L760,148 L640,140 L440,154 L240,170 L40,200 Z"
+            fill="url(#f23-gF)"
+          />
+          <path
+            d="M40,200 L240,170 L440,154 L640,140 L760,148 L760,60 L640,52 L440,72 L240,96 L40,200 Z"
+            fill="url(#f23-gP)"
+          />
+          <polyline
+            points="40,200 240,96 440,72 640,52 760,60"
+            stroke="#34D399"
+            strokeWidth={2.2}
+            fill="none"
+            strokeLinejoin="round"
+          />
+          <polyline
+            points="40,200 240,170 440,154 640,140 760,148"
+            stroke="#F87171"
+            strokeWidth={1.6}
+            fill="none"
+            strokeLinejoin="round"
+          />
+          <polyline
+            points="40,200 240,194 440,182 640,170 760,180"
+            stroke="#FBBF24"
+            strokeWidth={1.2}
+            fill="none"
+            strokeLinejoin="round"
+          />
+          <line
+            x1={640}
+            y1={10}
+            x2={640}
+            y2={216}
+            stroke="#A78BFA"
+            strokeWidth={0.8}
+            strokeDasharray="3,3"
+          />
+          <text
+            x={648}
+            y={20}
+            fill="#A78BFA"
+            fontFamily="var(--font-jetbrains-mono), monospace"
+            fontSize={9.5}
+            fontWeight={700}
+          >
+            TODAY · DAY 9
+          </text>
+          {(
+            [
+              [40, 'W1 start'],
+              [240, 'May 12'],
+              [440, 'May 15'],
+              [640, 'May 19'],
+              [760, 'forecast'],
+            ] as const
+          ).map(([x, label]) => (
+            <text
+              key={String(x)}
+              x={x as number}
+              y={232}
+              fill="var(--t4)"
+              fontFamily="var(--font-inter), system-ui"
+              fontSize={11}
+              textAnchor="middle"
+            >
+              {label as string}
+            </text>
+          ))}
+          {(
+            [
+              [50, '100%'],
+              [98, '75%'],
+              [146, '50%'],
+              [194, '25%'],
+            ] as const
+          ).map(([y, label]) => (
+            <text
+              key={String(y)}
+              x={6}
+              y={y as number}
+              fill="var(--t4)"
+              fontFamily="var(--font-jetbrains-mono), monospace"
+              fontSize={9}
+            >
+              {label as string}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function Legend({ swatch, label }: { swatch: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--t3)' }}>
+      <span
+        aria-hidden="true"
+        className="inline-block h-2 w-3 rounded-sm"
+        style={{ background: swatch }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function ChartPlaceholder({ activeKind }: { activeKind: ReportKindKey }) {
+  return (
+    <div
+      role="img"
+      aria-label="Report chart"
+      className="flex aspect-[800/240] w-full items-center justify-center rounded-lg border"
+      style={{ background: 'var(--base)', borderColor: 'var(--border)', color: 'var(--t4)' }}
+    >
+      <span className="font-mono text-[11px] uppercase tracking-wider">
+        {activeKind} chart · Monday port from design.html
+      </span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// DATA TABLE — cycle has real rows; other kinds show 'Monday' placeholder
+// ─────────────────────────────────────────────────────────────────────────
+
+function DataTable({ activeKind }: { activeKind: ReportKindKey }) {
   const t = f23CannedData.table[activeKind as keyof typeof f23CannedData.table];
   if (!t) {
     return (
@@ -269,26 +533,32 @@ function DataTableStub({ activeKind }: { activeKind: ReportKindKey }) {
         className="rounded-lg border p-4 text-center font-mono text-[10.5px]"
         style={{ background: 'var(--base)', borderColor: 'var(--border)', color: 'var(--t4)' }}
       >
-        table for kind &quot;{activeKind}&quot; — Monday scaffold (canned-data has rows only for
-        &quot;cycle&quot;)
+        table for kind &quot;{activeKind}&quot; — Monday port
       </div>
     );
   }
   return (
     <div
-      role="table"
-      aria-label="Underlying records"
-      className="flex max-h-[440px] flex-col overflow-y-auto rounded-lg border"
+      className="flex max-h-[440px] flex-col overflow-x-auto overflow-y-auto rounded-lg border"
       style={{ background: 'var(--base)', borderColor: 'var(--border)' }}
     >
-      <table className="w-full border-collapse text-[11.5px]">
+      <table
+        className="w-full border-collapse text-[11.5px]"
+        role="table"
+        aria-label="Underlying records"
+      >
         <thead className="sticky top-0">
-          <tr style={{ background: 'var(--overlay)', color: 'var(--t3)' }}>
+          <tr
+            style={{
+              background: 'var(--overlay)',
+              color: 'var(--t3)',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
             {t.columns.map((c, i) => (
               <th
                 key={i}
-                className="px-2 py-2 text-left font-semibold uppercase tracking-wider"
-                style={{ borderBottom: '1px solid var(--border)' }}
+                className={`px-3 py-2 text-left font-semibold uppercase tracking-wider ${i >= 2 && i <= 5 ? 'text-right' : ''}`}
               >
                 {c}
               </th>
@@ -297,28 +567,55 @@ function DataTableStub({ activeKind }: { activeKind: ReportKindKey }) {
         </thead>
         <tbody>
           {t.rows.map((r, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid var(--border)', color: 'var(--t2)' }}>
-              <td className="px-2 py-1.5 font-mono">{r.id}</td>
-              <td className="px-2 py-1.5">{r.suite}</td>
-              <td className="px-2 py-1.5 text-right font-mono" style={{ color: 'var(--pass)' }}>
+            <tr
+              key={i}
+              style={{
+                borderBottom: '1px solid var(--border)',
+                color: 'var(--t2)',
+              }}
+            >
+              <td className="px-3 py-1.5 font-mono text-[10.5px]" style={{ color: 'var(--t2)' }}>
+                {r.id}
+              </td>
+              <td className="px-3 py-1.5">{r.suite}</td>
+              <td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--pass)' }}>
                 {r.pass}
               </td>
-              <td className="px-2 py-1.5 text-right font-mono" style={{ color: 'var(--fail)' }}>
+              <td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--fail)' }}>
                 {r.fail}
               </td>
-              <td className="px-2 py-1.5 text-right font-mono" style={{ color: 'var(--warn)' }}>
+              <td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--warn)' }}>
                 {r.blocked}
               </td>
-              <td className="px-2 py-1.5 text-right font-mono">{r.pct}</td>
-              <td className="px-2 py-1.5">{r.owner}</td>
-              <td className="px-2 py-1.5 text-[10.5px] uppercase" style={{ color: 'var(--t4)' }}>
-                {r.status}
+              <td className="px-3 py-1.5 text-right font-mono" style={{ color: 'var(--t1)' }}>
+                {r.pct}
               </td>
-              <td className="px-2 py-1.5" />
+              <td className="px-3 py-1.5">{r.owner}</td>
+              <td className="px-3 py-1.5">
+                <StatusBadge status={r.status} />
+              </td>
+              <td className="px-3 py-1.5" />
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { bg: string; fg: string; bd: string }> = {
+    complete: { bg: 'var(--pass-soft)', fg: 'var(--pass)', bd: 'var(--pass-line)' },
+    running: { bg: 'var(--info-soft)', fg: 'var(--info)', bd: 'var(--info-line)' },
+    closed: { bg: 'var(--overlay)', fg: 'var(--t4)', bd: 'var(--border)' },
+  };
+  const tones = map[status] ?? map.closed;
+  return (
+    <span
+      className="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-wider"
+      style={{ background: tones.bg, color: tones.fg, borderColor: tones.bd }}
+    >
+      {status}
+    </span>
   );
 }
