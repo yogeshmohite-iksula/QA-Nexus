@@ -1,0 +1,23 @@
+{
+  "id": "def-036",
+  "input": {
+    "testCaseId": "TC-RET-931",
+    "testCaseTitle": "After login from marketing head,found exception after click on save button.Its not be working properly.",
+    "runId": "80609f56-cd6e-43e1-adcc-19e1c67acd58",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-190 reported defect: After login from marketing head,found exception after click on save button.Its not be working properly.",
+    "durationMs": 11045,
+    "environment": "local-dev",
+    "errorMessage": "After login from marketing head, found exception after click on save button. Its not be working properly.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-190 (Minor, Done, resolved 19/Mar/25 8:24 AM). Source title: After login from marketing head,found exception after click on save button.Its not be working properly.. See LABELING-WORKSHEET.md row def-036 for cleaned RCA evidence."
+  }
+}

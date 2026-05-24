@@ -1,0 +1,23 @@
+{
+  "id": "def-027",
+  "input": {
+    "testCaseId": "TC-RET-922",
+    "testCaseTitle": "Login from Product head,approve/reject options are not be visible.",
+    "runId": "e23f0eec-be59-4031-aa73-84243215f878",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-194 reported defect: Login from Product head,approve/reject options are not be visible.",
+    "durationMs": 11138,
+    "environment": "staging-iksula",
+    "errorMessage": "Login from Product head,approve/reject options are not be visible.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-194 (Minor, Done, resolved 19/Mar/25 8:30 AM). Source title: Login from Product head,approve/reject options are not be visible.. See LABELING-WORKSHEET.md row def-027 for cleaned RCA evidence."
+  }
+}

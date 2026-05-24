@@ -1,0 +1,23 @@
+{
+  "id": "def-031",
+  "input": {
+    "testCaseId": "TC-RET-926",
+    "testCaseTitle": "Dam workflow->All 15 PMG are not available in permission bundle.",
+    "runId": "45117ddd-31ef-4f30-8c33-98c827719a26",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-187 reported defect: Dam workflow->All 15 PMG are not available in permission bundle.",
+    "durationMs": 9785,
+    "environment": "local-dev",
+    "errorMessage": "Dam workflow->All 15 PMG are not available in permission bundle.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-187 (Minor, Done, resolved 19/Mar/25 8:14 AM). Source title: Dam workflow->All 15 PMG are not available in permission bundle.. See LABELING-WORKSHEET.md row def-031 for cleaned RCA evidence."
+  }
+}

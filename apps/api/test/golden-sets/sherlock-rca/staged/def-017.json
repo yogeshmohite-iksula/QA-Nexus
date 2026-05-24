@@ -1,0 +1,23 @@
+{
+  "id": "def-017",
+  "input": {
+    "testCaseId": "TC-RET-912",
+    "testCaseTitle": "Issue in Bulk import with 2000 records and excel file is not to be uploaded",
+    "runId": "e1dc3972-231d-4f24-a0b9-791350d0f714",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-251 reported defect: Issue in Bulk import with 2000 records and excel file is not to be uploaded",
+    "durationMs": 9825,
+    "environment": "prod-iksula",
+    "errorMessage": "Issue in Bulk import with 2000 records and excel file is not to be uploaded 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials 4.Go to menu list and click on Bulk import 5.select excel file and click on upload button. 6.After clicking on upload button,file is continuous processing and 0 to 100 percen be shown and continuos running. 7.I was waiting approx 5 minuts but its not be uplo Expected Result->After clicking the uploaded file,file should be…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-251 (High (migrated), Done, resolved 10/Jul/25 12:57 PM). Source title: Issue in Bulk import with 2000 records and excel file is not to be uploaded. See LABELING-WORKSHEET.md row def-017 for cleaned RCA evidence."
+  }
+}

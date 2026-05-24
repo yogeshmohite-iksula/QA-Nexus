@@ -1,0 +1,23 @@
+{
+  "id": "def-024",
+  "input": {
+    "testCaseId": "TC-RET-919",
+    "testCaseTitle": "Security Risk in Product API, without authorization data is coming",
+    "runId": "2e74505e-4df6-4c1e-88c3-34848f091d47",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-293 reported defect: Security Risk in Product API, without authorization data is coming",
+    "durationMs": 9728,
+    "environment": "staging-iksula",
+    "errorMessage": "!image-20250415-115254.png|width=1591,height=811,alt=\"image-20250415-115254.png\"!",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-293 (Major, Done, resolved 22/Apr/25 1:10 PM). Source title: Security Risk in Product API, without authorization data is coming. See LABELING-WORKSHEET.md row def-024 for cleaned RCA evidence."
+  }
+}

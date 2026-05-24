@@ -1,0 +1,23 @@
+{
+  "id": "def-010",
+  "input": {
+    "testCaseId": "TC-RET-905",
+    "testCaseTitle": "For DAM tab please refer updated table for rolewise permissions",
+    "runId": "dcab7316-d36a-4f71-81fa-881a95917ad5",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-344 reported defect: For DAM tab please refer updated table for rolewise permissions",
+    "durationMs": 8719,
+    "environment": "prod-iksula",
+    "errorMessage": "For DAM tab please refer updated table",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-344 (Highest, Done, resolved 19/Sep/25 11:35 AM). Source title: For DAM tab please refer updated table for rolewise permissions. See LABELING-WORKSHEET.md row def-010 for cleaned RCA evidence."
+  }
+}
