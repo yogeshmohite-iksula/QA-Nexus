@@ -58,6 +58,8 @@ playwright-report/
 test-results/
 e2e-results/
 .playwright-mcp/
+# AC042 eval per-run output (gitignored except the first commit landing the harness)
+apps/api/test/golden-sets/sherlock-rca/results-*.json
 
 # ───── Loose screenshot files at repo root (committed copies live in docs/screenshots/) ─────
 /*.png

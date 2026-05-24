@@ -20,6 +20,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:smoke": "jest --config ./test/jest-e2e.json --testPathPattern=smoke --passWithNoTests",
+    "ac042:eval": "ts-node --transpile-only -P tsconfig.json test/ac042-eval.ts",
     "prisma:generate": "prisma generate",
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",

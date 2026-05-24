@@ -46,7 +46,24 @@ Day-25 Sun buffer task (~2 hr) — eliminated the mechanical half of Monday's AC
 
 Day-25 Sun P1 — built the AC042 eval harness that was missing pre-Day-25. `apps/api/test/ac042-eval.ts` loads any `def-*.json` from `apps/api/test/golden-sets/sherlock-rca/`, runs each through `SherlockOrchestratorService.runRca()` (per ADR-019), and scores top-2 hit rate + confidence calibration (≥0.8 threshold) per M4 plan §4.5 + ADR-019 AC042 spec.
 
-(See PR #201 for full detail — this entry duplicates intentionally so the two AC042 PRs each carry their own CHANGELOG entry; merge cascade will combine.)
+**Design:**
+
+- **Corpus-size-agnostic:** smoke run on 5 seed defects (today) and binding run on 50 (post Mon corpus expansion) use the same harness — no code change between runs.
+- **Self-contained bootstrap:** `NestFactory.createApplicationContext(AC042EvalModule)` with `LLMGatewayService` injected directly (bypasses `LLMGatewayModule`'s controller graph which would drag `AuthService` → better-auth ESM chain). `runRca()` is a pure-function code path that never touches Prisma/Audit/Realtime, so those deps are wired to no-op fakes.
+- **Scoring:** top-2 hit = `groundTruth.rootCauseCategory` OR any of `groundTruth.acceptableAlternatives` appears in orchestrator's top-2 hypothesis categories. Calibration = fraction of top-1 predictions with `confidence ≥ 0.8` that match ground-truth.
+- **Output:** prints `AC042 RESULT: top-2 = X% · calibration = Y · crashes = Z/N · corpus n=N` + writes per-case JSON to `apps/api/test/golden-sets/sherlock-rca/results-YYYY-MM-DD.json`. Per-run output is gitignored after this first commit.
+
+**Smoke run today (n=5, NOT the binding gate):**
+
+- Harness plumbing GREEN end-to-end: 5 defects loaded, NestJS bootstrap clean (zero DI/ESM errors), 20 LLM calls dispatched via real `GroqProvider`, retry logic + 4-agent merge + scoring + reporting all worked, zero code crashes, ~5 sec total runtime.
+- LLM responses: 0/20 successful — all returned `401 invalid_api_key`. Root cause: `GROQ_API_KEY` in `apps/api/.env` was the literal placeholder `REPLACE_ME` from `.env.example`, never populated in this worktree. Trivial Mon AM fix.
+- Binding AC042 BLOCKED on (1) corpus expansion 5 → 50 (per `sherlock-rca/README.md` line 4 — Yogesh manual labeling task, plan staged at `.claude/scratch/ac042-corpus-expansion-plan.md`) + (2) valid `GROQ_API_KEY` in the apps/api/.env.
+
+**Scripts:**
+
+- New `apps/api/package.json` script: `ac042:eval` — runs `ts-node --transpile-only -P tsconfig.json test/ac042-eval.ts`.
+
+**Gitignore:** future `results-YYYY-MM-DD.json` files are gitignored. Today's first run (broken-key 401 noise floor) is force-included as the worked-example artifact.
 
 ### Added — Day 24 — ADR-021 Reports backend: 6 report kinds + SWR cache + 02:30 IST aggregation cron [m5 day-24]
 
