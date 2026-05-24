@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -23,9 +24,13 @@ import { RequirementsModule } from './requirements/requirements.module';
 import { TestRunsModule } from './test-runs/test-runs.module';
 import { DefectsModule } from './defects/defects.module';
 import { JiraSyncModule } from './jira-sync/jira-sync.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
+    // Day-24 P0 ADR-021 — global cron registration; ReportsRefreshCron
+    // (in ReportsModule) uses @Cron('30 2 * * *', { timeZone: 'Asia/Kolkata' }).
+    ScheduleModule.forRoot(),
     PrismaModule,
     EmailModule,
     AuditModule,
@@ -46,6 +51,7 @@ import { JiraSyncModule } from './jira-sync/jira-sync.module';
     TestRunsModule, // M4 Day-18 P3 — TestRun state-machine + audit + WS emit (PR #149)
     DefectsModule, // M4 Day-19 P0 #2 → Day-20 P1 — POST :id/rca FUNCTIONAL (calls SherlockOrchestratorService); other endpoints stay 501 stubs
     JiraSyncModule, // M4 Day-19 P0 #2 — STUB (501); webhook + sync land Day-19/20
+    ReportsModule, // M5 Day-24 P0 — ADR-021 Reports backend (cycle/defect/agent/sprint/coverage)
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)
     HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts
   ],

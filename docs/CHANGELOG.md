@@ -13,6 +13,59 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 24 — ADR-021 Reports backend: 6 report kinds + SWR cache + 02:30 IST aggregation cron [m5 day-24]
+
+Day-24 P0 — ratified ADR-021 Reports backend impl. POST /api/reports endpoint with 6 report kinds (cycle_pass_rate, defect_age, agent_cost, sprint_progress, test_coverage, requirement_coverage), in-process LRU SWR cache (no Redis per Hard Rule 5), per-kind TTLs (5min/15min/30min/1hr), is_stale Amendment B sentinel, 02:30 IST daily aggregation cron + 15-min stale sweep.
+
+**Migration `20260521090000_reports_backend_schema`:**
+
+- New `report_aggregate` table — tier-1 pre-computed cache per ADR-021 §2. UNIQUE on (project_id, report_kind, time_range_key); 3 partial indexes (lookup hot path filters is_stale=false; sweep index targets is_stale=true).
+- New `report_template` table — saved user configs per ADR-021 §1. Composite index on (project_id, owner_user_id) for the F23 Reports Studio template picker.
+- New `sprint_current(project_id)` PL/pgSQL helper per ADR-021 §4. Depends on jira_sprints.state + start_date from PR #189 migration — sequencing critical (this PR branches from PR #189 head).
+
+**Shared schemas (packages/shared/src/schemas/m5/report.ts):**
+
+- `ReportKindSchema` enum + `ReportTimeRangeSchema` discriminated union (sprint/7d/30d/90d/custom)
+- `ReportRequestSchema` (POST body) + `ReportResponseSchema` envelope (kind + projectId + timeRange + aggregatedAt + source + isStale + data)
+- 6 per-kind data shape schemas (CyclePassRateData, DefectAgeData, AgentCostData, SprintProgressData, TestCoverageData, RequirementCoverageData)
+- `ReportTemplateCreateSchema` + `ReportTemplateSchema`
+
+**`ReportsService`** — POST /api/reports orchestrator:
+
+- SWR (stale-while-revalidate) flow: lru-cache → report_aggregate.is_stale check → live compute path. Audit emits `report.cache_hit` / `report.cache_stale_swr` / `report.persisted_hit` / `report.computed` per branch (sync per api.md).
+- UPSERT on (project_id, report_kind, time_range_key) for cron + on-demand convergence.
+- 6 per-kind SQL builders via Prisma `$queryRaw` — defensive zero-shape return on empty data (Day-25 pilot tuning will sharpen the math; shapes are stable).
+- `invalidate(projectId, kinds[])` — event-triggered hook (defects/runs call to flip is_stale=true + drop in-process cache for project).
+- Template CRUD — `createTemplate` + `listTemplates` (owner-owned + isShared).
+
+**`ReportsController`** — 3 endpoints under /api:
+
+- `POST /api/reports` — @Roles(Admin/Lead/QAEngineer/Stakeholder); Zod-validated; calls `reports.run(workspaceId, request, actorId)`
+- `POST /api/reports/templates` — @Roles(Admin/Lead/QAEngineer); Stakeholder excluded (read-only role)
+- `GET /api/projects/:projectId/reports/templates` — @Roles(Admin/Lead/QAEngineer/Stakeholder)
+
+**`ReportsRefreshCron`** — 2 schedules:
+
+- `@Cron('30 2 * * *', { timeZone: 'Asia/Kolkata' })` — daily aggregation across (project × kind × window). Per-cell try/catch so a single failure doesn't crash the cron.
+- `@Cron('*/15 * * * *')` — every 15 min stale sweep (mark rows >24h old).
+
+**Module wiring:**
+
+- `AppModule` imports `ScheduleModule.forRoot()` (first cron registration in the codebase) + `ReportsModule`.
+- `ReportsModule` imports AuditModule + AuthModule; exports ReportsService for downstream invalidate() consumers.
+
+**Deps added:** `@nestjs/schedule` + `lru-cache` (both free OSS; lru-cache in-process per Hard Rule 5 — no Redis).
+
+**Tests (+33 vs Day-23):**
+
+- 6 SWR cache tests (miss/hit/stale/persisted hit + invalidate + template lifecycle)
+- 6 builder defensive-shape tests (empty data per kind)
+- 7 controller tests (Zod validation + RBAC happy paths + template create + list)
+- 4 cron tests (24-cell upsert × project, per-cell failure isolation, audit firing, zero-project no-op)
+- 5 time-range helper tests (sprint/7d/30d/90d + custom + reject-bad-bounds + idempotency)
+
+669/669 jest pass (+33). pnpm typecheck clean. pnpm exec prettier --check clean.
+
 ### Added — Day 23 — ADR-020 Jira webhook wire-up: Issue + Sprint event routing [m5 PARTIAL — Day-24 adds Comment+Version+Property]
 
 Day-23 P1 — implements 7 of 14 Atlassian webhook event types per ADR-020 ratified. Replaces PR #186's stub handler with real per-event-type dispatch + Sherlock trigger logic + soft-delete semantics + audit chain integrity per Hard Rule 7.
