@@ -66,6 +66,38 @@ Day-24 P0 — ratified ADR-021 Reports backend impl. POST /api/reports endpoint 
 
 669/669 jest pass (+33). pnpm typecheck clean. pnpm exec prettier --check clean.
 
+### Added — Day 24 — ADR-020 Jira webhook wire-up FINISH: Comment + Version + Property events [m5 day-24 — completes ADR-020 wire-up]
+
+Day-24 P1 — completes ADR-020 webhook wire-up by adding the remaining 8 of 14 Atlassian event types. After this PR + #189, all 14 Atlassian webhook event families are routed end-to-end.
+
+**Schema additions (`jira-webhook.schema.ts`):**
+
+- `JiraWebhookCommentRefSchema` + 3 per-event schemas (comment_created / \_updated / \_deleted)
+- `JiraWebhookVersionRefSchema` + 3 per-event schemas (jira:version_created / \_released / \_unreleased)
+- `JiraWebhookPropertyPayloadSchema` — single schema for issue_property_set / \_deleted (discriminated on webhookEvent literal union)
+- `WIRED_EVENT_TYPES` extended from 7 to 15 entries
+
+**3 new handlers (audit-only — no DB tables for these event families in PM1):**
+
+- `CommentWebhookHandler` (handleCreated / handleUpdated / handleDeleted) — Day-25 Sherlock cluster detection scans audit_log for jira_comment.\* actions
+- `VersionWebhookHandler` (handleCreated / handleReleased / handleUnreleased) — release tracking deferred to M6 with jira_versions table + report.release_health kind
+- `PropertyWebhookHandler` (handle — discriminated by webhookEvent) — LOW-priority no-op + forensic audit; PM1 has no use case for issue properties
+
+All 3 handlers resolve `{workspaceId, projectId}` from first active jira_connection (single-tenant pilot pattern from Day-23 SprintWebhookHandler). Drains silently if no connection.
+
+**Dispatch extension (`webhook-processor.service.ts`):**
+
+- 8 new `case` arms in the dispatch switch — each Zod-validates the payload before invoking the handler. Failures rethrow per Day-23 retry-with-backoff pattern.
+- `JiraSyncModule` registers the 3 new handlers as providers.
+
+**Tests (+20 vs PR #189 base):**
+
+- 12 handler-spec tests (4 per handler: 3 event types × happy path + 1 no-connection drain)
+- 8 dispatch tests in webhook-processor.service.spec.ts (3 comment + 3 version + 2 property)
+- 1 existing test updated: the "unwired event type" test now uses `worklog_created` since `comment_created` is now wired
+
+656/656 jest pass (+20 vs PR #189 base). pnpm typecheck clean. pnpm exec prettier --check clean.
+
 ### Added — Day 23 — ADR-020 Jira webhook wire-up: Issue + Sprint event routing [m5 PARTIAL — Day-24 adds Comment+Version+Property]
 
 Day-23 P1 — implements 7 of 14 Atlassian webhook event types per ADR-020 ratified. Replaces PR #186's stub handler with real per-event-type dispatch + Sherlock trigger logic + soft-delete semantics + audit chain integrity per Hard Rule 7.

@@ -169,9 +169,134 @@ export type JiraWebhookSprintClosedPayload = z.infer<
 >;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Comment event payloads (Day-24 P1: comment_created / _updated / _deleted)
+//
+// Atlassian sends `comment` as a sibling of `issue` on these events. The
+// issue is identified for context but the operation acts on the comment.
+// Per ADR-020 §6: PM1 audit-only — Sherlock cluster detection in Day-25
+// scans the audit_log for these actions (no jira_comments table exists).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const JiraWebhookCommentRefSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
+    body: z.string().optional(),
+    author: JiraWebhookUserRefSchema.optional(),
+    updateAuthor: JiraWebhookUserRefSchema.optional(),
+    created: z.string().optional(),
+    updated: z.string().optional(),
+  })
+  .passthrough();
+export type JiraWebhookCommentRef = z.infer<typeof JiraWebhookCommentRefSchema>;
+
+export const JiraWebhookCommentCreatedPayloadSchema =
+  JiraWebhookPayloadSchema.extend({
+    webhookEvent: z.literal('comment_created'),
+    issue: JiraWebhookIssueRefSchema,
+    comment: JiraWebhookCommentRefSchema,
+  });
+export type JiraWebhookCommentCreatedPayload = z.infer<
+  typeof JiraWebhookCommentCreatedPayloadSchema
+>;
+
+export const JiraWebhookCommentUpdatedPayloadSchema =
+  JiraWebhookPayloadSchema.extend({
+    webhookEvent: z.literal('comment_updated'),
+    issue: JiraWebhookIssueRefSchema,
+    comment: JiraWebhookCommentRefSchema,
+  });
+export type JiraWebhookCommentUpdatedPayload = z.infer<
+  typeof JiraWebhookCommentUpdatedPayloadSchema
+>;
+
+export const JiraWebhookCommentDeletedPayloadSchema =
+  JiraWebhookPayloadSchema.extend({
+    webhookEvent: z.literal('comment_deleted'),
+    issue: JiraWebhookIssueRefSchema,
+    comment: JiraWebhookCommentRefSchema,
+  });
+export type JiraWebhookCommentDeletedPayload = z.infer<
+  typeof JiraWebhookCommentDeletedPayloadSchema
+>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Version event payloads (Day-24 P1: jira:version_released / _unreleased)
+//
+// Atlassian sends `jira:version_created` / `_released` / `_unreleased` /
+// `_deleted` / `_moved` / `_updated`. PM1 wires the 2 release-state ones
+// per Day-24 brief; the others surface in audit via the unwired-skip path.
+// PM1 audit-only — Day-25+ release tracking adds jira_versions table.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const JiraWebhookVersionRefSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
+    name: z.string().optional(),
+    projectId: z.union([z.string(), z.number()]).optional(),
+    released: z.boolean().optional(),
+    archived: z.boolean().optional(),
+    description: z.string().optional(),
+    startDate: z.string().optional().nullable(),
+    releaseDate: z.string().optional().nullable(),
+  })
+  .passthrough();
+export type JiraWebhookVersionRef = z.infer<typeof JiraWebhookVersionRefSchema>;
+
+export const JiraWebhookVersionReleasedPayloadSchema =
+  JiraWebhookPayloadSchema.extend({
+    webhookEvent: z.literal('jira:version_released'),
+    version: JiraWebhookVersionRefSchema,
+  });
+export type JiraWebhookVersionReleasedPayload = z.infer<
+  typeof JiraWebhookVersionReleasedPayloadSchema
+>;
+
+export const JiraWebhookVersionUnreleasedPayloadSchema =
+  JiraWebhookPayloadSchema.extend({
+    webhookEvent: z.literal('jira:version_unreleased'),
+    version: JiraWebhookVersionRefSchema,
+  });
+export type JiraWebhookVersionUnreleasedPayload = z.infer<
+  typeof JiraWebhookVersionUnreleasedPayloadSchema
+>;
+
+export const JiraWebhookVersionCreatedPayloadSchema =
+  JiraWebhookPayloadSchema.extend({
+    webhookEvent: z.literal('jira:version_created'),
+    version: JiraWebhookVersionRefSchema,
+  });
+export type JiraWebhookVersionCreatedPayload = z.infer<
+  typeof JiraWebhookVersionCreatedPayloadSchema
+>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Property event payloads (Day-24 P1 — LOW priority per Yogesh brief)
+//
+// PM1 has no use case for issue-level properties — they're an Atlassian
+// extensibility surface for app-specific metadata. We accept the events
+// (audit only) so the staging table drains cleanly and forensics can see
+// volume + sources if needed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const JiraWebhookPropertyPayloadSchema = JiraWebhookPayloadSchema.extend(
+  {
+    webhookEvent: z.union([
+      z.literal('issue_property_set'),
+      z.literal('issue_property_deleted'),
+    ]),
+    issue: JiraWebhookIssueRefSchema.optional(),
+    propertyKey: z.string().optional(),
+    value: z.unknown().optional(),
+  },
+);
+export type JiraWebhookPropertyPayload = z.infer<
+  typeof JiraWebhookPropertyPayloadSchema
+>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Day-23 P1 wire-up: handled event-type literals (used by dispatcher).
-// Day-24 expands with: comment_created/updated/deleted, version_created/
-// released/unreleased, property_set/deleted.
+// Day-24 P1 expands with: comment_*, jira:version_released/unreleased/created,
+// issue_property_set/deleted. ADR-020 wire-up now COMPLETE.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const WIRED_EVENT_TYPES = [
@@ -182,6 +307,15 @@ export const WIRED_EVENT_TYPES = [
   'sprint_updated',
   'sprint_deleted',
   'sprint_closed',
+  // Day-24 P1
+  'comment_created',
+  'comment_updated',
+  'comment_deleted',
+  'jira:version_created',
+  'jira:version_released',
+  'jira:version_unreleased',
+  'issue_property_set',
+  'issue_property_deleted',
 ] as const;
 
 export type WiredEventType = (typeof WIRED_EVENT_TYPES)[number];
