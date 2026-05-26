@@ -1,0 +1,23 @@
+{
+  "id": "def-045",
+  "input": {
+    "testCaseId": "TC-RET-940",
+    "testCaseTitle": "Rename Product manager instead of Project Manager",
+    "runId": "1aa72d7b-83c1-45c4-9569-cbd30913b009",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-356 reported defect: Rename Product manager instead of Project Manager",
+    "durationMs": 11468,
+    "environment": "prod-iksula",
+    "errorMessage": "Rename Product manager instead of Project Manager",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-356 (Highest, Done, resolved 12/Sep/25 8:14 PM). Source title: Rename Product manager instead of Project Manager. See LABELING-WORKSHEET.md row def-045 for cleaned RCA evidence."
+  }
+}

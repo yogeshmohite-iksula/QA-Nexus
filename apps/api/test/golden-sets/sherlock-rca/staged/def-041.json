@@ -1,0 +1,23 @@
+{
+  "id": "def-041",
+  "input": {
+    "testCaseId": "TC-RET-936",
+    "testCaseTitle": "After creating the product,By default SAG code is not showing.",
+    "runId": "f59e6a67-5c26-4986-801c-40bc95005fba",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-181 reported defect: After creating the product,By default SAG code is not showing.",
+    "durationMs": 9476,
+    "environment": "staging-iksula",
+    "errorMessage": "After creating the product,By default SAG code is not showing.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-181 (Minor, Done, resolved 19/Mar/25 7:59 AM). Source title: After creating the product,By default SAG code is not showing.. See LABELING-WORKSHEET.md row def-041 for cleaned RCA evidence."
+  }
+}

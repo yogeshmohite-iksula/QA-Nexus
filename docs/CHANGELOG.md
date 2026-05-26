@@ -13,6 +13,41 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 25 (Sun) — AC042 corpus port script + 45 staged cases + labeling worksheet [m5 day-25 ac042 prep]
+
+Day-25 Sun buffer task (~2 hr) — eliminated the mechanical half of Monday's AC042 corpus-expansion blocker. Splits the prep into (a) deterministic schema port (this PR, done) + (b) ground-truth labeling (Yogesh Day-26 AM, ~2-3 hr down from previously-estimated 4-6 hr).
+
+**Pipeline (3 scripts now):**
+
+1. **`scripts/port-cpi-corpus.mjs`** (NEW) — one-shot mechanical port from `apps/api/test/golden-sets/a4/raw/cpi_postmortem_defects.json` (50 CUMI/PIM cases, no ground truth) to:
+   - `apps/api/test/golden-sets/sherlock-rca/staged/def-006.json` … `staged/def-050.json` (45 staged files; synthesizes testCaseId TC-RET-901…945, runId via deterministic UUID-from-seed, stepNumber, stepLabel, durationMs, environment, errorMessage from description first 500 chars; placeholder groundTruth that Yogesh replaces)
+   - `apps/api/test/golden-sets/sherlock-rca/LABELING-WORKSHEET.md` (85 KB · 45 sections; per case: synthesized fields summary + source description + cleaned `recent_comments` (Jira account-ID prefixes + ADF JSON blocks + screenshot markup all stripped) + YAML form block for Yogesh to fill)
+
+2. **`scripts/apply-cpi-labels.mjs`** (NEW) — Day-26 executor. Reads filled worksheet → extracts YAML blocks → validates (rootCauseCategory must be 1 of 10 enums, rootCauseDetail ≥10 chars + no leftover "TODO", confidence must be high/medium/low, acceptableAlternatives must be subset of 10 enums) → dry-run by default; `--promote` flag required to actually write. On promote: updates staged JSON groundTruth + moves staged → live (`sherlock-rca/def-NNN.json`). Refuses to promote if ANY case is blocked.
+
+3. **`apps/api/test/ac042-eval.ts`** (from PR #201, awaiting merge) — corpus-size-agnostic harness. Runs the binding AC042 in ~30-60 sec once corpus = 50.
+
+**Cleaning logic in port:**
+
+- Comment account-ID prefix: `^\d{2}/\w{3}/\d{2} \d{1,2}:\d{2} (AM|PM)?;712020:UUID;\s*` → `DD/MMM/YY: `
+- Embedded ADF tables: `{adf:display=block}…{adf}` → `[ADF table elided]`
+- Screenshot markup: `!Screenshot…!` → `[screenshot elided]`
+- Whitespace normalization + truncation to 800 chars per comment for worksheet readability
+
+**Field source mapping (Yogesh-correction-applied):** brief assumed `rca` + `root_cause_corrective_actions` would carry RCA evidence, but BOTH are 100% empty in the source corpus (0/50). RCA evidence is actually in `recent_comments` (avg 3/case) + `description` (41/50 cases). Worksheet sources from those instead.
+
+**Coverage:** 41/50 cpi cases have descriptions → prioritized. 4 description-less cases included as fallback (errorMessage synthesized from title). Environments distributed: staging-iksula 14 / local-dev 18 / prod-iksula 13.
+
+**Verification:** ran port + dry-run apply-cpi-labels → 45 sections parsed correctly, all 45 reported BLOCKED (rootCauseCategory empty + rootCauseDetail TODO + confidence empty), refused to promote — exactly the expected pre-labeling state.
+
+**README update:** `apps/api/test/golden-sets/sherlock-rca/README.md` Status section refreshed (Day-18 stale → Day-25 current) with pipeline scripts inventory.
+
+### Added — Day 25 (Sun) — AC042 Sherlock RCA eval harness [m5 day-25 — M5 close enabler]
+
+Day-25 Sun P1 — built the AC042 eval harness that was missing pre-Day-25. `apps/api/test/ac042-eval.ts` loads any `def-*.json` from `apps/api/test/golden-sets/sherlock-rca/`, runs each through `SherlockOrchestratorService.runRca()` (per ADR-019), and scores top-2 hit rate + confidence calibration (≥0.8 threshold) per M4 plan §4.5 + ADR-019 AC042 spec.
+
+(See PR #201 for full detail — this entry duplicates intentionally so the two AC042 PRs each carry their own CHANGELOG entry; merge cascade will combine.)
+
 ### Added — Day 24 — ADR-021 Reports backend: 6 report kinds + SWR cache + 02:30 IST aggregation cron [m5 day-24]
 
 Day-24 P0 — ratified ADR-021 Reports backend impl. POST /api/reports endpoint with 6 report kinds (cycle_pass_rate, defect_age, agent_cost, sprint_progress, test_coverage, requirement_coverage), in-process LRU SWR cache (no Redis per Hard Rule 5), per-kind TTLs (5min/15min/30min/1hr), is_stale Amendment B sentinel, 02:30 IST daily aggregation cron + 15-min stale sweep.

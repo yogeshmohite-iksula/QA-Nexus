@@ -1,0 +1,23 @@
+{
+  "id": "def-050",
+  "input": {
+    "testCaseId": "TC-RET-945",
+    "testCaseTitle": "New NPI > ERP > Objective Others : Extra field is Showing.",
+    "runId": "5c4b269a-12b3-4fc5-89cc-f1903ac68ce6",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-362 reported defect: New NPI > ERP > Objective Others : Extra field is Showing.",
+    "durationMs": 5480,
+    "environment": "prod-iksula",
+    "errorMessage": "New NPI > ERP > Objective Others : Extra field is Showing. — see CPI ticket CPI-362 for repro context (no description in source corpus)",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-362 (Medium, Done, resolved 15/Sep/25 7:18 PM). Source title: New NPI > ERP > Objective Others : Extra field is Showing.. See LABELING-WORKSHEET.md row def-050 for cleaned RCA evidence."
+  }
+}

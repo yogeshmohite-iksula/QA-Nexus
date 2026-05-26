@@ -1,0 +1,23 @@
+{
+  "id": "def-021",
+  "input": {
+    "testCaseId": "TC-RET-916",
+    "testCaseTitle": "In newly created SKU, in ERP form for ERP support team all details should get fetched like SAG etc. , previous item codes should be disabled",
+    "runId": "3b6a7070-cc05-4de6-b440-43c02af862e9",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-352 reported defect: In newly created SKU, in ERP form for ERP support team all details should get fetched like SAG etc. , previous item codes should be disabled",
+    "durationMs": 4386,
+    "environment": "prod-iksula",
+    "errorMessage": "In newly created SKU, in ERP form for ERP support team all details should get fetched like SAG etc. , previous item codes should be disabled",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-352 (Highest, Done, resolved 12/Nov/25 1:15 PM). Source title: In newly created SKU, in ERP form for ERP support team all details should get fetched like SAG etc. , previous item codes should be disabled. See LABELING-WORKSHEET.md row def-021 for cleaned RCA evidence."
+  }
+}

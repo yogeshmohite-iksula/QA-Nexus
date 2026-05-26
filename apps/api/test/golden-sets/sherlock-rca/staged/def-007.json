@@ -1,0 +1,23 @@
+{
+  "id": "def-007",
+  "input": {
+    "testCaseId": "TC-RET-902",
+    "testCaseTitle": "Email Notification Not Triggered for Certain Update Workflow Transitions in Product Workflow (PIM)",
+    "runId": "d3f39bfe-057e-42b7-9426-b91188880812",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-387 reported defect: Email Notification Not Triggered for Certain Update Workflow Transitions in Product Workflow (PIM)",
+    "durationMs": 5065,
+    "environment": "staging-iksula",
+    "errorMessage": "*Description:* In the PIM Product Workflow, email notifications are not triggered for specific transitions performed by *Product Head* and *Marketing Head*. These transitions are expected to send emails but currently result in *no email being triggered*. |Role|Current Status|Action Taken|New Status|Mail Expected To|Mail Triggered| |Product Head|InReview|Update to Marketing Manager|Update Required|To: Marketing Manager CC: Product Manager|❌ No| |Marketing Head|InReview|Update to Marketing…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-387 (High (migrated), Done, resolved 21/Nov/25 7:16 PM). Source title: Email Notification Not Triggered for Certain Update Workflow Transitions in Product Workflow (PIM). See LABELING-WORKSHEET.md row def-007 for cleaned RCA evidence."
+  }
+}

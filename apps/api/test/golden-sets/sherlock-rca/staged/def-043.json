@@ -1,0 +1,23 @@
+{
+  "id": "def-043",
+  "input": {
+    "testCaseId": "TC-RET-938",
+    "testCaseTitle": "Item code needs to be removed from PDF",
+    "runId": "d3e2ebab-6e92-4513-965b-f28515f3e776",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-353 reported defect: Item code needs to be removed from PDF",
+    "durationMs": 10824,
+    "environment": "local-dev",
+    "errorMessage": "Item code needs to be removed from PDF",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-353 (Highest, Done, resolved 10/Jul/25 1:00 PM). Source title: Item code needs to be removed from PDF. See LABELING-WORKSHEET.md row def-043 for cleaned RCA evidence."
+  }
+}

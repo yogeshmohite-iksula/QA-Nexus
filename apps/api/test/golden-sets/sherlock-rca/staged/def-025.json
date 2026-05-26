@@ -1,0 +1,23 @@
+{
+  "id": "def-025",
+  "input": {
+    "testCaseId": "TC-RET-920",
+    "testCaseTitle": "Issue in Bulk import and excel file is not to be uploaded",
+    "runId": "6cf9c2fa-3978-4152-944b-dc51fa171ddf",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-243 reported defect: Issue in Bulk import and excel file is not to be uploaded",
+    "durationMs": 10279,
+    "environment": "prod-iksula",
+    "errorMessage": "Issue in Bulk import and excel file is not to be uploaded 1.Go to URL 2.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 3.Enter valid login credentials 4.Go to menu list and click on Bulk import 5.select excel file and click on upload button. 6.After clicking on upload button,message is showing invalid file format(only excel file uploaded) 7.Now uplaoding exdel file but its not to be uplaoded Expected Result->After clicking the uploaded file,file should be successfully uploaded. Actual…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-243 (Medium, Done, resolved 22/Apr/25 2:47 PM). Source title: Issue in Bulk import and excel file is not to be uploaded. See LABELING-WORKSHEET.md row def-025 for cleaned RCA evidence."
+  }
+}

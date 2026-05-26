@@ -1,0 +1,23 @@
+{
+  "id": "def-022",
+  "input": {
+    "testCaseId": "TC-RET-917",
+    "testCaseTitle": "Error popup while click on Bonded and coded folder and their inner folder",
+    "runId": "523c68f7-8a8f-4c4f-92d6-7628f52f1fa4",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-248 reported defect: Error popup while click on Bonded and coded folder and their inner folder",
+    "durationMs": 8629,
+    "environment": "local-dev",
+    "errorMessage": "!Screenshot from 2025-04-07 11-19-37.png|width=1920,height=1080,alt=\"Screenshot from 2025-04-07 11-19-37.png\"!",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-248 (Minor, Done, resolved 09/Apr/25 9:56 AM). Source title: Error popup while click on Bonded and coded folder and their inner folder. See LABELING-WORKSHEET.md row def-022 for cleaned RCA evidence."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "def-040",
+  "input": {
+    "testCaseId": "TC-RET-935",
+    "testCaseTitle": "ERP form,its not working correctly.",
+    "runId": "6a74337f-7334-44ee-9054-0a931c355a90",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-191 reported defect: ERP form,its not working correctly.",
+    "durationMs": 5974,
+    "environment": "prod-iksula",
+    "errorMessage": "ERP form,its not working correctly.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-191 (Medium, Done, resolved 19/Mar/25 8:16 AM). Source title: ERP form,its not working correctly.. See LABELING-WORKSHEET.md row def-040 for cleaned RCA evidence."
+  }
+}

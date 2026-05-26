@@ -2,7 +2,13 @@
 
 > **Binding:** M4 v2 plan §4.5 (AC042 measurement protocol) · ADR-019 (Sherlock prompt strategy)
 > **AC042:** `(hits / 50) ≥ 0.40` top-2 hit rate on this corpus — at least **20 of 50** defects must be top-2 hits at M4 close.
-> **Status (Day-18 PM 2026-05-14):** 5 seed defects landed (`def-001` … `def-005`); BE+1 to expand to 50 Day-19 by mining real Iksula Returns Jira issues + the F20 Run Results v2 canonical failures + the existing `apps/api/test/golden-sets/a4/raw/cpi_postmortem_defects.json` 62-case corpus.
+> **Status (Day-25 Sun 2026-05-24):** 5 seed defects landed (`def-001` … `def-005`). 45 mechanical-ported cpi cases staged at `staged/def-006.json` … `staged/def-050.json` (synthesized non-scored fields + cleaned RCA evidence in `LABELING-WORKSHEET.md`). Pending Yogesh Day-26 AM: fill the 45 ground-truth YAML blocks in `LABELING-WORKSHEET.md` (~2-3 hr), then run `node scripts/apply-cpi-labels.mjs --promote` to validate + promote staged → live → corpus = 50 → run binding AC042 via `pnpm --filter @qa-nexus/api ac042:eval`.
+>
+> **Pipeline scripts (Day-25 Sun):**
+>
+> - `scripts/port-cpi-corpus.mjs` — one-shot mechanical port from `cpi_postmortem_defects.json` → 45 staged + worksheet. Already executed; re-run only if you want to regenerate staged files.
+> - `scripts/apply-cpi-labels.mjs` — reads filled worksheet → validates each label → promotes staged → live. Dry-run by default; `--promote` flag required to actually write.
+> - `apps/api/test/ac042-eval.ts` — the corpus-size-agnostic eval harness. Runs via `pnpm --filter @qa-nexus/api ac042:eval`. Outputs `results-YYYY-MM-DD.json` (gitignored except today's worked-example file).
 
 ---
 

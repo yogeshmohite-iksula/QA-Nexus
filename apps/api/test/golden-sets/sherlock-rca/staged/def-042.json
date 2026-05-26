@@ -1,0 +1,23 @@
+{
+  "id": "def-042",
+  "input": {
+    "testCaseId": "TC-RET-937",
+    "testCaseTitle": "After creating the product,By default PMG code is not showing.",
+    "runId": "8c181c41-e800-4bc7-b62f-7f3d93714385",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-180 reported defect: After creating the product,By default PMG code is not showing.",
+    "durationMs": 8193,
+    "environment": "prod-iksula",
+    "errorMessage": "After creating the product,By default PMG code is not showing.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "TODO-YOGESH: 1-2 sentences from the recent_comments / description in LABELING-WORKSHEET.md.",
+    "acceptableAlternatives": [],
+    "confidence": "low",
+    "notesForEval": "Ported from CPI corpus CPI-180 (Medium, Done, resolved 19/Mar/25 7:57 AM). Source title: After creating the product,By default PMG code is not showing.. See LABELING-WORKSHEET.md row def-042 for cleaned RCA evidence."
+  }
+}
