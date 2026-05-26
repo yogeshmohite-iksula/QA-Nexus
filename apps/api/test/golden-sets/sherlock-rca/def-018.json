@@ -1,0 +1,23 @@
+{
+  "id": "def-018",
+  "input": {
+    "testCaseId": "TC-RET-913",
+    "testCaseTitle": "For admin, all tabs should be visible & editable",
+    "runId": "9ee82c8f-1f50-491f-ab14-3df81daef6f5",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-342 reported defect: For admin, all tabs should be visible & editable",
+    "durationMs": 11190,
+    "environment": "local-dev",
+    "errorMessage": "For admin, all tabs should be visible & editable",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "Admin did not have the intended all-access permission set for product tabs. The ERP/DAM tab visibility and editability were corrected so Admin can verify data added by other users.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "high",
+    "notesForEval": "Numeric confidence 0.91. ui-regression is acceptable only as a surface symptom; the comments state the reason was admin access."
+  }
+}

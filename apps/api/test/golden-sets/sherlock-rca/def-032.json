@@ -1,0 +1,23 @@
+{
+  "id": "def-032",
+  "input": {
+    "testCaseId": "TC-RET-927",
+    "testCaseTitle": "Action button is not visible in role ProductHeadIndustrial and ProductHeadRetail in Product Workflow",
+    "runId": "92a50cf8-a055-4e7b-87b2-67d89ddfa1fe",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-250 reported defect: Action button is not visible in role ProductHeadIndustrial and ProductHeadRetail in Product Workflow",
+    "durationMs": 2008,
+    "environment": "staging-iksula",
+    "errorMessage": "!image-20250409-112932.png|width=1366,height=768,alt=\"image-20250409-112932.png\"!",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "Product Head Retail and Product Head Industrial did not have the expected action button visibility in Product Workflow. The role-specific action visibility was corrected and verified in Dev.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.82. ui-regression is acceptable because only screenshots are preserved for the symptom."
+  }
+}

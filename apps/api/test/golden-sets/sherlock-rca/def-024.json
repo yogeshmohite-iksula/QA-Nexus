@@ -1,0 +1,23 @@
+{
+  "id": "def-024",
+  "input": {
+    "testCaseId": "TC-RET-919",
+    "testCaseTitle": "Security Risk in Product API, without authorization data is coming",
+    "runId": "2e74505e-4df6-4c1e-88c3-34848f091d47",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-293 reported defect: Security Risk in Product API, without authorization data is coming",
+    "durationMs": 9728,
+    "environment": "staging-iksula",
+    "errorMessage": "!image-20250415-115254.png|width=1591,height=811,alt=\"image-20250415-115254.png\"!",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "The Product API returned data without server-side authentication or authorization. The fix added authentication and then Bearer Token authorization on Dev/UAT.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "high",
+    "notesForEval": "Numeric confidence 0.97. This is the cleanest auth-permissions case in the worksheet."
+  }
+}

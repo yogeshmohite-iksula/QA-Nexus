@@ -1,0 +1,23 @@
+{
+  "id": "def-012",
+  "input": {
+    "testCaseId": "TC-RET-907",
+    "testCaseTitle": "Error Showing After Product Approval Opening, Due to Invalid SAGDescription value error showing while opening the item.",
+    "runId": "91d896d3-1794-4404-a348-51036c2b2c33",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-377 reported defect: Error Showing After Product Approval Opening, Due to Invalid SAGDescription value error showing while opening the item.",
+    "durationMs": 5819,
+    "environment": "local-dev",
+    "errorMessage": "h3. *Description:* *Issue:* When creating a new NPI and the ERP team adds the item code, the product is moved from the *NPI section to the Coated section*. At this point, an error occurs related to the *SAGDescription* field. *Error Message:* {{Invalid Option field [ SAGDescription ]: Please choose a valid option for select / multiselect field [ SAGDescription ]. Current value: \"YS592-Ceramic BELTS\"}} *Observation:* * The value {{\"YS592-Ceramic BELTS\"}} is *already present in the Data Model…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "The SAGDescription option YS592-Ceramic BELTS existed in the Data Model sheet but was not recognized by the configured select/multiselect options when the product moved to Coated. Syncing the configured dropdown/master values removed the invalid-option error.",
+    "acceptableAlternatives": ["auth-permissions", "code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.87. auth-permissions is acceptable because DAM Manager object permission was discussed, but the primary evidence is option/master-data mismatch."
+  }
+}

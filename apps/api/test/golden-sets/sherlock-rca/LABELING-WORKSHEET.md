@@ -54,11 +54,12 @@
 
 ```yaml
 # def-006 (CPI-372)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: NPI notification routing used the wrong PMG-to-product-developer mapping. A Coated Industrial Belt NPI routed mail to Bonded Industrial and other developers until the PMG scenarios were checked and corrected.
+acceptableAlternatives: ['code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.84. code-bug is acceptable if the reviewer treats the bad routing as workflow lookup logic rather than master-data mapping.
+reasoning: The description says mail for a Coated Industrial Belt NPI went to different Product Developers, including Bonded Industrial. The comments repeatedly focus on checking Product Manager/Product Developer assignments by PMG and verifying specific PMG scenarios after the fix. That makes the PMG-recipient mapping the dominant evidence.
 ```
 
 ---
@@ -87,11 +88,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-007 (CPI-387)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Product Head and Marketing Head update transitions had incomplete notification-recipient logic. The Marketing Manager CC path was missing on the Marketing Head to Product Head update flow until the mail rule was corrected.
+acceptableAlternatives: ['auth-permissions']
+confidence: medium
+notesForEval: Numeric confidence 0.88. auth-permissions is defensible because the symptom is role-specific, but the evidence points to notification rule logic.
+reasoning: The ticket lists specific workflow transitions where mail should fire but did not. The comments narrow the remaining issue to Marketing Manager missing from CC and then state that mail to Marketing Manager was added and all update mail triggers correctly. There is no environment or timing signal.
 ```
 
 ---
@@ -121,11 +123,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-008 (CPI-341)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: The DAM tab visibility and field editability matrix was not enforced by role and approval state. PM, PH, and MM users could see or edit DAM surfaces before the product state allowed it.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.86. ui-regression is acceptable because the visible symptom is tab rendering, but the rule being enforced is role/state permission.
+reasoning: The title and comments are entirely about when the DAM tab should be visible, invisible, disabled, or editable for each role before and after approval. The final verification table confirms a role-by-role permission matrix. That is stronger than a generic UI styling issue.
 ```
 
 ---
@@ -154,11 +157,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-009 (CPI-345)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: SAG dropdown master data was not aligned to the selected PMG. Some PMGs had extra test SAG values and at least one expected SAG value was missing until the PMG-SAG options were corrected.
+acceptableAlternatives: ['code-bug']
+confidence: high
+notesForEval: Numeric confidence 0.93. code-bug is an acceptable second label if the model frames it as dropdown-filter logic.
+reasoning: The source says SAG should appear based on PMG selection, and the comments enumerate specific PMGs with missing or extra SAG values. The final comment says all SAG values show correctly as per selected PMG. This is direct evidence of reference-data/mapping correction.
 ```
 
 ---
@@ -185,11 +189,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-010 (CPI-344)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: DAM tab role permissions were out of sync with the updated permission table. Visibility and editability differed by role and approval state, with the table explicitly marking the admin path as failing.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.80. ui-regression is plausible because the failure is visible tab state, but the evidence is a rolewise permissions table.
+reasoning: The ticket is framed as an updated table for rolewise DAM tab permissions. The comment table compares expected tab visibility and editable state per role and includes pass/fail status. That points to authorization/permission configuration rather than data or network behavior.
 ```
 
 ---
@@ -220,11 +225,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-011 (CPI-376)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Custom ExtJS date handling allowed future dates and displayed a record saved with today's date as tomorrow's date. The ERP date filter was fixed so records display on the saved date and future dates are rejected.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.84. ui-regression is acceptable because the bug is surfaced in the date picker/display layer.
+reasoning: A comment states the database saved today's date correctly but the UI displayed tomorrow's date, and asks to debug customized ExtJS code. Later comments verify both the date display and future-date rejection were fixed. That is a code-level date handling defect.
 ```
 
 ---
@@ -255,11 +261,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-012 (CPI-377)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: The SAGDescription option YS592-Ceramic BELTS existed in the Data Model sheet but was not recognized by the configured select/multiselect options when the product moved to Coated. Syncing the configured dropdown/master values removed the invalid-option error.
+acceptableAlternatives: ['auth-permissions', 'code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.87. auth-permissions is acceptable because DAM Manager object permission was discussed, but the primary evidence is option/master-data mismatch.
+reasoning: The error explicitly says the current SAGDescription value is not a valid select option, while the description says the value is present in the Data Model sheet. The reproduction path is tied to choosing Coated Industrial Belt and opening the item after workflow movement. Comments later verify the invalid SAGDescription error no longer appears.
 ```
 
 ---
@@ -289,11 +296,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-013 (CPI-404)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Change SKU workflow permissions and recipient scoping were wrong for Product Head Retail versus Industrial. Product Head needed permission to open the notification process, and access had to be limited to the matching vertical.
+acceptableAlternatives: ['code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.82. code-bug is acceptable if the reviewer focuses on incorrect notification routing logic.
+reasoning: The discussion explicitly calls out a Pimcore permission issue and then says permission was allowed for Product Head to open the notification process. A later comment clarifies that only Product Head Retail should access Retail products and Product Head Industrial only Industrial products. That makes role/vertical authorization the clearest cause.
 ```
 
 ---
@@ -324,11 +332,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-014 (CPI-392)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: SKU update workflow action availability was misconfigured across roles and statuses. Product Developer, Product Manager, and Product Head saw the wrong approve/update actions until the role-state action matrix was corrected.
+acceptableAlternatives: ['ui-regression', 'code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.86. ui-regression is acceptable for visible wrong buttons; code-bug is acceptable if modeled as workflow-state logic.
+reasoning: The description lists exact action buttons that should or should not appear for each role. Comments confirm changes to allow the correct statuses/actions for Product Manager and verify the final role-specific button set. The dominant behavior is permissioned workflow action visibility.
 ```
 
 ---
@@ -358,11 +367,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-015 (CPI-179)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Product creation did not assign or display the PIM ID at initial create time. The PIM ID was only generated after saving the ERP layout, so the ERP form default PIM ID field stayed empty until the creation flow was fixed.
+acceptableAlternatives: ['data-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.76. data-bug is plausible because the missing value is generated product data, but the comment describes lifecycle behavior fixed by code.
+reasoning: The comments explain that the product ID was not available immediately after creating a product and only appeared after entering ERP layout information and saving. The developer comment says the issue was fixed by code on the development server. No permission or environment evidence is present.
 ```
 
 ---
@@ -393,11 +403,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-016 (CPI-382)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: The ERP attribute mapping after publish was not aligned with the client-provided attribute sheet. Five extra ERP attributes appeared after enabling new item code creation until the attribute mapping was corrected.
+acceptableAlternatives: ['ui-regression', 'code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.88. ui-regression is acceptable because the symptom is extra fields in the ERP form.
+reasoning: The description explicitly compares the ERP form against an attribute mapping sheet and says five unexpected fields appeared post-publish. Follow-up comments verify all required attributes are visible and no five extra attributes appear in ERP after the fix. The evidence is data/schema mapping, not timing or permissions.
 ```
 
 ---
@@ -428,11 +439,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-017 (CPI-251)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: env-config
+rootCauseDetail: Bulk import exhausted the UAT processing capacity on larger record counts. The comments identify memory issues above roughly 4000 records and long runtimes at 6500-7000 records, so the upload failure was tied to environment/resource limits.
+acceptableAlternatives: ["code-bug"]
+confidence: low
+notesForEval: Numeric confidence 0.68. Hard case: code-bug is also plausible because the import process was updated, but the clearest evidence names UAT memory pressure.
+reasoning: The original 2000-record upload stalled, and later comments discuss successful tests at 4000-5000 records plus memory issues beyond that on UAT. The final note also says remaining PMG data was not provided by the client, adding some data ambiguity. I picked env-config because the only explicit root-cause signal is memory/resource behavior on UAT.
 ```
 
 ---
@@ -461,11 +473,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-018 (CPI-342)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Admin did not have the intended all-access permission set for product tabs. The ERP/DAM tab visibility and editability were corrected so Admin can verify data added by other users.
+acceptableAlternatives: ['ui-regression']
+confidence: high
+notesForEval: Numeric confidence 0.91. ui-regression is acceptable only as a surface symptom; the comments state the reason was admin access.
+reasoning: The source and comments focus on Admin seeing only ERP/DAM tabs and DAM being disabled. A comment states Admin must have all access to check and verify all data added by other users, and the final verification says the expected tabs show. That is direct role permission evidence.
 ```
 
 ---
@@ -494,11 +507,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-019 (CPI-375)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: The Marketing Head approval email used the wrong template content. A role-specific In-Review-MarketingHead template was created and wired at the referenced template-name line to remove the incorrect post-approval instruction.
+acceptableAlternatives: ['code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.82. code-bug is acceptable because the fix included changing the template name reference in code.
+reasoning: The requirement is to remove a specific line from the Marketing Head email and trigger a new template only for that role. Comments say a new template was created and the template name changed at line 240, then verified in normal and reopen workflows. The defect is user-visible email copy/template behavior.
 ```
 
 ---
@@ -529,11 +543,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-020 (CPI-403)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: The DAM Manager approval email reused the shared In-Review product template that still referenced sending the product to Product Manager. The incorrect post-approval line was removed for the DAM Manager publish-to-web path.
+acceptableAlternatives: ['code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.84. code-bug is acceptable because the template selection/content may be controlled by workflow logic.
+reasoning: The actual result quotes the wrong Product Manager instruction in the DAM Manager email. Comments identify the shared In-Review Product Template as the affected template and later verify that the exact line was removed. This is a visible template/content regression rather than data, auth, or environment behavior.
 ```
 
 ---
@@ -561,11 +576,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-021 (CPI-352)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: ERP form selection did not populate the selected PIM ID's details or lock previous item codes for newly created SKUs. The ERP support flow was fixed so SAG and related details auto-fetch and old item codes are disabled.
+acceptableAlternatives: ["data-bug"]
+confidence: medium
+notesForEval: Numeric confidence 0.76. data-bug is acceptable because the missing values are PIM-derived fields.
+reasoning: The ticket describes expected behavior after ERP support selects a PIM ID: details should auto-fetch and previous item codes should be disabled. The follow-up confirms that these behaviors work as expected. With no master-data correction called out, the likely defect is form-binding/workflow logic.
 ```
 
 ---
@@ -593,11 +609,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-022 (CPI-248)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Opening the Bonded and Coated folders triggered an error popup, and the fix was delivered as a code update on the development server. The source ticket does not preserve the actual exception text.
+acceptableAlternatives: ["ui-regression"]
+confidence: low
+notesForEval: Numeric confidence 0.55. Hard case: evidence is mostly screenshots plus a generic code-updated confirmation, so Yogesh should review the original images if precision matters.
+reasoning: The title is the only textual symptom: an error popup on folder click. The comments only contain screenshots and then state the issue was fixed and code updated. With no data, auth, or environment signal, code-bug is the closest category but confidence stays low.
 ```
 
 ---
@@ -627,11 +644,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-023 (CPI-292)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: other
+rootCauseDetail: The requested Sub Brand to Brand Extension rename conflicted with Pimcore object/folder naming behavior. The object folder name could not be changed safely, so only the PMG template and Product class display name were updated.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.80. ui-regression is acceptable if the model focuses on display-label behavior, but the comments describe a platform constraint/change request.
+reasoning: Comments state the Sub Brand object cannot be changed because objects use the same folder name and newly created objects are always stored under SubBrand. The implemented compromise changed template/Product class naming, not the underlying object folder. That does not fit the standard defect categories cleanly, so other is closest.
 ```
 
 ---
@@ -661,11 +679,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-024 (CPI-293)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: The Product API returned data without server-side authentication or authorization. The fix added authentication and then Bearer Token authorization on Dev/UAT.
+acceptableAlternatives: ['code-bug']
+confidence: high
+notesForEval: Numeric confidence 0.97. This is the cleanest auth-permissions case in the worksheet.
+reasoning: The ticket title says data was returned without authorization. Comments explicitly state no server authentication process was integrated, followed by updates adding authentication and Bearer Token authorization. That directly matches the auth-permissions category.
 ```
 
 ---
@@ -694,11 +713,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-025 (CPI-243)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: The bulk-import upload handler incorrectly rejected Excel files as invalid format and restarted the progress cycle after upload completion. The upload validation/process was corrected on Dev and UAT.
+acceptableAlternatives: ['data-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.84. data-bug is acceptable if the model frames the spreadsheet payload as malformed input, but the evidence points to upload validation logic.
+reasoning: The description says an Excel file reached 100 percent upload, restarted from 0 percent, and then showed invalid file format even though Excel was expected. Comments later state the issue was resolved on Dev and UAT. This is a file-upload validation/process bug.
 ```
 
 ---
@@ -726,11 +746,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-026 (CPI-405)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: env-config
+rootCauseDetail: Reopen Product Workflow was missing or misconfigured workflow email template wiring, producing Email template path is empty and then invalid transition state. Resolving the workflow template issue restored the New status and expected action button.
+acceptableAlternatives: ['code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.88. code-bug is acceptable if the model treats workflow transition handling as application logic.
+reasoning: The first error says the email template path is empty, and the follow-up says the workflow template issue was resolved. The second transition error and two-status symptom are downstream workflow-state effects after the failed reopen attempt. Template path/config evidence is stronger than a generic code fault.
 ```
 
 ---
@@ -759,11 +780,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-027 (CPI-194)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Product Head did not see the expected approve/reject actions after login. The role-specific workflow actions were corrected and verified on the development server.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.78. ui-regression is acceptable because the visible symptom is missing buttons; source detail is thin.
+reasoning: The source title is role-specific and says approve/reject options were not visible for Product Head. The comments ask for reproduction details and then state code was updated and functionality works. With no other cause preserved, the closest consistent category is role/action permission.
 ```
 
 ---
@@ -792,11 +814,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-028 (CPI-178)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Sending or opening the user invitation link raised an exception in the User Module. The preserved ticket evidence only confirms a code update and successful retest, not the underlying exception class.
+acceptableAlternatives: ["env-config", "auth-permissions"]
+confidence: low
+notesForEval: Numeric confidence 0.60. Hard case: email delivery/config and permission paths are conceivable, but the source does not preserve enough technical evidence.
+reasoning: The steps reproduce an exception after clicking send invitation link, and the final comments say the issue was resolved by a code update. There is no stack trace, SMTP/config mention, or role-permission note. code-bug is the least speculative primary label, with low confidence.
 ```
 
 ---
@@ -825,11 +848,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-029 (CPI-244)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: The Assets JPG upload flow reused or applied the wrong file-type validation, rejecting JPG files with an xls-only message. The upload handler was fixed on Dev and verified in Chrome.
+acceptableAlternatives: ["ui-regression"]
+confidence: medium
+notesForEval: Numeric confidence 0.89. ui-regression is acceptable for the wrong validation message, but the broken behavior is upload validation.
+reasoning: The description gives a direct mismatch: uploading JPG under Product Image fails and says only xls is allowed. That points to incorrect validation logic or route handling, not user permission or data state. Comments confirm a code fix and successful verification.
 ```
 
 ---
@@ -857,11 +881,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-030 (CPI-177)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: other
+rootCauseDetail: The reported ID/path/date search behavior matched Pimcore's default search limitation rather than a project defect. The reviewer noted default Pimcore search is text-based and does not search numeric fields the way the tester expected.
+acceptableAlternatives: ['dependency-version']
+confidence: medium
+notesForEval: Numeric confidence 0.78. dependency-version is acceptable if Sherlock frames this as inherited platform behavior, but no version mismatch is evidenced.
+reasoning: The comment explicitly says this is a default Pimcore feature and references the Pimcore demo site for verification. No fix is described, and the mismatch is between tester expectation and platform behavior. That makes other more appropriate than code-bug.
 ```
 
 ---
@@ -890,11 +915,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-031 (CPI-187)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: PMG master objects were not all saved and published, so the DAM workflow permission bundle did not list all 15 PMGs. Publishing the PMG master objects restored the expected permission-bundle entries.
+acceptableAlternatives: ['auth-permissions']
+confidence: high
+notesForEval: Numeric confidence 0.91. auth-permissions is acceptable because the missing data appeared inside a permission bundle.
+reasoning: The first developer comment directly instructs to save and publish all PMG objects from the PMG master. The symptom is missing PMG entries in a permission bundle, but the fix is master-data publication. That is a clear data-bug.
 ```
 
 ---
@@ -923,11 +949,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-032 (CPI-250)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Product Head Retail and Product Head Industrial did not have the expected action button visibility in Product Workflow. The role-specific action visibility was corrected and verified in Dev.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.82. ui-regression is acceptable because only screenshots are preserved for the symptom.
+reasoning: The title identifies two Product Head roles and a missing action button. Comments verify the action button is visible for both Product Head Retail and Product Head Industrial after the fix. This aligns with role-permission/action availability.
 ```
 
 ---
@@ -955,11 +982,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-033 (CPI-241)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Search-and-export applied page-size pagination to the export result, showing only 10 records instead of all 300 matching records. The export/query logic was corrected and verified on the development server.
+acceptableAlternatives: ['data-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.88. data-bug is acceptable if the model focuses on result-set handling, but the evidence points to export pagination logic.
+reasoning: The reproduction shows 300 records after search but only 10 records after export, matching a pagination leak into export behavior. The comment says code was updated and verified. There is no role, environment, or data-quality signal.
 ```
 
 ---
@@ -987,11 +1015,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-034 (CPI-346)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: other
+rootCauseDetail: The notification was a misunderstanding of prior workflow context, not a confirmed defect. Comments state the displayed Product Manager notification came from the previous Product Manager to Marketing Manager step, and the Product Workflow worked as expected.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.80. ui-regression is acceptable if Sherlock treats the confusing notification display as a UI issue.
+reasoning: The ticket claims the notification showed Product Manager instead of Product Head, but the comment explicitly says this was a misunderstanding in the meeting. It explains the notification belonged to a previous workflow step and then states the workflow worked as expected. That makes other the best primary label.
 ```
 
 ---
@@ -1020,11 +1049,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-035 (CPI-291)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: Import success messages for SAG, Brand, and Brand Extension displayed the wrong copy/path guidance. The message text was updated for those import flows on localhost, Dev, and UAT.
+acceptableAlternatives: ['code-bug']
+confidence: medium
+notesForEval: Numeric confidence 0.88. code-bug is acceptable because the message is emitted by upload/import logic.
+reasoning: The source specifies the exact desired success message and log path wording. Comments say message changes were made for SAG, Brand, and Brand Extension and then verified on UAT. The defect is user-visible copy in the import UI.
 ```
 
 ---
@@ -1052,11 +1082,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-036 (CPI-190)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Marketing Head save raised an exception, and the preserved record only confirms a later code update and successful retest. The ticket does not include the exception text or reproduction data needed for a narrower category.
+acceptableAlternatives: ["auth-permissions"]
+confidence: low
+notesForEval: Numeric confidence 0.58. Hard case: role specificity makes auth-permissions possible, but the evidence is too thin for a confident permission label.
+reasoning: The source says Marketing Head saw an exception after clicking Save. Comments ask for screenshots and then say code was updated and the functionality works. With no stack trace, field data, or permission rule stated, code-bug is the closest label at low confidence.
 ```
 
 ---
@@ -1084,11 +1115,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-037 (CPI-192)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: Mandatory-field visual indicators were missing across ERP, Information Material, Technical, DAM, SCM, SCO, and Quality Summary tabs. The UI was updated so required fields show the red asterisk marker.
+acceptableAlternatives: ["code-bug"]
+confidence: medium
+notesForEval: Numeric confidence 0.82. code-bug is acceptable if the model treats required-marker rendering as form logic.
+reasoning: The title identifies a visual requirement: mandatory fields should have an asterisk and red mark across several pages. The final comment says code was updated and verified. The failure is primarily UI presentation of validation metadata.
 ```
 
 ---
@@ -1116,11 +1148,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-038 (CPI-252)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: ERP form file upload raised an exception instead of accepting the uploaded file. The comments only preserve a prompt to inspect the detailed error link and a later code update, so the exact failing handler is not known.
+acceptableAlternatives: ["data-bug"]
+confidence: low
+notesForEval: Numeric confidence 0.63. Hard case: the upload payload could be bad data, but the ticket mainly points to an exception fixed by code.
+reasoning: The reproduction steps end with file upload failing and an exception error. A comment directs the tester to the detailed error link, but that detail is not included in the worksheet. The final note says code was updated and verified, making code-bug the nearest category with low confidence.
 ```
 
 ---
@@ -1149,11 +1182,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-039 (CPI-249)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: Product Workflow email routing did not send messages to Product Head Industrial and Product Head Retail. The role-recipient email logic was fixed and verified by received-mail screenshots in Dev.
+acceptableAlternatives: ['auth-permissions']
+confidence: medium
+notesForEval: Numeric confidence 0.76. auth-permissions is acceptable because recipients are role-specific.
+reasoning: The title says emails were not sending to two Product Head roles. Follow-up comments show email received for both paths and final verification on the dev environment. Because the evidence is about notification delivery rather than access denial, code-bug edges out auth-permissions.
 ```
 
 ---
@@ -1181,11 +1215,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-040 (CPI-191)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: code-bug
+rootCauseDetail: ERP form behavior was broken and later fixed by a code update, but the worksheet does not preserve the actual failure mode beyond a screenshot. The label should be treated as low-confidence generic application logic.
+acceptableAlternatives: ["data-bug"]
+confidence: low
+notesForEval: Numeric confidence 0.55. Hard case: source evidence is too thin for a precise root cause, so Yogesh should review the original screenshot if this case matters.
+reasoning: The description only says the ERP form was not working correctly, and the comments contain a screenshot plus a generic code-updated verification. There is no explicit field, role, data mapping, or environment clue. code-bug is the closest default category.
 ```
 
 ---
@@ -1213,11 +1248,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-041 (CPI-181)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: Newly created products did not default-populate the SAG code. The expected SAG value was not being derived or displayed from the selected product data until the fix was verified.
+acceptableAlternatives: ['code-bug']
+confidence: low
+notesForEval: Numeric confidence 0.72. code-bug is acceptable because the defect may be in form data-binding rather than the underlying data.
+reasoning: The title says the default SAG code was missing after product creation. The comments only provide a screenshot and generic code-updated verification, so the exact layer is uncertain. I label it data-bug because the missing value is canonical product classification data.
 ```
 
 ---
@@ -1245,11 +1281,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-042 (CPI-180)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: data-bug
+rootCauseDetail: Newly created products did not default-populate the PMG code. The expected PMG classification value was missing from the created product view until the fix was verified.
+acceptableAlternatives: ['code-bug']
+confidence: low
+notesForEval: Numeric confidence 0.72. code-bug is acceptable because the defect may be in default-value binding logic.
+reasoning: This mirrors def-041 but for PMG code rather than SAG code. The title gives the missing default value and the comments only preserve a screenshot and generic fix confirmation. The missing classification value makes data-bug the most consistent primary label, with modest confidence.
 ```
 
 ---
@@ -1277,11 +1314,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-043 (CPI-353)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: Generated PDF output included Item code when it should have been removed. The PDF template/rendering output was updated and verified on Dev and UAT.
+acceptableAlternatives: ["code-bug"]
+confidence: medium
+notesForEval: Numeric confidence 0.83. code-bug is acceptable if the model frames this as PDF generation logic.
+reasoning: The title is a presentation/output requirement: remove Item code from PDF. Comments confirm Item code was removed from the PDF and the change was deployed to Dev/UAT. That fits a UI/report output regression rather than data or permissions.
 ```
 
 ---
@@ -1309,11 +1347,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-044 (CPI-188)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Product Manager did not have the expected change-management workflow actions to edit and approve/reject. The role-specific workflow capability was fixed and verified on the development server.
+acceptableAlternatives: ['code-bug']
+confidence: low
+notesForEval: Numeric confidence 0.72. Source detail is limited; code-bug is acceptable if the evaluator treats it as workflow action logic.
+reasoning: The title is explicitly about what Product Manager can do in change management workflow. Comments ask for a PIM ID/screenshot and then confirm a code update, but do not preserve a deeper root cause. Because the symptom is role capability, auth-permissions is the closest label.
 ```
 
 ---
@@ -1340,11 +1379,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-045 (CPI-356)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: Workflow action labels used Project Manager where the product workflow required Product Manager. The copy was corrected so Product Head and Marketing Head users see Product Manager in the action dropdown.
+acceptableAlternatives: ['code-bug']
+confidence: high
+notesForEval: Numeric confidence 0.95. This is a straightforward UI copy/label defect.
+reasoning: The title directly states the rename requirement, and the comment verifies Product Manager is shown in the action dropdown for Product Head and Marketing Head users. There are no data, permission, or environment signals. The root cause is visible UI text mismatch.
 ```
 
 ---
@@ -1372,11 +1412,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-046 (CPI-193)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Uploaded product images were not visible under the Product Manager login. The role-specific asset visibility path was fixed and verified on the development server.
+acceptableAlternatives: ['ui-regression']
+confidence: low
+notesForEval: Numeric confidence 0.74. ui-regression is acceptable because the symptom is image display; confidence is limited by sparse evidence.
+reasoning: The title ties the missing image to Product Manager login, which suggests role-scoped visibility. Comments only ask for a screenshot and then confirm a code update and verification. I chose auth-permissions because the symptom is specific to one role, but the source is thin.
 ```
 
 ---
@@ -1406,11 +1447,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-047 (CPI-253)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: auth-permissions
+rootCauseDetail: Bulk Publish button visibility needed to be restricted to DAM Manager or Admin in the BONDED and COATED product folders. The role/folder permission behavior was corrected and verified on the development server.
+acceptableAlternatives: ["ui-regression"]
+confidence: medium
+notesForEval: Numeric confidence 0.84. ui-regression is acceptable because the preserved evidence is button visibility screenshots.
+reasoning: The title gives the expected authorization rule: only DAM Manager or Admin should see Bulk Publish in specific folders. Comments are screenshot-heavy but conclude the issue was fixed and code updated. Role/folder visibility maps cleanly to auth-permissions.
 ```
 
 ---
@@ -1441,11 +1483,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-048 (CPI-366)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: After ERP approval, switching to the DAM tab left the ERP tab disabled and unclickable for users. The tab interaction state was corrected so ERP and DAM tabs remain clickable and their information visible.
+acceptableAlternatives: ["code-bug", "auth-permissions"]
+confidence: medium
+notesForEval: Numeric confidence 0.84. code-bug is acceptable for tab-state logic; auth-permissions is acceptable because user roles were mentioned.
+reasoning: The comments give clear reproduction steps: open an approved product, click DAM, then ERP cannot be clicked without reload. They also note the issue persisted for other users after Product Manager and Admin worked, then verify all users can click ERP and DAM tabs. The primary user-facing defect is tab state/UI behavior.
 ```
 
 ---
@@ -1474,11 +1517,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-049 (CPI-394)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: ui-regression
+rootCauseDetail: The DAM workflow action dropdown used the generic Update label instead of Update to DAM Manager. The action label was corrected for Product Manager, Product Head, and Marketing Manager users.
+acceptableAlternatives: ['code-bug']
+confidence: high
+notesForEval: Numeric confidence 0.92. Straightforward action-label UI defect.
+reasoning: The title states the exact rename, and the final comment verifies the corrected label appears in the DAM workflow for three roles. There is no evidence of missing permission or failed transition, only wrong visible action text. ui-regression is the clearest category.
 ```
 
 ---
@@ -1508,11 +1552,12 @@ notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
 
 ```yaml
 # def-050 (CPI-362)
-rootCauseCategory: '' # one of: code-bug | data-bug | env-config | flaky-network | auth-permissions | dependency-version | ui-regression | race-condition | payment-gateway | other
-rootCauseDetail: '' # 1-2 sentences explaining the actual cause (≥10 chars)
-acceptableAlternatives: [] # other category enums a senior reviewer could defend; typically 1-2
-confidence: '' # high / medium / low — your confidence in this label
-notesForEval: '' # comments for the eval reviewer (e.g., "ambiguous because…")
+rootCauseCategory: other
+rootCauseDetail: The Objective Others field was added as a requirements change rather than evidence of a runtime defect. The final dropdown includes If others with a text box, and comments say this was added per requirements and works as expected.
+acceptableAlternatives: ['ui-regression']
+confidence: medium
+notesForEval: Numeric confidence 0.78. ui-regression is acceptable if Sherlock treats the extra field as visible form drift, but the comments read like accepted scope change.
+reasoning: The ticket title says an extra field was showing, but comments say new fields were added per requirements and enumerate the final objective dropdown including Other Objective. The final verification says it is working as expected. That makes this a requirement clarification/change, best mapped to other.
 ```
 
 ---

@@ -1,0 +1,23 @@
+{
+  "id": "def-043",
+  "input": {
+    "testCaseId": "TC-RET-938",
+    "testCaseTitle": "Item code needs to be removed from PDF",
+    "runId": "d3e2ebab-6e92-4513-965b-f28515f3e776",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-353 reported defect: Item code needs to be removed from PDF",
+    "durationMs": 10824,
+    "environment": "local-dev",
+    "errorMessage": "Item code needs to be removed from PDF",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "Generated PDF output included Item code when it should have been removed. The PDF template/rendering output was updated and verified on Dev and UAT.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.83. code-bug is acceptable if the model frames this as PDF generation logic."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "def-009",
+  "input": {
+    "testCaseId": "TC-RET-904",
+    "testCaseTitle": "SAG should come on the selection of PMG",
+    "runId": "f0ecc74f-a35a-4eb3-aa0e-8b7d86d5f498",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-345 reported defect: SAG should come on the selection of PMG",
+    "durationMs": 2696,
+    "environment": "staging-iksula",
+    "errorMessage": "SAG should come on the selection of PMG",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "SAG dropdown master data was not aligned to the selected PMG. Some PMGs had extra test SAG values and at least one expected SAG value was missing until the PMG-SAG options were corrected.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "high",
+    "notesForEval": "Numeric confidence 0.93. code-bug is an acceptable second label if the model frames it as dropdown-filter logic."
+  }
+}

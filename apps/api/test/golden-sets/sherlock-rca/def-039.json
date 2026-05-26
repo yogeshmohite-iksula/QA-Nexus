@@ -1,0 +1,23 @@
+{
+  "id": "def-039",
+  "input": {
+    "testCaseId": "TC-RET-934",
+    "testCaseTitle": "Email is not sending to ProductHeadIndustrial and ProductHeadRetila in Product Workflow",
+    "runId": "439ecef4-6b4d-4296-a91e-8f957f9cbd08",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-249 reported defect: Email is not sending to ProductHeadIndustrial and ProductHeadRetila in Product Workflow",
+    "durationMs": 6978,
+    "environment": "prod-iksula",
+    "errorMessage": "!image-20250409-113017.png|width=1366,height=768,alt=\"image-20250409-113017.png\"!",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "Product Workflow email routing did not send messages to Product Head Industrial and Product Head Retail. The role-recipient email logic was fixed and verified by received-mail screenshots in Dev.",
+    "acceptableAlternatives": ["auth-permissions"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.76. auth-permissions is acceptable because recipients are role-specific."
+  }
+}

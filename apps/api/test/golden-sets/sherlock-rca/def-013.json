@@ -1,0 +1,23 @@
+{
+  "id": "def-013",
+  "input": {
+    "testCaseId": "TC-RET-908",
+    "testCaseTitle": "Incorrect email notifications and missing post approval user in Change SKU workflow",
+    "runId": "8a4fa78b-587c-45cf-85b2-2e7d77180ff3",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-404 reported defect: Incorrect email notifications and missing post approval user in Change SKU workflow",
+    "durationMs": 11237,
+    "environment": "prod-iksula",
+    "errorMessage": "*Environment: Production* * Workflow: Change SKU * Notification: Email Trigger *Steps to Reproduce:* # SKU belongs to *Bonded Retail > Super Abrasive Retail*. # Product Developer approves the SKU and sends it to *Product Manager*. # Observe the email notification and in-app notification. *Expected Result:* * Email should be sent only to the correct *Product Manager (Retail)*. * Mail body should correctly display the *post approval user (Product Head)*. * Notification should open the correct…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "Change SKU workflow permissions and recipient scoping were wrong for Product Head Retail versus Industrial. Product Head needed permission to open the notification process, and access had to be limited to the matching vertical.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.82. code-bug is acceptable if the reviewer focuses on incorrect notification routing logic."
+  }
+}

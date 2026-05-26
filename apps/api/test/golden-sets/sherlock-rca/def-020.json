@@ -1,0 +1,23 @@
+{
+  "id": "def-020",
+  "input": {
+    "testCaseId": "TC-RET-915",
+    "testCaseTitle": "Email shows incorrect line after DAM Manager approval – Product Manager reference not required",
+    "runId": "c800798d-1dd5-4b22-9874-95fd74b90477",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-403 reported defect: Email shows incorrect line after DAM Manager approval – Product Manager reference not required",
+    "durationMs": 4277,
+    "environment": "staging-iksula",
+    "errorMessage": "*Environment: Prod* * Workflow: Marketing Manager → DAM Manager → Publish to Web *Steps to Reproduce:* # Marketing Manager approves an product and sends it to *DAM Manager*. # DAM Manager receives the approval email notification. # Observe the content of the mail. *Expected Result:* * Email should only instruct the DAM Manager to review and publish the product. * No further steps or Product Manager reference should be included. *Actual Result:* * Email incorrectly contains the line: *\"Post…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "The DAM Manager approval email reused the shared In-Review product template that still referenced sending the product to Product Manager. The incorrect post-approval line was removed for the DAM Manager publish-to-web path.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.84. code-bug is acceptable because the template selection/content may be controlled by workflow logic."
+  }
+}

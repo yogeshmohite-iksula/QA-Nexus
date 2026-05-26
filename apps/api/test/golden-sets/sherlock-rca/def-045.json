@@ -1,0 +1,23 @@
+{
+  "id": "def-045",
+  "input": {
+    "testCaseId": "TC-RET-940",
+    "testCaseTitle": "Rename Product manager instead of Project Manager",
+    "runId": "1aa72d7b-83c1-45c4-9569-cbd30913b009",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-356 reported defect: Rename Product manager instead of Project Manager",
+    "durationMs": 11468,
+    "environment": "prod-iksula",
+    "errorMessage": "Rename Product manager instead of Project Manager",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "Workflow action labels used Project Manager where the product workflow required Product Manager. The copy was corrected so Product Head and Marketing Head users see Product Manager in the action dropdown.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "high",
+    "notesForEval": "Numeric confidence 0.95. This is a straightforward UI copy/label defect."
+  }
+}

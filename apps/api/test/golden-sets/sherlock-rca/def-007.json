@@ -1,0 +1,23 @@
+{
+  "id": "def-007",
+  "input": {
+    "testCaseId": "TC-RET-902",
+    "testCaseTitle": "Email Notification Not Triggered for Certain Update Workflow Transitions in Product Workflow (PIM)",
+    "runId": "d3f39bfe-057e-42b7-9426-b91188880812",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-387 reported defect: Email Notification Not Triggered for Certain Update Workflow Transitions in Product Workflow (PIM)",
+    "durationMs": 5065,
+    "environment": "staging-iksula",
+    "errorMessage": "*Description:* In the PIM Product Workflow, email notifications are not triggered for specific transitions performed by *Product Head* and *Marketing Head*. These transitions are expected to send emails but currently result in *no email being triggered*. |Role|Current Status|Action Taken|New Status|Mail Expected To|Mail Triggered| |Product Head|InReview|Update to Marketing Manager|Update Required|To: Marketing Manager CC: Product Manager|❌ No| |Marketing Head|InReview|Update to Marketing…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "Product Head and Marketing Head update transitions had incomplete notification-recipient logic. The Marketing Manager CC path was missing on the Marketing Head to Product Head update flow until the mail rule was corrected.",
+    "acceptableAlternatives": ["auth-permissions"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.88. auth-permissions is defensible because the symptom is role-specific, but the evidence points to notification rule logic."
+  }
+}

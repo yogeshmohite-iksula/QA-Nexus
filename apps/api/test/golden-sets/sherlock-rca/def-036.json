@@ -1,0 +1,23 @@
+{
+  "id": "def-036",
+  "input": {
+    "testCaseId": "TC-RET-931",
+    "testCaseTitle": "After login from marketing head,found exception after click on save button.Its not be working properly.",
+    "runId": "80609f56-cd6e-43e1-adcc-19e1c67acd58",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-190 reported defect: After login from marketing head,found exception after click on save button.Its not be working properly.",
+    "durationMs": 11045,
+    "environment": "local-dev",
+    "errorMessage": "After login from marketing head, found exception after click on save button. Its not be working properly.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "Marketing Head save raised an exception, and the preserved record only confirms a later code update and successful retest. The ticket does not include the exception text or reproduction data needed for a narrower category.",
+    "acceptableAlternatives": ["auth-permissions"],
+    "confidence": "low",
+    "notesForEval": "Numeric confidence 0.58. Hard case: role specificity makes auth-permissions possible, but the evidence is too thin for a confident permission label."
+  }
+}
