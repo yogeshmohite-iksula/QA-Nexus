@@ -1,0 +1,92 @@
+{
+  "timestamp": "2026-05-24T12:24:50.244Z",
+  "corpusSize": 5,
+  "crashes": 0,
+  "top2HitRate": 0,
+  "calibration": null,
+  "highConfidencePredictionCount": 0,
+  "results": [
+    {
+      "caseId": "def-001",
+      "groundTruth": "code-bug",
+      "acceptableAlts": [
+        "data-bug"
+      ],
+      "topCategories": [],
+      "topConfidences": [],
+      "top2Hit": false,
+      "highConfidencePredictionCorrect": null,
+      "status": "degraded",
+      "okAgentCount": 0,
+      "hypothesisCount": 0,
+      "durationMs": 526,
+      "crashed": false
+    },
+    {
+      "caseId": "def-002",
+      "groundTruth": "env-config",
+      "acceptableAlts": [
+        "flaky-network",
+        "payment-gateway"
+      ],
+      "topCategories": [],
+      "topConfidences": [],
+      "top2Hit": false,
+      "highConfidencePredictionCorrect": null,
+      "status": "degraded",
+      "okAgentCount": 0,
+      "hypothesisCount": 0,
+      "durationMs": 887,
+      "crashed": false
+    },
+    {
+      "caseId": "def-003",
+      "groundTruth": "code-bug",
+      "acceptableAlts": [
+        "data-bug"
+      ],
+      "topCategories": [],
+      "topConfidences": [],
+      "top2Hit": false,
+      "highConfidencePredictionCorrect": null,
+      "status": "degraded",
+      "okAgentCount": 0,
+      "hypothesisCount": 0,
+      "durationMs": 984,
+      "crashed": false
+    },
+    {
+      "caseId": "def-004",
+      "groundTruth": "payment-gateway",
+      "acceptableAlts": [
+        "code-bug"
+      ],
+      "topCategories": [],
+      "topConfidences": [],
+      "top2Hit": false,
+      "highConfidencePredictionCorrect": null,
+      "status": "degraded",
+      "okAgentCount": 0,
+      "hypothesisCount": 0,
+      "durationMs": 728,
+      "crashed": false
+    },
+    {
+      "caseId": "def-005",
+      "groundTruth": "race-condition",
+      "acceptableAlts": [
+        "code-bug",
+        "payment-gateway"
+      ],
+      "topCategories": [],
+      "topConfidences": [],
+      "top2Hit": false,
+      "highConfidencePredictionCorrect": null,
+      "status": "degraded",
+      "okAgentCount": 0,
+      "hypothesisCount": 0,
+      "durationMs": 823,
+      "crashed": false
+    }
+  ]
+}
