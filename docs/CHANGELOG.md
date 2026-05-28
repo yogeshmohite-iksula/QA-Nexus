@@ -13,6 +13,28 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+## [M5 CORE] - 2026-05-27
+
+**M5 CORE milestone closed Wed Day-28 2026-05-27.** 4 binding frames + F28 Tier-2 bonus + 3 ADRs ratified (impl LIVE) + AC042 Sherlock RCA corpus eval PASS gate cleared on the 50-defect golden set. F26 + F27 carry to Day-29 as Tier-2 reserve allowance per ADR-022 §5.9.
+
+**Frames shipped:**
+
+- **F19 Run Console** (PR #198) — v2 HTML + skill v2.2; Option C hybrid reorganize + patch; 6 polish rounds.
+- **F22 Defect Detail** (PR #192) — v2 HTML + skill v2.2; bundle REJECTED Day-23 (30-50% divergence); first canonical port.
+- **F23 Reports Studio** (PR #203) — bundle; pre-Step-3 sanity check PASS at 12.5% ARIA divergence; diff-probe AMBER.
+- **F25 Executive Dashboard** (PR #197) — bundle; first bundle-workflow SUCCESS at 0% structural divergence.
+- **F28 Settings & Audit** (PR #214) — **Tier-2 bonus**; v2.3 in-place re-port shipped Day-28.
+
+**ADRs ratified:**
+
+- **ADR-020 Jira sync architecture** (Day-22; impl LIVE — #189 + #195; 15 events wired).
+- **ADR-021 Reports backend** (Day-23; impl LIVE — #194; 6 report kinds + SWR cache + 02:30 IST cron).
+- **ADR-022 Frontend Handoff Bundle workflow** (Day-27; PR #208; 3-frame validation 2 ✓ : 1 ✗; bundle ADDITIVE to Rule 15 with mandatory §5.9 pre-Step-3 sanity check).
+
+**AC042 Sherlock RCA corpus eval — PASS:** top-2 **64%** (gate ≥ 40%), calibration **1.00** (gate ≥ 0.8), crashes **0/50**, corpus n=50. Fix (PR #213): (1) Zod schema loosen in `sherlock-code/schemas.ts` (evidence union + agent optional, shared across 4 agents); (2) prompt calibration nudge in 4 agent system prompts per ADR-019 §2 amendment. Provenance: Codex-assisted labels + Yogesh spot-check (6 sub-0.70 cases) per ADR-022 §5.9. Day-28 Groq usage ~424/1000 RPD.
+
+**Cascade:** 28 PRs merged (10 Phase A + 17 Phase B EOD + 1 schema-fix #213). **Retro dominant friction:** orchestrator-absence (Fri+Sat+Mon = 3 calendar days lost); full M5 retro Thu Day-29. See `docs/m5/m5-close-report.md`.
+
 ### Fixed — Day 28 (Wed) — Sherlock schema bridge + agent prompt calibration → AC042 PASS [m5 close gate]
 
 Day-28 Wed — closed the AC042 binding gate (M5 CORE close gate). Two narrow fixes after Day-27's FAIL diagnosis (all 4 agents returned 0 hypotheses → top-2 0.0%).
