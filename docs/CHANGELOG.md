@@ -13,6 +13,31 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 28 (Wed) — Sherlock schema bridge + agent prompt calibration → AC042 PASS [m5 close gate]
+
+Day-28 Wed — closed the AC042 binding gate (M5 CORE close gate). Two narrow fixes after Day-27's FAIL diagnosis (all 4 agents returned 0 hypotheses → top-2 0.0%).
+
+**1. Schema bridge (`apps/api/src/agents/sherlock-code/schemas.ts`, shared by all 4 agents):**
+
+- `SherlockHypothesisSchema.evidence` was `z.array(z.string())` but `openai/gpt-oss-120b` emits a single `string` per hypothesis → loosened to `z.union([z.array(z.string()).max(10), z.string()]).transform(v => Array.isArray(v) ? v : [v]).default([])`.
+- `SherlockHypothesisSchema.agent` was a required enum but the model omits it (each agent service re-tags its own output in the caller per the design comment) → made `.optional()`.
+- Root cause surfaced via a 1-defect smoke (4 Groq calls) with env-gated diagnostic logging (reverted after diagnosis).
+
+**2. Prompt calibration (Plan A2 — all 4 agent system prompts: sherlock-code/prompts.ts + data/env/flake inline):**
+
+- Replaced single-line `0.9+ only when…` guidance with explicit 4-band confidence guidance per ADR-019 §2: 0.90-1.00 (bet reputation) / 0.75-0.89 (strong, second conceivable) / 0.60-0.74 (two equally plausible) / 0.50-0.59 (ambiguous, mark for human review). Plus "DO NOT default to 0.8+" anchor.
+- Fixes overconfidence: schema-only fix gave top-2 54% but calibration 0.57 (14 high-conf preds, only 8 correct). After A2: only 4 high-conf preds, all 4 correct.
+
+**AC042 binding eval (corpus n=50) trajectory:**
+
+- Day-27 pre-fix: top-2 0.0% / cal n/a (Zod fail, 0 hypotheses)
+- Day-28 schema-only: top-2 54.0% / cal 0.57 (PARTIAL)
+- Day-28 schema + A2: **top-2 64.0% / cal 1.00 / crashes 0/50 → PASS both gates**
+
+**Tooling:** `apps/api/test/ac042-eval.ts` (corpus-size-agnostic harness + `AC042_LIMIT` env for single-defect smoke) + `ac042:eval` pnpm script + `results-2026-05-27.json` binding-eval evidence. (ac042-eval.ts + package.json overlap PR #201 — rebase keeps #201 canonical post-merge.)
+
+**Provenance (per ADR-022 §5.9):** corpus labels are Codex-generated + Yogesh spot-checked (6 sub-0.70 cases). AC042 this run = LLM-Sherlock vs LLM-Codex agreement, not pure-human ground truth. M6+ corpus-governance review item.
+
 ### Decided — Day 27 (Tue) — ADR-022 ratified: Frontend Handoff Bundle workflow for M5+ frames [m5 day-27]
 
 Day-27 Tue 2026-05-26 PM. ADR-022 ratified after the 3-frame validation gate fired: F22 ✗ (Day-23, bundle 30-50% structurally divergent, v2 HTML fallback per Hard Rule 15) + F25 ✓ (Day-24, 0% divergence, first bundle-workflow SUCCESS) + F23 ✓ (Day-27, 12.5% ARIA divergence, sanity check confirmed; diff-probe AMBER band 5.1-9.6%). **2 ✓ : 1 ✗ → ratified** with mandatory §5.9 pre-Step-3 sanity check (30% structural-divergence threshold triggers Rule 15 fallback).
