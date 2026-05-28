@@ -63,3 +63,112 @@ If POTENTIAL_INVERSION fires PREDICTABLY on Radix/shadcn Accordion wrappers (and
 ---
 
 _Initial entry Day-22 ~14:30 IST. Update as F19 + F22 PRs land. Promote to a session retro entry in RETROS.md once 3+ frames have been ported via v2.2._
+
+---
+
+# Frame-port skill v2.2 — first F22 use (Day-23 2026-05-20)
+
+> First production use of skill v2.2 (Day-21 amendment: BEM-class section detection + nested-section-count inverse probe) on F22 Defect Detail v2 HTML. Probe behavior confirmed expected; AMBER band stable across iterations; known Tailwind-vs-BEM SECONDARY-tier limitation persists per F20/F21 precedent.
+
+## Probe configuration
+
+```
+node .claude/skills/frame-port/diff-probe.mjs \
+  --frame F22 \
+  --canonical "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F22 Defect Detail v2.html" \
+  --port http://localhost:3000/projects/iksula-returns/defects/DEF-RET-2104/ \
+  --spec .claude/skills/frame-port/specs/F22.spec.json \
+  --out .claude/skills/frame-port/diffs/F22/
+```
+
+- Scope: `content` (default, 5% threshold, blocks)
+- Spec source: `.claude/skills/frame-port/specs/F22.spec.json` — regenerated via `extract-spec.mjs` (bundle's own spec.json was schemaVersion 3, flat — incompatible with probe v2.2 tree walker; first crash was `TypeError: nodes is not iterable` on bundle spec)
+
+## Final band breakdown (after polish iterations)
+
+| Viewport | PRIMARY ARIA   | SECONDARY class | Pixel | Band  |
+| -------- | -------------- | --------------- | ----- | ----- |
+| 320      | **9/9 (100%)** | 0/27            | 9.30% | AMBER |
+| 768      | **9/9 (100%)** | 0/27            | 6.20% | AMBER |
+| 1024     | **9/9 (100%)** | 0/27            | 5.10% | AMBER |
+| 1440     | **9/9 (100%)** | 0/27            | 5.88% | AMBER |
+
+## Interpretation
+
+### PRIMARY ARIA tier (Hard Rule 18 Part 1 binding contract)
+
+**100% PASS on every viewport.** The role+aria-label match across:
+
+- `banner` (role="banner")
+- `proj-pill` (role="button", aria-label="Project switcher")
+- `tablist` (role="tablist")
+- `rail` (role="navigation", aria-label="Primary navigation")
+- `railCollapseToggle` (aria-label="Collapse navigation")
+- `main` (role="main")
+- `Breadcrumb` (role="navigation", aria-label="Breadcrumb")
+- `section` (role="region" × 5 — Sherlock/Evidence/Curator/Discussion + per-layer)
+- `cur-panel` (role="region", aria-label="Curator similar defects detected")
+- `Defect metadata` (role="complementary", aria-label="Defect metadata")
+
+### SECONDARY class-token tier (known Tailwind-vs-BEM limitation)
+
+**0/27 PASS.** Per F20 Day-20 + F21 Day-19 precedent, this is the documented limitation:
+
+> "Probe SECONDARY class-match fails on Tailwind ports because canonical uses BEM class names but ports use Tailwind utilities."
+
+Accepted as known per Hard Rule 18 Day-19 Part 3 band system.
+
+### Nested-count inverse probe (Day-21 amendment Part 4)
+
+POTENTIAL_INVERSION (WARN only) on 6 parents:
+
+- `section`: 16 canonical vs 27 port (React component wrappers)
+- `cur-panel`: 5 canonical vs 27 port
+- `Defect metadata`: 11 canonical vs 19 port
+- `banner`: 2 canonical vs 1 port (MISSING — accepted, AdminShell renders 1 banner)
+- `main`: 53 canonical vs 0 port (MISSING — Tailwind class detection limitation)
+- `rail`: 8 canonical vs 4 port (MISSING — AdminShell-internal, accepted per F21 Day-19)
+
+No blocking MISSING flags after polish — all caught via Yogesh visual gate at 320 + 1440.
+
+## Pixel diff stability across iterations
+
+The pixel diff held in the AMBER range (5-10%) across ALL 4 polish iterations:
+
+- After initial re-port: 5.5-7.9%
+- After header layout fix: 5.5-7.9%
+- After font polish: 5.5-7.9%
+- After 5-issue polish (Sherlock bg + button sizes + tabs + Curator + Discussion): 5.1-9.3%
+
+**Implication:** AMBER band reflects renderer-noise floor (Chrome HTML vs Chrome React with different anti-aliasing on different DOM tree depth). Polish iterations that materially change the layout don't move the band — they refine within it. The band ALONE cannot signal "done" — Yogesh visual gate is authoritative for AMBER per Hard Rule 18 Day-19 Part 3.
+
+## Bundle spec schemaVersion mismatch
+
+The Claude Design bundle ships its own `spec.json` (schemaVersion 3, flat sections list). Skill v2.2 `diff-probe.mjs` expects schemaVersion 2 (tree with `children`). On first probe run, crashed with:
+
+```
+TypeError: nodes is not iterable
+  at walk (.claude/skills/frame-port/diff-probe.mjs:168:21)
+```
+
+**Recovery:** Re-run `extract-spec.mjs` against the canonical v2 HTML to get a schemaVersion 2 spec:
+
+```
+node .claude/skills/frame-port/extract-spec.mjs \
+  --frame F22 \
+  --html "QA Nexus/PM1/PM1_UI_v2/Redesign Frame by claude design/F22 Defect Detail v2.html" \
+  --out .claude/skills/frame-port/specs/F22.spec.json
+```
+
+Result: 72 sections, 66 structural — works as probe input.
+
+## Codified going forward
+
+When Claude Design bundle ships, **ALWAYS regenerate spec.json via skill v2.2's extract-spec.mjs** before running diff-probe. Bundle's own spec.json is NOT a substitute. Add to ADR-022 §5.10 candidate.
+
+## Cross-references
+
+- `feedback_claude_design_bundle_first_use.md` — bundle workflow rejection that triggered the re-port
+- `feedback_f22_polish_iteration.md` — polish iterations during which the band held AMBER stable
+- Day-19/20 lessons: F20 + F21 SECONDARY class-token limitation documented earlier
+- PR #192 — F22 canonical port shipping AMBER on all viewports
