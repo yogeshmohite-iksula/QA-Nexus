@@ -13,6 +13,25 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Decided — Day 27 (Tue) — ADR-022 ratified: Frontend Handoff Bundle workflow for M5+ frames [m5 day-27]
+
+Day-27 Tue 2026-05-26 PM. ADR-022 ratified after the 3-frame validation gate fired: F22 ✗ (Day-23, bundle 30-50% structurally divergent, v2 HTML fallback per Hard Rule 15) + F25 ✓ (Day-24, 0% divergence, first bundle-workflow SUCCESS) + F23 ✓ (Day-27, 12.5% ARIA divergence, sanity check confirmed; diff-probe AMBER band 5.1-9.6%). **2 ✓ : 1 ✗ → ratified** with mandatory §5.9 pre-Step-3 sanity check (30% structural-divergence threshold triggers Rule 15 fallback).
+
+**Decisions locked:**
+
+- Bundle path is **ADDITIVE** to Hard Rule 15, not REPLACEMENT. Frames without bundles (M3 ports, F26, F28) keep the existing 7-step workflow.
+- Bundle artifacts (`design.html` + `design-notes.md` + `spec.json` + `screenshots/` + `README.md`) are AUTHORITATIVE for Steps 1+2 only; Steps 3-7 unchanged from the v2 HTML port flow.
+- FE+1 still writes TSX manually in Step 4 — bundle does NOT auto-generate React (Day-23 amendment correcting Day-22 draft).
+- Pre-Step-3 sanity check (§5.9) MANDATORY: count v2 HTML sections vs bundle `spec.json` sections; if ≥ 30% structural divergence, REJECT the bundle + port via Rule 15.
+- Bundle storage: repo at `apps/web/components/<frame>/handoff-bundle/`; R2 rejected (no auditability + free-tier add).
+- Bundle versioning + HMAC signing: DEFERRED to M6 (see `docs/m6/m6-hygiene-followups.md`).
+
+**Effective scope:** F25 (PASSED Day-24) + F23 (PASSED Day-27) shipped via bundle path. F26 + F28 carry to Wed Day-28 via v2 HTML/v1 HTML + skill v2.2 (neither has a bundle). Bundle path remains ENABLED for any future M5+/M6 frame where Claude Design ships a bundle AND pre-Step-3 sanity check passes.
+
+**Hard Rule 15 amendment Part X:** forthcoming as a separate followup (post-M5 enhancement); will codify precedence when both bundle + v2 HTML exist for a frame.
+
+**Cross-references:** Hard Rule 15 (v2 HTML source-of-truth — remains DEFAULT when bundle absent OR sanity check fails) · Hard Rule 18 (skill-mandatory workflow + Day-19/21 amendments) · §5.3 pre-built TSX path-adaptation finding from F22 · §5.9 bundle-canonical divergence + sanity check threshold from F22 REJECTION · `.claude/memory/feedback_claude_design_bundle_first_use.md` · `.claude/memory/feedback_skill_v2.2_first_use.md` 3-frame outcome journal.
+
 ### Added — Day 25 (Sun) — AC042 corpus port script + 45 staged cases + labeling worksheet [m5 day-25 ac042 prep]
 
 Day-25 Sun buffer task (~2 hr) — eliminated the mechanical half of Monday's AC042 corpus-expansion blocker. Splits the prep into (a) deterministic schema port (this PR, done) + (b) ground-truth labeling (Yogesh Day-26 AM, ~2-3 hr down from previously-estimated 4-6 hr).
