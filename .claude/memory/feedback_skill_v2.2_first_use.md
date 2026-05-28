@@ -172,3 +172,59 @@ When Claude Design bundle ships, **ALWAYS regenerate spec.json via skill v2.2's 
 - `feedback_f22_polish_iteration.md` — polish iterations during which the band held AMBER stable
 - Day-19/20 lessons: F20 + F21 SECONDARY class-token limitation documented earlier
 - PR #192 — F22 canonical port shipping AMBER on all viewports
+
+---
+
+# Frame-port skill v2.2 — backend (BE+1) perspective (Day-28 2026-05-27, M5 CORE close)
+
+> Skill v2.2 is a **frontend frame-port** tool. Day-28's backend work (AC042 Sherlock
+> eval gate — the M5 CORE close gate) didn't exercise the skill's diff-probe or
+> BEM-section machinery at all. Logging the BE-side observations anyway, because two
+> skill-adjacent patterns DID prove out and one M6 gap surfaced.
+
+## What did NOT apply (and why that's fine)
+
+- **BEM-class section detection + nested-count inverse probe** (the v2.2 headline
+  features) are about HTML→React DOM fidelity. Backend agent work has no
+  canonical-HTML-to-port comparison, so none of it applied. The skill is correctly
+  FE-scoped; there's no backend drift to flag.
+
+## Skill-design patterns that generalized to the backend
+
+1. **ADR-driven contracts held up under a real gate.** ADR-019 §6 (Sherlock JSON
+   output contract + never-throws) and the per-agent confidence-calibration prompt
+   design were validated by AC042 PASS (top-2 64.0% / cal 1.00). The "spec the
+   contract in an ADR → enforce in code (Zod) → measure with a gate" loop is the
+   backend analogue of the skill's "spec.json → diff-probe → visual gate" loop.
+2. **Plan A2 calibration-nudge is a generalizable LLM-overconfidence remedy.**
+   Replacing a single `0.9+ only when…` line with an explicit 4-band rubric
+   (0.90–1.00 / 0.75–0.89 / 0.60–0.74 / 0.50–0.59 + "DO NOT default to 0.8+") moved
+   calibration 0.57 → 1.00 with no code change. Reusable for ANY LLM feature that
+   emits a confidence (Composer, Curator). Promote to PM1_PATTERNS.md as a
+   prompt-engineering pattern.
+3. **Smoke-before-binding-eval mirrors diff-probe-before-visual-gate.** See
+   `feedback_eval_gate_smoke_first.md`. Cheap structural check first, expensive
+   authoritative gate second — same shape as the skill's probe → Rule-13 ordering.
+
+## M6 gap surfaced
+
+The frame-port skill makes the FE port workflow **executable + auditable**
+(extract-spec → diff-probe → bands). The backend has **no equivalent skill** for the
+analogous workflow — "stand up / modify an LLM agent → smoke → binding eval →
+calibration check." Day-28's AC042 work was done by hand with throwaway env flags.
+**M6 candidate: an `agent-eval` skill** that scaffolds the eval harness (with a
+permanent `--limit`/`--debug` smoke mode), runs the smoke, then the binding eval, and
+emits a GREEN/AMBER/RED-style band on the gate thresholds — the backend mirror of
+`frame-port`.
+
+## Cross-references
+
+- `feedback_eval_gate_smoke_first.md` — the smoke-first pattern (Day-28).
+- `feedback_ac042_provenance_llm_assist.md` — corpus provenance (Day-28).
+- ADR-019 (Sherlock RCA design) · ADR-022 §5.9 (LLM-assist reserve allowance).
+- PR #213 — the Day-28 schema-bridge + Plan A2 calibration fix that closed AC042.
+
+---
+
+_BE+1 entry Day-28 2026-05-27. The FE-perspective entries above (F22 Day-22/23) remain
+the primary skill-v2.2 journal; this is the backend footnote._
