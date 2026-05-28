@@ -1,0 +1,23 @@
+{
+  "id": "def-031",
+  "input": {
+    "testCaseId": "TC-RET-926",
+    "testCaseTitle": "Dam workflow->All 15 PMG are not available in permission bundle.",
+    "runId": "45117ddd-31ef-4f30-8c33-98c827719a26",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-187 reported defect: Dam workflow->All 15 PMG are not available in permission bundle.",
+    "durationMs": 9785,
+    "environment": "local-dev",
+    "errorMessage": "Dam workflow->All 15 PMG are not available in permission bundle.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "PMG master objects were not all saved and published, so the DAM workflow permission bundle did not list all 15 PMGs. Publishing the PMG master objects restored the expected permission-bundle entries.",
+    "acceptableAlternatives": ["auth-permissions"],
+    "confidence": "high",
+    "notesForEval": "Numeric confidence 0.91. auth-permissions is acceptable because the missing data appeared inside a permission bundle."
+  }
+}

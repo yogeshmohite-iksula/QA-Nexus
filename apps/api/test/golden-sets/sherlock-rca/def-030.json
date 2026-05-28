@@ -1,0 +1,23 @@
+{
+  "id": "def-030",
+  "input": {
+    "testCaseId": "TC-RET-925",
+    "testCaseTitle": "Masters->After Search functionality is not working with ID, path and date",
+    "runId": "48e10692-72c7-4b96-adbe-12f4e1741223",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-177 reported defect: Masters->After Search functionality is not working with ID, path and date",
+    "durationMs": 6526,
+    "environment": "local-dev",
+    "errorMessage": "Masters->After Search functionality is not working with ID, path and date Steps to be replicate: 1.Go to URL 2.[Http://127.0.0.1:8080/Admin|Http://127.0.0.1:8080/Admin] 3.Enter valid login credentials 4.Click on data objects 5.Go to Masters 6.Click on Brands 7.Go to search 8.Search functionality is not working with ID,path and date Expected Result: Search functionality should be work with ID,date and other fields. Actual Result: Search functionality is not working with ID and path",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "The reported ID/path/date search behavior matched Pimcore's default search limitation rather than a project defect. The reviewer noted default Pimcore search is text-based and does not search numeric fields the way the tester expected.",
+    "acceptableAlternatives": ["dependency-version"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.78. dependency-version is acceptable if Sherlock frames this as inherited platform behavior, but no version mismatch is evidenced."
+  }
+}

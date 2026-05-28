@@ -1,0 +1,23 @@
+{
+  "id": "def-023",
+  "input": {
+    "testCaseId": "TC-RET-918",
+    "testCaseTitle": "Rename Sub Brand to Brand Extension",
+    "runId": "8b08317f-9c21-4179-be5b-e3d4c9330c3e",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-292 reported defect: Rename Sub Brand to Brand Extension",
+    "durationMs": 11704,
+    "environment": "staging-iksula",
+    "errorMessage": "!image-20250415-101404.png|width=1070,height=530,alt=\"image-20250415-101404.png\"! rename folder and title of ht sub brand name and check the impact as well",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "The requested Sub Brand to Brand Extension rename conflicted with Pimcore object/folder naming behavior. The object folder name could not be changed safely, so only the PMG template and Product class display name were updated.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.80. ui-regression is acceptable if the model focuses on display-label behavior, but the comments describe a platform constraint/change request."
+  }
+}

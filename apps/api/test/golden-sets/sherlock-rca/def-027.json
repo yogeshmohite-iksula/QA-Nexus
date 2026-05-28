@@ -1,0 +1,23 @@
+{
+  "id": "def-027",
+  "input": {
+    "testCaseId": "TC-RET-922",
+    "testCaseTitle": "Login from Product head,approve/reject options are not be visible.",
+    "runId": "e23f0eec-be59-4031-aa73-84243215f878",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-194 reported defect: Login from Product head,approve/reject options are not be visible.",
+    "durationMs": 11138,
+    "environment": "staging-iksula",
+    "errorMessage": "Login from Product head,approve/reject options are not be visible.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "Product Head did not see the expected approve/reject actions after login. The role-specific workflow actions were corrected and verified on the development server.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.78. ui-regression is acceptable because the visible symptom is missing buttons; source detail is thin."
+  }
+}

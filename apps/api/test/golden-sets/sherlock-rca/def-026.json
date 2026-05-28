@@ -1,0 +1,23 @@
+{
+  "id": "def-026",
+  "input": {
+    "testCaseId": "TC-RET-921",
+    "testCaseTitle": "Reopen Product Workflow Fails – Email Error & Conflicting Statuses",
+    "runId": "d4d9ef41-8d79-4e67-93e2-2bfdda51da7d",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-405 reported defect: Reopen Product Workflow Fails – Email Error & Conflicting Statuses",
+    "durationMs": 4880,
+    "environment": "prod-iksula",
+    "errorMessage": "*Description:* When the Product Manager attempts to reopen a product workflow, multiple issues are occurring: # On first attempt of *Action > Reopen product workflow*, the system throws an error: {noformat}error performing action on this element Workflow processing error: Email sending failed: Email template path is empty! {noformat} # On retrying *Action > Reopen product workflow*, another error appears: {noformat}transition failed The marking does not enable the transition {noformat} # After…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "env-config",
+    "rootCauseDetail": "Reopen Product Workflow was missing or misconfigured workflow email template wiring, producing Email template path is empty and then invalid transition state. Resolving the workflow template issue restored the New status and expected action button.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.88. code-bug is acceptable if the model treats workflow transition handling as application logic."
+  }
+}

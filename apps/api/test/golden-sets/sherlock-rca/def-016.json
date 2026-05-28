@@ -1,0 +1,23 @@
+{
+  "id": "def-016",
+  "input": {
+    "testCaseId": "TC-RET-911",
+    "testCaseTitle": "Mismatch of ERP Attributes Between New NPI Creation and Post-Publish View",
+    "runId": "21ccfa20-62d4-400f-9a5c-bf61446f86e7",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-382 reported defect: Mismatch of ERP Attributes Between New NPI Creation and Post-Publish View",
+    "durationMs": 2050,
+    "environment": "prod-iksula",
+    "errorMessage": "*Description:* As per the attribute mapping sheet provided by the client, the ERP form should display consistent attributes in both the New NPI creation phase and after the product is published. However, after publishing the product and enabling *\"New item code creation\"*, the ERP form displays additional unexpected attributes. Specifically, *five extra fields* are visible post-publish that were not required to be shown. *Steps to Reproduce:* # Go to *NPI section* in the PIMCore Admin. # Start…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "The ERP attribute mapping after publish was not aligned with the client-provided attribute sheet. Five extra ERP attributes appeared after enabling new item code creation until the attribute mapping was corrected.",
+    "acceptableAlternatives": ["ui-regression", "code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.88. ui-regression is acceptable because the symptom is extra fields in the ERP form."
+  }
+}

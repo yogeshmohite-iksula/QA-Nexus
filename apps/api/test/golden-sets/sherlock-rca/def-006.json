@@ -1,0 +1,23 @@
+{
+  "id": "def-006",
+  "input": {
+    "testCaseId": "TC-RET-901",
+    "testCaseTitle": "Mail are not trigger as per the PMG selected in NPI.",
+    "runId": "7d8c77f1-7ce5-4b8d-a23e-8e216df34ed6",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-372 reported defect: Mail are not trigger as per the PMG selected in NPI.",
+    "durationMs": 7404,
+    "environment": "staging-iksula",
+    "errorMessage": "e.g. Created a New NPI and it is under the coated Industrial > belt But Mail are go to Different Product Developers Pandu_B -- Bonded Industrial. >Thinwheel, Thinwheel G2 Gopalakrishnan_C - Coated Industrial > Sheets Mathews_Reji -- Coated Retail > Sheets Retail",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "NPI notification routing used the wrong PMG-to-product-developer mapping. A Coated Industrial Belt NPI routed mail to Bonded Industrial and other developers until the PMG scenarios were checked and corrected.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.84. code-bug is acceptable if the reviewer treats the bad routing as workflow lookup logic rather than master-data mapping."
+  }
+}

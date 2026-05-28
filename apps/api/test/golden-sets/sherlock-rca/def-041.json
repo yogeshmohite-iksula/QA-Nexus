@@ -1,0 +1,23 @@
+{
+  "id": "def-041",
+  "input": {
+    "testCaseId": "TC-RET-936",
+    "testCaseTitle": "After creating the product,By default SAG code is not showing.",
+    "runId": "f59e6a67-5c26-4986-801c-40bc95005fba",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-181 reported defect: After creating the product,By default SAG code is not showing.",
+    "durationMs": 9476,
+    "environment": "staging-iksula",
+    "errorMessage": "After creating the product,By default SAG code is not showing.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "Newly created products did not default-populate the SAG code. The expected SAG value was not being derived or displayed from the selected product data until the fix was verified.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "low",
+    "notesForEval": "Numeric confidence 0.72. code-bug is acceptable because the defect may be in form data-binding rather than the underlying data."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "def-008",
+  "input": {
+    "testCaseId": "TC-RET-903",
+    "testCaseTitle": "Remove DAM tab till the product is approved for PM, PH, MM. once the product is approved then only dam tab should be visible as per permissions",
+    "runId": "61026dff-1573-430a-a4de-3a440ef16feb",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-341 reported defect: Remove DAM tab till the product is approved for PM, PH, MM. once the product is approved then only dam tab should be visible as per permissions",
+    "durationMs": 10172,
+    "environment": "local-dev",
+    "errorMessage": "Remove DAM tab till the product is approved for pm, ph, mm. once the product is approved then only dam tab should be visible as per permissions",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "The DAM tab visibility and field editability matrix was not enforced by role and approval state. PM, PH, and MM users could see or edit DAM surfaces before the product state allowed it.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.86. ui-regression is acceptable because the visible symptom is tab rendering, but the rule being enforced is role/state permission."
+  }
+}

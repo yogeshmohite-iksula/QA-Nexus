@@ -1,0 +1,23 @@
+{
+  "id": "def-048",
+  "input": {
+    "testCaseId": "TC-RET-943",
+    "testCaseTitle": "After ERP Approved the Product, If user click on DAM Tab then ERP tab can't be clickable in all the User.",
+    "runId": "e74f64b7-6e7a-48b0-9db8-2c44aaa8afcb",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-366 reported defect: After ERP Approved the Product, If user click on DAM Tab then ERP tab can't be clickable in all the User.",
+    "durationMs": 8824,
+    "environment": "staging-iksula",
+    "errorMessage": "After ERP Approved the Product, If user click on DAM Tab then ERP tab can't be clickable in all the User. — see CPI ticket CPI-366 for repro context (no description in source corpus)",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "After ERP approval, switching to the DAM tab left the ERP tab disabled and unclickable for users. The tab interaction state was corrected so ERP and DAM tabs remain clickable and their information visible.",
+    "acceptableAlternatives": ["code-bug", "auth-permissions"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.84. code-bug is acceptable for tab-state logic; auth-permissions is acceptable because user roles were mentioned."
+  }
+}

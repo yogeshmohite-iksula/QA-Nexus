@@ -1,0 +1,23 @@
+{
+  "id": "def-038",
+  "input": {
+    "testCaseId": "TC-RET-933",
+    "testCaseTitle": "Issue in ERP form and file is not be uploaded",
+    "runId": "a9040ba6-e97b-46f2-ab4f-e7032ccd0b93",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-252 reported defect: Issue in ERP form and file is not be uploaded",
+    "durationMs": 11004,
+    "environment": "staging-iksula",
+    "errorMessage": "Issue in ERP form and file is not be uploaded 1.Go to URL 2.Login from ERP support 3.[http://127.0.0.1/admin/|http://127.0.0.1/admin/] 4.Enter valid login credentials 5.Go to menu list and click on ERP form 6.ERP form page should be open 5.Select PIM id and fill all the detaisl 6.uplad the excel file 7.File is not to be uplaoded then found exception error Expected Result->After uploading the file, file should be uploaded. Actual result: File is not to be uploaded then found exception error…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "ERP form file upload raised an exception instead of accepting the uploaded file. The comments only preserve a prompt to inspect the detailed error link and a later code update, so the exact failing handler is not known.",
+    "acceptableAlternatives": ["data-bug"],
+    "confidence": "low",
+    "notesForEval": "Numeric confidence 0.63. Hard case: the upload payload could be bad data, but the ticket mainly points to an exception fixed by code."
+  }
+}

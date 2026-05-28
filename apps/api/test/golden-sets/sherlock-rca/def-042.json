@@ -1,0 +1,23 @@
+{
+  "id": "def-042",
+  "input": {
+    "testCaseId": "TC-RET-937",
+    "testCaseTitle": "After creating the product,By default PMG code is not showing.",
+    "runId": "8c181c41-e800-4bc7-b62f-7f3d93714385",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-180 reported defect: After creating the product,By default PMG code is not showing.",
+    "durationMs": 8193,
+    "environment": "prod-iksula",
+    "errorMessage": "After creating the product,By default PMG code is not showing.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "data-bug",
+    "rootCauseDetail": "Newly created products did not default-populate the PMG code. The expected PMG classification value was missing from the created product view until the fix was verified.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "low",
+    "notesForEval": "Numeric confidence 0.72. code-bug is acceptable because the defect may be in default-value binding logic."
+  }
+}

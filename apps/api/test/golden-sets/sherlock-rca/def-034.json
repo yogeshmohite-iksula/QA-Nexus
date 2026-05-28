@@ -1,0 +1,23 @@
+{
+  "id": "def-034",
+  "input": {
+    "testCaseId": "TC-RET-929",
+    "testCaseTitle": "In Notification, it is showing as product manager instead of product head, but mail is going to product head only",
+    "runId": "e6856a6b-9348-4285-888c-405f7d3fa99a",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-346 reported defect: In Notification, it is showing as product manager instead of product head, but mail is going to product head only",
+    "durationMs": 5826,
+    "environment": "local-dev",
+    "errorMessage": "In Notification, it is showing as product manager instead of product head, but mail is going to product head only",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "The notification was a misunderstanding of prior workflow context, not a confirmed defect. Comments state the displayed Product Manager notification came from the previous Product Manager to Marketing Manager step, and the Product Workflow worked as expected.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.80. ui-regression is acceptable if Sherlock treats the confusing notification display as a UI issue."
+  }
+}

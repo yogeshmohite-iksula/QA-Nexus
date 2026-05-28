@@ -1,0 +1,23 @@
+{
+  "id": "def-049",
+  "input": {
+    "testCaseId": "TC-RET-944",
+    "testCaseTitle": "Rename the \"Update\" button to \"Update to DAM Manager\" in the DAM workflow",
+    "runId": "585896e4-07fe-46b0-802b-4ab615226819",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-394 reported defect: Rename the \"Update\" button to \"Update to DAM Manager\" in the DAM workflow",
+    "durationMs": 1886,
+    "environment": "local-dev",
+    "errorMessage": "Rename the \"Update\" button to \"Update to DAM Manager\" in the DAM workflow — see CPI ticket CPI-394 for repro context (no description in source corpus)",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "The DAM workflow action dropdown used the generic Update label instead of Update to DAM Manager. The action label was corrected for Product Manager, Product Head, and Marketing Manager users.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "high",
+    "notesForEval": "Numeric confidence 0.92. Straightforward action-label UI defect."
+  }
+}

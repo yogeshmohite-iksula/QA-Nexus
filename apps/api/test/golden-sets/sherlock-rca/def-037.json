@@ -1,0 +1,23 @@
+{
+  "id": "def-037",
+  "input": {
+    "testCaseId": "TC-RET-932",
+    "testCaseTitle": "Mandatory fields should be * and red mark in Page-ERP,Information material,Technical,DAM,SCM,SCO,Quality Summary.",
+    "runId": "5cd944a4-7afd-4fd8-8049-8938a9080c91",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-192 reported defect: Mandatory fields should be * and red mark in Page-ERP,Information material,Technical,DAM,SCM,SCO,Quality Summary.",
+    "durationMs": 4953,
+    "environment": "local-dev",
+    "errorMessage": "Mandatory fields should be * and red mark in Page-ERP,Information material,Technical,DAM,SCM,SCO,Quality Summary.",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "Mandatory-field visual indicators were missing across ERP, Information Material, Technical, DAM, SCM, SCO, and Quality Summary tabs. The UI was updated so required fields show the red asterisk marker.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.82. code-bug is acceptable if the model treats required-marker rendering as form logic."
+  }
+}

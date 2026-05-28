@@ -1,0 +1,23 @@
+{
+  "id": "def-047",
+  "input": {
+    "testCaseId": "TC-RET-942",
+    "testCaseTitle": "Bulk Publish button is only visible for DAM manager or admin in Products/BONDED/ and Products/COATED/ folder",
+    "runId": "5dc287b4-a04d-491c-a904-c718f7b1d166",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-253 reported defect: Bulk Publish button is only visible for DAM manager or admin in Products/BONDED/ and Products/COATED/ folder",
+    "durationMs": 8150,
+    "environment": "local-dev",
+    "errorMessage": "Bulk Publish button is only visible for DAM manager or admin in Products/BONDED/ and Products/COATED/ folder — see CPI ticket CPI-253 for repro context (no description in source corpus)",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "auth-permissions",
+    "rootCauseDetail": "Bulk Publish button visibility needed to be restricted to DAM Manager or Admin in the BONDED and COATED product folders. The role/folder permission behavior was corrected and verified on the development server.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.84. ui-regression is acceptable because the preserved evidence is button visibility screenshots."
+  }
+}

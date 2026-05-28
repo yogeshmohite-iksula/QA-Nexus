@@ -1,0 +1,23 @@
+{
+  "id": "def-028",
+  "input": {
+    "testCaseId": "TC-RET-923",
+    "testCaseTitle": "User Module->After clicking on Email invitation link, found exception error.",
+    "runId": "7e9c1f18-7d6b-484b-86aa-250cfae6413e",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-178 reported defect: User Module->After clicking on Email invitation link, found exception error.",
+    "durationMs": 10399,
+    "environment": "local-dev",
+    "errorMessage": "User Module->After clicking on Email invitation link, found exception error. Steps to be replicate: 1.Go to URL 2.[Http://127.0.0.1:8080/Admin|Http://127.0.0.1:8080/Admin] 3.Enter valid login credentials 4.Go to users 5.Click on product head 6.Enter email id and click on send invitation link 7.After clicking on send invitation link then found exception error. Expected Result: After clicking on send invitation link,its should be work and receive email with correct ID Actual Result: After…",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "code-bug",
+    "rootCauseDetail": "Sending or opening the user invitation link raised an exception in the User Module. The preserved ticket evidence only confirms a code update and successful retest, not the underlying exception class.",
+    "acceptableAlternatives": ["env-config", "auth-permissions"],
+    "confidence": "low",
+    "notesForEval": "Numeric confidence 0.60. Hard case: email delivery/config and permission paths are conceivable, but the source does not preserve enough technical evidence."
+  }
+}

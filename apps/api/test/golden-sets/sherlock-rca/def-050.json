@@ -1,0 +1,23 @@
+{
+  "id": "def-050",
+  "input": {
+    "testCaseId": "TC-RET-945",
+    "testCaseTitle": "New NPI > ERP > Objective Others : Extra field is Showing.",
+    "runId": "5c4b269a-12b3-4fc5-89cc-f1903ac68ce6",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-362 reported defect: New NPI > ERP > Objective Others : Extra field is Showing.",
+    "durationMs": 5480,
+    "environment": "prod-iksula",
+    "errorMessage": "New NPI > ERP > Objective Others : Extra field is Showing. — see CPI ticket CPI-362 for repro context (no description in source corpus)",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "other",
+    "rootCauseDetail": "The Objective Others field was added as a requirements change rather than evidence of a runtime defect. The final dropdown includes If others with a text box, and comments say this was added per requirements and works as expected.",
+    "acceptableAlternatives": ["ui-regression"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.78. ui-regression is acceptable if Sherlock treats the extra field as visible form drift, but the comments read like accepted scope change."
+  }
+}

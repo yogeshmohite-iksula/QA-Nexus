@@ -1,0 +1,23 @@
+{
+  "id": "def-035",
+  "input": {
+    "testCaseId": "TC-RET-930",
+    "testCaseTitle": "Wrong message after upload in SAG, Brand and Brand extension",
+    "runId": "7c522a95-87f9-4c15-81a7-f91d1a4d5e94",
+    "stepNumber": 1,
+    "stepLabel": "Reproduce CPI-291 reported defect: Wrong message after upload in SAG, Brand and Brand extension",
+    "durationMs": 8046,
+    "environment": "local-dev",
+    "errorMessage": "It should be “Brand data has been imported successfully. Please check logs “Assets/BrandLogs“ for more error and success details !image-20250415-100917.png|width=480,height=270,alt=\"image-20250415-100917.png\"! !image-20250415-101735.png|width=1070,height=530,alt=\"image-20250415-101735.png\"!",
+    "stackTrace": null,
+    "priorHistory": null,
+    "kbContext": []
+  },
+  "groundTruth": {
+    "rootCauseCategory": "ui-regression",
+    "rootCauseDetail": "Import success messages for SAG, Brand, and Brand Extension displayed the wrong copy/path guidance. The message text was updated for those import flows on localhost, Dev, and UAT.",
+    "acceptableAlternatives": ["code-bug"],
+    "confidence": "medium",
+    "notesForEval": "Numeric confidence 0.88. code-bug is acceptable because the message is emitted by upload/import logic."
+  }
+}
