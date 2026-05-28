@@ -4,7 +4,7 @@
 // Reached from F18 Run Sessions list (when ported) → click a run row.
 // Direct URL: /projects/<slug>/runs/<runId>.
 
-import { RunConsolePage } from '@/components/runs/run-console-page';
+import { RunConsolePage } from '@/components/f19-run-console/run-console-page';
 
 // Static export needs explicit generateStaticParams for dynamic segments.
 // Pattern A: emit one canonical params combo matching the canned-data

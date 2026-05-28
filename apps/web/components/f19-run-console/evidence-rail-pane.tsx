@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Plus, Search } from 'lucide-react';
+import { Check, Clock, Plus, Search, X } from 'lucide-react';
 import { LiveCapturePill } from './live-pill';
 import { FAIL_CARD, SHERLOCK, EV_TABS, EV_KBD_HINTS, type EvTab } from './canned-data';
 
@@ -25,7 +25,7 @@ export function EvidenceRailPane({ onTabChange, onOpenSherlock }: Props) {
 
   return (
     <aside
-      aria-label="Evidence rail"
+      aria-label="Evidence"
       className="flex min-h-0 flex-col overflow-hidden border-t lg:border-l lg:border-t-0"
       style={{ background: 'var(--canvas)', borderColor: 'var(--border)' }}
     >
@@ -58,11 +58,14 @@ export function EvidenceRailPane({ onTabChange, onOpenSherlock }: Props) {
               role="tab"
               aria-selected={isOn}
               onClick={() => handleTab(t.key)}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11.5px] font-semibold transition-colors hover:bg-[var(--overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+              // Day-25 Round-2 fix: bumped active underline to 3px + brighter
+              // active text color (--t1 instead of --primary) so the selection
+              // is more obvious vs Yogesh canonical comparison.
+              className="-mb-px inline-flex items-center gap-1.5 whitespace-nowrap px-3 pb-2.5 pt-1.5 text-[11.5px] font-semibold transition-colors hover:text-[var(--t2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
               style={{
-                background: isOn ? 'var(--primary-soft)' : 'transparent',
+                background: 'transparent',
                 color: isOn ? 'var(--primary)' : 'var(--t3)',
-                border: isOn ? '1px solid var(--primary-line)' : '1px solid transparent',
+                borderBottom: isOn ? '3px solid var(--primary)' : '3px solid transparent',
               }}
             >
               {t.label}
@@ -70,8 +73,8 @@ export function EvidenceRailPane({ onTabChange, onOpenSherlock }: Props) {
                 <span
                   className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[9.5px] font-bold"
                   style={{
-                    background: isOn ? 'var(--primary)' : 'var(--canvas)',
-                    color: isOn ? 'var(--primary-ink)' : 'var(--t3)',
+                    background: isOn ? 'var(--primary-soft)' : 'var(--base)',
+                    color: isOn ? 'var(--primary)' : 'var(--t3)',
                   }}
                 >
                   {t.count}
@@ -131,55 +134,91 @@ export function EvidenceRailPane({ onTabChange, onOpenSherlock }: Props) {
 function FailCard() {
   return (
     <article
-      className="flex flex-col gap-3 rounded-md border p-3"
+      aria-label={`Recent failure: ${FAIL_CARD.caseId}`}
+      // Day-25 Round-5 fix per Yogesh canonical-vs-port comparison:
+      // - REMOVED max-h-[520px] + overflow-y-auto — canonical has NO internal
+      //   scrollbar. The parent rail-body already handles overflow. My Round-2
+      //   scroll cap was over-engineering.
+      // - Keep 4px LEFT accent bar (canonical red rail pattern) + 1px hairline
+      //   border on other sides for the rounded card shape.
+      className="flex flex-col gap-3 rounded-md p-3"
       style={{
         background: 'var(--canvas)',
-        borderColor: 'var(--fail-line)',
+        border: '1px solid var(--border)',
+        borderLeft: '4px solid var(--fail)',
       }}
     >
-      {/* Head */}
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
+      {/* Head — Round-5 fix: added border-bottom divider line per canonical
+          (hairline between head and capture stream). pb-3 spacing keeps the
+          divider visually separated from the captures below it. */}
+      <div
+        className="flex flex-wrap items-start gap-2 border-b pb-3"
+        style={{ borderColor: 'var(--border)' }}
+      >
+        <span
+          aria-hidden="true"
+          className="inline-flex h-7 w-7 flex-none items-center justify-center rounded-md border"
+          style={{
+            background: 'var(--fail-soft)',
+            borderColor: 'var(--fail-line)',
+            color: 'var(--fail)',
+          }}
+        >
+          <X size={14} strokeWidth={3} />
+        </span>
+        <div className="min-w-0 flex-1">
           <p
             className="m-0 font-mono text-[10.5px] font-bold uppercase tracking-wide"
             style={{ color: 'var(--fail)' }}
           >
             {FAIL_CARD.caseId} · {FAIL_CARD.statusLabel}
           </p>
-          <p className="m-0 mt-0.5 text-[12.5px]" style={{ color: 'var(--t1)' }}>
+          {/* Day-25 Round-6 fix: title bumped DOWN 12.5px → 11px + truncate
+              for single-line ellipsis (canonical shows
+              "Refund webhook · refund.retry.exhau…"). */}
+          <p className="m-0 mt-0.5 truncate text-[11px]" style={{ color: 'var(--t1)' }}>
             {FAIL_CARD.title} ·{' '}
-            <code className="font-mono text-[11px]" style={{ color: 'var(--t2)' }}>
+            <code className="font-mono text-[10.5px]" style={{ color: 'var(--t2)' }}>
               {FAIL_CARD.monoTitle}
             </code>
           </p>
         </div>
-        <span className="font-mono text-[10.5px]" style={{ color: 'var(--t4)' }}>
+        <span className="flex-none font-mono text-[10.5px]" style={{ color: 'var(--t4)' }}>
           {FAIL_CARD.timeAgo}
         </span>
       </div>
 
-      {/* Capture stream */}
-      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+      {/* Capture stream — Day-25 Round-4 fix per canonical zoom:
+          - icon shape changed from rounded-full circle → rounded-md SQUARE
+          - icon sized up h-4 → h-5, checkmark 9 → 12, clock icon for streaming
+          - label color now matches status tone (pass green for done,
+            secondary violet for streaming) per canonical row colors */}
+      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
         {FAIL_CARD.captures.map((c, idx) => (
-          <li
-            key={idx}
-            className="flex items-center gap-2 rounded px-2 py-1.5 text-[11.5px]"
-            style={{ background: 'var(--base)' }}
-          >
+          <li key={idx} className="flex items-center gap-2.5 text-[11.5px]">
             <span
               aria-hidden="true"
-              className="inline-flex h-4 w-4 flex-none items-center justify-center rounded-full border"
+              className="inline-flex h-5 w-5 flex-none items-center justify-center rounded-md border"
               style={{
-                background: c.status === 'streaming' ? 'var(--info-soft)' : 'var(--pass-soft)',
-                color: c.status === 'streaming' ? 'var(--info)' : 'var(--pass)',
-                borderColor: c.status === 'streaming' ? 'var(--info-line)' : 'var(--pass-line)',
+                background: c.status === 'streaming' ? 'var(--ai-soft)' : 'var(--pass-soft)',
+                color: c.status === 'streaming' ? 'var(--secondary)' : 'var(--pass)',
+                borderColor: c.status === 'streaming' ? 'var(--ai-line)' : 'var(--pass-line)',
                 animation:
                   c.status === 'streaming' ? 'f19Pulse 1.2s ease-in-out infinite' : undefined,
               }}
             >
-              {c.status === 'done' && <Check size={9} strokeWidth={3.6} aria-hidden="true" />}
+              {c.status === 'done' ? (
+                <Check size={12} strokeWidth={3.2} aria-hidden="true" />
+              ) : (
+                <Clock size={12} strokeWidth={2.4} aria-hidden="true" />
+              )}
             </span>
-            <span className="flex-1 truncate" style={{ color: 'var(--t2)' }}>
+            <span
+              className="flex-1 truncate font-semibold"
+              style={{
+                color: c.status === 'streaming' ? 'var(--secondary)' : 'var(--pass)',
+              }}
+            >
               {c.label}
             </span>
             <span className="font-mono text-[10.5px]" style={{ color: 'var(--t4)' }}>
@@ -266,16 +305,18 @@ function FailCard() {
         >
           Environment
         </p>
+        {/* Day-25 Round-6 fix (FINAL on env chips): tightened to compact
+            padding 2px/6px + text-[9.5px]. Stopping the flip-flop. */}
         <div className="flex flex-wrap gap-1">
           {FAIL_CARD.envChips.map((c) => (
             <span
               key={c}
-              className="rounded border text-[10px]"
+              className="rounded border font-mono text-[9.5px]"
               style={{
-                background: 'var(--overlay)',
+                background: 'var(--base)',
                 borderColor: 'var(--border)',
                 color: 'var(--t2)',
-                padding: '3px 7px',
+                padding: '2px 6px',
               }}
             >
               {c}

@@ -54,23 +54,23 @@ export function CurrentCasePane({
         >
           {current.title}
         </h2>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span
-            className="rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-bold"
-            style={{
-              background: 'var(--canvas)',
-              borderColor: 'var(--border)',
-              color: 'var(--t2)',
-            }}
-          >
+        {/* Day-25 Round-3 fix per Yogesh "button size are more" feedback:
+            tightened all chip padding from px-2 py-1 (Round-2 bumped) back to
+            px-1.5 py-0.5 (compact, matches canonical chip-row zoom). Composer
+            ⓘ icon shrunk from h-3.5 w-3.5 → h-3 w-3 to fit compact chip.
+            - TC-RET-0247 stays as bare teal mono ID (no chip wrap)
+            - Other chips uppercase + tracking-wider, compact padding
+            - Composer chip keeps violet --ai-soft + mixed-case name */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] font-bold" style={{ color: 'var(--primary)' }}>
             {current.id}
           </span>
           {current.tags.map((t) => (
             <span
               key={t.label}
-              className="rounded border px-1.5 py-0.5 text-[10.5px] font-semibold"
+              className="rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
               style={{
-                background: 'var(--canvas)',
+                background: 'var(--base)',
                 borderColor: 'var(--border)',
                 color: t.dim ? 'var(--t4)' : 'var(--t2)',
               }}
@@ -79,7 +79,7 @@ export function CurrentCasePane({
             </span>
           ))}
           <span
-            className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10.5px] font-semibold"
+            className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold"
             style={{
               background: 'var(--ai-soft)',
               borderColor: 'var(--ai-line)',
@@ -98,9 +98,9 @@ export function CurrentCasePane({
             <span className="font-mono opacity-70">{current.agent.version}</span>
           </span>
           <span
-            className="rounded border px-1.5 py-0.5 text-[10.5px]"
+            className="rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
             style={{
-              background: 'var(--canvas)',
+              background: 'var(--base)',
               borderColor: 'var(--border)',
               color: 'var(--t4)',
             }}
@@ -144,7 +144,7 @@ export function CurrentCasePane({
         </button>
 
         {/* Steps */}
-        <section aria-label="BDD steps">
+        <section aria-label="Test steps">
           <header className="mb-2 flex items-center justify-between">
             <span
               className="text-[11px] font-semibold uppercase tracking-[0.06em]"

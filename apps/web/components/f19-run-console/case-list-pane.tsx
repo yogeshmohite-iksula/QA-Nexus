@@ -66,6 +66,7 @@ export function CaseListPane({ rows, counts, onCaseClick }: Props) {
           />
           <input
             type="search"
+            aria-label="Search cases"
             placeholder="Filter cases…"
             className="h-9 w-full rounded-md border bg-[var(--canvas)] pl-8 pr-3 text-[12.5px] outline-none focus:border-[var(--primary)]"
             style={{ borderColor: 'var(--border)', color: 'var(--t2)' }}
@@ -139,6 +140,7 @@ export function CaseListPane({ rows, counts, onCaseClick }: Props) {
                       >
                         {r.titleMonoToken}
                       </code>
+                      {r.titleSuffix && <> {r.titleSuffix}</>}
                     </>
                   )}
                 </span>
