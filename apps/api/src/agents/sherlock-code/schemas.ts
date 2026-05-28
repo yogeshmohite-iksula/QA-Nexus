@@ -52,8 +52,18 @@ export const SherlockHypothesisSchema = z.object({
   category: z.enum(SHERLOCK_CATEGORIES),
   hypothesis: z.string().min(10).max(2_000),
   confidence: z.number().min(0).max(1),
-  evidence: z.array(z.string()).max(10),
-  agent: z.enum(SHERLOCK_AGENTS),
+  // [Day-28 AC042 schema-bridge fix] gpt-oss-120b emits `evidence` as a single
+  // string per hypothesis, not as an array. Accept either shape and normalise
+  // to string[] for downstream consumers. Empty default covers omission.
+  evidence: z
+    .union([z.array(z.string()).max(10), z.string()])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .default([]),
+  // [Day-28 AC042 schema-bridge fix] LLM does not emit `agent` — each agent
+  // service re-tags its output in the caller (per the design comment in
+  // sherlock-data.service.ts:144-146). Make optional so safeParse succeeds;
+  // caller's .map() sets the correct literal post-parse.
+  agent: z.enum(SHERLOCK_AGENTS).optional(),
 });
 export type SherlockHypothesis = z.infer<typeof SherlockHypothesisSchema>;
 
