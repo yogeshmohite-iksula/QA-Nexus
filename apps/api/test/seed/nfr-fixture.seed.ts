@@ -9,10 +9,11 @@
 //   SEED_DRY_RUN=1 pnpm --filter @qa-nexus/api seed:nfr   # validate plan, NO writes
 //   pnpm --filter @qa-nexus/api seed:nfr                  # real writes (TEST DB only)
 //
-// SAFETY: refuses to write when DATABASE_URL points at Neon / the pilot DB. Pilot
-// data is sacred (Hard Rule: "Neon pilot data is sacred"). As of Day-1 the ONLY
-// local DATABASE_URL IS the Neon DB, so a REAL run needs a separate TEST_DATABASE_URL
-// (local Postgres) provisioned first — Wed decision. Tonight: DRY-RUN only.
+// SAFETY: real writes go ONLY to TEST_DATABASE_URL (a separate Neon test branch); the
+// PrismaClient is constructed with that URL explicitly and NEVER the pilot DATABASE_URL.
+// The gate refuses if TEST_DATABASE_URL's host equals the pilot host — a substring
+// "neon.tech" check is insufficient because the test branch is also on neon.tech (different
+// `ep-*` endpoint). Pilot data is sacred (Hard Rule: "Neon pilot data is sacred").
 //
 // EMBEDDINGS: TestCase.embedding is `Unsupported("vector(384)")` — Prisma's typed
 // client CANNOT write it. After seeding the rows below, Wed populates embeddings via
@@ -24,18 +25,34 @@
 import { PrismaClient, UserRole, Priority } from '@prisma/client';
 
 const SEED_DRY_RUN = process.env.SEED_DRY_RUN === '1';
-const DB_URL = process.env.DATABASE_URL ?? '';
+const TEST_DB_URL = process.env.TEST_DATABASE_URL ?? '';
+const PILOT_DB_URL = process.env.DATABASE_URL ?? '';
 
-// Safety gate — never write to Neon / pilot. (Day-1: local DATABASE_URL IS neon.tech.)
-const PILOT_HOST_MARKERS = ['neon.tech', 'iksula-pilot'];
-if (!SEED_DRY_RUN && PILOT_HOST_MARKERS.some((m) => DB_URL.includes(m))) {
-  console.error(
-    '[seed:nfr] REFUSED — DATABASE_URL points at Neon / the pilot DB. NFR fixtures must',
-  );
-  console.error(
-    '[seed:nfr] target a separate local Postgres via TEST_DATABASE_URL. Pilot data is sacred.',
-  );
-  process.exit(2);
+function hostOf(u: string): string {
+  try {
+    return new URL(u).host;
+  } catch {
+    return '';
+  }
+}
+
+// Safety gate — real writes target ONLY TEST_DATABASE_URL, and its host MUST differ
+// from the pilot DATABASE_URL host. The pilot DB and the Neon TEST BRANCH are both on
+// neon.tech (different `ep-*` endpoints), so a substring check on "neon.tech" is
+// insufficient (it would wrongly refuse the legitimate test branch) — compare hosts.
+if (!SEED_DRY_RUN) {
+  if (!TEST_DB_URL) {
+    console.error(
+      '[seed:nfr] REFUSED — TEST_DATABASE_URL is not set. Real writes need a separate test DB.',
+    );
+    process.exit(2);
+  }
+  if (PILOT_DB_URL && hostOf(TEST_DB_URL) === hostOf(PILOT_DB_URL)) {
+    console.error(
+      '[seed:nfr] REFUSED — TEST_DATABASE_URL host equals the pilot DATABASE_URL host. Pilot data is sacred.',
+    );
+    process.exit(2);
+  }
 }
 
 // ── Fixture plan (verified against schema.prisma: Workspace/User/Project/
@@ -85,7 +102,7 @@ async function main(): Promise<void> {
     `[seed:nfr] mode: ${SEED_DRY_RUN ? 'DRY-RUN (no writes)' : 'WRITE'}`,
   );
   console.log(
-    `[seed:nfr] target: ${DB_URL.replace(/:[^:@]+@/, ':***@') || '(unset)'}`,
+    `[seed:nfr] target (TEST_DATABASE_URL): ${TEST_DB_URL.replace(/:[^:@]+@/, ':***@') || '(unset)'}`,
   );
 
   if (SEED_DRY_RUN) {
@@ -100,7 +117,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  const prisma = new PrismaClient();
+  const prisma = new PrismaClient({
+    datasources: { db: { url: TEST_DB_URL } },
+  });
   try {
     // Workspace (no @@unique on name — pre-check, mirror prisma/seed.ts).
     const existingWs = await prisma.workspace.findFirst({

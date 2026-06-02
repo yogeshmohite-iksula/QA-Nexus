@@ -72,10 +72,29 @@ measure (8), pending confirmation each is built:
 **Budget (PM1_PRD §10 / ADR-019):** Composer A1 p95 < 10 s · Curator A2 p95 < 500 ms
 · Sherlock A4 p95 < 15 s.
 
-**Deferred** — exercising the agents burns Groq RPD, which today's pilot-push rules
-forbid (preserve budget for Wed-approved agent-latency runs OR measure against a
-production-warm deployed Render instance). The new `scripts/ac042-smoke.mjs` (1
-defect, ~4 Groq calls) is the cheapest Sherlock-A4 latency probe when budget allows.
+### A4 Sherlock — MEASURED 2026-06-02 PM (real, 20-case via `AC042_LIMIT=20 ac042:eval`)
+
+| metric                  | value                                               |
+| ----------------------- | --------------------------------------------------- |
+| n / quality             | 20 cases · top-2 80% · calibration 1.00 · 0 crashes |
+| latency p50 / p95 / p99 | **12.9s / 18.2s / 22.3s** (min 1.7s / max 22.3s)    |
+| **gate p95 < 15s**      | ❌ **FAIL** — p95 18.2s exceeds the 15s budget      |
+
+The 4-agent merge tail (gpt-oss-120b on the code/data agents) drives p95 over budget.
+**Real NFR finding** — flag for optimization (faster model on the slower agents /
+parallelism tuning) OR a gate re-evaluation before pilot. p50 (12.9s) is within budget;
+the tail isn't. Also a live **Groq Composer smoke** ran clean (4 calls, 0 crashes) —
+providers verified end-to-end. Groq used: ~84 RPD (4 smoke + 80 this run).
+
+### A1 Composer + A2-full Curator — DEFERRED (test-branch blocker)
+
+Both need a seeded DB fixture with the **M3 schema**, but the Neon test branch is
+**pre-M3**: the real seed hit `P2022: column 'format' does not exist` — workspace /
+user / project / requirement seeded OK, test-case upserts blocked. Unblock Wed:
+`prisma migrate deploy` to the test branch (needs a direct, non-pooler URL), then
+populate `test_cases.embedding` via raw SQL → run the probes. The `nfr:a1`/`nfr:a2`
+harnesses (Composer/Curator Nest contexts) still need writing. A2's embedding component
+(p95 98ms) is already measured (above).
 
 ---
 
@@ -87,5 +106,8 @@ latency ~1.2 s (scale-to-zero), then warm (~10 ms, see `/health` p50).
 
 ---
 
-_Started Day-1 2026-06-02 (BE+1). NFR-002 public baseline GREEN. Remaining NFRs
-scripted/scoped for Wed AM completion._
+_Started Day-1 2026-06-02 (BE+1); extended Day-1 PM with Yogesh-provided live keys.
+**GREEN:** NFR-002 public · A2 embedding component (98ms). **RED:** NFR-003 A4 p95 18.2s
+(> 15s budget — real finding). **DEFERRED to Wed:** A1 + A2-full (test branch needs a
+pre-M3 → M3 `migrate deploy`), NFR-002-auth (session cookie + `nfr:api` alias), NFR-001
+page-load (live FE + auth session). No fabricated numbers._
