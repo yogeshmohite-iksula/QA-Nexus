@@ -22,6 +22,7 @@
     "test:smoke": "jest --config ./test/jest-e2e.json --testPathPattern=smoke --passWithNoTests",
     "ac042:eval": "ts-node --transpile-only -P tsconfig.json test/ac042-eval.ts",
     "ac042:smoke": "node ../../scripts/ac042-smoke.mjs",
+    "nfr:embed": "ts-node --transpile-only -P tsconfig.json test/nfr-embed-latency.ts",
     "prisma:generate": "prisma generate",
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
