@@ -8,6 +8,7 @@
 
 import type { Metadata } from 'next';
 import { projects } from '@/lib/demo-seed';
+import { getProjectStaticParams } from '@/lib/project-slug';
 import { ConnectJiraStep3Page } from '@/components/sources-jira/connect-jira-step3-page';
 
 interface PageProps {
@@ -20,10 +21,10 @@ export const metadata: Metadata = {
 };
 
 // `output: 'export'` requires this to enumerate every reachable [slug]
-// at build time. Slug shape = lowercased project `key`. Closes followup
-// (y) — surfaced 2026-05-04 PR #31 visual gate.
+// at build time. Slug = project name-slug (`iksula-returns`) via the shared
+// helper — BUG-001 standardization (Day-1), Yogesh ruling.
 export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
+  return getProjectStaticParams(projects);
 }
 
 export default async function JiraConnectStep3Page({ params }: PageProps) {

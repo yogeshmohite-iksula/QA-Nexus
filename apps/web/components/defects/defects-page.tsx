@@ -34,7 +34,7 @@ export function DefectsPage() {
   }));
 
   return (
-    <AdminShell active="defects-failures" projectKeyLower="ret">
+    <AdminShell active="defects-failures" projectKeyLower="iksula-returns">
       <div
         data-canonical-section="def-shell"
         className="flex min-h-0 flex-1 flex-col"

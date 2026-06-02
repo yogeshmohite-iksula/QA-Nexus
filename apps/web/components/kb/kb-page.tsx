@@ -24,6 +24,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight, Sliders, X } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { slugFromName } from '@/lib/project-slug';
 import { useKbSearch } from '@/lib/hooks/use-kb-search';
 import type { KbSearchRequest } from '@/lib/api/kb-api';
 import { KbSearchBar } from './kb-search-bar';
@@ -41,13 +42,13 @@ interface KbPageProps {
 
 export function KbPage(props: KbPageProps) {
   return (
-    <AdminShell active="knowledge-base" projectKeyLower={props.projectKey.toLowerCase()}>
+    <AdminShell active="knowledge-base" projectKeyLower={slugFromName(props.projectName)}>
       <KbPageContent {...props} />
     </AdminShell>
   );
 }
 
-function KbPageContent({ projectId, projectKey, projectName }: KbPageProps) {
+function KbPageContent({ projectId, projectName }: KbPageProps) {
   const [query, setQuery] = useState('refund window');
   const [semantic, setSemantic] = useState(true);
   const [minRelevance, setMinRelevance] = useState(0.3);
@@ -99,7 +100,7 @@ function KbPageContent({ projectId, projectKey, projectName }: KbPageProps) {
             </li>
             <li>
               <a
-                href={`/projects/${projectKey.toLowerCase()}`}
+                href={`/projects/${slugFromName(projectName)}`}
                 className="hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
               >
                 Author

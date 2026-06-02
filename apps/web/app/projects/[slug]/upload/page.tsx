@@ -9,6 +9,7 @@
 import type { Metadata } from 'next';
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
 import { projects, SEED_IDS } from '@/lib/demo-seed';
+import { getProjectStaticParams } from '@/lib/project-slug';
 import { UploadPage } from '@/components/upload/upload-page';
 
 interface PageProps {
@@ -22,10 +23,10 @@ export const metadata: Metadata = {
 };
 
 // `output: 'export'` requires this to enumerate every reachable [slug]
-// at build time. Slug shape = lowercased project `key`. Closes followup
-// (y) — surfaced 2026-05-04 PR #31 visual gate.
+// at build time. Slug = project name-slug (`iksula-returns`) via the shared
+// helper — BUG-001 standardization (Day-1), Yogesh ruling.
 export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
+  return getProjectStaticParams(projects);
 }
 
 export default async function UploadRoute({ params }: PageProps) {

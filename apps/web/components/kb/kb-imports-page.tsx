@@ -196,7 +196,8 @@ function StatusBadge({ status }: { status: ImportStatus }) {
 
 export function KbImportsPage() {
   return (
-    <AdminShell active="knowledge-base" projectKeyLower="ret">
+    // projectKeyLower carries the project URL slug (name-slug) post-BUG-001.
+    <AdminShell active="knowledge-base" projectKeyLower="iksula-returns">
       <KbImportsPageContent />
     </AdminShell>
   );

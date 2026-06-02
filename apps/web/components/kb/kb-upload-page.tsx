@@ -99,7 +99,8 @@ function isAccepted(name: string): boolean {
 
 export function KbUploadPage() {
   return (
-    <AdminShell active="knowledge-base" projectKeyLower="ret">
+    // projectKeyLower carries the project URL slug (name-slug) post-BUG-001.
+    <AdminShell active="knowledge-base" projectKeyLower="iksula-returns">
       <KbUploadPageContent />
     </AdminShell>
   );

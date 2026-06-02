@@ -165,8 +165,11 @@ const ICONS: Record<RcaLayer['icon'], typeof Terminal> = {
 
 function LayerPayloadRender({ payload }: { payload: LayerPayload }) {
   if (payload.kind === 'stack') {
+    // BUG-005: min-w-0 + max-w-full cap the <pre> at the column width so the
+    // long stack-trace line scrolls inside this box (overflow-x-auto) instead
+    // of pushing the page width at 320px.
     return (
-      <pre className="max-h-[260px] overflow-x-auto overflow-y-auto rounded-md border border-[color:var(--border)] bg-[color:var(--canvas)] p-3 font-mono text-[11.5px] leading-[1.6] text-[color:var(--t2)]">
+      <pre className="max-h-[260px] min-w-0 max-w-full overflow-x-auto overflow-y-auto rounded-md border border-[color:var(--border)] bg-[color:var(--canvas)] p-3 font-mono text-[11.5px] leading-[1.6] text-[color:var(--t2)]">
         {payload.lines.map((l, i) => (
           <div key={i}>
             {l.candidate ? (

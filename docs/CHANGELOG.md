@@ -13,6 +13,26 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Fixed — Day 1 pilot-prep (Tue 2026-06-02) — BUG-001 slug split + BUG-005 F22 320px overflow [m5-pilot-prep]
+
+Two P1 findings from the Day-1 pilot baseline sweep, both fixed after Yogesh visual-gate approval (Hard Rule 13).
+
+**BUG-001 — project slug convention standardized on name-slug:**
+
+- New helper `apps/web/lib/project-slug.ts` — `slugFromName` + `projectFromSlug` + `getProjectStaticParams` (single source of truth for project URL slugs).
+- 6 dynamic routes (kb / imports / upload / sources × 3) refactored from `p.key.toLowerCase()` (`ret`) to the shared name-slug helper.
+- 5 nav call-sites (`kb-page`, `kb-upload-page`, `kb-imports-page`, `defects-page`, `F22DefectDetail`) now emit `iksula-returns`.
+- Root cause: two slug conventions coexisted; under `output: export` each only emitted static HTML for its own slug set → 6 `/projects/iksula-returns/*` anchors 404'd in prod. Now all 11 `/projects/iksula-returns/*` routes return 200; the old `/projects/ret/kb` correctly 404s.
+
+**BUG-005 — F22 Defect Detail 320px horizontal scroll + visual-gate polish (4 rounds):**
+
+- `SherlockRca` `<pre>`: added `min-w-0 max-w-full` so the RCA stack-trace scrolls inside its box instead of forcing page overflow (the original 531px overflow culprit).
+- `DefectHeader` restructured to the canonical `.title-row`: the action cluster floats top-right so the title + description use the full width and flow under it; breadcrumb→meta 10px and meta→title 6px (were ~24px); all five action boxes (severity · status · Jira · Edit · More) unified to 24px (canonical chip height). WCAG 2.5.5 tap floor preserved via `pointer-coarse` → 44px (canonical `@media (pointer:coarse)`).
+- `EvidenceSection` tab bar: `flex-wrap` → `flex-nowrap overflow-x-auto` — one horizontal-scroll row on mobile with the SYS-17 custom scrollbar visible (was wrapping to 3 rows).
+- 320px scrollWidth 411 → 320 (no horizontal scroll); 1440px verified. Yogesh visual-gate PASS after 4 rounds. Deviations from canonical (full-width title float + uniform 24px boxes + visible tab scrollbar) are Rule 13 visual-gate calls, documented inline in `DefectHeader.tsx` / `EvidenceSection.tsx`.
+
+**BUG-003** (client-side-only admin guard) accepted-for-pilot per separate Yogesh ruling; server-side enforcement deferred to MS0-T021 (M6).
+
 ## [M5 CORE] - 2026-05-27
 
 **M5 CORE milestone closed Wed Day-28 2026-05-27.** 4 binding frames + F28 Tier-2 bonus + 3 ADRs ratified (impl LIVE) + AC042 Sherlock RCA corpus eval PASS gate cleared on the 50-defect golden set. F26 + F27 carry to Day-29 as Tier-2 reserve allowance per ADR-022 §5.9.
