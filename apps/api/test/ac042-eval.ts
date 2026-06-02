@@ -238,6 +238,19 @@ async function main(): Promise<void> {
     );
   }
 
+  // Limit mode (Day-1 PM pilot-push, F-2 follow-on): AC042_LIMIT=N runs the first
+  // N cases — used by NFR-003 (Sherlock A4 latency over a ~20-case sample) and as a
+  // cheaper partial binding run. Applied AFTER the AC042_CASE filter (if both are
+  // set, AC042_CASE wins). Permanent — the Day-28 AC042_LIMIT was a transient diag.
+  const limitRaw = process.env.AC042_LIMIT?.trim();
+  const limit = limitRaw ? parseInt(limitRaw, 10) : undefined;
+  if (limit !== undefined && limit > 0 && limit < cases.length) {
+    logger.log(
+      `AC042_LIMIT=${limit} active — running first ${limit} of ${cases.length} cases`,
+    );
+    cases = cases.slice(0, limit);
+  }
+
   logger.log('Bootstrapping AC042EvalModule (LLM + 4 agents + orchestrator)…');
   const app = await NestFactory.createApplicationContext(AC042EvalModule, {
     logger: ['log', 'warn', 'error'],

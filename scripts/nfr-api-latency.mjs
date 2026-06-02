@@ -13,12 +13,23 @@
  *   COOKIE="better-auth.session_token=…" node scripts/nfr-api-latency.mjs --auth
  *
  * Env:
- *   BASE_URL  default http://localhost:3001
+ *   BASE_URL  default http://localhost:3001 (point at a deployed Render URL to
+ *             measure production-warm latency)
  *   N         requests per endpoint (default 100)
- *   COOKIE    session cookie string for authenticated endpoints
+ *   COOKIE    session-cookie string for authenticated endpoints, e.g.
+ *             COOKIE="better-auth.session_token=<value>" (capture via the dev
+ *             console-stub magic-link sign-in — finding F-7)
  *   OUT       output JSON path (default /tmp/nfr-002-results.json)
  * Flags:
  *   --auth    include the authenticated endpoint set (requires COOKIE)
+ *
+ * OUTPUT (two channels — do NOT `> redirect`, the JSON goes to $OUT not stdout):
+ *   - stdout : human-readable summary table (endpoint · p50 · p95 · p99 · err · verdict)
+ *   - $OUT   : structured JSON { nfr, baseUrl, n, gate, measured[], deferred[] }
+ *             where each measured[] entry is { path, p50_ms, p95_ms, p99_ms, … }
+ *   Correct Wed usage: `OUT=/tmp/nfr-002-auth-results.json node scripts/nfr-api-latency.mjs --auth`
+ *
+ * GATE (PM1_PRD §10 NFR-002, LLM latency excluded): p50 < 200ms AND p95 < 500ms.
  */
 
 import { writeFileSync } from 'node:fs';
