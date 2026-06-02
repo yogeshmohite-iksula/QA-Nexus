@@ -232,12 +232,16 @@ DB + Groq + Embedding are GREEN locally. Gemini/R2 are placeholder/absent locall
 
 ### F-1 — [P3 doc-drift] Embedding model docs say bge-large/1024, system runs bge-small/384
 
+**✅ CLOSED Day-1 PM** — executed followup `(ae)`: PM1_PRD + PM1_ERD notes + CLAUDE.md locked-stack updated to bge-small/384; `(ae)` marked resolved. (`.claude/rules/api.md` drift folded into `(ae)` follow-through.)
+
 - **Observed:** `/health/deep` → `embedding.model_id = Xenova/bge-small-en-v1.5` (384-dim).
 - **Docs say otherwise:** CLAUDE.md locked-stack + `docs/architecture/adr-003-embedding-model.md` body recommend `Xenova/bge-large-en-v1.5` (1024-dim).
 - **Reality is internally CONSISTENT (no bug):** `schema.prisma:432` column is `Unsupported("vector(384)")`; Day-5 migration `0002_vector_384_dim.sql` resized to 384; curator + KB-search both emit/consume 384-dim. The "Path C: pin bge-small/384-dim for pilot" decision (noted in `curator.service.ts:5`) overrode ADR-003's original 1024 choice. Model dim (384) == column dim (384) → **no runtime mismatch, no pilot risk.**
 - **Action (NOT today):** doc-sync PR — update CLAUDE.md locked-stack line + ADR-003 recommendation to reflect the 384-dim bge-small pilot pin. Pure documentation hygiene.
 
 ### F-2 — [P2 plan-bug] `ac042:smoke` script does not exist + would violate the no-Groq-burn rule
+
+**✅ CLOSED Day-1 PM** — built `scripts/ac042-smoke.mjs` (`--case`/`--debug`/`--no-burn`) + `ac042:smoke` pnpm script + permanent `AC042_CASE`/`AC042_DEBUG` harness capability (retro §6.8). `--no-burn` tested; live path wired (runs Wed w/ Groq budget).
 
 - Activity 2.1 calls `pnpm --filter @qa-nexus/api ac042:smoke`. **No such script.** `apps/api/package.json` has only `ac042:eval` (full 50-defect binding run, ~200 Groq calls) + `test:smoke` (jest e2e).
 - Running `ac042:eval` would burn ~200 RPD — directly contradicts today's "**NO eval harness runs that burn Groq RPD**" rule.

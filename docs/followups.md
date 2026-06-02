@@ -936,6 +936,8 @@ Sibling discipline-cascade item to `enforce-rwd.sh` (Rule 12).
 
 ## [2026-05-06] (ae) P2 — PRD/ERD/CLAUDE.md drift: embedding model spec says 1024-dim bge-large, code is 384-dim bge-small — `[m2-blocker]` (spec-only)
 
+**✅ RESOLVED 2026-06-02 (Day-1 pilot push, BE+1 — surfaced as Day-1 baseline finding F-1).** Fix-path steps 1-3 applied: `PM1_PRD/PM1_PRD.md` + `PM1_ERD/PM1_ERD.md` 2026-04-28 implementation notes amended to bge-small/384 with honest current-vs-future framing; `CLAUDE.md` locked-stack backend + Embeddings lines updated. Step 4 (cite ADR-009) folded into the ADR-003-amendment references already present. Deeper historical/aspirational prose mentions of Qwen3/1024 left in place — the now-corrected top-of-doc implementation note explicitly scopes them as historical-plan/future-target. ADR-003 already documents the bge-small reality (Day-4 amendment, line 74) — left unchanged. CHANGELOG entries left as historical record. Shipped on `docs/be-day-1-pilot-push` (PR #223).
+
 **Symptom (Day-11 skill alignment audit):** `PM1_PRD v8.1` and `PM1_ERD v2.1` both contain a 2026-04-28 implementation note saying _"PM1 ships with `Xenova/bge-large-en-v1.5` (1024-dim, ONNX, Apache-2.0)"_. `CLAUDE.md` "Locked tech stack" section says the same. **However**, the live code in `apps/api/prisma/schema.prisma` declares `KbChunk.embedding` as `Unsupported("vector(384)")` per ADR-003 amendment + ADR-009 (Day-5 migration `0002_vector_384_dim.sql`). The active runtime model is `Xenova/bge-small-en-v1.5` to fit Render Free's 512 MB memory ceiling.
 
 **Severity:** P2 — code is correct (ADRs supersede), but specs are stale. New BE engineers reading PRD/ERD will be confused. M2 KB chunk-search PRs reference the spec for chunk dimension.

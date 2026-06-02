@@ -212,11 +212,30 @@ async function main(): Promise<void> {
   const corpusDir = path.resolve(__dirname, 'golden-sets/sherlock-rca');
   const logger = new Logger('AC042Eval');
   logger.log(`Loading corpus from ${corpusDir}`);
-  const cases = await loadCorpus(corpusDir);
+  let cases = await loadCorpus(corpusDir);
   logger.log(`Loaded ${cases.length} defects`);
   if (cases.length === 0) {
     logger.error('Empty corpus — nothing to evaluate');
     process.exit(1);
+  }
+
+  // Smoke mode (Day-27 M5 retro §6.8 / Day-1 pilot-push F-2): AC042_CASE pins a
+  // single defect for a 1-defect / 4-Groq-call smoke run BEFORE the ~200-call
+  // binding eval, to catch schema/prompt bridge regressions cheaply. Permanent
+  // capability — supersedes the transient AC042_LIMIT used during Day-28 diag.
+  const onlyCase = process.env.AC042_CASE?.trim();
+  if (onlyCase) {
+    const before = cases.length;
+    cases = cases.filter((c) => c.id === onlyCase);
+    if (cases.length === 0) {
+      logger.error(
+        `AC042_CASE="${onlyCase}" not found among ${before} corpus cases`,
+      );
+      process.exit(1);
+    }
+    logger.log(
+      `AC042_CASE smoke mode: running 1 defect (${onlyCase}) of ${before} in corpus`,
+    );
   }
 
   logger.log('Bootstrapping AC042EvalModule (LLM + 4 agents + orchestrator)…');
@@ -235,6 +254,13 @@ async function main(): Promise<void> {
       const input = corpusToOrchestratorInput(c);
       const result = await orchestrator.runRca(input);
       const elapsed = Date.now() - t0;
+      // Smoke debug (AC042_DEBUG=1, set by scripts/ac042-smoke.mjs --debug):
+      // dump the full orchestrator result (per-agent hypotheses + confidences)
+      // so a 1-defect smoke surfaces schema/prompt bridge issues at a glance.
+      if (process.env.AC042_DEBUG) {
+        console.log(`  [debug] full RCA result for ${c.id}:`);
+        console.log(JSON.stringify(result, null, 2));
+      }
       const score = scoreCase(
         c,
         result.hypotheses,
