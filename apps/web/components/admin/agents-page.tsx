@@ -1,10 +1,9 @@
-// F26 Agents page composer — Phase-2 wired.
-//
-// Hard Rule 17: all text comes from agents-page.canned-data exports
-// (F26_RAW for fallback / shell text; F26_* semantic exports for
-// section bodies). Zero invented strings.
+// F26 Agents page composer — markup mirrors canonical F26 v2 HTML
+// (Hard Rule 15) + text from canned-data (Hard Rule 17).
 
 'use client';
+
+import './agents-page.css';
 
 import { AdminShell } from '@/components/admin/admin-shell';
 import {
@@ -32,38 +31,47 @@ import { EvalHarness } from '@/components/admin/agents/EvalHarness';
 import { GuardrailEvents } from '@/components/admin/agents/GuardrailEvents';
 
 const H1 = F26_RAW.headings.h1[0];
-const SNAPSHOT_LABEL = F26_RAW.textByTag.span.find((s) => s === 'Snapshot') ?? 'Snapshot';
 
 export function AgentsPage() {
   return (
     <AdminShell active="agents">
-      <main className="center" aria-label="Agents page">
-        <nav className="crumb" aria-label="Breadcrumb">
-          <span>Admin</span>
-          <span aria-hidden="true">›</span>
-          <span aria-current="page">Agents</span>
-        </nav>
+      <main className="main">
+        <div className="center">
+          {/* breadcrumb */}
+          <nav className="crumb" aria-label="Breadcrumb">
+            <a href="#">Home</a>
+            <span className="sep">›</span>
+            <a href="#">Govern</a>
+            <span className="sep">›</span>
+            <span className="now">Agents</span>
+          </nav>
 
-        <header className="phead">
-          <h1>{H1}</h1>
-          <StatsStrip data={F26_STATS} />
-        </header>
+          {/* Page header */}
+          <div className="phead">
+            <div className="lead">
+              <h1>{H1}</h1>
+              <StatsStrip data={F26_STATS} />
+            </div>
+          </div>
 
-        <div className="prove-ribbon" role="status" aria-label="Snapshot mode" data-tone="info">
-          <strong>{SNAPSHOT_LABEL}</strong>
-          <span>
-            Frozen by {F26_SNAPSHOT.frozenBy} · {F26_SNAPSHOT.frozenAt} · {F26_SNAPSHOT.description}
-          </span>
-          <code className="prove-sha">{F26_SNAPSHOT.sha256}</code>
+          {/* Prove-mode ribbon */}
+          <div className="prove-ribbon" role="status" aria-label="Snapshot mode">
+            <span className="lbl">Snapshot</span>
+            <span className="meta">
+              Frozen by <b>{F26_SNAPSHOT.frozenBy}</b> · <b>{F26_SNAPSHOT.frozenAt}</b> ·{' '}
+              {F26_SNAPSHOT.description}
+            </span>
+            <span className="hash">SHA-256 · {F26_SNAPSHOT.sha256}</span>
+          </div>
+
+          <LLMProviderPanel data={F26_LLM_PROVIDER} />
+          <AgentCardsGrid data={F26_AGENTS} />
+          <PermissionsMatrix data={F26_PERMISSIONS_MATRIX} />
+          <RecentActivity data={F26_RECENT_ACTIVITY} />
+          <RecentDecisions data={F26_RECENT_DECISIONS} summary={F26_DECISION_SUMMARY} />
+          <EvalHarness data={F26_EVAL_HARNESS} autonomyLadder={F26_AUTONOMY_LADDER} />
+          <GuardrailEvents data={F26_GUARDRAIL_EVENTS} />
         </div>
-
-        <LLMProviderPanel data={F26_LLM_PROVIDER} />
-        <AgentCardsGrid data={F26_AGENTS} />
-        <PermissionsMatrix data={F26_PERMISSIONS_MATRIX} />
-        <RecentActivity data={F26_RECENT_ACTIVITY} />
-        <RecentDecisions data={F26_RECENT_DECISIONS} summary={F26_DECISION_SUMMARY} />
-        <EvalHarness data={F26_EVAL_HARNESS} autonomyLadder={F26_AUTONOMY_LADDER} />
-        <GuardrailEvents data={F26_GUARDRAIL_EVENTS} />
       </main>
     </AdminShell>
   );

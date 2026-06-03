@@ -1,72 +1,173 @@
-// F26 RecentDecisions — list with outcome chip + confidence + summary.
+// F26 RecentDecisions — canonical .dec-card structure with .dec-filters
+// (filt-chip), .dec-row > .badge + .what > .id + .conf + .outcome + .ts.
 
 'use client';
 
-import { F26_RAW } from '@/components/admin/agents-page.canned-data';
-import type { F26RecentDecisionsData, F26DecisionSummary } from '@/components/admin/agents/types';
-import { AgentName } from '@/components/ui/agent-name';
+import type {
+  F26RecentDecisionsData,
+  F26DecisionSummary,
+  F26DecisionEntry,
+} from '@/components/admin/agents/types';
 
-const HEADING =
-  F26_RAW.headings.h2.find((h) => h.startsWith('Recent decisions')) ?? 'Recent decisions';
+function BadgeFor({ code }: { code: F26DecisionEntry['agent'] }) {
+  const cls = code === 'composer' ? 'composer' : code === 'curator' ? 'curator' : 'sherlock';
+  const Display = code.charAt(0).toUpperCase() + code.slice(1);
+  return <span className={`badge ${cls}`}>{Display}</span>;
+}
+
+function OutcomeBadge({ outcome }: { outcome: F26DecisionEntry['outcome'] }) {
+  if (outcome === 'acc') {
+    return (
+      <span className="outcome acc">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
+          <path d="M3 8l3 3 7-7" />
+        </svg>
+        Accepted
+      </span>
+    );
+  }
+  if (outcome === 'edit') {
+    return (
+      <span className="outcome edit">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        >
+          <path d="M11 3l3 3-8 8H3v-3z" />
+        </svg>
+        Edited
+      </span>
+    );
+  }
+  return (
+    <span className="outcome rej">
+      <svg
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      >
+        <path d="M4 4l8 8M12 4l-8 8" />
+      </svg>
+      Rejected
+    </span>
+  );
+}
 
 interface Props {
   data: F26RecentDecisionsData;
   summary: F26DecisionSummary;
 }
 
-function outcomeTone(o: 'acc' | 'edit' | 'rej'): 'pass' | 'warn' | 'fail' {
-  if (o === 'acc') return 'pass';
-  if (o === 'edit') return 'warn';
-  return 'fail';
-}
-function outcomeLabel(o: 'acc' | 'edit' | 'rej'): string {
-  if (o === 'acc') return 'Accepted';
-  if (o === 'edit') return 'Edited';
-  return 'Rejected';
-}
-
 export function RecentDecisions({ data, summary }: Props) {
+  const composerCount = data.filter((d) => d.agent === 'composer').length;
+  const curatorCount = data.filter((d) => d.agent === 'curator').length;
+  const sherlockCount = data.filter((d) => d.agent === 'sherlock').length;
   return (
     <section id="decisions" aria-labelledby="dec-h">
-      <header className="section-head">
-        <h2 id="dec-h">{HEADING}</h2>
-        <div className="dec-summary text-muted" aria-label="Decisions summary">
-          <span data-tone="pass">{summary.accepted} accepted</span>
-          <span aria-hidden="true">·</span>
-          <span data-tone="warn">{summary.edited} edited</span>
-          <span aria-hidden="true">·</span>
-          <span data-tone="fail">{summary.rejected} rejected</span>
-          <span aria-hidden="true">·</span>
-          <span>{summary.acceptanceRate}</span>
-        </div>
-      </header>
-      <div className="section-body">
-        <ol className="decision-list" aria-label="Recent decisions">
-          {data.map((entry, i) => (
-            <li
-              key={i}
-              className="decision-row"
-              data-agent={entry.agent}
-              data-outcome={entry.outcome}
+      <div className="sec-h" style={{ marginBottom: 10 }}>
+        <h2 id="dec-h">
+          Recent decisions <span className="ct">last 12</span>
+        </h2>
+        <span className="meta">
+          human accept / edit / reject per agent output · <b>quality signal</b>
+        </span>
+      </div>
+      <div className="dec-card">
+        <div className="dec-filters" role="tablist" aria-label="Decisions filter">
+          <button className="filt-chip on" data-decfilt="all" type="button">
+            All <span className="ct">{data.length}</span>
+          </button>
+          <button className="filt-chip" data-decfilt="composer" type="button">
+            Composer <span className="ct">{composerCount}</span>
+          </button>
+          <button className="filt-chip" data-decfilt="curator" type="button">
+            Curator <span className="ct">{curatorCount}</span>
+          </button>
+          <button className="filt-chip" data-decfilt="sherlock" type="button">
+            Sherlock <span className="ct">{sherlockCount}</span>
+          </button>
+          <span style={{ flex: 1 }}></span>
+          <button className="filt-chip" data-decout="acc" type="button">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="var(--pass)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
             >
-              <span className="decision-time text-muted">{entry.time}</span>
-              <span className="decision-agent">
-                <AgentName code={entry.agent} noIcon />
+              <path d="M3 8l3 3 7-7" />
+            </svg>
+            Accepted
+          </button>
+          <button className="filt-chip" data-decout="edit" type="button">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="var(--warn)"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <path d="M11 3l3 3-8 8H3v-3z" />
+            </svg>
+            Edited
+          </button>
+          <button className="filt-chip" data-decout="rej" type="button">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="var(--fail)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            >
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+            Rejected
+          </button>
+        </div>
+        <div className="dec-list" id="decList">
+          {data.map((entry, i) => (
+            <div key={i} className="dec-row" data-agent={entry.agent} data-outcome={entry.outcome}>
+              <BadgeFor code={entry.agent} />
+              <span className="what">
+                <span className="id">{entry.ref}</span>
+                {entry.description}
+                {entry.actor && <span className="by"> · {entry.actor}</span>}
               </span>
-              <span className="decision-ref text-muted">{entry.ref}</span>
-              <p className="decision-desc">{entry.description}</p>
-              <span className="decision-actor text-muted">{entry.actor}</span>
-              <span
-                className="decision-outcome"
-                data-tone={outcomeTone(entry.outcome)}
-                aria-label={`Outcome ${outcomeLabel(entry.outcome)}`}
-              >
-                {outcomeLabel(entry.outcome)}
+              <span className="conf">
+                {entry.agent === 'curator' ? 'sim' : 'conf'} <b>{entry.confidence.toFixed(2)}</b>
               </span>
-              <span className="decision-conf text-muted">conf {entry.confidence.toFixed(2)}</span>
-            </li>
+              <OutcomeBadge outcome={entry.outcome} />
+              <span className="ts">{entry.time}</span>
+            </div>
           ))}
-        </ol>
+        </div>
+        <div className="dec-foot perm-foot">
+          <span className="note">
+            <b>{summary.accepted}</b> accepted · <b>{summary.edited}</b> edited ·{' '}
+            <b>{summary.rejected}</b> rejected · acceptance rate <b>{summary.acceptanceRate}</b> ·
+            last 12 decisions
+          </span>
+          <a href="#" className="ghost details-link">
+            Open quality report ›
+          </a>
+        </div>
       </div>
     </section>
   );
