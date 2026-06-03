@@ -106,8 +106,53 @@ latency ~1.2 s (scale-to-zero), then warm (~10 ms, see `/health` p50).
 
 ---
 
+## Day-2 PM (Wed 2026-06-03) — A1/A2 full harnesses + the network-RTT finding
+
+Test branch (`ep-blue-star`) was migrated (`db push`) + seeded (1/1/1/1/3) + embeddings
+populated (3/3 × 384-dim). Harnesses `nfr:a1` (Composer) + `nfr:a2` (Curator full
+`check()`) written + run against it.
+
+| NFR-003 agent             | gate (pilot/M5) | measured (test branch, local)                 | verdict        | reading                     |
+| ------------------------- | --------------- | --------------------------------------------- | -------------- | --------------------------- |
+| A4 Sherlock               | p95 < 20s       | p95 18.2s                                     | PASS (ADR-024) | real                        |
+| A2 Curator full `check()` | p95 < 500ms     | p50 1551ms / p95 7146ms                       | local-FAIL     | **network-bound, not algo** |
+| A1 Composer `generate()`  | p95 < 10s       | unmeasured (all 5 runs "providers exhausted") | n/a            | Groq RPM cascade            |
+
+### 14th reality-check (RATIFIED) — the A2 number is client→DB network RTT, not the algorithm
+
+A **read-only `SELECT 1` probe** measured a single Neon round-trip from the dev Mac →
+`ap-southeast-1` (Singapore) at **~91ms p50 (warm pilot)**. Curator `check()` makes ~4
+round-trips (2 audit-writes + embed-read + pgvector) → **~360ms of pure network latency**
+before compute, + ~98ms embed + audit HMAC = the observed ~1.5s p50. The pilot DB shows
+the **identical** 91ms RTT, so re-measuring A1/A2 against pilot from the Mac would NOT
+reduce the inflation — **and would write audit rows (ZERO-writes violation), so it was not
+run.** The TEST branch errored mid-probe (scaled to zero), confirming it's unreliable for
+steady-state latency.
+
+**Implication:** A1/A2 representative latency is only obtainable **from the deployed API
+(Render, co-located with Neon → ~1-5ms RTT)**. Estimated production A2 ≈ embed (~98ms) +
+~4×(~3ms) + pgvector ≈ **~120-200ms — under the 500ms gate.** The Curator algorithm is
+sound; the local 7.1s is a network-distance ceiling, not a defect.
+
+### Measurement methodology (binding going forward)
+
+- Latency NFRs with DB round-trips (A1, A2, NFR-002) MUST be measured **from a host
+  co-located with Neon** (Render prod, or a Render one-off job) — never from a dev Mac in
+  a different region (adds ~91ms/round-trip).
+- LLM-bound NFRs (A1 Composer, A4 Sherlock) MUST space Groq calls ≥6s (free-tier RPM).
+- A1/A2 are NOT read-only (they audit-write) → can only run against a writable DB (test
+  branch or a Render job), never pilot read-only.
+
+### Still open (Render-side or dedicated session)
+
+A1 Composer (Render-side, RPM-spaced) · A2 confirm (Render-side, expect ~150ms) ·
+NFR-001 page-load (deployed FE) · NFR-002-auth · live Resend/R2 single-shot smokes.
+
+---
+
 _Started Day-1 2026-06-02 (BE+1); extended Day-1 PM with Yogesh-provided live keys.
 **GREEN:** NFR-002 public · A2 embedding component (98ms). **RED:** NFR-003 A4 p95 18.2s
-(> 15s budget — real finding). **DEFERRED to Wed:** A1 + A2-full (test branch needs a
-pre-M3 → M3 `migrate deploy`), NFR-002-auth (session cookie + `nfr:api` alias), NFR-001
-page-load (live FE + auth session). No fabricated numbers._
+(ADR-024: pilot p95<20s). **NETWORK-BOUND (not a defect):** A2 full `check()` 7.1s local =
+~91ms/RTT × 4 round-trips from the Mac; production ≈ ~150ms (Render-side measurement
+pending). **DEFERRED:** A1 (Render-side, RPM-spaced) · NFR-001 · NFR-002-auth · Resend/R2.
+No fabricated numbers · 14 reality-checks logged._
