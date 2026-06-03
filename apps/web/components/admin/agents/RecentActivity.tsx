@@ -1,34 +1,42 @@
-// F26 RecentActivity — accepts `data?` for Phase-2 wire-up.
-// Phase-1: falls back to placeholder when data is undefined.
-// Phase-2: pass data from semantic canned-data export.
+// F26 RecentActivity — verbatim activity feed.
 
 'use client';
 
 import { F26_RAW } from '@/components/admin/agents-page.canned-data';
 import type { F26RecentActivityData } from '@/components/admin/agents/types';
+import { AgentName } from '@/components/ui/agent-name';
 
 const HEADING =
   F26_RAW.headings.h2.find((h) => h.startsWith('Recent activity')) ?? 'Recent activity';
 
 interface Props {
-  /** Semantic data from agents-page.canned-data (added in Phase-2). */
-  data?: F26RecentActivityData;
+  data: F26RecentActivityData;
 }
 
 export function RecentActivity({ data }: Props) {
   return (
-    <section aria-labelledby="act-h" id="activity">
-      <header>
+    <section id="activity" aria-labelledby="act-h">
+      <header className="section-head">
         <h2 id="act-h">{HEADING}</h2>
       </header>
       <div className="section-body">
-        {data === undefined ? (
-          <p className="text-muted">[ body populated in Phase-2 ]</p>
-        ) : (
-          // Phase-2 wire-up will replace this branch with rendered body.
-          // Until then, prop accepted but unused — typecheck-clean.
-          <p className="text-muted">[ Phase-2 wire-up pending ]</p>
-        )}
+        <ol className="activity-list" aria-label="Recent activity entries">
+          {data.map((entry, i) => (
+            <li key={i} className="activity-row" data-agent={entry.agent}>
+              <span className="activity-time text-muted">{entry.time}</span>
+              <span className="activity-agent">
+                <AgentName code={entry.agent} noIcon />
+              </span>
+              <span className="activity-action">{entry.action}</span>
+              <span className="activity-target">{entry.target}</span>
+              {entry.actor && <span className="activity-actor text-muted">· {entry.actor}</span>}
+              <span className="activity-perf text-muted">· {entry.perf}</span>
+              {'detail' in entry && entry.detail && (
+                <span className="activity-detail text-muted">· {entry.detail}</span>
+              )}
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

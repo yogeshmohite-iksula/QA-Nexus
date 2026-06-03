@@ -1,6 +1,4 @@
-// F26 PermissionsMatrix — accepts `data?` for Phase-2 wire-up.
-// Phase-1: falls back to placeholder when data is undefined.
-// Phase-2: pass data from semantic canned-data export.
+// F26 PermissionsMatrix — 3 agents x 4 roles grid.
 
 'use client';
 
@@ -11,24 +9,43 @@ const HEADING =
   F26_RAW.headings.h2.find((h) => h.startsWith('Agent permissions')) ?? 'Agent permissions';
 
 interface Props {
-  /** Semantic data from agents-page.canned-data (added in Phase-2). */
-  data?: F26PermissionsMatrixData;
+  data: F26PermissionsMatrixData;
 }
 
 export function PermissionsMatrix({ data }: Props) {
   return (
     <section aria-labelledby="perm-h">
-      <header>
+      <header className="section-head">
         <h2 id="perm-h">{HEADING}</h2>
       </header>
       <div className="section-body">
-        {data === undefined ? (
-          <p className="text-muted">[ body populated in Phase-2 ]</p>
-        ) : (
-          // Phase-2 wire-up will replace this branch with rendered body.
-          // Until then, prop accepted but unused — typecheck-clean.
-          <p className="text-muted">[ Phase-2 wire-up pending ]</p>
-        )}
+        <div className="perm-table-wrap">
+          <table className="perm-table" aria-describedby="perm-footer">
+            <thead>
+              <tr>
+                <th scope="col">Agent</th>
+                {data.roles.map((r) => (
+                  <th key={r} scope="col">
+                    {r}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.permissions.map((row) => (
+                <tr key={row.agent}>
+                  <th scope="row">{row.agent}</th>
+                  {data.roles.map((r) => (
+                    <td key={r}>{row.byRole[r as keyof typeof row.byRole]}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p id="perm-footer" className="perm-footer text-muted">
+          {data.footer}
+        </p>
       </div>
     </section>
   );
