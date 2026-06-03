@@ -726,11 +726,484 @@ export const F26_RAW = {
  */
 export const F26_PAGE_TITLE = 'QA Nexus — Agents · Composer / Curator / Sherlock' as const;
 
-/**
- * Add semantically-named exports below as the React port consumes
- * verbatim text from F26_RAW. Examples:
- *
- *   export const F26_RIGHT_RAIL_LABELS = F26_RAW.textByTag.span.slice(0, 8);
- *   export const F26_DEFECT_IDS = F26_RAW.ids.defectIds;
- *   export const F26_HEADINGS = F26_RAW.headings;
- */
+// ─── Semantic exports (Rule 17 verbatim from F26 v2 HTML) ────────────
+// Naming convention: F{NN}_{SECTION_UPPER} (ratified Day-2 by Yogesh)
+// Agent codes lowercase per <AgentName code={...}/> convention
+
+/** Stat-strip at top of page (5 entries) */
+export const F26_STATS = [
+  { label: '3 agents active' as const },
+  { label: '47 decisions today' as const },
+  { label: '98.2% accept rate' as const },
+  { label: '$0.00 cost today' as const },
+  { label: 'Synced 1 min ago' as const },
+] as const;
+
+/** Snapshot banner */
+export const F26_SNAPSHOT = {
+  frozenBy: 'Yogesh Mohite' as const,
+  frozenAt: '2026-05-24 11:42 IST' as const,
+  description: 'governance state immutable · re-run from source config only' as const,
+  sha256: '4e9b a72c d318 f6e0 …' as const,
+} as const;
+
+/** LLM Provider section */
+export const F26_LLM_PROVIDER = {
+  title: 'LLM Provider' as const,
+  status: 'healthy' as const,
+  provider: 'Groq' as const,
+  connectionStatus: 'Connected' as const,
+  model: 'openai/gpt-oss-120b' as const,
+  latency: '47ms' as const,
+  lastHealthCheck: '8s' as const,
+  rpd: { used: 312, limit: 1000 } as const,
+  dailyCost: '$0.00' as const,
+  fallback: 'Gemini 2.5 Flash' as const,
+  note: 'Composer (test case generation) and Sherlock (RCA) require an LLM provider. Curator works without one — it uses internal pgvector embeddings.' as const,
+} as const;
+
+/** Agent cards (3 agents) */
+export const F26_AGENTS = [
+  {
+    code: 'composer' as const,
+    name: 'Composer' as const,
+    agentId: 'A1' as const,
+    role: 'Test Case Generator' as const,
+    description:
+      'Generates test cases from requirements using your configured LLM provider (Groq · Gemini · Custom).' as const,
+    stats: {
+      primary: '621' as const,
+      primaryLabel: 'generated' as const,
+      saved: '184h' as const,
+      recent: 'last gen 2m' as const,
+    },
+    chart: '7-day generations' as const,
+    chartDetail: '112 / day avg' as const,
+    autonomy: 'Suggest' as const,
+  },
+  {
+    code: 'curator' as const,
+    name: 'Curator' as const,
+    agentId: 'A2' as const,
+    role: 'Duplicate Detection' as const,
+    description:
+      'Detects near-duplicate test cases via pgvector cosine similarity. Internal — no LLM provider needed.' as const,
+    stats: {
+      primary: '412' as const,
+      primaryLabel: 'flags raised' as const,
+      saved: '37h' as const,
+      recent: 'thresholds 0.85' as const,
+    },
+    chart: 'Similarity distribution' as const,
+    chartDetail: 'peak at 0.78' as const,
+    autonomy: 'Suggest' as const,
+  },
+  {
+    code: 'sherlock' as const,
+    name: 'Sherlock' as const,
+    agentId: 'A4' as const,
+    role: '5-Layer Root Cause Analysis' as const,
+    description:
+      'Analyses test failures with 5-layer RCA — Symptom → Trigger → Root → Mechanism → Origin. Uses your configured LLM provider.' as const,
+    stats: {
+      primary: '89' as const,
+      primaryLabel: 'RCAs' as const,
+      saved: '~ 30h' as const,
+      recent: 'last RCA 14m' as const,
+    },
+    chart: 'RCA confidence distribution' as const,
+    chartDetail: 'median 0.82' as const,
+    autonomy: 'Suggest' as const,
+  },
+] as const;
+
+/** Permissions matrix (3 agents × 4 roles) — verbatim from HTML table */
+export const F26_PERMISSIONS_MATRIX = {
+  roles: ['QA Engineer', 'QA Lead', 'Admin', 'Stakeholder'] as const,
+  permissions: [
+    {
+      agent: 'Composer A1' as const,
+      byRole: {
+        'QA Engineer': '✓ Trigger · View' as const,
+        'QA Lead': '✓ Trigger · View · Configure' as const,
+        Admin: '✓ Full' as const,
+        Stakeholder: '— View shared' as const,
+      },
+    },
+    {
+      agent: 'Curator A2' as const,
+      byRole: {
+        'QA Engineer': '✓ View flags' as const,
+        'QA Lead': '✓ View · Configure thresholds' as const,
+        Admin: '✓ Full' as const,
+        Stakeholder: '— No' as const,
+      },
+    },
+    {
+      agent: 'Sherlock A4' as const,
+      byRole: {
+        'QA Engineer': '✓ Trigger · View' as const,
+        'QA Lead': '✓ Trigger · View · Configure' as const,
+        Admin: '✓ Full' as const,
+        Stakeholder: '— View shared' as const,
+      },
+    },
+  ],
+  footer:
+    'Cannot be modified at agent level — governed by role definition in Users & Roles.' as const,
+} as const;
+
+/** Recent activity (last 20) — verbatim from HTML */
+export const F26_RECENT_ACTIVITY = [
+  {
+    agent: 'composer' as const,
+    action: 'Generated 5 test cases' as const,
+    target: 'RET-247' as const,
+    actor: 'Akshay P.' as const,
+    time: '2m ago' as const,
+    perf: '1.2s · 432 tok' as const,
+  },
+  {
+    agent: 'curator' as const,
+    action: 'Flagged duplicate' as const,
+    target: 'TC-RET-1043 vs TC-RET-1041' as const,
+    actor: '' as const,
+    time: '8m ago' as const,
+    perf: '0.04s · cosine' as const,
+    detail: '0.91 sim' as const,
+  },
+  {
+    agent: 'sherlock' as const,
+    action: 'Produced RCA' as const,
+    target: 'DEF-RET-2104' as const,
+    actor: 'Yogesh M.' as const,
+    time: '14m ago' as const,
+    perf: '3.4s · 891 tok' as const,
+    detail: '0.87 conf' as const,
+  },
+  {
+    agent: 'composer' as const,
+    action: 'Generated 8 test cases' as const,
+    target: 'RET-244' as const,
+    actor: 'Govind D.' as const,
+    time: '22m ago' as const,
+    perf: '2.1s · 712 tok' as const,
+  },
+  {
+    agent: 'curator' as const,
+    action: 'Blocked save' as const,
+    target: 'TC-RET-1102' as const,
+    actor: '' as const,
+    time: '41m ago' as const,
+    perf: '0.03s' as const,
+    detail: '0.97 sim to TC-RET-1098' as const,
+  },
+  {
+    agent: 'composer' as const,
+    action: 'Generated 3 test cases' as const,
+    target: 'RET-241' as const,
+    actor: 'Akshay P.' as const,
+    time: '1h ago' as const,
+    perf: '0.9s · 318 tok' as const,
+  },
+  {
+    agent: 'sherlock' as const,
+    action: 'Produced RCA' as const,
+    target: 'DEF-RET-2098' as const,
+    actor: 'Kishor K.' as const,
+    time: '1h ago' as const,
+    perf: '4.1s · 1,042 tok' as const,
+    detail: '0.74 conf' as const,
+  },
+  {
+    agent: 'composer' as const,
+    action: 'Bulk imported & deduped 14 test cases' as const,
+    target: 'spec.docx' as const,
+    actor: 'Yogesh M.' as const,
+    time: '2h ago' as const,
+    perf: '6.8s · 2,310 tok' as const,
+  },
+  {
+    agent: 'curator' as const,
+    action: 'Flagged near-duplicate' as const,
+    target: 'TC-RET-1099 vs TC-RET-1014' as const,
+    actor: '' as const,
+    time: '3h ago' as const,
+    perf: '0.05s' as const,
+    detail: '0.89 sim' as const,
+  },
+  {
+    agent: 'sherlock' as const,
+    action: 'Re-ran RCA' as const,
+    target: 'DEF-RET-2087' as const,
+    actor: '' as const,
+    time: '4h ago' as const,
+    perf: '2.9s · 778 tok' as const,
+    detail: 'post-fix verification · 0.93 conf' as const,
+  },
+  {
+    agent: 'composer' as const,
+    action: 'Generated 2 edge-case tests' as const,
+    target: 'RET-238' as const,
+    actor: 'Mohanraj K.' as const,
+    time: '5h ago' as const,
+    perf: '0.8s · 264 tok' as const,
+  },
+  {
+    agent: 'curator' as const,
+    action: 'Reindexed 142 chunks' as const,
+    target: 'KB sync' as const,
+    actor: 'system' as const,
+    time: '6h ago' as const,
+    perf: '1.4s' as const,
+  },
+] as const;
+
+/** Recent decisions (last 12) — verbatim from HTML */
+export const F26_RECENT_DECISIONS = [
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-247:v1' as const,
+    description: 'Generated 5 test cases for "Refund webhook idempotency"' as const,
+    actor: 'Akshay P.' as const,
+    confidence: 0.91,
+    outcome: 'acc' as const,
+    time: '2m ago' as const,
+  },
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-244:v1' as const,
+    description: 'Generated 8 test cases for "Partial refund SLA"' as const,
+    actor: 'Govind D.' as const,
+    confidence: 0.84,
+    outcome: 'edit' as const,
+    time: '22m ago' as const,
+  },
+  {
+    agent: 'curator' as const,
+    ref: 'tc:TC-RET-1102' as const,
+    description: 'Flagged near-duplicate of TC-RET-1098' as const,
+    actor: 'Yogesh M.' as const,
+    confidence: 0.97,
+    outcome: 'rej' as const,
+    time: '41m ago' as const,
+  },
+  {
+    agent: 'sherlock' as const,
+    ref: 'def:DEF-RET-2104' as const,
+    description: '5-layer RCA · payment-svc retry exhaustion → connection-pool starvation' as const,
+    actor: 'Yogesh M.' as const,
+    confidence: 0.87,
+    outcome: 'acc' as const,
+    time: '14m ago' as const,
+  },
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-241:v2' as const,
+    description: 'Generated 3 negative-path tests for "Idempotency-key collision"' as const,
+    actor: 'Kishor K.' as const,
+    confidence: 0.93,
+    outcome: 'acc' as const,
+    time: '1h ago' as const,
+  },
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-238:v1' as const,
+    description: 'Generated 2 edge-case tests for "Refund > ₹10K window"' as const,
+    actor: 'Govind D.' as const,
+    confidence: 0.78,
+    outcome: 'edit' as const,
+    time: '5h ago' as const,
+  },
+  {
+    agent: 'sherlock' as const,
+    ref: 'def:DEF-RET-2087' as const,
+    description: 'Re-ran 5-layer RCA post-fix · all layers verified' as const,
+    actor: 'Sagar T.' as const,
+    confidence: 0.93,
+    outcome: 'acc' as const,
+    time: '4h ago' as const,
+  },
+  {
+    agent: 'curator' as const,
+    ref: 'tc:TC-RET-1099' as const,
+    description: 'Flagged near-duplicate of TC-RET-1014' as const,
+    actor: 'Mohanraj K.' as const,
+    confidence: 0.89,
+    outcome: 'acc' as const,
+    time: '3h ago' as const,
+  },
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-228:v1' as const,
+    description: 'Generated 4 tests for "Multi-currency refund"' as const,
+    actor: 'Nadim S.' as const,
+    confidence: 0.62,
+    outcome: 'rej' as const,
+    time: '8h ago' as const,
+  },
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-224:v1' as const,
+    description: 'Bulk-generated 14 tests from spec.docx' as const,
+    actor: 'Yogesh M.' as const,
+    confidence: 0.88,
+    outcome: 'acc' as const,
+    time: '2h ago' as const,
+  },
+  {
+    agent: 'curator' as const,
+    ref: 'tc:TC-RET-1043' as const,
+    description: 'Flagged duplicate of TC-RET-1041' as const,
+    actor: 'auto-merged by Curator' as const,
+    confidence: 0.91,
+    outcome: 'acc' as const,
+    time: '8m ago' as const,
+  },
+  {
+    agent: 'composer' as const,
+    ref: 'req:RET-218:v1' as const,
+    description: 'Generated 6 boundary tests for "Refund window 30d"' as const,
+    actor: 'Nitin G.' as const,
+    confidence: 0.9,
+    outcome: 'acc' as const,
+    time: '11h ago' as const,
+  },
+] as const;
+
+/** Decision summary stats */
+export const F26_DECISION_SUMMARY = {
+  accepted: 8,
+  edited: 2,
+  rejected: 2,
+  acceptanceRate: '67%' as const,
+} as const;
+
+/** Eval harness (last 4 runs) — AC042 row EXACT per M5 binding */
+export const F26_EVAL_HARNESS = {
+  suite: 'iksula-returns-eval-50' as const,
+  suiteDescription: 'synthetic + sampled prod' as const,
+  rows: [
+    {
+      date: '2026-05-27' as const,
+      label: 'AC042' as const,
+      scorePct: 64,
+      trend: '✓ PASS · +10pp vs baseline' as const,
+      detail: '32/50 · Sherlock · M5 close-gate (top-2 64% · calibration 1.00)' as const,
+      fails: ['cross_service', 'timing_race', 'environment_drift'] as const,
+      failCount: 18,
+    },
+    {
+      date: '2026-05-09' as const,
+      label: 'v2.3' as const,
+      scorePct: 94,
+      trend: '▲ Improved · +6pp vs v2.2' as const,
+      detail: '47/50 · Composer · multi-step refund chains' as const,
+      fails: ['multi_step_refund', 'currency_edge'] as const,
+      failCount: 3,
+    },
+    {
+      date: '2026-05-02' as const,
+      label: 'v2.2' as const,
+      scorePct: 88,
+      trend: '▼ Declined · −4pp vs v2.1' as const,
+      detail: '44/50 · Composer · regressions on negative paths' as const,
+      fails: ['negative_path', 'legacy_spec', 'ambiguous_req'] as const,
+      failCount: 6,
+    },
+    {
+      date: '2026-04-25' as const,
+      label: 'v2.2' as const,
+      scorePct: 92,
+      trend: '▶ Stable · ±0pp vs v2.1' as const,
+      detail: '46/50 · Sherlock · RCA depth gate held' as const,
+      fails: ['deep_stack', 'async_cause'] as const,
+      failCount: 4,
+    },
+  ],
+} as const;
+
+/** Guardrail events (last 30 days) — 4 triggers from HTML */
+export const F26_GUARDRAIL_EVENTS = [
+  {
+    date: '2026-05-08 · 14:22' as const,
+    type: 'PII detected' as const,
+    description: 'Composer redacted email pattern in generated step nitin@***.com' as const,
+    target: 'RET-244' as const,
+  },
+  {
+    date: '2026-05-06 · 09:51' as const,
+    type: 'Secret scan' as const,
+    description: 'Composer blocked output containing token-like string sk-pr0j…' as const,
+    target: 'TC-RET-1080' as const,
+  },
+  {
+    date: '2026-05-03 · 17:08' as const,
+    type: 'Output length cap' as const,
+    description: 'Sherlock RCA truncated at 1,500 tok' as const,
+    target: 'DEF-RET-2076' as const,
+  },
+  {
+    date: '2026-04-29 · 11:34' as const,
+    type: 'PII detected' as const,
+    description:
+      'Curator scrubbed phone-number pattern from chunk kb-117 before embedding.' as const,
+    target: 'kb-117' as const,
+  },
+] as const;
+
+/** Configure Composer drawer — autonomy ladder */
+export const F26_AUTONOMY_LADDER = [
+  {
+    level: 1,
+    name: 'Monitor' as const,
+    description:
+      'Observe-only. Agent never acts or suggests. Used during onboarding or compliance review.' as const,
+  },
+  {
+    level: 2,
+    name: 'Suggest' as const,
+    description:
+      'Every output requires a human to accept, edit or reject. Confidence shown; HITL on low-conf.' as const,
+    tag: 'PM1 default' as const,
+  },
+  {
+    level: 3,
+    name: 'Act' as const,
+    description:
+      'Auto-acts within guardrails when confidence ≥ threshold. Audit-only after the fact.' as const,
+    tag: 'Unlocks v1.5' as const,
+  },
+] as const;
+
+/** Composer detail drawer — identity + scope + autonomy */
+export const F26_COMPOSER_DETAIL = {
+  status: '● Healthy' as const,
+  statusDetail: 'running · 0 errors 14d' as const,
+  uptime7d: '99.97 %' as const,
+  uptimeDetail: '2.4s downtime · scheduled restart' as const,
+  responseP95: '1.42 s' as const,
+  responseDetail: 'target ≤ 2.0s · ▼ 0.18s w/w' as const,
+  decisions7d: '412' as const,
+  decisionsDetail: 'acceptance 87%' as const,
+  identity: {
+    agentId: 'agent:composer · A1' as const,
+    model: 'openai/gpt-oss-120b · Groq' as const,
+    version: 'v2.3 · released 2026-05-09' as const,
+    promptRev: 'composer-v2.3 · committed 2026-05-09 by Yogesh Mohite' as const,
+    lastError: 'none · last 14 days' as const,
+  },
+  scope: {
+    enabledRoles: ['qa.engineer', 'qa.lead', 'qa.admin'] as const,
+    enabledProjects: ['Iksula Returns', 'Iksula Commerce'] as const,
+    dataScope: ['requirements', 'test_cases', 'kb_chunks'] as const,
+  },
+  autonomy: {
+    level: 'Suggest · HITL on conf < 0.80' as const,
+    rateLimit: '60 calls / user / hour' as const,
+    costCap: '$0.05 / call · provider $0 free tier' as const,
+    piiSecrets: '✓ enforced · 4 triggers logged 30d' as const,
+  },
+  footer:
+    'Composer v2.3 · running stable · 0 errors last 14 days · last config change 2026-05-19 by Yogesh M.' as const,
+} as const;
