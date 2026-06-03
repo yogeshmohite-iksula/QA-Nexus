@@ -177,11 +177,9 @@ Both are pure mobile-layout fixes (no desktop change). **F22 is a recently Rule-
 
 **Cross-refs:** skill v2.2 (`.claude/skills/frame-port/`) · ADR-022 §5.9 · Hard Rule 11 (ask-don't-guess) · `apps/web/next.config` `output: export` (Cloudflare Pages static host).
 
-
 ---
 
 # BE+1 Backend Baseline (PR #223 — appended at Wed merge-wave union)
-
 
 > BE+1 findings from Day-1 baseline integrity + integration-health verification.
 > MAIN was to create this file; it was absent at session start, so BE+1 created it.
