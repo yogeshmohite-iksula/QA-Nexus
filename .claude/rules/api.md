@@ -46,8 +46,8 @@ paths:
 
 ## Embedding service (MS0-T024)
 
-- `EmbeddingService.embed(text)` is the only entry point. It returns a 1024-dim Float32Array.
-- The Qwen3-Embedding-0.6B model is loaded **once at app startup**, not per-request. If startup load fails, the app should crash — failing closed is correct here.
+- `EmbeddingService.embed(text)` is the only entry point. It returns a 384-dim Float32Array (`Xenova/bge-small-en-v1.5`, the current pilot pin per ADR-003 amendment + Day-5 `vector(384)` migration; bge-large/1024-dim + Qwen3-Embedding-0.6B are future targets — hot-swap via `EMBEDDING_MODEL_ID`).
+- The model is loaded **once at app startup**, not per-request. If startup load fails, the service stays in a deferred/degraded state (the pre-flight memory guard refuses to load a model that would OOM the Render Free 512 MB dyno — see ADR-003 amendment) rather than crashing the pod.
 
 ## What NOT to add
 

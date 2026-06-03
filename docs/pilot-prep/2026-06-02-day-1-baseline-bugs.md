@@ -176,3 +176,158 @@ Both are pure mobile-layout fixes (no desktop change). **F22 is a recently Rule-
 ---
 
 **Cross-refs:** skill v2.2 (`.claude/skills/frame-port/`) · ADR-022 §5.9 · Hard Rule 11 (ask-don't-guess) · `apps/web/next.config` `output: export` (Cloudflare Pages static host).
+
+---
+
+# BE+1 Backend Baseline (PR #223 — appended at Wed merge-wave union)
+
+> BE+1 findings from Day-1 baseline integrity + integration-health verification.
+> MAIN was to create this file; it was absent at session start, so BE+1 created it.
+> Severity: **P0** (blocks pilot, fix today) · **P1** (fix before Jun 8) ·
+> **P2** (plan/env issue, decision needed) · **P3** (doc/cosmetic, no functional risk).
+
+Repo state at verification: `origin/main` HEAD `a635fff` · worktree `-backend` · clean.
+
+---
+
+## Activity 1 — Baseline integrity: ✅ PASS (no P0)
+
+| Gate                         | Result                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `pnpm install` (frozen-lock) | ✅ EXIT 0                                                                   |
+| `@qa-nexus/api` typecheck    | ✅ EXIT 0                                                                   |
+| `@qa-nexus/api` lint         | ✅ EXIT 0                                                                   |
+| `@qa-nexus/api` build        | ✅ EXIT 0                                                                   |
+| `@qa-nexus/api` unit suite   | ✅ **59 suites / 689 tests pass, 0 fail** (37s, mocked Prisma — no DB/Groq) |
+| API boot (`nest start`)      | ✅ started on :3001, 0 TS errors                                            |
+| Prisma → Postgres            | ✅ `Prisma connected to Postgres` at boot                                   |
+
+node v24.13.1 · pnpm 10.33.2. **Baseline is clean — green light to proceed.**
+
+---
+
+## Activity 2 — Integration health (via `/health/deep`, zero Groq burn)
+
+The efficient path: `GET http://localhost:3001/health/deep` returns per-provider
+health in one call. The LLM check reads **in-memory provider state** (does NOT
+actively ping → no free-tier burn). Result (HTTP 200):
+
+| Integration   | Status        | Detail                                                                    |
+| ------------- | ------------- | ------------------------------------------------------------------------- |
+| **Neon DB**   | ✅ up         | latency 1244 ms (scale-to-zero cold start); **9.51 MB = 1.86%** of 512 MB |
+| **Groq**      | ✅ configured | key present (56c); status "unknown" = not yet exercised this boot         |
+| **Gemini**    | ⚠️ key absent | configured in code; `GEMINI_API_KEY=REPLACE_ME` locally                   |
+| **R2**        | ⚠️ deferred   | `R2_ACCESS_KEY_ID/SECRET/ENDPOINT not set` locally                        |
+| **Embedding** | ✅ up + warm  | `Xenova/bge-small-en-v1.5`, load 1179 ms (see F-1)                        |
+| **OTel**      | ℹ️ deferred   | Grafana/Better Stack OTLP are Render-only env (expected)                  |
+
+DB + Groq + Embedding are GREEN locally. Gemini/R2 are placeholder/absent locally —
+**expected** per Hard Rule 6 (real keys live only in Render). See F-4 for the consequence.
+
+---
+
+## Findings
+
+### F-1 — [P3 doc-drift] Embedding model docs say bge-large/1024, system runs bge-small/384
+
+**✅ CLOSED Day-1 PM** — executed followup `(ae)`: PM1_PRD + PM1_ERD notes + CLAUDE.md locked-stack updated to bge-small/384; `(ae)` marked resolved. (`.claude/rules/api.md` drift folded into `(ae)` follow-through.)
+
+- **Observed:** `/health/deep` → `embedding.model_id = Xenova/bge-small-en-v1.5` (384-dim).
+- **Docs say otherwise:** CLAUDE.md locked-stack + `docs/architecture/adr-003-embedding-model.md` body recommend `Xenova/bge-large-en-v1.5` (1024-dim).
+- **Reality is internally CONSISTENT (no bug):** `schema.prisma:432` column is `Unsupported("vector(384)")`; Day-5 migration `0002_vector_384_dim.sql` resized to 384; curator + KB-search both emit/consume 384-dim. The "Path C: pin bge-small/384-dim for pilot" decision (noted in `curator.service.ts:5`) overrode ADR-003's original 1024 choice. Model dim (384) == column dim (384) → **no runtime mismatch, no pilot risk.**
+- **Action (NOT today):** doc-sync PR — update CLAUDE.md locked-stack line + ADR-003 recommendation to reflect the 384-dim bge-small pilot pin. Pure documentation hygiene.
+
+### F-2 — [P2 plan-bug] `ac042:smoke` script does not exist + would violate the no-Groq-burn rule
+
+**✅ CLOSED Day-1 PM** — built `scripts/ac042-smoke.mjs` (`--case`/`--debug`/`--no-burn`) + `ac042:smoke` pnpm script + permanent `AC042_CASE`/`AC042_DEBUG` harness capability (retro §6.8). `--no-burn` tested; live path wired (runs Wed w/ Groq budget).
+
+- Activity 2.1 calls `pnpm --filter @qa-nexus/api ac042:smoke`. **No such script.** `apps/api/package.json` has only `ac042:eval` (full 50-defect binding run, ~200 Groq calls) + `test:smoke` (jest e2e).
+- Running `ac042:eval` would burn ~200 RPD — directly contradicts today's "**NO eval harness runs that burn Groq RPD**" rule.
+- **Recommendation:** integration health is already proven via `/health/deep` (zero burn) + the Day-28 AC042 PASS (top-2 64% / cal 1.00) already validated Groq end-to-end. If a live Groq round-trip is still wanted, do **one** call, not a 200-call eval.
+
+### F-3 — [P2 plan-bug] Health-endpoint path in brief is wrong
+
+- Brief: `curl http://localhost:3000/api/health`. **Incorrect** — port 3000 is the web app, and the API has **no `/api` global prefix** (`main.ts` confirmed). Correct:
+  - `http://localhost:3001/health` — liveness (status/version, no probes, by design)
+  - `http://localhost:3001/health/deep` — integration health (DB + R2 + LLM snapshot + quota)
+
+### F-4 — [P2 env-blocker, DECISION NEEDED] Local env cannot run Gemini / Resend / R2 live tests
+
+- Local `apps/api/.env`: `GEMINI_API_KEY` + `RESEND_API_KEY` = `REPLACE_ME` (10c); **no R2 keys at all**. (Groq 56c ✓, DATABASE_URL 123c ✓, BETTER_AUTH_SECRET 44c ✓.)
+- This is **expected** per Hard Rule 6 / security.md — real provider keys live only in Render env vars, never local.
+- **Consequence:** Activities 2.2 (Gemini fallback), 2.3 (Resend email), 2.4 (R2 upload) are **not runnable in this local worktree as-is.**
+- **Decision for Yogesh:** run these against the **deployed Render app** (has all keys), OR paste temp local keys, OR defer live-provider tests to the deployed-smoke pass.
+
+### F-5 — [P2 harness-block] Activity 2.2 Gemini-fallback method is blocked 3 ways
+
+- Method (set `GROQ_API_KEY` invalid in `.env` → trigger fallback) is blocked by: (a) `.env` Edit/Write is **harness-denied** (security.md deny block); (b) `GEMINI_API_KEY` is a placeholder locally so the fallback target can't succeed; (c) corrupting the hard-won Groq key risks repeating the Days-25–27 key saga.
+- **Recommendation:** verify fallback via the deployed app OR a provider-mocked integration test — never by mutating the live `.env`.
+
+### F-6 — [P3 possible-gap] No FE provider-setup / F28m1 component found in `apps/web/src`
+
+- Searched `*provider*`, `*f28m1*`, `*llm-setup*` paths under `apps/web/src` → no match. API side has `llm.controller.ts @Get('providers')` (ops/dev endpoint) only.
+- Activity 3 (F28m1 Day-0 provider-setup modal) may target a screen **not yet built** (F26 Agents UI was a Tier-2 carry per the M5 close record; F28m1 may be pending too).
+- **Action:** FE+1 confirm whether F28m1 exists. If not, Activity 3 defers.
+
+### F-7 — [P3 info, GOOD NEWS] Local auth IS feasible despite Resend placeholder
+
+- `auth.controller.ts:112` returns _"Magic link sent (check inbox; in dev, see console for stubbed link)."_ → **in dev the magic link is stubbed to the console/log, not emailed.** So `RESEND_API_KEY=REPLACE_ME` does **not** block local login.
+- **Refines F-4:** the local blocker is narrower than "can't authenticate" — authenticated UI flows (F28m1 render, RBAC redirects, per-role gates) ARE locally feasible via console-stubbed link + seeded users. Only the live provider **round-trips** (real Resend email delivery, R2 upload, Gemini fallback) need real keys → those defer per F-4.
+- **Caveat for Activity 4 full matrix:** Day-0 seed creates ONE admin (Yogesh). Lead / QA Engineer / Stakeholder users need seeding before the full 4-role matrix can be driven live. RBAC per-role **logic** is already verified at unit level (`project-roles.guard.spec.ts` PASS, in the 689-test suite).
+
+### F-8 — [P2 worktree-hygiene] Inherited locked-frame deletions sitting in the `-backend` worktree
+
+- `git status` in the `-backend` worktree shows **5 unstaged deletions of LOCKED frames** (Hard Rule 3): `F26 Agents.html`, `F26m1 Agent Model Assignment.html`, `F27 Users and Roles.html`, `F27m1 Invite User Modal.html`, `F28m1 LLM Provider Configuration.html` (all in `frames - claude code build (PM1 v2.6-v2.8)/`).
+- These are **tracked in HEAD `a635fff`** but **missing from this worktree's disk** — they bled in from FE's `chore/web-f28-v1-frame-delete` v1-supersede work (visible in the shared stash list). This is the **cross-worktree pollination** risk logged in the M5 retro (lesson #5).
+- **Risk:** a careless `git add -A` / `git commit -am` here would commit locked-frame deletions = Hard Rule 3 violation. BE+1 committed Day-1 docs **by explicit path only** to avoid this.
+- **Action (FE/Yogesh own this):** decide whether F26/F27/F28m1 v1 frames are intentionally being superseded (then land the deletion via the proper FE PR with v2s) or restore them. Not BE's domain to commit either way.
+
+---
+
+## Decisions taken autonomously (interactive prompt was unavailable)
+
+The Day-1 plan had two forks that needed a call; the interactive question failed to
+deliver, so per the brief's own "make the reasonable call and keep going" posture +
+binding rules, BE+1 decided:
+
+1. **Skip the live Groq round-trip** (Activity 2.1). Honors today's explicit "NO Groq
+   RPD burn" rule. `ac042:smoke` doesn't exist (F-2); a real `ac042:eval` burns ~200
+   RPD. Groq is already proven: config via `/health/deep` + the Day-28 AC042 PASS
+   (top-2 64% / cal 1.00) exercised it end-to-end. **0 Groq RPD spent today.**
+2. **Defer live Resend / R2 / Gemini round-trips** to a deployed-smoke pass (F-4). Local
+   `.env` lacks those keys; `.env` is Edit/Write-harness-blocked; fabricating keys
+   violates security.md. `/health/deep` already confirms config wiring. **Reversible** —
+   if you provide the deployed API URL or paste local keys, I run them immediately.
+
+If either call is wrong, redirect and I'll execute the alternative.
+
+---
+
+## GREEN (verified working, no action)
+
+- **G-1 RBAC code + runtime guard:** 65 routes carry `@Roles(`/`@ProjectRoles(`; role enum `{Admin, Lead, QAEngineer, Stakeholder}` in `packages/shared/src/auth/role.enum.ts` — **exactly matches PM1 ERD §3**. **Runtime-verified**: unauthenticated GET on `/api/projects/:id/test-cases`, `/api/projects/:id/requirements`, `/llm/providers` all return **401** (auth guard fires before role check) — **no bypass**. (Per-_role_ differentiation — Admin vs Lead vs QA vs Stakeholder — still needs authenticated sessions = Activity 4 live, pending env per F-4.)
+- **G-2 DB quota:** Neon 9.51 MB / 512 MB = **1.86%**. Ample headroom.
+- **G-3 Embedding:** model warm in 1179 ms, 384-dim, consistent with schema.
+
+---
+
+## Activity 5 — Day-1 quota snapshot (partial; dashboards need Yogesh)
+
+| Provider   | Measured                                                         | Source                                        |
+| ---------- | ---------------------------------------------------------------- | --------------------------------------------- |
+| Neon       | 9.51 MB storage (1.86% of 512 MB)                                | `/health/deep` ✅                             |
+| Groq       | **0 RPD today** (no calls made)                                  | budget preserved per "do NOT" rule            |
+| GH Actions | ≥100 CI runs since 2026-05-26 (M5 close week); minutes _pending_ | billing API 404 (token scope) → **dashboard** |
+| Resend     | _pending_                                                        | needs Resend dashboard (Yogesh)               |
+| R2         | _pending_                                                        | needs CF dashboard (Yogesh)                   |
+
+Neon **CU-hr** (compute-hours, distinct from the 9.51 MB storage above), GH-Actions
+minutes, Resend email count, R2 GB all need provider dashboards (Yogesh access).
+
+Neon **CU-hr** (compute), GH-Actions minutes, Resend email count, R2 storage GB all
+require provider dashboards — captured at EOD with Yogesh's dashboard access.
+
+---
+
+_BE+1 Day-1, 2026-06-02. Activities 1+2 done autonomously (baseline GREEN, integration
+health via /health/deep). Activities 2.2–2.4 + 3 + 4-live gated on F-4 decision._

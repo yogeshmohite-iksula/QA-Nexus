@@ -297,7 +297,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 **Frontend:** Next.js 15 (App Router) · React 19 · Tailwind CSS 4 (CSS-first config) · shadcn/ui · Sonner · lucide-react · react-hook-form · Zod · Framer Motion · TanStack Query v5 · TipTap
 
-**Backend:** single NestJS 10 service (REST + WebSocket via `@nestjs/websockets` + `ws`) · Prisma 5 · BetterAuth (Postgres adapter) · Zod (shared with FE) · `@xenova/transformers` (BAAI/bge-large-en-v1.5 in-process WASM — see ADR-003; Qwen3-Embedding-0.6B is the future target once Xenova ships an ONNX conversion) · Groq SDK · `@google/generative-ai`
+**Backend:** single NestJS 10 service (REST + WebSocket via `@nestjs/websockets` + `ws`) · Prisma 5 · BetterAuth (Postgres adapter) · Zod (shared with FE) · `@xenova/transformers` (BAAI/bge-small-en-v1.5 in-process WASM, 384-dim — pinned Day-4 for Render-Free fit per ADR-003 amendment; bge-large/1024 + Qwen3-Embedding-0.6B are future targets) · Groq SDK · `@google/generative-ai`
 
 **Database:** Postgres 15 + pgvector (HNSW indexes) on Neon free 0.5 GB · scale-to-zero
 
@@ -305,7 +305,7 @@ Conflict resolution priority: **PM1_PRD > PM1_ERD > M0_v8 > 01_SYSTEM > Tech-pro
 
 **LLM:** Groq free API — `openai/gpt-oss-120b` primary (500 tok/s, 131K ctx, 1k RPD) · `meta-llama/llama-4-scout-17b-16e-instruct` long-context (10M tokens, preview tier) · `openai/gpt-oss-20b` fast layers (14.4k RPD) · Gemini 2.5 Flash fallback (1.5k RPD)
 
-**Embeddings:** BAAI/bge-large-en-v1.5 in-process via `@xenova/transformers` (1024-dim, ~47ms/embed warm). Model selection: see `docs/architecture/adr-003-embedding-model.md`. Qwen3-Embedding-0.6B remains the future target once Xenova ships an ONNX conversion — env var `EMBEDDING_MODEL_ID` enables hot-swap without code change.
+**Embeddings:** BAAI/bge-small-en-v1.5 in-process via `@xenova/transformers` (384-dim, ~33 MB resident, Render-Free-fit). Pinned Day-4 per ADR-003 amendment (bge-large/1024-dim OOM'd Render Free's 512 MB at ~470 MB resident) + Day-5 `vector(384)` migration `0002_vector_384_dim.sql`. Model selection: see `docs/architecture/adr-003-embedding-model.md`. bge-large-en-v1.5 (1024-dim) + Qwen3-Embedding-0.6B remain future targets — env var `EMBEDDING_MODEL_ID` enables hot-swap without code change.
 
 **Email:** Resend free tier (3,000/mo) via `resend` SDK over HTTPS API (ADR-018, supersedes ADR-008 Gmail SMTP — Render Free blocks outbound SMTP since Sept 2025)
 
