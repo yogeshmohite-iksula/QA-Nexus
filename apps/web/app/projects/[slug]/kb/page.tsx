@@ -9,6 +9,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { projects } from '@/lib/demo-seed';
+import { getProjectStaticParams, projectFromSlug } from '@/lib/project-slug';
 import { KbPage } from '@/components/kb/kb-page';
 
 export const metadata: Metadata = {
@@ -18,10 +19,10 @@ export const metadata: Metadata = {
 };
 
 // `output: 'export'` requires this to enumerate every reachable [slug]
-// at build time. Slug shape = lowercased project `key` (matches the URL
-// convention everywhere else; followup (y) lesson learned).
+// at build time. Slug = project name-slug (`iksula-returns`) via the shared
+// helper — BUG-001 standardization (Day-1), Yogesh ruling.
 export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
+  return getProjectStaticParams(projects);
 }
 
 interface KbRouteProps {
@@ -30,7 +31,7 @@ interface KbRouteProps {
 
 export default async function KbRoute({ params }: KbRouteProps) {
   const { slug } = await params;
-  const project = projects.find((p) => p.key.toLowerCase() === slug.toLowerCase());
+  const project = projectFromSlug(slug, projects);
   if (!project) {
     notFound();
   }

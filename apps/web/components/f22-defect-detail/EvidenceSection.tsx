@@ -180,12 +180,15 @@ export function EvidenceSection({ tabs, cards, source }: Props) {
         </button>
       </header>
 
-      {/* Flat tabs with bottom border on active (canonical .dtab) */}
+      {/* Flat tabs with bottom border on active (canonical .dtab). Single row +
+          horizontal scroll on overflow (canonical .tabs); unlike canonical we
+          DON'T hide the scrollbar — the SYS-17 custom scrollbar (Rule 14) stays
+          visible so mobile users can swipe to reach a tab (Yogesh visual gate). */}
       <div
         role="tablist"
         aria-label="Evidence tabs"
         data-canonical-section="ev-tabs"
-        className="flex flex-wrap items-center gap-x-2 border-b border-[color:var(--border)]"
+        className="flex flex-nowrap items-center gap-x-2 overflow-x-auto border-b border-[color:var(--border)]"
       >
         {tabs.map((t) => {
           const Icon = TAB_ICONS[t.icon] ?? Terminal;
@@ -197,7 +200,7 @@ export function EvidenceSection({ tabs, cards, source }: Props) {
               aria-selected={isActive}
               type="button"
               onClick={() => setActiveId(t.id)}
-              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-medium transition-colors ${
+              className={`-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[12px] font-medium transition-colors ${
                 isActive
                   ? 'border-[color:var(--primary)] text-[color:var(--t1)]'
                   : 'border-transparent text-[color:var(--t3)] hover:text-[color:var(--t2)]'

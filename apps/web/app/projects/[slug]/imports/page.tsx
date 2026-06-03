@@ -9,6 +9,7 @@
 import type { Metadata } from 'next';
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
 import { projects, SEED_IDS } from '@/lib/demo-seed';
+import { getProjectStaticParams } from '@/lib/project-slug';
 import { ImportsPage } from '@/components/imports/imports-page';
 
 interface PageProps {
@@ -22,13 +23,11 @@ export const metadata: Metadata = {
 };
 
 // `output: 'export'` requires this to enumerate every reachable [slug]
-// at build time. Slug shape = lowercased project `key` (matches the
-// URL convention used across the app: /projects/ret/..., /projects/
-// cart/..., etc.). Pre-build covers the 5 Iksula seed projects;
-// once BE M2 schema lands + projects table is populated, this becomes
-// a build-time DB lookup.
+// at build time. Slug = project name-slug (`iksula-returns`) via the shared
+// helper — BUG-001 standardization (Day-1), Yogesh ruling. Pre-build covers
+// the 5 Iksula seed projects; once BE M2 schema lands this becomes a DB lookup.
 export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.key.toLowerCase() }));
+  return getProjectStaticParams(projects);
 }
 
 export default async function ImportsRoute({ params }: PageProps) {

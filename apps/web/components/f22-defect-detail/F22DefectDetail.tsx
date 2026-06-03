@@ -37,32 +37,35 @@ export function F22DefectDetail({ slug }: Props) {
   const defectsHref = `/projects/${slug}/defects`;
 
   return (
-    <AdminShell active="defects-failures" projectKeyLower={projectAnchor.key.toLowerCase()}>
+    <AdminShell active="defects-failures" projectKeyLower={projectAnchor.slug}>
       <div className="mx-auto w-full max-w-screen-2xl">
         <div className="px-4 py-6 md:px-6 lg:px-8 lg:py-8">
           {/* Two-column grid: main 7/10 / rail 3/10 at lg+, stacked on mobile. */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:gap-8">
             {/* def-center */}
             <div data-canonical-section="def-center" className="min-w-0 space-y-6">
-              {/* Breadcrumb */}
-              <nav
-                role="navigation"
-                aria-label="Breadcrumb"
-                data-canonical-section="breadcrumb"
-                className="font-mono text-[11px] uppercase tracking-[0.08em] text-[color:var(--t3)]"
-              >
-                <a href={`/projects/${slug}`} className="hover:text-[color:var(--t2)]">
-                  {projectAnchor.name}
-                </a>
-                <span className="mx-1.5 text-[color:var(--t4)]">/</span>
-                <a href={defectsHref} className="hover:text-[color:var(--t2)]">
-                  Defects
-                </a>
-                <span className="mx-1.5 text-[color:var(--t4)]">/</span>
-                <span className="text-[color:var(--t2)]">{defect.id}</span>
-              </nav>
+              {/* Breadcrumb sits tight above the header (canonical title-row margin-top:10px). */}
+              <div className="space-y-2.5">
+                {/* Breadcrumb */}
+                <nav
+                  role="navigation"
+                  aria-label="Breadcrumb"
+                  data-canonical-section="breadcrumb"
+                  className="font-mono text-[11px] uppercase tracking-[0.08em] text-[color:var(--t3)]"
+                >
+                  <a href={`/projects/${slug}`} className="hover:text-[color:var(--t2)]">
+                    {projectAnchor.name}
+                  </a>
+                  <span className="mx-1.5 text-[color:var(--t4)]">/</span>
+                  <a href={defectsHref} className="hover:text-[color:var(--t2)]">
+                    Defects
+                  </a>
+                  <span className="mx-1.5 text-[color:var(--t4)]">/</span>
+                  <span className="text-[color:var(--t2)]">{defect.id}</span>
+                </nav>
 
-              <DefectHeader defect={defect} />
+                <DefectHeader defect={defect} />
+              </div>
 
               <SherlockRca
                 overall={overallConfidence}
