@@ -1130,18 +1130,21 @@ export const F26_GUARDRAIL_EVENTS = [
     type: 'PII detected' as const,
     description: 'Composer redacted email pattern in generated step nitin@***.com' as const,
     target: 'RET-244' as const,
+    suffix: ' for RET-244 — output continued without PII.' as const,
   },
   {
     date: '2026-05-06 · 09:51' as const,
     type: 'Secret scan' as const,
     description: 'Composer blocked output containing token-like string sk-pr0j…' as const,
     target: 'TC-RET-1080' as const,
+    suffix: ' in TC-RET-1080 — request reissued without secret context.' as const,
   },
   {
     date: '2026-05-03 · 17:08' as const,
     type: 'Output length cap' as const,
     description: 'Sherlock RCA truncated at 1,500 tok' as const,
     target: 'DEF-RET-2076' as const,
+    suffix: ' for DEF-RET-2076 — analyst expanded to 3,000 tok in re-run.' as const,
   },
   {
     date: '2026-04-29 · 11:34' as const,
@@ -1149,6 +1152,7 @@ export const F26_GUARDRAIL_EVENTS = [
     description:
       'Curator scrubbed phone-number pattern from chunk kb-117 before embedding.' as const,
     target: 'kb-117' as const,
+    suffix: '' as const,
   },
 ] as const;
 
