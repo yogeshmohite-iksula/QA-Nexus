@@ -281,3 +281,250 @@ export const F28M1_PAGE_TITLE = 'QA Nexus — F28m1 LLM Provider Configuration' 
  *   export const F28M1_DEFECT_IDS = F28M1_RAW.ids.defectIds;
  *   export const F28M1_HEADINGS = F28M1_RAW.headings;
  */
+
+// F28m1 semantic exports — Day-3 FE+1 full 2-pane per F{NN}_{SECTION} canon.
+// Verbatim from F28m1 LLM Provider Configuration Modal v2.html (Hard Rule 17).
+
+export const F28M1_HEADER = {
+  title: 'LLM Provider Configuration' as const,
+  code: 'F28m1' as const,
+  subtitle: 'Workspace providers & model directory · Iksula Returns · Admin-only' as const,
+  tabs: [
+    { key: 'all', label: 'All providers', count: 11 },
+    { key: 'connected', label: 'Connected', count: 2 },
+  ],
+  addProvider: 'Add provider' as const,
+} as const;
+
+export const F28M1_CONNECTED = [
+  { key: 'groq', logo: 'G', logoCls: 'groq', name: 'Groq', sub: '11 models · 3 enabled' },
+  {
+    key: 'gemini',
+    logo: '◆',
+    logoCls: 'gemini',
+    name: 'Google Gemini',
+    sub: '4 models · 1 enabled',
+  },
+] as const;
+
+export const F28M1_AVAILABLE = [
+  {
+    logo: 'OR',
+    name: 'OpenRouter',
+    tier: 'Mixed',
+    tierCls: 'mixed',
+    sub: '300+ models · unified API',
+  },
+  { logo: 'C', name: 'Cerebras', tier: 'Free', tierCls: 'free', sub: '~2000 tok/s · wafer-scale' },
+  { logo: 'AI', name: 'OpenAI · ChatGPT', tier: 'Paid', tierCls: 'paid', sub: 'GPT-4o · o-series' },
+  { logo: 'A', name: 'Anthropic Claude', tier: 'Paid', tierCls: 'paid', sub: 'Opus 4 · Sonnet 4' },
+  { logo: 'K', name: 'Kimi · Moonshot', tier: 'Paid', tierCls: 'paid', sub: 'K2 · long context' },
+  { logo: 'M', name: 'Mistral', tier: 'Paid', tierCls: 'paid', sub: 'Large · Codestral' },
+  { logo: 'T', name: 'Together AI', tier: 'Paid', tierCls: 'paid', sub: '200+ OSS models' },
+  { logo: 'F', name: 'Fireworks', tier: 'Paid', tierCls: 'paid', sub: 'Fast OSS serving' },
+  {
+    logo: '⚙',
+    name: 'Custom (OpenAI-compat)',
+    tier: 'Adv',
+    tierCls: 'adv',
+    sub: 'Any /v1 endpoint',
+  },
+] as const;
+
+export const F28M1_DETAIL = {
+  logo: 'G' as const,
+  name: 'Groq' as const,
+  rec: 'Recommended' as const,
+  status: 'Connected' as const,
+  desc: 'Ultra-fast inference for open-weight models on custom LPU hardware. Free tier supports development and small pilots — no credit card required.' as const,
+  freeTierTop: 'Free Tier active' as const,
+  freeTierNote: '— no credit card on file. Rate limits enforced per model size.' as const,
+  ftStats: [
+    { v: '30', l: 'RPM · requests/min' },
+    { v: '6,000', l: 'TPM · tokens/min (15K Gemma 2)' },
+    { v: '14,400', l: 'RPD · 8B / 20B models' },
+    { v: '1,000', l: 'RPD · 70B+ models' },
+  ],
+  apiKeyLabel: 'API key' as const,
+  apiKeyMasked: 'gsk_••••••••••••••••8629' as const,
+  apiKeyHelper:
+    'Stored encrypted at rest in Render env vars. Never shown in audit logs. Generated at console.groq.com/keys ›' as const,
+  apiKeyBtns: ['Show', 'Update', 'Rotate'] as const,
+  endpointLabel: 'Endpoint' as const,
+  endpointValue: 'https://api.groq.com/openai/v1' as const,
+  testTitle: 'Test connection' as const,
+  testSub: 'Verifies key, lists models, measures latency.' as const,
+  testHealthy: 'Connection healthy' as const,
+  testStatParts: {
+    retrieved: '11 models retrieved' as const,
+    respondingPre: 'API responding in ' as const,
+    latency: '124 ms' as const,
+    testedPre: 'Last tested ' as const,
+    testedVal: '2 min ago' as const,
+  },
+  modelsTitle: 'Available models' as const,
+  modelsMeta: '11 found · 3 enabled · Last sync: 2 min ago' as const,
+  modelFilters: [
+    { label: 'All', n: 11 },
+    { label: 'Production', n: 4 },
+    { label: 'Preview', n: 5 },
+    { label: 'Speech', n: 2 },
+  ],
+  foldLabel: 'Show 3 more models (Whisper · PlayAI TTS · Qwen QwQ)' as const,
+} as const;
+
+export const F28M1_MODELS = [
+  {
+    id: 'openai/gpt-oss-120b',
+    name: 'GPT-OSS 120B',
+    badge: 'Production',
+    badgeCls: 'prod',
+    enabled: true,
+    specs: ['131K ctx', '500 tok/s', '1K RPD'],
+    agents: ['Composer (Primary)', 'Sherlock (Primary)'],
+  },
+  {
+    id: 'openai/gpt-oss-20b',
+    name: 'GPT-OSS 20B',
+    badge: 'Production',
+    badgeCls: 'prod',
+    enabled: true,
+    specs: ['131K ctx', '1,000 tok/s', '14.4K RPD'],
+    agents: ['Sherlock (fast layers)'],
+  },
+  {
+    id: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    name: '',
+    badge: 'Preview',
+    badgeCls: 'preview',
+    enabled: true,
+    specs: ['10M ctx', '300 tok/s', 'varies'],
+    agents: ['Composer (Long-context)'],
+  },
+  {
+    id: 'llama-3.3-70b-versatile',
+    name: 'Llama 3.3 70B',
+    badge: 'Production',
+    badgeCls: 'prod',
+    enabled: false,
+    specs: ['131K ctx', '280 tok/s', '1K RPD'],
+    agents: [],
+  },
+  {
+    id: 'llama-3.1-8b-instant',
+    name: 'Llama 3.1 8B Instant',
+    badge: 'Production',
+    badgeCls: 'prod',
+    enabled: false,
+    specs: ['131K ctx', '560 tok/s', '14.4K RPD'],
+    agents: [],
+  },
+  {
+    id: 'qwen3-32b',
+    name: 'Qwen3 32B',
+    badge: 'Preview',
+    badgeCls: 'preview',
+    enabled: false,
+    specs: ['131K ctx', '60 RPM'],
+    agents: [],
+  },
+  {
+    id: 'deepseek-r1-distill-70b',
+    name: 'DeepSeek R1 Distill 70B',
+    badge: 'Preview',
+    badgeCls: 'preview',
+    enabled: false,
+    specs: ['128K ctx', 'reasoning'],
+    agents: [],
+  },
+  {
+    id: 'gemma-2-9b-it',
+    name: 'Gemma 2 9B',
+    badge: 'Production',
+    badgeCls: 'prod',
+    enabled: false,
+    specs: ['8K ctx', '15K TPM'],
+    agents: [],
+  },
+] as const;
+
+export const F28M1_FOOTER = {
+  stats: [
+    { b: '11', t: 'models', ai: false },
+    { b: '3', t: 'enabled for QA Nexus', ai: false },
+    { b: '3', t: 'assigned to agents', ai: true },
+  ],
+  auditNote: 'Provider changes write to audit log' as const,
+  cancel: 'Cancel' as const,
+  save: 'Save changes' as const,
+} as const;
+
+export const F28M1_WIZARD = {
+  steps: [
+    { num: '1', label: 'Choose provider' },
+    { num: '2', label: 'API key' },
+    { num: '3', label: 'Model' },
+    { num: '4', label: 'Advanced' },
+  ],
+  step1Title: 'Step 1 · Choose a provider' as const,
+  cards: [
+    {
+      key: 'groq',
+      logo: 'G',
+      logoStyle: 'groq',
+      name: 'Groq',
+      rec: 'Rec',
+      desc: 'Fastest inference · LPU hardware · OSS models',
+      tier: 'FREE · 1,000 RPD',
+      tierStyle: 'free',
+      selected: true,
+    },
+    {
+      key: 'gemini',
+      logo: '◆',
+      logoStyle: 'gemini',
+      name: 'Gemini',
+      rec: '',
+      desc: 'Long-context fallback · 1M tokens',
+      tier: 'FREE · 1,500 RPD',
+      tierStyle: 'free',
+      selected: false,
+    },
+    {
+      key: 'custom',
+      logo: '⚙',
+      logoStyle: 'custom',
+      name: 'Custom',
+      rec: '',
+      desc: 'Any OpenAI-compatible endpoint',
+      tier: 'ADVANCED',
+      tierStyle: 'adv',
+      selected: false,
+    },
+  ],
+  step2Title: 'Step 2 · API key' as const,
+  apiKeyLabel: 'API key' as const,
+  apiKeyPlaceholder: 'gsk_xxx…' as const,
+  apiKeyHelper:
+    'Groq keys start with gsk_ and are 56+ chars. Get one at console.groq.com/keys ›' as const,
+  step3Title: 'Step 3 · Default model' as const,
+  modelLabel: 'Model' as const,
+  modelValue: 'openai/gpt-oss-120b · 131K ctx · 500 tok/s' as const,
+  modelHelper: 'PM1 default. Per-agent overrides set after connection.' as const,
+  testTitle: 'Test connection' as const,
+  testSub: 'Save unlocks once the connection verifies.' as const,
+  testSuccess: 'Connection successful' as const,
+  testStatParts: {
+    providerPre: 'Provider ',
+    provider: 'Groq',
+    modelPre: 'Model ',
+    model: 'openai/gpt-oss-120b',
+    latencyPre: 'Latency ',
+    latency: '47 ms',
+  },
+  samplePromptLabel: 'Sample · prompt' as const,
+  samplePrompt: 'Generate a test case for: Refund window for digital goods' as const,
+  sampleResponseLabel: 'Sample · response (truncated)' as const,
+  sampleResponse:
+    'Title: Verify refund window for digital goods is 30 days from purchase date · Steps: 1. Purchase a digital product…' as const,
+} as const;
