@@ -433,3 +433,277 @@ export const F27_PAGE_TITLE = 'QA Nexus — Users & Roles · Iksula Returns' as 
  *   export const F27_DEFECT_IDS = F27_RAW.ids.defectIds;
  *   export const F27_HEADINGS = F27_RAW.headings;
  */
+
+// =============================================================================
+// =============================================================================
+// F27 semantic exports — Day-3 FE+1 extension per F{NN}_{SECTION_UPPER} canon.
+// Verbatim from F27 Users and Roles v2.html per Hard Rule 17.
+// Day-3 polish iteration 1: match canonical screenshot exactly.
+// =============================================================================
+
+/** Phead stats chips (verbatim canonical text) */
+export const F27_STATS = [
+  { label: '8' as const, suffix: 'members' as const, tone: 'default' as const },
+  { label: '1' as const, suffix: 'pending invite' as const, tone: 'default' as const },
+  { label: '4' as const, suffix: 'roles in use' as const, tone: 'default' as const },
+  {
+    label: 'Admin-only · Lead read-only' as const,
+    suffix: '' as const,
+    tone: 'secondary' as const,
+  },
+] as const;
+
+/** Sync indicator pill (top-right of phead stats) */
+export const F27_SYNC = {
+  label: 'Synced 30 sec ago' as const,
+} as const;
+
+/** CTA banner — Add people to Iksula Services Pvt Ltd */
+export const F27_CTA_BANNER = {
+  title: 'Add people to Iksula Services Pvt Ltd' as const,
+  description:
+    'Send Resend email invites — invitees set their password and land on the Day-0 onboarding tour. You assign role + projects per invitee.' as const,
+  slotsLabel: 'SLOTS REMAINING' as const,
+  slotsValue: '17' as const,
+  slotsOfTotal: 'of 25' as const,
+  expiresLabel: 'EXPIRES AFTER' as const,
+  expiresValue: '7' as const,
+  expiresUnit: 'days' as const,
+  cta: 'Invite user' as const,
+} as const;
+
+/** Current team table — 8 rows · Iksula pilot roster per CLAUDE.md canon
+ *  Order per Yogesh Day-3 ruling: Yogesh first (as "you"), then Akshay (Lead),
+ *  then 6 QA Engineers. */
+export const F27_TEAM_MEMBERS = [
+  {
+    initials: 'YM' as const,
+    name: 'Yogesh M.' as const,
+    nameSuffix: '(you)' as const,
+    email: 'yogesh@iksula.com' as const,
+    role: 'ADMIN' as const,
+    roleKey: 'admin' as const,
+    projects: ['Returns', 'Commerce', 'Payments', 'Mobile', 'Internal Ops'] as const,
+    status: 'Active' as const,
+    lastActive: 'Just now' as const,
+    joined: '2026-03-02' as const,
+  },
+  {
+    initials: 'AP' as const,
+    name: 'Akshay Panchal' as const,
+    nameSuffix: '' as const,
+    email: 'akshay@iksula.com' as const,
+    role: 'QA LEAD' as const,
+    roleKey: 'qa_lead' as const,
+    projects: ['Returns', 'Commerce', 'Payments', 'Mobile', 'Internal Ops'] as const,
+    status: 'Active' as const,
+    lastActive: '2 min ago' as const,
+    joined: '2026-03-15' as const,
+  },
+  {
+    initials: 'KK' as const,
+    name: 'Kishor Kadam' as const,
+    nameSuffix: '' as const,
+    email: 'kishor@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns', 'Commerce', 'Mobile'] as const,
+    status: 'Active' as const,
+    lastActive: '18 min ago' as const,
+    joined: '2026-03-22' as const,
+  },
+  {
+    initials: 'NG' as const,
+    name: 'Nitin Gomle' as const,
+    nameSuffix: '' as const,
+    email: 'nitin@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns', 'Commerce'] as const,
+    status: 'Active' as const,
+    lastActive: '1 h ago' as const,
+    joined: '2026-03-22' as const,
+  },
+  {
+    initials: 'NS' as const,
+    name: 'Nadim Siddiqui' as const,
+    nameSuffix: '' as const,
+    email: 'nadim@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns', 'Mobile', 'Payments'] as const,
+    status: 'Active' as const,
+    lastActive: '3 h ago' as const,
+    joined: '2026-03-22' as const,
+  },
+  {
+    initials: 'GD' as const,
+    name: 'Govind Daware' as const,
+    nameSuffix: '' as const,
+    email: 'govind@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns', 'Commerce'] as const,
+    status: 'Active' as const,
+    lastActive: 'Yesterday' as const,
+    joined: '2026-04-02' as const,
+  },
+  {
+    initials: 'MK' as const,
+    name: 'Mohanraj K.' as const,
+    nameSuffix: '' as const,
+    email: 'mohanraj@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns', 'Payments', 'Mobile', 'Internal Ops'] as const,
+    status: 'Active' as const,
+    lastActive: '2 h ago' as const,
+    joined: '2026-04-15' as const,
+  },
+  {
+    initials: 'ST' as const,
+    name: 'Sagar Todankar' as const,
+    nameSuffix: '' as const,
+    email: 'sagar@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns', 'Commerce', 'Mobile'] as const,
+    status: 'Active' as const,
+    lastActive: '30 min ago' as const,
+    joined: '2026-04-19' as const,
+  },
+] as const;
+
+/** Pending invites — 1 invite per canonical (PT initials) */
+export const F27_PENDING_INVITES = [
+  {
+    initials: 'PT' as const,
+    name: 'Priya Tiwari' as const,
+    email: 'priya.tiwari@iksula.com' as const,
+    role: 'QA ENGINEER' as const,
+    roleKey: 'qa_engineer' as const,
+    projects: ['Returns'] as const,
+    sentBy: 'Yogesh M.' as const,
+    expiresIn: '5d 14h' as const,
+  },
+] as const;
+
+/** Recent activity — 6 audit entries (last 14 days, verbatim format) */
+export const F27_RECENT_ACTIVITY = [
+  {
+    tone: 'violet' as const,
+    actor: 'Yogesh M.' as const,
+    action: 'invited' as const,
+    target: 'priya.tiwari@iksula.com' as const,
+    detail: 'as QA Engineer' as const,
+    date: '2026-06-01' as const,
+    time: '14:22' as const,
+    eventType: 'invite_sent' as const,
+  },
+  {
+    tone: 'pass' as const,
+    actor: 'Sagar Todankar' as const,
+    action: 'joined via invite link' as const,
+    target: '' as const,
+    detail: 'last roster member onboarded' as const,
+    date: '2026-04-19' as const,
+    time: '11:08' as const,
+    eventType: 'invite_accepted' as const,
+  },
+  {
+    tone: 'pass' as const,
+    actor: 'Mohanraj K.' as const,
+    action: 'accepted invite and set password' as const,
+    target: '' as const,
+    detail: '' as const,
+    date: '2026-04-15' as const,
+    time: '09:32' as const,
+    eventType: 'invite_accepted' as const,
+  },
+  {
+    tone: 'warn' as const,
+    actor: 'Yogesh M.' as const,
+    action: 'changed' as const,
+    target: "Govind Daware's projects" as const,
+    detail: '— added Commerce' as const,
+    date: '2026-04-12' as const,
+    time: '16:42' as const,
+    eventType: 'projects_updated' as const,
+  },
+  {
+    tone: 'pass' as const,
+    actor: 'Govind Daware' as const,
+    action: 'joined via invite link' as const,
+    target: '' as const,
+    detail: '' as const,
+    date: '2026-04-02' as const,
+    time: '14:25' as const,
+    eventType: 'invite_accepted' as const,
+  },
+  {
+    tone: 'violet' as const,
+    actor: 'Yogesh M.' as const,
+    action: 'invited' as const,
+    target: 'Akshay Panchal' as const,
+    detail: 'as QA Lead · workspace bootstrap' as const,
+    date: '2026-03-15' as const,
+    time: '09:15' as const,
+    eventType: 'invite_sent' as const,
+  },
+] as const;
+
+/** Role matrix — reference grid per canonical (Stakeholder = "0 members in pilot") */
+export const F27_ROLE_MATRIX = [
+  {
+    role: 'QA Engineer' as const,
+    roleKey: 'qa_engineer' as const,
+    memberLabel: '5 members' as const,
+    badge: 'QA ENGINEER' as const,
+    capabilities: [
+      { text: 'Author & edit test cases', tone: 'pass' as const },
+      { text: 'Run tests, log defects', tone: 'pass' as const },
+      { text: 'Review AI agent drafts (Composer / Curator / Sherlock)', tone: 'pass' as const },
+      { text: 'Cannot manage team or access Govern section', tone: 'fail' as const },
+    ],
+  },
+  {
+    role: 'QA Lead' as const,
+    roleKey: 'qa_lead' as const,
+    memberLabel: '1 member' as const,
+    badge: 'QA LEAD' as const,
+    capabilities: [
+      { text: 'Everything QA Engineer can', tone: 'pass' as const },
+      { text: 'Approve test cases + release readiness', tone: 'pass' as const },
+      { text: 'View Executive Dashboard + Reports Studio', tone: 'pass' as const },
+      { text: 'Invite users (not Admin role)', tone: 'pass' as const },
+      { text: 'Configure agent autonomy + guardrails', tone: 'pass' as const },
+      { text: 'Read-only Settings & Audit access', tone: 'pass' as const },
+    ],
+  },
+  {
+    role: 'Admin' as const,
+    roleKey: 'admin' as const,
+    memberLabel: '1 member' as const,
+    badge: 'ADMIN' as const,
+    capabilities: [
+      { text: 'Everything QA Lead can', tone: 'pass' as const },
+      { text: 'Assign any role (including Admin)', tone: 'pass' as const },
+      { text: 'Full Settings & Audit control', tone: 'pass' as const },
+      { text: 'Configure LLM providers + agents', tone: 'pass' as const },
+      { text: 'Workspace owner · billing', tone: 'pass' as const },
+      { text: 'Manage integrations', tone: 'pass' as const },
+    ],
+  },
+  {
+    role: 'Stakeholder' as const,
+    roleKey: 'stakeholder' as const,
+    memberLabel: '0 members in pilot' as const,
+    badge: 'STAKEHOLDER' as const,
+    capabilities: [
+      { text: 'Read-only dashboards & reports', tone: 'pass' as const },
+      { text: 'Approve release sign-offs', tone: 'pass' as const },
+      { text: 'No test authoring or execution', tone: 'fail' as const },
+      { text: 'Govern section hidden', tone: 'fail' as const },
+    ],
+  },
+] as const;
