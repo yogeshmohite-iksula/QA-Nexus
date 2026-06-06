@@ -1,7 +1,9 @@
 // F26 AgentCardsGrid — canonical agent cards with sparklines + buttons.
+// "Configure" links to F26m2 model-assignment modal: /admin/agents/model-assignment?agent={code}
 
 'use client';
 
+import Link from 'next/link';
 import type { F26AgentsData } from '@/components/admin/agents/types';
 
 // Per-agent SVG glyph (verbatim from canonical F26 v2 HTML).
@@ -157,7 +159,11 @@ export function AgentCardsGrid({ data }: Props) {
                 </div>
               </div>
               <div className="ag-foot">
-                <button className="btn-primary configure-btn" type="button" data-agent={a.code}>
+                <Link
+                  className="btn-primary configure-btn"
+                  href={`/admin/agents/model-assignment?agent=${a.code}`}
+                  data-agent={a.code}
+                >
                   <svg
                     viewBox="0 0 16 16"
                     fill="none"
@@ -170,7 +176,7 @@ export function AgentCardsGrid({ data }: Props) {
                     <path d="M8 1v1.5M8 13.5V15M2.5 4.5l1 1M12.5 10.5l1 1M1 8h1.5M13.5 8H15M2.5 11.5l1-1M12.5 5.5l1-1" />
                   </svg>
                   Configure
-                </button>
+                </Link>
                 <button
                   className="ghost details-link details-btn"
                   type="button"
