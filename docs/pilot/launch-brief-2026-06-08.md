@@ -1,7 +1,7 @@
 # QA Nexus PM1 MVP — Pilot Launch Brief (Mon Jun 8, 2026)
 
 > **Audience:** Yogesh (Admin) + 8-user Iksula pilot team.
-> **Status:** SKELETON Day-3 Thu 2026-06-04. Fill §5 (known limits) + §7 (feedback) after BE+1 Day-3 results. Finalize Fri.
+> **Status:** FILLED Sat Day-3+4 2026-06-06 evening. §5 (known limits) + §7 (feedback channel) populated with BE+1 Day-3-4 results + Yogesh ratified channel decision. Ready for Sun smoke + Mon launch.
 
 ---
 
@@ -33,33 +33,42 @@ The Mon Jun 8 pilot puts this in the hands of your 8-person QA team for daily us
 
 ## §4 — Surfaces ready for pilot
 
-| Frame    | Page                                | Status                      |
-| -------- | ----------------------------------- | --------------------------- |
-| F06      | Sign In                             | ✅ shipped M1               |
-| F07      | Verify                              | ✅ shipped M1               |
-| F08      | Home                                | ✅ shipped M2               |
-| F09      | Projects List                       | ✅ shipped M2               |
-| F12-F13  | Knowledge Base (list + detail)      | ✅ shipped M3               |
-| F14      | Requirements                        | ✅ shipped M3               |
-| F15      | Knowledge Base v2 (canonical shell) | ✅ shipped M3               |
-| F16a/b/c | Test Cases (list + detail + runs)   | ✅ shipped M4               |
-| F18      | Test Suites                         | ✅ shipped M4               |
-| F19      | Run Console                         | ✅ shipped M5               |
-| F20      | Run Results                         | ✅ shipped M4               |
-| F21      | Defects Hub                         | ✅ shipped M4               |
-| F22      | Defect Detail                       | ✅ shipped M5               |
-| F23      | Reports Studio                      | ✅ shipped M5               |
-| F25      | Executive Dashboard                 | ✅ shipped M5               |
-| F26      | Agents                              | ✅ shipped Day-2 pilot-prep |
-| F27      | Users & Roles                       | ⏳ shipping Day-3           |
-| F28      | Settings & Audit                    | ✅ shipped M5               |
+| Frame    | Page                                | Status                                     |
+| -------- | ----------------------------------- | ------------------------------------------ |
+| F06      | Sign In                             | ✅ shipped M1                              |
+| F07      | Verify                              | ✅ shipped M1                              |
+| F08      | Home                                | ✅ shipped M2                              |
+| F09      | Projects List                       | ✅ shipped M2                              |
+| F12-F13  | Knowledge Base (list + detail)      | ✅ shipped M3                              |
+| F14      | Requirements                        | ✅ shipped M3                              |
+| F15      | Knowledge Base v2 (canonical shell) | ✅ shipped M3                              |
+| F16a/b/c | Test Cases (list + detail + runs)   | ✅ shipped M4                              |
+| F18      | Test Suites                         | ✅ shipped M4                              |
+| F19      | Run Console                         | ✅ shipped M5                              |
+| F20      | Run Results                         | ✅ shipped M4                              |
+| F21      | Defects Hub                         | ✅ shipped M4                              |
+| F22      | Defect Detail                       | ✅ shipped M5                              |
+| F23      | Reports Studio                      | ✅ shipped M5                              |
+| F25      | Executive Dashboard                 | ✅ shipped M5                              |
+| F26      | Agents                              | ✅ shipped Day-2 pilot-prep                |
+| F27      | Users & Roles                       | ✅ shipped Sat Day-3+4                     |
+| F28      | Settings & Audit                    | ✅ shipped M5                              |
+| F26m1    | LLM Provider Setup modal            | ✅ shipped Sat Day-3+4                     |
+| F28m1    | LLM Provider Config modal           | ✅ shipped Sat Day-3+4                     |
+| F26m2    | Curator Detail modal                | ⏳ Sat evening (defer post-pilot if slips) |
+| F27m1    | Invite User modal                   | ⏳ Sat evening                             |
 
 ## §5 — Known limits / deferred items
 
 - **R-001:** client-side admin guard only (server-side → M6/MS0-T021). Pilot is honor-system for 8 trusted users.
 - **R-002:** Sherlock A4 RCA p95 ~18s (pilot gate <20s per ADR-024; GA gate <15s deferred to M6).
-- _[FILL from BE+1 Day-3: any AC011/AC021 eval gaps, Resend/R2 integration status, embedding coverage]_
-- Modals (F26m1 Composer Detail, F26m2 Curator Detail, F27m1 Invite User, F28m1 LLM Provider Setup) — shipping Day-3/4; if any slip, the parent page is still functional without the modal.
+- **Email sender (ADR-025):** magic-link email is sent via the Apps Script bridge from `yogesh.mohite@iksula.com` (Workspace 1,500 recipients/day). Migration trigger: when Iksula IT verifies `mail.qanexus.iksula.com` in Resend → flip `EMAIL_PROVIDER=resend` env var, Render auto-redeploys, Apps Script bridge stays as fallback. See `docs/architecture/adr-025-pilot-email-via-apps-script-bridge.md`.
+- **NFR-003 production verification deferred to Day-29** — `NFR_PROBE_TOKEN` mechanism is code-ready (PR #238 documents the followup); production A1/A2 measurement on the Render-co-located runner runs in the Day-29 followup window, NOT during the pilot. Pilot-tier gate per ADR-024 holds.
+- **FE Home page (`/home/`)** renders stub data, not API-backed yet. Day-29 followup for FE+1; pilot users see static demo content on the Home landing surface (functional nav unaffected).
+- **F26 Agents page — Phase-3 modal interactions** (deep config editor flows beyond the F26m1/F28m1 setup-and-config modals) are scoped post-pilot. F26 view + F26m1 + F28m1 cover the pilot surface; F26's Phase-3 cfgModal hooks remain TODOs.
+- **F26m2 Curator Detail modal** — shipping Sat evening if FE+1 has time; if not, the F26 Agents parent page already shows the Curator card without the drill-in detail. Defer post-pilot if Sat ship slips.
+- **`mail.qanexus.iksula.com` Resend domain verification** — Iksula IT dependency; outside Yogesh's DNS edit access. Drives ADR-025 above. Long-poll for IT verification post-pilot.
+- Modal Batch A shipped Sat (F26m1 + F28m1, PRs #236/#237). Modal Batch B (F26m2 + F27m1) in flight Sat evening; parent pages function without these modals.
 
 ## §6 — Pilot operating window
 
@@ -70,9 +79,7 @@ The Mon Jun 8 pilot puts this in the hands of your 8-person QA team for daily us
 
 ## §7 — Feedback collection
 
-_[FILL Fri — Yogesh decides channel: Linear tickets? Slack channel? Email? Google Form?]_
-
-Recommended: dedicated Slack channel `#qa-nexus-pilot-feedback` + a pinned Google Form for structured bug reports (severity / screenshot / steps to reproduce).
+Pilot users report bugs / questions / feedback via email to `yogesh.mohite@iksula.com`. Yogesh triages in Gmail with labels (P0 bug / P1 bug / question / feature request) and either resolves directly or routes to BE+1/FE+1 via Claude Code. Migration target post-pilot: `qa-nexus-pilot@iksula.com` group alias when Iksula IT verifies.
 
 ## §8 — Mon Jun 8 D-day timeline
 
@@ -98,4 +105,4 @@ If a P0 surfaces during pilot:
 
 ---
 
-_Skeleton authored Day-3 2026-06-04. Finalize Fri after Yogesh smoke testing. §5 + §7 need BE+1 Day-3 results + Yogesh channel decision._
+_Skeleton authored Day-3 2026-06-04. Filled Sat Day-3+4 2026-06-06 evening with all pilot-prep deferrals + Yogesh-ratified email feedback channel. Sun smoke (Yogesh-driven) → Mon Jun 8 D-day launch._
