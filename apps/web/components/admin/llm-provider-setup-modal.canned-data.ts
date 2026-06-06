@@ -180,3 +180,186 @@ export const F26M1_PAGE_TITLE = 'QA Nexus — Configure LLM Provider · F26m1 v2
  *   export const F26M1_DEFECT_IDS = F26M1_RAW.ids.defectIds;
  *   export const F26M1_HEADINGS = F26M1_RAW.headings;
  */
+
+// F26m1 semantic exports — Day-3 FE+1 full step-wizard per F{NN}_{SECTION} canon.
+// Verbatim from F26m1 LLM Provider Setup Modal v2.html (Hard Rule 17).
+
+export const F26M1_HEADER = {
+  title: 'Configure LLM Provider' as const,
+  subtitle: 'Set up Groq, Gemini, or a custom provider for Composer + Sherlock agents' as const,
+  ctx: 'Admin · F26m1' as const,
+} as const;
+
+export const F26M1_PROVIDERS = [
+  {
+    key: 'groq',
+    logo: 'G',
+    name: 'Groq',
+    tag: 'Fastest inference — 500 tok/s on gpt-oss-120b.',
+    badges: [
+      { t: '★ Recommended', cls: 'rec' },
+      { t: 'Free · 1,000 RPD', cls: 'free' },
+    ],
+  },
+  {
+    key: 'gemini',
+    logo: '◆',
+    name: 'Google Gemini',
+    tag: 'Reliable fallback — Gemini 2.5 Flash with long context.',
+    badges: [{ t: 'Free · 1,500 RPD', cls: 'free' }],
+  },
+  {
+    key: 'custom',
+    logo: '⚙',
+    name: 'Custom Provider',
+    tag: 'Any OpenAI-compatible endpoint — Anthropic, Together AI, self-hosted.',
+    badges: [{ t: '⚙ Advanced', cls: 'adv' }],
+  },
+] as const;
+
+export const F26M1_STEPS = {
+  step1Title: 'Choose your provider' as const,
+  step1Help:
+    'All three are OpenAI-compatible. Groq is recommended for speed and a generous free tier.' as const,
+  step2Title: 'Enter API key' as const,
+  apiKeyLabel: 'API key' as const,
+  apiKeyPlaceholder: 'gsk_xxx…' as const,
+  apiKeyShow: 'Show' as const,
+  apiKeyHelper: 'Get your API key from console.groq.com/keys ›' as const,
+  step3Title: 'Pick your primary model' as const,
+  modelLabel: 'Primary model' as const,
+  modelOptions: ['openai/gpt-oss-120b · 131K ctx · 500 tok/s · default'] as const,
+  modelHelper:
+    'Recommended: openai/gpt-oss-120b — best quality + 500 tok/s + 131K context.' as const,
+  step4Title: 'Advanced' as const,
+  step4Opt: 'Optional' as const,
+  advSummary: 'Endpoint, sampling, retries, per-agent overrides' as const,
+  advMetaR: 'defaults shown' as const,
+} as const;
+
+export const F26M1_ADVANCED = {
+  temperatureLabel: 'Temperature' as const,
+  temperatureValue: '0.4' as const,
+  temperatureHelper: 'Lower = deterministic. Raise for creative test cases.' as const,
+  maxTokensLabel: 'Max tokens' as const,
+  maxTokensValue: '1500' as const,
+  maxTokensHelper: 'Per response cap. Sherlock RCAs may need 2,500+.' as const,
+  retriesLabel: 'Retry attempts' as const,
+  retriesValue: '4' as const,
+  retriesHelper: 'Retries fail-over to Gemini 2.5 Flash on exhaustion.' as const,
+  streamingLabel: 'Streaming' as const,
+  streamingOptions: ['Enabled (recommended)', 'Disabled'] as const,
+  streamingHelper: 'Streamed tokens render live in Composer + Sherlock.' as const,
+  perAgentLabel: 'Per-agent override' as const,
+  perAgentHelper:
+    'Each agent uses this provider unless overridden. Curator runs entirely on internal pgvector.' as const,
+  agents: [
+    {
+      key: 'composer',
+      name: 'Composer',
+      code: 'A1',
+      state: 'Uses primary provider',
+      options: ['Same as primary', 'Override → Gemini 2.5 Flash', 'Override → Custom endpoint'],
+      dim: false,
+    },
+    {
+      key: 'curator',
+      name: 'Curator',
+      code: 'A2',
+      state: 'N/A — internal pgvector embeddings',
+      options: ['No LLM provider used'],
+      dim: true,
+    },
+    {
+      key: 'sherlock',
+      name: 'Sherlock',
+      code: 'A4',
+      state: 'Uses primary provider',
+      options: ['Same as primary', 'Override → Gemini 2.5 Flash', 'Override → Custom endpoint'],
+      dim: false,
+    },
+  ],
+} as const;
+
+export const F26M1_TEST = {
+  title: 'Test connection' as const,
+  sub: 'POST /api/integrations/llm/test-connection — verifies key, model, latency. Test does not save.' as const,
+  btn: 'Test connection' as const,
+} as const;
+
+export const F26M1_FOOTER = {
+  cancel: 'Cancel' as const,
+  test: 'Test connection' as const,
+  save: 'Save configuration' as const,
+  saveTip: 'Run Test connection first to verify before saving.' as const,
+} as const;
+
+// Demo-mode bar (mock-only affordance) — flips Fresh setup ↔ Edit existing.
+// Verbatim from F26m1 v2.html .demo-bar (Hard Rule 17).
+export const F26M1_DEMO = {
+  label: 'Demo' as const,
+  fresh: 'Fresh setup' as const,
+  edit: 'Edit existing' as const,
+} as const;
+
+// Edit-existing mode strings — banner + saved-key + Replace.
+// Verbatim from F26m1 v2.html .exist banner + demo edit branch (Hard Rule 17).
+export const F26M1_EDIT = {
+  bannerLead: 'Editing existing configuration:' as const,
+  bannerTarget: 'Groq · openai/gpt-oss-120b' as const,
+  bannerTs: 'Last successful test: 2m ago at 12:30 IST · 47ms latency' as const,
+  reset: 'Reset & choose again' as const,
+  savedKeyMasked: 'gsk_••••••••••••••••••••••••••••••••' as const,
+  replace: 'Replace' as const,
+  savedKeyHelper: 'Saved key — Replace to enter a new one.' as const,
+} as const;
+
+// Test-connection success result — shown as prior-test in Edit existing mode.
+// Verbatim from F26m1 v2.html showResult('success') (Hard Rule 17).
+export const F26M1_TEST_RESULT = {
+  successHead: 'Connection successful' as const,
+  providerLabel: 'Provider' as const,
+  provider: 'Groq' as const,
+  modelLabel: 'Model' as const,
+  model: 'openai/gpt-oss-120b' as const,
+  latencyLabel: 'Latency' as const,
+  latencyValue: '87ms' as const,
+  priorTest: '12:30 IST · prior test' as const,
+  samplePromptLabel: 'Sample · prompt' as const,
+  samplePrompt: 'Generate a test case for: Refund window for digital goods' as const,
+  sampleRespLabel: 'Sample · response (truncated)' as const,
+  sampleResp:
+    'Test Case TC-001 — Verify refund window extends to 30 days for digital goods on partial-download failure. Steps: 1. Initiate purchase…' as const,
+} as const;
+
+// Per-provider key config (placeholder, validation prefix, hint, doc link).
+// Verbatim from F26m1 v2.html PROVIDERS script object (Hard Rule 17).
+export const F26M1_PROVIDER_CONFIG = {
+  groq: {
+    placeholder: 'gsk_xxx…',
+    keyPrefix: '^gsk_[A-Za-z0-9_-]{20,}$',
+    keyHint: 'Groq keys start with gsk_ and are 56+ chars.',
+    docUrl: 'console.groq.com/keys ›',
+    docHref: 'https://console.groq.com/keys',
+    model: 'openai/gpt-oss-120b · 131K ctx · 500 tok/s · default',
+    modelHelper: 'Recommended: openai/gpt-oss-120b — best quality + 500 tok/s + 131K context.',
+  },
+  gemini: {
+    placeholder: 'AIzaSy…',
+    keyPrefix: '^AIza[A-Za-z0-9_-]{30,}$',
+    keyHint: 'Gemini keys start with AIza.',
+    docUrl: 'aistudio.google.com/app/apikey ›',
+    docHref: 'https://aistudio.google.com/app/apikey',
+    model: 'gemini-2.5-flash · 1M ctx · default',
+    modelHelper: 'Recommended: gemini-2.5-flash — fastest with generous free tier.',
+  },
+  custom: {
+    placeholder: 'sk-… (your provider\u2019s key format)',
+    keyPrefix: '^.{10,}$',
+    keyHint: 'Any non-empty token your provider accepts.',
+    docUrl: 'your provider\u2019s docs',
+    docHref: '#',
+    model: 'custom-model · your provider',
+    modelHelper: "Refer to your provider's docs for the exact model identifier string.",
+  },
+} as const;
