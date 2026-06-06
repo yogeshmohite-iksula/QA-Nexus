@@ -27,8 +27,13 @@ if echo "$CONTENT" | grep -nE '(primary-container|on-primary|surface-tint|surfac
   VIOLATIONS+="Forbidden Material Design 3 token (PM1 design system bans MD3):\n$HITS\n"
 fi
 
-# Block hex colors not in the locked whitelist
-WHITELIST='#0B0F17|#111827|#1A2233|#232C3F|#2A3347|#3B4660|#F1F5F9|#C7D0DC|#8A94A6|#94A3B8|#2DD4BF|#003732|#A78BFA|#C4B5FD|#34D399|#F87171|#FBBF24|#60A5FA|#FAFAF8|#022C1F|#3D0707|#3F2300|#2E1065'
+# Block hex colors not in the locked whitelist.
+# Tokens come from PM1_UI_v2/UI Files/01_SYSTEM.md §3.1 + the canonical shell
+# handoff (_SHELL Developer Handoff.md §2, shipped Sun 2026-06-07 by Claude
+# Design). The handoff adds:
+#   - admin-red: #EF4444 (Admin role badge)
+#   - Full light-theme palette (toggled via html[data-theme="light"])
+WHITELIST='#0B0F17|#111827|#1A2233|#232C3F|#2A3347|#3B4660|#F1F5F9|#C7D0DC|#8A94A6|#94A3B8|#2DD4BF|#003732|#A78BFA|#C4B5FD|#34D399|#F87171|#FBBF24|#60A5FA|#FAFAF8|#022C1F|#3D0707|#3F2300|#2E1065|#EF4444|#E8ECF4|#F3F1FB|#EAEAF6|#DFE0EF|#D2D5E6|#B5BAD2|#1B1F3B|#3C4366|#6B7298|#9CA1C0|#FFFFFF'
 HEX_HITS=$(echo "$CONTENT" | grep -niE '#[0-9a-f]{6}\b' | grep -viE "$WHITELIST" || true)
 if [ -n "$HEX_HITS" ]; then
   VIOLATIONS+="Hex color outside PM1 design-token whitelist:\n$HEX_HITS\nWhitelist: $WHITELIST\n"
