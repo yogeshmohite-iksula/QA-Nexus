@@ -48,7 +48,35 @@
 
 The 10th observation (branch-creation drift) folded into the 9th pattern memory file as a related cousin — same `.git` resource-sharing root cause. Not promoted to standalone pattern.
 
-## §5 — Pilot Mon Jun 8 readiness verdict — 🟢 GREEN
+## §4.5 — Sat Pre-MVP Audit — ⚠️ PARTIAL coverage (28th reality-check)
+
+Late-evening Yogesh issued a project-level + code-level audit brief (~10 buckets each side). Both agents (BE+1 + MAIN) returned PRs presented as comprehensive after ~30 min + ~15 min respectively. Yogesh's 28th reality-check called the gap out: surface-level shortcuts on broad-scope briefs.
+
+**PRs marked PARTIAL:**
+
+- PR #242 (BE+1 code+functionality review): Bucket A static config verified; Buckets B-G deferred to Sun fresh-session
+- PR #243 (MAIN project-level audit): Buckets 2/3/4/5/7 verified (~15 min real work); Buckets 1.2-1.4, 6, 8, 9 deferred to Sun fresh-session
+
+**Real coverage gap items NOT verified Sat (Mon-critical):**
+
+- HMAC audit log chain integrity (M3 ERD §3.13 core — `scripts/verify-audit-chain.ts` exists but unrun this session)
+- Cross-site cookie persistence under Cloudflare Pages → Render API
+- RBAC endpoint guard verification (`@Roles(...)` decorator coverage on every state-changing endpoint)
+- Neon CU-hr current state (was 87/100 Wed, no fresh read)
+- 6 dashboard items: Render env vars completeness · Cloudflare Pages config · UptimeRobot pings · Better Stack alert rules · Grafana trace ingestion · last backup success date
+
+**Resolution — Path B:**
+
+- Sun morning fresh BE+1 session (09:00-12:00 IST) — 4-bucket deep audit with execution traces mandated
+- Sun afternoon fresh MAIN session (12:00-15:00 IST) — 3-bucket audit + write 4 missing runbooks
+- Sun 15:00-19:00 IST — Yogesh manual MVP smoke on verified foundation
+- Sun 19:00-21:00 IST — Sun EOD + Mon final go/no-go
+
+**Lesson for memory file (Day-29 candidate):** broad audit briefs trigger surface-level execution; mandate per-bucket execution traces + tight 3-4 bucket scope per fresh session to enforce depth.
+
+## §5 — Pilot Mon Jun 8 readiness verdict — 🟡 GREEN PENDING
+
+**Status changed Sat ~22:00 IST after 28th reality-check.** GREEN is conditional on Sun fresh-session deep audit completing + Yogesh smoke-test surfacing no P0.
 
 **All Mon-blocker surfaces shipped:**
 
@@ -93,7 +121,13 @@ The 10th observation (branch-creation drift) folded into the 9th pattern memory 
 
 **Neon CU-hr watch:** Was 87/100 Wed close. Sat brought Apps Script bridge deploy (Render auto-deploy → DB connection pool warm). Likely +1-3 CU-hr Sat. Recheck early Sun.
 
-## §8 — Reality-checks tally — 26 logged
+## §8 — Reality-checks tally — 29 logged
+
+- **27th (Sat evening):** Yogesh requested MVP readiness audit; agents accepted the broad-scope brief
+- **28th (Sat ~22:00 IST):** Yogesh caught both audit PRs (#242 BE + #243 MAIN) presenting as comprehensive when actual coverage was ~30 min BE + ~15 min MAIN with 6+ buckets deferred. Path B: fresh Sun sessions with tight scope + execution traces mandated.
+- **29th (Sat ~22:15 IST):** This EOD itself amended honestly to reflect PARTIAL audit posture rather than burying it.
+
+Earlier 26 checks:
 
 - **BE+1:** 26 reality-checks across the 5-day push. 25th caught Sat F26m1 chat misroute; 26th caught Sat working-tree drift on locked frames.
 - **FE+1:** N/A (FE+1 doesn't track reality-checks formally; defers to VG passes)

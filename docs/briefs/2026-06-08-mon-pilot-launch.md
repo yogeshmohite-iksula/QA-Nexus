@@ -2,6 +2,19 @@
 
 > **Date:** Mon 2026-06-08 · **Mode:** Live pilot — 8 users on production · **Audience:** Yogesh (Admin) + agents on-call.
 
+## Pre-launch gates (must all be GREEN by Mon 08:00 IST)
+
+These gates were re-locked Sat 22:00 IST after the 28th reality-check identified PARTIAL audit coverage in Sat PRs #242 + #243. Mon Jun 8 unconditional GREEN launch requires all 4 PASS.
+
+| Gate | Source                                                      | Required state                                |
+| ---- | ----------------------------------------------------------- | --------------------------------------------- |
+| 1    | BE+1 Sun AM fresh audit (4 buckets)                         | All 4 PASS in `2026-06-07-sun-am-be-audit.md` |
+| 2    | MAIN Sun PM fresh audit (3 buckets + 4 runbooks)            | All 3 PASS + 4 runbooks landed                |
+| 3    | Yogesh manual smoke testing (Sun 15:00-19:00 IST)           | 0 P0 bugs found (P1 with fix plan acceptable) |
+| 4    | Sun EOD verdict (`docs/pilot/sun-blockers.md` ABSENT/empty) | Mon launch unconditional GREEN                |
+
+If any gate FAILS Sun 19:00 IST → delay pilot 24h to Tue Jun 9.
+
 ## Pre-launch (08:00-09:00 IST)
 
 ### 08:00 IST — Apps Script bridge health check
