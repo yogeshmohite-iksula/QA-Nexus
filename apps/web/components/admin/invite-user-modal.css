@@ -1,0 +1,1013 @@
+/* F27m1 Invite User modal — canonical CSS extracted verbatim from
+   v2.html and scoped under .f27m1-scrim. SYS-17 tokens locked.
+   Source: PM1_UI_v2/Redesign Frame by claude design/F27m1 Invite User Modal v2.html */
+
+.f27m1-scrim {
+  --canvas: #0b0f17;
+  --base: #111827;
+  --raised: #1a2233;
+  --overlay: #232c3f;
+  --border: #2a3347;
+  --border-strong: #3b4660;
+  --t1: #f1f5f9;
+  --t2: #c7d0dc;
+  --t3: #8a94a6;
+  --t4: #94a3b8;
+  --primary: #2dd4bf;
+  --primary-ink: #003732;
+  --secondary: #a78bfa;
+  --secondary-ink: #2e1065;
+  --ai-accent: #c4b5fd;
+  --pass: #34d399;
+  --fail: #f87171;
+  --warn: #fbbf24;
+  --info: #60a5fa;
+  --admin-red: #ef4444;
+  --primary-soft: rgba(45, 212, 191, 0.1);
+  --primary-line: rgba(45, 212, 191, 0.28);
+  --ai-soft: rgba(167, 139, 250, 0.12);
+  --ai-line: rgba(167, 139, 250, 0.3);
+  --pass-soft: rgba(52, 211, 153, 0.14);
+  --pass-line: rgba(52, 211, 153, 0.34);
+  --warn-soft: rgba(251, 191, 36, 0.14);
+  --warn-line: rgba(251, 191, 36, 0.34);
+  --fail-soft: rgba(248, 113, 113, 0.14);
+  --fail-line: rgba(248, 113, 113, 0.34);
+  --admin-soft: rgba(239, 68, 68, 0.1);
+  --admin-line: rgba(239, 68, 68, 0.32);
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.display {
+  font-family: 'DM Sans', 'Inter', ui-sans-serif;
+  letter-spacing: -0.01em;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+  border: 0;
+  background: none;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+@media (max-width: 1023px) {
+  .scrim {
+    padding: 0;
+  }
+}
+.modal {
+  width: 960px;
+  max-width: 100%;
+  height: 720px;
+  max-height: calc(100vh - 48px);
+  background: var(--base);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 40px 120px -20px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+@media (max-width: 1023px) {
+  .modal {
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: 0;
+  }
+}
+
+.m-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.m-head .ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--ai-soft);
+  border: 1px solid var(--ai-line);
+  color: var(--secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.m-head .ic svg {
+  width: 19px;
+  height: 19px;
+}
+.m-head .ttl {
+  flex: 1;
+  min-width: 0;
+}
+.m-head .ttl .t {
+  font-family: 'DM Sans';
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--t1);
+  letter-spacing: -0.01em;
+}
+.m-head .ttl .s {
+  font-size: 11.5px;
+  color: var(--t3);
+  margin-top: 2px;
+  display: block;
+  /* No max-width cap on desktop — let subtitle render as a single line.
+     Mobile fit block below adds wrapping with overflow-wrap. */
+}
+.f27m1-scrim .flabel .req {
+  display: inline;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+/* Apply-to-all + per-row role/projects dropdowns. */
+.f27m1-scrim .menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.f27m1-scrim .menu-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: var(--raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 6px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+}
+.f27m1-scrim .menu-pop button.opt {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--t1);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.f27m1-scrim .menu-pop button.opt:hover {
+  background: var(--overlay);
+}
+.f27m1-scrim .menu-pop button.opt .check {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex: none;
+}
+.f27m1-scrim .menu-pop button.opt .check svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+}
+.f27m1-scrim .menu-pop button.opt.selected .check svg {
+  opacity: 1;
+}
+.f27m1-scrim .menu-pop button.opt .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+.f27m1-scrim .menu-pop button.opt .dot.eng {
+  background: var(--primary);
+}
+.f27m1-scrim .menu-pop button.opt .dot.lead {
+  background: var(--secondary);
+}
+.f27m1-scrim .menu-pop button.opt .dot.stake {
+  background: var(--overlay);
+  border: 1px solid var(--border-strong);
+}
+.m-head .code {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: var(--t3);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  flex: none;
+}
+.m-head .x {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  color: var(--t3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.m-head .x:hover {
+  background: var(--raised);
+  color: var(--t1);
+}
+.m-head .x svg {
+  width: 15px;
+  height: 15px;
+}
+
+.m-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.m-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Workspace banner */
+.ws-banner {
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ws-banner .l {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ws-banner .cap {
+  font-family: 'JetBrains Mono';
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-weight: 700;
+}
+.ws-banner .nm {
+  font-size: 13px;
+  color: var(--t1);
+  font-weight: 700;
+}
+.ws-banner .r {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--t3);
+}
+.ws-banner .r b {
+  font-family: 'JetBrains Mono';
+  color: var(--t1);
+  font-weight: 600;
+}
+.ws-banner .r b.pass {
+  color: var(--pass);
+}
+
+/* Field label */
+.flabel {
+  font-family: 'JetBrains Mono';
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-weight: 700;
+  margin-bottom: 7px;
+  display: block;
+}
+.flabel .req {
+  color: var(--fail);
+}
+
+/* Email chip input */
+.chip-input {
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  min-height: 54px;
+}
+.chip-input:focus-within {
+  border-color: var(--secondary);
+}
+.echip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 5px 0 4px;
+  border-radius: 7px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+}
+.echip .av {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono';
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #0b0f17;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.av.eng {
+  background: var(--primary);
+}
+.av.lead {
+  background: var(--secondary);
+}
+.av.admin {
+  background: var(--admin-red);
+}
+.av.stake {
+  background: var(--overlay);
+  color: var(--t2);
+}
+.echip .em {
+  font-family: 'JetBrains Mono';
+  font-size: 11.5px;
+  color: var(--t1);
+}
+.echip .x {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--t3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.echip .x:hover {
+  background: var(--overlay);
+  color: var(--fail);
+}
+.echip .x svg {
+  width: 14px;
+  height: 14px;
+}
+.chip-input input {
+  flex: 1;
+  min-width: 140px;
+  height: 30px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--t1);
+  font-size: 12.5px;
+  font-family: 'JetBrains Mono';
+}
+.chip-input input::placeholder {
+  color: var(--t3);
+}
+.fhelp {
+  font-size: 11px;
+  color: var(--t3);
+  margin-top: 6px;
+}
+
+/* Apply to all + invitee list as ONE box */
+.invite-box {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  /* FE+1: overflow visible so dropdown popups from .applyall + per-row .rsel
+     can escape the box border. Canonical uses overflow:hidden but that clips
+     the React port's interactive role/projects dropdowns. */
+  overflow: visible;
+  background: var(--base);
+  flex: none;
+}
+.applyall {
+  background: var(--raised);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.applyall .cap {
+  font-family: 'JetBrains Mono';
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-weight: 700;
+  flex: none;
+}
+.sel {
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 7px;
+  background: var(--base);
+  border: 1px solid var(--border);
+  color: var(--t1);
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.sel:hover {
+  border-color: var(--border-strong);
+}
+.sel.role-eng {
+  background: var(--primary-soft);
+  border-color: var(--primary-line);
+  color: var(--primary);
+}
+.sel svg {
+  width: 11px;
+  height: 11px;
+  color: currentColor;
+  opacity: 0.7;
+}
+.applyall .go {
+  margin-left: auto;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 7px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.applyall .go:hover {
+  background: #26b8a4;
+}
+.applyall .go svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Per-invitee table — let modal body handle scroll. Canonical caps height
+   to 176px with overflow-y:auto but that clips per-row role dropdowns. */
+.inv-list {
+  overflow: visible;
+  min-height: 132px;
+  background: var(--base);
+  border-top: 1px solid var(--border);
+}
+.inv-list::-webkit-scrollbar {
+  width: 8px;
+}
+.inv-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+.inv-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 130px minmax(120px, 1fr) 110px 32px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+  border-top: 1px solid var(--border);
+}
+.inv-row:first-child {
+  border-top: 0;
+}
+.inv-row {
+  background: var(--canvas);
+}
+.inv-row:hover {
+  background: var(--raised);
+}
+@media (max-width: 767px) {
+  /* Per-invitee row: 4 stacked zones for clean mobile hierarchy.
+     Row 1: avatar+email take 1fr, X Remove button takes auto col.
+     Row 2: role dropdown spans full width.
+     Row 3: project chips span full width.
+     Row 4: Senior QA toggle spans full width. */
+  .f27m1-scrim .inv-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'who x'
+      'role role'
+      'proj proj'
+      'snr snr';
+    gap: 10px;
+    row-gap: 10px;
+    align-items: center;
+  }
+  .f27m1-scrim .inv-row .inv-who {
+    grid-area: who;
+    min-width: 0;
+  }
+  /* React port wraps .rsel in .menu-wrap (for dropdown popover anchoring). */
+  .f27m1-scrim .inv-row .menu-wrap {
+    grid-area: role;
+    width: 100%;
+  }
+  .f27m1-scrim .inv-row .rsel {
+    width: 100%;
+  }
+  .f27m1-scrim .inv-row .inv-proj {
+    grid-area: proj;
+    min-width: 0;
+  }
+  .f27m1-scrim .inv-row .snr {
+    grid-area: snr;
+  }
+  .f27m1-scrim .inv-row .inv-x {
+    grid-area: x;
+    align-self: start;
+  }
+
+  /* Apply-to-all: stack the controls vertically so role dd / projects dd /
+     Apply-go button each get full width. */
+  .f27m1-scrim .applyall {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .f27m1-scrim .applyall .cap {
+    align-self: flex-start;
+  }
+  .f27m1-scrim .applyall .menu-wrap {
+    width: 100%;
+  }
+  .f27m1-scrim .applyall .menu-wrap .sel {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .f27m1-scrim .applyall .go {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+}
+.inv-who {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.inv-who .av {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  font-weight: 700;
+  color: #0b0f17;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.inv-who .em {
+  font-family: 'JetBrains Mono';
+  font-size: 11.5px;
+  color: var(--t1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rsel {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  width: 100%;
+  justify-content: space-between;
+  border: 1px solid;
+}
+.rsel.eng {
+  background: var(--primary-soft);
+  border-color: var(--primary-line);
+  color: var(--primary);
+}
+.rsel.lead {
+  background: var(--ai-soft);
+  border-color: var(--ai-line);
+  color: var(--secondary);
+}
+.rsel.stake {
+  background: var(--overlay);
+  border-color: var(--border-strong);
+  color: var(--t2);
+}
+.rsel svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0.7;
+}
+.inv-proj {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pchip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-line);
+  color: var(--primary);
+  font-family: 'JetBrains Mono';
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+.pchip.more {
+  background: var(--overlay);
+  border-color: var(--border);
+  color: var(--t3);
+}
+.snr {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 11.5px;
+  color: var(--t2);
+}
+.snr .cb {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.snr .cb.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-ink);
+}
+.snr .cb svg {
+  width: 9px;
+  height: 9px;
+  opacity: 0;
+}
+.snr .cb.on svg {
+  opacity: 1;
+}
+.snr.na {
+  color: var(--t4);
+  cursor: default;
+}
+.inv-x {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--t3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.inv-x:hover {
+  background: var(--overlay);
+  color: var(--fail);
+  border-color: var(--fail-line);
+}
+.inv-x svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Personal message collapsible */
+.pmsg {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--base);
+  overflow: hidden;
+  flex: none;
+}
+.pmsg-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.pmsg-head .chev {
+  width: 16px;
+  height: 16px;
+  color: var(--t3);
+  transition: transform 220ms;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pmsg-head .chev svg {
+  width: 11px;
+  height: 11px;
+}
+.pmsg.open .pmsg-head .chev {
+  transform: rotate(90deg);
+}
+.pmsg-head .lab {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t3);
+  font-weight: 700;
+}
+.pmsg-head .r {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--t3);
+}
+.pmsg-body {
+  display: none;
+  padding: 0 14px 14px;
+  flex-direction: column;
+  gap: 6px;
+}
+.pmsg.open .pmsg-body {
+  display: flex;
+}
+.pmsg-body textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  color: var(--t1);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+.pmsg-body textarea:focus {
+  border-color: var(--secondary);
+}
+.pmsg-body .ctr {
+  font-family: 'JetBrains Mono';
+  font-size: 10.5px;
+  color: var(--t4);
+  align-self: flex-end;
+}
+
+/* Resend callout */
+.resend {
+  background: var(--pass-soft);
+  border: 1px solid var(--pass-line);
+  border-radius: 9px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--t2);
+  flex-wrap: wrap;
+}
+.resend svg {
+  width: 15px;
+  height: 15px;
+  color: var(--pass);
+  flex: none;
+}
+.resend b {
+  color: var(--t1);
+  font-family: 'JetBrains Mono';
+  font-weight: 600;
+}
+.resend a {
+  color: var(--secondary);
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Footer */
+.m-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--base);
+  flex-wrap: wrap;
+}
+.m-foot .sum {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.m-foot .sum .l1 {
+  font-size: 12px;
+  color: var(--t2);
+}
+.m-foot .sum .l1 b {
+  font-family: 'JetBrains Mono';
+  color: var(--t1);
+  font-weight: 600;
+}
+.m-foot .sum .l2 {
+  font-size: 10.5px;
+  color: var(--t3);
+}
+.m-foot .sum .l2 b {
+  font-family: 'JetBrains Mono';
+  color: var(--t2);
+  font-weight: 600;
+}
+.m-foot .acts {
+  display: inline-flex;
+  gap: 8px;
+  flex: none;
+}
+.btn-ghost {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--t2);
+  font-size: 13px;
+  font-weight: 500;
+}
+.btn-ghost:hover {
+  background: var(--raised);
+  color: var(--t1);
+  border-color: var(--border-strong);
+}
+.btn-send {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 7px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-send:hover {
+  background: #26b8a4;
+}
+.btn-send svg {
+  width: 14px;
+  height: 14px;
+}
+.btn-send .badge {
+  font-family: 'JetBrains Mono';
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(0, 55, 50, 0.25);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+@media (max-width: 639px) {
+  .m-foot .sum {
+    order: 2;
+    width: 100%;
+  }
+  .m-foot .acts {
+    order: 1;
+    width: 100%;
+  }
+  .btn-send {
+    flex: 1;
+    justify-content: center;
+  }
+  .btn-ghost {
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* FE+1 mobile fit (Lesson 8) — min-width:0 shrink chain. */
+@media (max-width: 1023px) {
+  .f27m1-scrim .scrim {
+    padding: 0;
+    overflow-x: hidden;
+  }
+  .f27m1-scrim .modal {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .f27m1-scrim .m-body,
+  .f27m1-scrim .ws-banner,
+  .f27m1-scrim .chip-input,
+  .f27m1-scrim .invite-box,
+  .f27m1-scrim .applyall,
+  .f27m1-scrim .inv-list,
+  .f27m1-scrim .inv-row,
+  .f27m1-scrim .inv-who,
+  .f27m1-scrim .pmsg,
+  .f27m1-scrim .resend,
+  .f27m1-scrim .m-foot,
+  .f27m1-scrim .m-foot .sum {
+    min-width: 0;
+  }
+  .f27m1-scrim .inv-who .em,
+  .f27m1-scrim .echip .em {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .f27m1-scrim .ws-banner .r,
+  .f27m1-scrim .resend,
+  .f27m1-scrim .m-foot .sum .l2 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}

@@ -1,8 +1,10 @@
 // F27 CtaBanner — "Add people" banner with slots/expires + Invite user CTA.
-// Pattern A TODO: Invite user click → pattern-a:deferred:users-invite-open → /admin/users/invite (F27m1)
+// "Invite user" links to /admin/users/invite which mounts F27 underneath + F27m1
+// InviteUserModal on top (UsersRolesWithModal wrapper).
 
 'use client';
 
+import Link from 'next/link';
 import type { F27CtaBannerData } from '@/components/admin/users-roles/types';
 
 interface Props {
@@ -45,7 +47,7 @@ export function CtaBanner({ data }: Props) {
           </span>
         </div>
       </div>
-      <button className="cta-btn" type="button">
+      <Link className="cta-btn" href="/admin/users/invite">
         <svg
           width="13"
           height="13"
@@ -58,7 +60,7 @@ export function CtaBanner({ data }: Props) {
           <path d="M8 3v10M3 8h10" />
         </svg>
         {data.cta}
-      </button>
+      </Link>
     </section>
   );
 }
