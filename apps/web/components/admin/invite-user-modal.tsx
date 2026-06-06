@@ -1,730 +1,683 @@
-// F27m1 Invite User Modal — overlay rendered on top of /admin/users.
-// Locked source: PM1_UI_v2/frames - claude code build (PM1 v2.6-v2.8)/F27m1 Invite User Modal.html
-// Mounted by /admin/users/invite route on top of the F27 page underneath.
+// F27m1 Invite to QA Nexus modal · Pattern A interactive bulk-invite per Hard Rule 15.
 //
-// Pattern A enforcement (PM1_PRD §F27m1) — 9 deferred markers:
-// - Mount → `pattern-a:deferred:invite-modal-open` { rowCount, defaults }.
-// - Bulk-apply click → `pattern-a:deferred:invite-bulk-apply`
-//     { role, projectKeys, rowCount }.
-// - Row email change → `pattern-a:deferred:invite-row-email-change`
-//     { rowIndex } (debounced).
-// - Row role change → `pattern-a:deferred:invite-row-role-change`
-//     { rowIndex, role }.
-// - Row project toggle → `pattern-a:deferred:invite-row-project-toggle`
-//     { rowIndex, projectKey, action: 'add' | 'remove' }.
-// - Add another → `pattern-a:deferred:invite-add-row` { newCount }.
-// - Remove row → `pattern-a:deferred:invite-remove-row`
-//     { rowIndex, newCount }.
-// - Submit → `pattern-a:deferred:invite-submit`
-//     { rowCount, validatedCount, hasMessage }.
-// - Cancel + Esc + backdrop → `pattern-a:deferred:invite-cancel` + route
-//     to /admin/users.
-// - Validation errors → `pattern-a:deferred:invite-validation-error`
-//     { rowIndex, fields }.
-// - ZERO fetch / useMutation / axios.
+// Flow: workspace banner + email chips (synced to per-invitee rows) + Apply-to-all
+// role/projects controls + per-row Senior QA toggle + Remove + collapsible personal
+// message + Resend usage callout + footer summary.
 //
-// ADR-006 hooks:
-// - `useCurrentUser()` — modal header attribution + workspace ID.
-// - `useProjectList()` — project-chip picker options.
-// (No `useTeamRoster()` here — invites go to NEW emails not on the seed.)
+// State (Pattern A, no backend):
+//   - invitees[] = single source of truth; email chips + .inv-list both render from it
+//   - typing in chip-input + Enter/comma adds a new invitee with default role=engineer
+//   - clicking a chip X or row X removes the invitee
+//   - per-row Senior QA toggle (disabled for Lead = seniorNA)
+//   - personal message expand/collapse + 0/500 char counter
+//   - Apply-to-all bulk-sets role=engineer on every row
+//
+// All user-visible strings come from F27M1_* canned-data exports (Hard Rule 17).
+// Canonical: PM1_UI_v2/Redesign Frame by claude design/F27m1 Invite User Modal v2.html
 
 'use client';
 
-import { useEffect, useId, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
-import { useProjectList } from '@/lib/contexts/ProjectContext';
+import { useEffect, useMemo, useState } from 'react';
+
+import './invite-user-modal.css';
+
 import {
-  buildInvitePayload,
-  inviteFormDefaults,
-  inviteFormSchema,
-  inviteRoleLabel,
-  inviteRoles,
-  isLikelyEmail,
-  parseEmailBlob,
-  type InviteForm,
-  type InviteRole,
-} from './invite-user-schema';
+  F27M1_HEADER,
+  F27M1_WORKSPACE,
+  F27M1_EMAIL,
+  F27M1_APPLYALL,
+  F27M1_SENIOR,
+  F27M1_PMSG,
+  F27M1_RESEND,
+  F27M1_FOOTER,
+  F27M1_ROLES,
+  F27M1_PROJECTS,
+  F27M1_INITIAL_INVITEES,
+  type F27M1Invitee,
+  type F27M1Role,
+} from '@/components/admin/invite-user-modal.canned-data';
+
+// Which dropdown menu (if any) is open. Apply-to-all is global; row-role
+// targets a specific invitee row by id.
+type OpenMenu =
+  | { kind: 'apply-role' }
+  | { kind: 'apply-projects' }
+  | { kind: 'row-role'; rowId: string }
+  | null;
+
+const roleLabelOf = (role: F27M1Role) =>
+  F27M1_ROLES.find((r) => r.key === role)?.label ?? 'QA Engineer';
+
+const initialOf = (email: string) => (email.trim()[0] ?? '?').toUpperCase();
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface InviteUserModalProps {
-  onClose: () => void;
+  /** Cancel / close-X / backdrop click handler. UsersRolesWithModal wires this
+   * to router.push('/admin/users') so the modal feels like an overlay. */
+  onClose?: () => void;
 }
 
-export function InviteUserModal({ onClose }: InviteUserModalProps) {
-  const router = useRouter();
-  const titleId = useId();
-  const me = useCurrentUser();
-  const projects = useProjectList();
+export function InviteUserModal({ onClose }: InviteUserModalProps = {}) {
+  const [invitees, setInvitees] = useState<F27M1Invitee[]>(() => [...F27M1_INITIAL_INVITEES]);
+  const [draft, setDraft] = useState('');
+  const [pmsgOpen, setPmsgOpen] = useState(false);
+  const [pmsg, setPmsg] = useState('');
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    getValues,
-    formState: { errors, isValid, isSubmitting },
-  } = useForm<InviteForm>({
-    resolver: zodResolver(inviteFormSchema),
-    defaultValues: inviteFormDefaults,
-    mode: 'onChange',
-  });
+  // Apply-to-all selected values
+  const [applyRole, setApplyRole] = useState<F27M1Role>('engineer');
+  const [applyProjects, setApplyProjects] = useState<string[]>(['returns', 'commerce']);
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'rows' });
-
-  const personalMessage = watch('personalMessage') ?? '';
-  const allRows = watch('rows');
-  const validRowCount = useMemo(
-    () => allRows.filter((r) => isLikelyEmail(r.email) && r.projectKeys.length > 0).length,
-    [allRows],
-  );
-
-  // Bulk-apply local state (defaults to first-row values, applied on click).
-  const [bulkRole, setBulkRole] = useState<InviteRole>('qa-engineer');
-  const [bulkProjects, setBulkProjects] = useState<string[]>([]);
-
+  // Close dropdown on outside click / Esc
   useEffect(() => {
-    // PATTERN-A: open invite modal deferred until M1 (T030.5) - fire-and-forget telemetry on mount
-    console.info('pattern-a:deferred:invite-modal-open', {
-      workspaceId: me.workspaceId,
-      rowCount: fields.length,
-      projectsAvailable: projects.length,
-    });
-    // Esc + body-scroll-lock. Inline the cancel call (don't close over the
-    // unstable `handleCancel` ref) so the effect's deps array stays empty
-    // for setup/cleanup but we still log the deferred-cancel marker.
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        // PATTERN-A: cancel invite modal deferred until M1 (T030.5) - navigate back to /admin/users
-        console.info('pattern-a:deferred:invite-cancel', { trigger: 'esc' });
-        onClose();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+    if (!openMenu) return;
+    const onDocClick = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      if (t && !t.closest('.menu-wrap')) setOpenMenu(null);
     };
-  }, [me.workspaceId, fields.length, projects.length, onClose]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenMenu(null);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openMenu]);
 
-  function handleCancel() {
-    // PATTERN-A: cancel invite modal deferred until M1 (T030.5) - navigate back to /admin/users
-    console.info('pattern-a:deferred:invite-cancel', { rowCount: fields.length });
-    onClose();
+  const isOpen = (m: OpenMenu) => {
+    if (!openMenu || !m) return false;
+    if (m.kind !== openMenu.kind) return false;
+    if (m.kind === 'row-role' && openMenu.kind === 'row-role') return m.rowId === openMenu.rowId;
+    return true;
+  };
+
+  function setRowRole(rowId: string, role: F27M1Role) {
+    setInvitees((cur) =>
+      cur.map((iv) =>
+        iv.id === rowId
+          ? {
+              ...iv,
+              role,
+              seniorNA: role === 'lead' || role === 'stakeholder',
+              seniorQa: role === 'lead' || role === 'stakeholder' ? false : iv.seniorQa,
+              avatarColor: role === 'lead' ? 'lead' : role === 'stakeholder' ? 'stake' : 'eng',
+            }
+          : iv,
+      ),
+    );
+    setOpenMenu(null);
   }
 
-  function handleBulkApply() {
-    // PATTERN-A: bulk-apply role + projects deferred until M1 (T030.5) - client-only form mutation
-    console.info('pattern-a:deferred:invite-bulk-apply', {
-      role: bulkRole,
-      projectKeys: bulkProjects,
-      rowCount: fields.length,
-    });
-    const current = getValues('rows');
-    current.forEach((_, idx) => {
-      setValue(`rows.${idx}.role`, bulkRole, { shouldDirty: true, shouldValidate: true });
-      setValue(`rows.${idx}.projectKeys`, [...bulkProjects], {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-    });
+  function toggleApplyProject(key: string) {
+    setApplyProjects((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
   }
 
-  function handleAddRow() {
-    append({ email: '', role: bulkRole, projectKeys: [...bulkProjects] });
-    // PATTERN-A: add invite row deferred until M1 (T030.5) - client-only form mutation
-    console.info('pattern-a:deferred:invite-add-row', { newCount: fields.length + 1 });
+  const applyProjectsLabel = (() => {
+    if (applyProjects.length === 0) return 'No projects';
+    return applyProjects.map((k) => F27M1_PROJECTS.find((p) => p.key === k)?.label ?? k).join(', ');
+  })();
+
+  function addInviteeFromDraft() {
+    const next = draft
+      .split(/[,\n;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!next.length) return;
+    const fresh: F27M1Invitee[] = next.map((email, i) => ({
+      id: `inv-new-${Date.now()}-${i}`,
+      email,
+      initial: initialOf(email),
+      avatarColor: 'eng',
+      role: 'engineer',
+      projects: ['Returns'],
+      seniorQa: false,
+      seniorNA: false,
+    }));
+    setInvitees((cur) => [...cur, ...fresh]);
+    setDraft('');
   }
 
-  function handleRemoveRow(idx: number) {
-    if (fields.length <= 1) return;
-    remove(idx);
-    // PATTERN-A: remove invite row deferred until M1 (T030.5) - client-only form mutation
-    console.info('pattern-a:deferred:invite-remove-row', {
-      rowIndex: idx,
-      newCount: fields.length - 1,
-    });
+  function removeInvitee(id: string) {
+    setInvitees((cur) => cur.filter((iv) => iv.id !== id));
   }
 
-  function handleEmailBlobPaste(rowIdx: number, e: React.ClipboardEvent<HTMLInputElement>) {
-    const text = e.clipboardData.getData('text');
-    const list = parseEmailBlob(text);
-    if (list.length <= 1) return; // single email — let default paste handle
-    e.preventDefault();
-    // Set first email into the current row, append new rows for the rest.
-    setValue(`rows.${rowIdx}.email`, list[0], { shouldValidate: true, shouldDirty: true });
-    for (let i = 1; i < list.length; i++) {
-      append({ email: list[i], role: bulkRole, projectKeys: [...bulkProjects] });
-    }
-  }
-
-  function handleProjectToggle(rowIdx: number, projectKey: string) {
-    const current = getValues(`rows.${rowIdx}.projectKeys`);
-    const has = current.includes(projectKey);
-    const next = has ? current.filter((k) => k !== projectKey) : [...current, projectKey];
-    setValue(`rows.${rowIdx}.projectKeys`, next, { shouldDirty: true, shouldValidate: true });
-    // PATTERN-A: toggle row project deferred until M1 (T030.5) - client-only form mutation
-    console.info('pattern-a:deferred:invite-row-project-toggle', {
-      rowIndex: rowIdx,
-      projectKey,
-      action: has ? 'remove' : 'add',
-    });
-  }
-
-  function handleBulkProjectToggle(projectKey: string) {
-    setBulkProjects((prev) =>
-      prev.includes(projectKey) ? prev.filter((k) => k !== projectKey) : [...prev, projectKey],
+  function toggleSenior(id: string) {
+    setInvitees((cur) =>
+      cur.map((iv) => (iv.id === id && !iv.seniorNA ? { ...iv, seniorQa: !iv.seniorQa } : iv)),
     );
   }
 
-  // ---------------------------------------------------------------------
-  // Submit + validation handlers (Pattern A — toast wired, BE deferred).
-  // `onValid` is async + awaits a 600 ms simulated-persistence delay so
-  // RHF's `isSubmitting` flag flips on, the Send button shows a spinner,
-  // and a double-click on the button is a no-op (button is `disabled`
-  // while isSubmitting is true). When BE wiring lands MS0-T030.5+ the
-  // setTimeout swap-out becomes a real `fetch('/api/team-members/invite')`
-  // — every other piece (toast, loading state, redirect) stays as-is.
-  // ---------------------------------------------------------------------
-  async function onValid(values: InviteForm) {
-    // Defence-in-depth — guard against parallel submits even if the
-    // disabled prop is somehow bypassed (e.g. keyboard double-Enter
-    // before re-render). RHF handles this natively but the explicit
-    // check is cheap insurance + reads as intent.
-    if (isSubmitting) return;
-
-    const payload = buildInvitePayload(values);
-    // PATTERN-A: submit invitations deferred until M1 (T030.5) - real /api/team-members/invite POST
-    console.info('pattern-a:deferred:invite-submit', {
-      rowCount: payload.rows.length,
-      validatedCount: payload.rows.length,
-      hasMessage: Boolean(payload.personalMessage),
-    });
-
-    // Simulate persistence latency so loading state is observable.
-    // Replaced by real BE call at MS0-T030.5+.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    const n = payload.rows.length;
-    toast.success(`${n} ${n === 1 ? 'invitation' : 'invitations'} queued`, {
-      description:
-        n === 1
-          ? 'Invite email arrives within ~60 s. Recipient has 7 days to accept.'
-          : `Invite emails arrive within ~60 s. Recipients have 7 days to accept.`,
-    });
-
-    onClose();
-    router.push('/admin/users');
+  function applyAllRoles() {
+    const projectLabels = applyProjects
+      .map((k) => F27M1_PROJECTS.find((p) => p.key === k)?.label)
+      .filter(Boolean) as string[];
+    const isLead = applyRole === 'lead';
+    const isStake = applyRole === 'stakeholder';
+    setInvitees((cur) =>
+      cur.map((iv) => ({
+        ...iv,
+        role: applyRole,
+        seniorNA: isLead || isStake,
+        seniorQa: isLead || isStake ? false : iv.seniorQa,
+        avatarColor: isLead ? 'lead' : isStake ? 'stake' : 'eng',
+        projects: projectLabels.slice(0, 2),
+        projectMore: Math.max(0, projectLabels.length - 2) || undefined,
+      })),
+    );
   }
 
-  function onInvalid(formErrors: Record<string, unknown>) {
-    // PATTERN-A: invite form validation deferred until M1 (T030.5) - client-only Zod validation, no BE call
-    console.info('pattern-a:deferred:invite-validation-error', {
-      fields: Object.keys(formErrors),
-    });
+  // Footer summary counts
+  const summary = useMemo(() => {
+    const engCount = invitees.filter((iv) => iv.role === 'engineer' || iv.role === 'senior').length;
+    const leadCount = invitees.filter((iv) => iv.role === 'lead').length;
+    const stakeCount = invitees.filter((iv) => iv.role === 'stakeholder').length;
+    return { engCount, leadCount, stakeCount, total: invitees.length };
+  }, [invitees]);
 
-    // User-visible toast — surfaces the validation failure regardless
-    // of whether per-field error text is in view. Pattern A: client-only
-    // Zod surface; no BE call.
-    const rowsCount = Array.isArray(formErrors.rows)
-      ? (formErrors.rows as unknown[]).filter(Boolean).length
-      : 0;
-    toast.error('Some invites need attention before sending', {
-      description:
-        rowsCount > 0
-          ? `${rowsCount} row${rowsCount === 1 ? '' : 's'} ${rowsCount === 1 ? 'has' : 'have'} a missing or invalid field.`
-          : 'Check email format + project assignments.',
-    });
-  }
+  const sumL1Parts: string[] = [];
+  if (summary.engCount) sumL1Parts.push(`${summary.engCount} QA Engineers`);
+  if (summary.leadCount) sumL1Parts.push(`${summary.leadCount} Lead`);
+  if (summary.stakeCount) sumL1Parts.push(`${summary.stakeCount} Stakeholders`);
+
+  const slotsRemaining = F27M1_WORKSPACE.slotsTotal - F27M1_WORKSPACE.slotsUsed - invitees.length;
+  const slotsRemainingDisplay = Math.max(0, slotsRemaining);
+
+  const draftValid = EMAIL_RE.test(draft.trim());
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-50 flex items-stretch justify-center md:items-start md:p-6"
-    >
-      <button
-        type="button"
-        aria-label="Close invite modal"
-        onClick={handleCancel}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-      />
-      <div className="relative z-10 flex w-full max-w-[720px] flex-col overflow-hidden bg-[var(--base)] shadow-2xl md:mt-12 md:max-h-[calc(100vh-6rem)] md:rounded-xl md:border md:border-[var(--border-subtle)]">
-        <Header titleId={titleId} onClose={handleCancel} />
-
-        <form onSubmit={handleSubmit(onValid, onInvalid)} className="flex min-h-0 flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-            <BulkApplyPanel
-              projects={projects}
-              role={bulkRole}
-              setRole={setBulkRole}
-              projectKeys={bulkProjects}
-              onProjectToggle={handleBulkProjectToggle}
-              rowCount={fields.length}
-              onApply={handleBulkApply}
-            />
-
-            <div className="mt-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-                  Invitees ({fields.length} {fields.length === 1 ? 'row' : 'rows'} · max 25)
-                </span>
-                <span className="font-mono text-[10.5px] text-[var(--text-tertiary)]">
-                  {validRowCount} valid
-                </span>
-              </div>
-
-              <ul className="flex flex-col gap-2.5">
-                {fields.map((field, idx) => (
-                  <InviteRowCard
-                    key={field.id}
-                    idx={idx}
-                    projects={projects}
-                    register={register}
-                    control={control}
-                    errors={errors}
-                    onPaste={handleEmailBlobPaste}
-                    onProjectToggle={handleProjectToggle}
-                    onRemove={() => handleRemoveRow(idx)}
-                    canRemove={fields.length > 1}
-                  />
-                ))}
-              </ul>
-
-              <button
-                type="button"
-                onClick={handleAddRow}
-                disabled={fields.length >= 25}
-                className="inline-flex h-9 w-fit items-center gap-1.5 rounded-md border border-dashed border-[var(--border-subtle)] px-3 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path
-                    d="M8 3v10M3 8h10"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Add another invite
-              </button>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-2">
-              <label
-                htmlFor="invite-message"
-                className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]"
-              >
-                Personal message{' '}
-                <span className="font-normal normal-case tracking-normal text-[var(--text-tertiary)]">
-                  (optional)
-                </span>
-              </label>
-              <div className="relative">
-                <textarea
-                  id="invite-message"
-                  rows={3}
-                  placeholder="Welcome message included in the invite email — set context, link to onboarding doc, etc."
-                  aria-invalid={errors.personalMessage ? 'true' : 'false'}
-                  className={inputCls(
-                    !!errors.personalMessage,
-                    'min-h-[88px] resize-y leading-[20px]',
-                  )}
-                  {...register('personalMessage')}
-                />
-                <span className="pointer-events-none absolute bottom-2 right-3 font-mono text-[11px] text-[var(--text-tertiary)]">
-                  {personalMessage.length} / 500
-                </span>
-              </div>
-              {errors.personalMessage && (
-                <span role="alert" className="text-[12px] text-[var(--fail)]">
-                  {errors.personalMessage.message}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <Footer
-            isValid={isValid}
-            isSubmitting={isSubmitting}
-            validRowCount={validRowCount}
-            onCancel={handleCancel}
-          />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Modal header
-// ---------------------------------------------------------------------------
-
-function Header({ titleId, onClose }: { titleId: string; onClose: () => void }) {
-  return (
-    <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
-      <div className="flex flex-col gap-1">
-        <h2
-          id={titleId}
-          className="font-display text-[18px] font-bold leading-[24px] tracking-[-0.01em] text-[var(--text-primary)] sm:text-[20px] sm:leading-[26px]"
-        >
-          Invite to QA Nexus
-        </h2>
-        <p className="text-[12.5px] leading-[18px] text-[var(--text-secondary)]">
-          Send invites to join Iksula Services. Each person gets an email with a set-password link
-          valid for 7 days.
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+    <div className="f27m1-scrim">
+      <div
+        className="scrim"
+        onClick={(e) => {
+          // Backdrop click closes the modal. Only fire when the click is on
+          // the scrim itself, not bubbled from inside the modal.
+          if (e.target === e.currentTarget) onClose?.();
+        }}
       >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <path
-            d="M3.5 3.5l9 9M12.5 3.5l-9 9"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Bulk-apply panel
-// ---------------------------------------------------------------------------
-
-interface BulkApplyPanelProps {
-  projects: Array<{ id: string; key: string; name: string }>;
-  role: InviteRole;
-  setRole: (next: InviteRole) => void;
-  projectKeys: string[];
-  onProjectToggle: (key: string) => void;
-  rowCount: number;
-  onApply: () => void;
-}
-
-function BulkApplyPanel({
-  projects,
-  role,
-  setRole,
-  projectKeys,
-  onProjectToggle,
-  rowCount,
-  onApply,
-}: BulkApplyPanelProps) {
-  return (
-    <div className="flex flex-col gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--raised)] px-4 py-3.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
-          Apply to all rows
-        </span>
-        <span className="font-mono text-[10.5px] text-[var(--text-tertiary)]">
-          Speeds up bulk invites
-        </span>
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="flex flex-col gap-1.5 sm:min-w-[150px]">
-          <label
-            htmlFor="bulk-role"
-            className="text-[11px] font-medium text-[var(--text-tertiary)]"
-          >
-            Default role
-          </label>
-          <select
-            id="bulk-role"
-            value={role}
-            onChange={(e) => setRole(e.target.value as InviteRole)}
-            className={inputCls(false, 'h-9 cursor-pointer pr-8 text-[13px]')}
-          >
-            {inviteRoles.map((r) => (
-              <option key={r} value={r}>
-                {inviteRoleLabel[r]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-1 flex-col gap-1.5">
-          <label className="text-[11px] font-medium text-[var(--text-tertiary)]">
-            Default projects
-          </label>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {projects.map((p) => {
-              const on = projectKeys.includes(p.key);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => onProjectToggle(p.key)}
-                  aria-pressed={on}
-                  className={[
-                    'inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
-                    on
-                      ? 'border-[var(--primary)]/40 bg-[var(--primary)]/15 text-[var(--primary)]'
-                      : 'border-[var(--border-subtle)] bg-[var(--overlay)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]',
-                  ].join(' ')}
-                >
-                  {p.key}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onApply}
-          className="border-[var(--secondary)]/40 bg-[var(--secondary)]/15 hover:bg-[var(--secondary)]/25 inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border px-3 text-[12px] font-semibold text-[var(--secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
+        <div
+          className="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="m27-ttl"
+          data-screen-label="F27m1 Invite to QA Nexus"
         >
-          Apply to all {rowCount} {rowCount === 1 ? 'row' : 'rows'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Per-row invite card
-// ---------------------------------------------------------------------------
-
-import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
-
-interface InviteRowCardProps {
-  idx: number;
-  projects: Array<{ id: string; key: string; name: string }>;
-  register: UseFormRegister<InviteForm>;
-  control: Control<InviteForm>;
-  errors: FieldErrors<InviteForm>;
-  onPaste: (rowIdx: number, e: React.ClipboardEvent<HTMLInputElement>) => void;
-  onProjectToggle: (rowIdx: number, projectKey: string) => void;
-  onRemove: () => void;
-  canRemove: boolean;
-}
-
-function InviteRowCard({
-  idx,
-  projects,
-  register,
-  control,
-  errors,
-  onPaste,
-  onProjectToggle,
-  onRemove,
-  canRemove,
-}: InviteRowCardProps) {
-  const rowError = errors.rows?.[idx];
-  return (
-    <li className="flex flex-col gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--raised)] px-3 py-3 sm:px-4">
-      <div className="flex flex-wrap items-start gap-2 sm:flex-nowrap sm:items-center">
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-1 sm:w-auto">
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="off"
-            placeholder="teammate@iksula.com"
-            aria-invalid={rowError?.email ? 'true' : 'false'}
-            onPaste={(e) => onPaste(idx, e)}
-            {...register(`rows.${idx}.email`, {
-              onChange: () => {
-                // PATTERN-A: change row email deferred until M1 (T030.5) - client-only form mutation
-                console.info('pattern-a:deferred:invite-row-email-change', { rowIndex: idx });
-              },
-            })}
-            className={inputCls(!!rowError?.email, 'h-9 text-[13px]')}
-          />
-        </div>
-        <div className="w-full sm:w-[150px]">
-          <Controller
-            control={control}
-            name={`rows.${idx}.role`}
-            render={({ field }) => (
-              <select
-                value={field.value}
-                onChange={(e) => {
-                  field.onChange(e);
-                  // PATTERN-A: change row role deferred until M1 (T030.5) - client-only form mutation
-                  console.info('pattern-a:deferred:invite-row-role-change', {
-                    rowIndex: idx,
-                    role: e.target.value,
-                  });
-                }}
-                aria-label={`Role for row ${idx + 1}`}
-                className={inputCls(false, 'h-9 cursor-pointer pr-8 text-[13px]')}
-              >
-                {inviteRoles.map((r) => (
-                  <option key={r} value={r}>
-                    {inviteRoleLabel[r]}
-                  </option>
-                ))}
-              </select>
-            )}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          disabled={!canRemove}
-          aria-label={`Remove row ${idx + 1}`}
-          className="hover:border-[var(--fail)]/30 hover:bg-[var(--fail)]/10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[var(--border-subtle)] text-[var(--text-tertiary)] transition-colors hover:text-[var(--fail)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[var(--border-subtle)] disabled:hover:bg-transparent disabled:hover:text-[var(--text-tertiary)]"
-        >
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M3.5 3.5l9 9M12.5 3.5l-9 9"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <Controller
-        control={control}
-        name={`rows.${idx}.projectKeys`}
-        render={({ field }) => (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10.5px] font-medium text-[var(--text-tertiary)]">
-              Projects:
-            </span>
-            {projects.map((p) => {
-              const on = field.value.includes(p.key);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => onProjectToggle(idx, p.key)}
-                  aria-pressed={on}
-                  className={[
-                    'inline-flex h-6 items-center rounded border px-2 text-[10.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
-                    on
-                      ? 'border-[var(--primary)]/40 bg-[var(--primary)]/15 text-[var(--primary)]'
-                      : 'border-[var(--border-subtle)] bg-[var(--overlay)] text-[var(--text-tertiary)] hover:border-[var(--border-strong)] hover:text-[var(--text-secondary)]',
-                  ].join(' ')}
-                >
-                  {p.key}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      />
-
-      {(rowError?.email || rowError?.projectKeys) && (
-        <div role="alert" className="flex flex-col gap-0.5 text-[11.5px] text-[var(--fail)]">
-          {rowError?.email && <span>· {rowError.email.message}</span>}
-          {rowError?.projectKeys && <span>· {rowError.projectKeys.message}</span>}
-        </div>
-      )}
-    </li>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Footer
-// ---------------------------------------------------------------------------
-
-function Footer({
-  isValid,
-  isSubmitting,
-  validRowCount,
-  onCancel,
-}: {
-  isValid: boolean;
-  isSubmitting: boolean;
-  validRowCount: number;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] bg-[var(--base)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <button
-        type="button"
-        onClick={onCancel}
-        className="inline-flex h-10 items-center justify-center rounded-md px-3 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-      >
-        Cancel
-      </button>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <span
-          aria-live="polite"
-          className="font-mono text-[11px] text-[var(--text-tertiary)] sm:text-right"
-        >
-          {validRowCount > 0
-            ? `${validRowCount} ready to send · invites expire in 7 days`
-            : 'Add an email + at least one project to enable Send'}
-        </span>
-        <button
-          type="submit"
-          disabled={!isValid || isSubmitting}
-          aria-busy={isSubmitting || undefined}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[var(--primary)] px-5 text-[13px] font-semibold text-[var(--primary-ink)] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting ? 'Sending…' : 'Send invites'}
-          {!isSubmitting && validRowCount > 0 && (
-            <span className="bg-[var(--primary-ink)]/15 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold">
-              {validRowCount}
-            </span>
-          )}
-          {isSubmitting ? (
-            // Loading spinner — inline SVG with Tailwind's animate-spin
-            // instead of pulling lucide-react just for one icon.
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden="true"
-              className="animate-spin"
-            >
-              <circle
-                cx="8"
-                cy="8"
-                r="6"
-                stroke="currentColor"
-                strokeOpacity="0.3"
-                strokeWidth="1.8"
-              />
-              <path
-                d="M14 8a6 6 0 0 0-6-6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          ) : (
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d="M3 8h10M9 4l4 4-4 4"
+          <header className="m-head">
+            <span className="ic">
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
                 stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </button>
+              >
+                <circle cx="9" cy="8" r="3.5" />
+                <path d="M3 20a6 6 0 0 1 12 0M18 8v6M21 11h-6" />
+              </svg>
+            </span>
+            <div className="ttl">
+              <span className="t" id="m27-ttl">
+                {F27M1_HEADER.title}
+              </span>
+              <span className="s">{F27M1_HEADER.subtitle}</span>
+            </div>
+            <button className="x" type="button" aria-label="Close" onClick={() => onClose?.()}>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          </header>
+
+          <div className="m-body">
+            {/* Workspace banner */}
+            <div className="ws-banner">
+              <div className="l">
+                <span className="cap">{F27M1_WORKSPACE.cap}</span>
+                <span className="nm">{F27M1_WORKSPACE.name}</span>
+              </div>
+              <div className="r">
+                {F27M1_WORKSPACE.rPrefix} <b className="pass">{slotsRemainingDisplay}</b>{' '}
+                {F27M1_WORKSPACE.rSuffix} <b>{F27M1_WORKSPACE.slotsTotal}</b>{' '}
+                {F27M1_WORKSPACE.rTail}
+              </div>
+            </div>
+
+            {/* Email chips */}
+            <div>
+              <span className="flabel">
+                {F27M1_EMAIL.label} <span className="req">*</span>
+              </span>
+              <div className="chip-input">
+                {invitees.map((iv) => (
+                  <span key={`chip-${iv.id}`} className="echip">
+                    <span className={`av ${iv.avatarColor}`}>{iv.initial}</span>
+                    <span className="em">{iv.email}</span>
+                    <button
+                      className="x"
+                      type="button"
+                      aria-label="Remove"
+                      onClick={() => removeInvitee(iv.id)}
+                    >
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                      >
+                        <path d="M4 4l8 8M12 4l-8 8" />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  placeholder={F27M1_EMAIL.placeholder}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      if (draftValid) addInviteeFromDraft();
+                    }
+                  }}
+                />
+              </div>
+              <div className="fhelp">{F27M1_EMAIL.helper}</div>
+            </div>
+
+            {/* Apply-to-all + per-invitee rows */}
+            <div className="invite-box">
+              <div className="applyall">
+                <span className="cap">{F27M1_APPLYALL.cap}</span>
+
+                {/* Role dropdown (apply-to-all) */}
+                <span className="menu-wrap">
+                  <button
+                    className={
+                      applyRole === 'lead'
+                        ? 'sel'
+                        : applyRole === 'stakeholder'
+                          ? 'sel'
+                          : 'sel role-eng'
+                    }
+                    type="button"
+                    onClick={() =>
+                      setOpenMenu(isOpen({ kind: 'apply-role' }) ? null : { kind: 'apply-role' })
+                    }
+                    aria-expanded={isOpen({ kind: 'apply-role' })}
+                    aria-haspopup="menu"
+                  >
+                    {F27M1_ROLES.find((r) => r.key === applyRole)?.label ?? F27M1_APPLYALL.roleBtn}{' '}
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 6l4 4 4-4" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {isOpen({ kind: 'apply-role' }) && (
+                    <div className="menu-pop" role="menu">
+                      {F27M1_ROLES.map((r) => (
+                        <button
+                          key={r.key}
+                          type="button"
+                          className={applyRole === r.key ? 'opt selected' : 'opt'}
+                          onClick={() => {
+                            setApplyRole(r.key);
+                            setOpenMenu(null);
+                          }}
+                          role="menuitemradio"
+                          aria-checked={applyRole === r.key}
+                        >
+                          <span
+                            className={
+                              r.key === 'lead'
+                                ? 'dot lead'
+                                : r.key === 'stakeholder'
+                                  ? 'dot stake'
+                                  : 'dot eng'
+                            }
+                          />
+                          {r.label}
+                          <span className="check" style={{ marginLeft: 'auto' }}>
+                            <svg
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 8l3 3 7-7" />
+                            </svg>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </span>
+
+                {/* Projects multi-select dropdown */}
+                <span className="menu-wrap">
+                  <button
+                    className="sel"
+                    type="button"
+                    onClick={() =>
+                      setOpenMenu(
+                        isOpen({ kind: 'apply-projects' }) ? null : { kind: 'apply-projects' },
+                      )
+                    }
+                    aria-expanded={isOpen({ kind: 'apply-projects' })}
+                    aria-haspopup="menu"
+                  >
+                    {applyProjectsLabel}{' '}
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 6l4 4 4-4" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {isOpen({ kind: 'apply-projects' }) && (
+                    <div className="menu-pop" role="menu">
+                      {F27M1_PROJECTS.map((p) => {
+                        const sel = applyProjects.includes(p.key);
+                        return (
+                          <button
+                            key={p.key}
+                            type="button"
+                            className={sel ? 'opt selected' : 'opt'}
+                            onClick={() => toggleApplyProject(p.key)}
+                            role="menuitemcheckbox"
+                            aria-checked={sel}
+                          >
+                            {p.label}
+                            <span className="check" style={{ marginLeft: 'auto' }}>
+                              <svg
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M3 8l3 3 7-7" />
+                              </svg>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </span>
+
+                <button className="go" type="button" onClick={applyAllRoles}>
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 8l3 3 7-7" />
+                  </svg>
+                  {F27M1_APPLYALL.goLabel(invitees.length)}
+                </button>
+              </div>
+
+              <div className="inv-list">
+                {invitees.map((iv) => {
+                  // Role pill styling — eng/senior = teal, lead = violet,
+                  // stakeholder = neutral overlay.
+                  const roleCls =
+                    iv.role === 'lead' ? 'lead' : iv.role === 'stakeholder' ? 'stake' : 'eng';
+                  const avBg =
+                    iv.role === 'lead'
+                      ? 'var(--secondary)'
+                      : iv.role === 'stakeholder'
+                        ? 'var(--overlay)'
+                        : 'var(--primary)';
+                  return (
+                    <div key={iv.id} className="inv-row">
+                      <div className="inv-who">
+                        <span className="av" style={{ background: avBg }}>
+                          {iv.initial}
+                        </span>
+                        <span className="em">{iv.email}</span>
+                      </div>
+                      <span className="menu-wrap" style={{ width: '100%' }}>
+                        <button
+                          className={['rsel', roleCls].join(' ')}
+                          type="button"
+                          onClick={() =>
+                            setOpenMenu(
+                              isOpen({ kind: 'row-role', rowId: iv.id })
+                                ? null
+                                : { kind: 'row-role', rowId: iv.id },
+                            )
+                          }
+                          aria-expanded={isOpen({ kind: 'row-role', rowId: iv.id })}
+                          aria-haspopup="menu"
+                        >
+                          {roleLabelOf(iv.role)}{' '}
+                          <svg
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M4 6l4 4 4-4" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                        {isOpen({ kind: 'row-role', rowId: iv.id }) && (
+                          <div className="menu-pop" role="menu">
+                            {F27M1_ROLES.map((r) => (
+                              <button
+                                key={r.key}
+                                type="button"
+                                className={iv.role === r.key ? 'opt selected' : 'opt'}
+                                onClick={() => setRowRole(iv.id, r.key)}
+                                role="menuitemradio"
+                                aria-checked={iv.role === r.key}
+                              >
+                                <span
+                                  className={
+                                    r.key === 'lead'
+                                      ? 'dot lead'
+                                      : r.key === 'stakeholder'
+                                        ? 'dot stake'
+                                        : 'dot eng'
+                                  }
+                                />
+                                {r.label}
+                                <span className="check" style={{ marginLeft: 'auto' }}>
+                                  <svg
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M3 8l3 3 7-7" />
+                                  </svg>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </span>
+                      <div className="inv-proj">
+                        {iv.projects.map((p) => (
+                          <span key={p} className="pchip">
+                            {p}
+                          </span>
+                        ))}
+                        {iv.projectMore ? (
+                          <span className="pchip more">+{iv.projectMore}</span>
+                        ) : null}
+                      </div>
+                      <label
+                        className={['snr', iv.seniorNA ? 'na' : ''].filter(Boolean).join(' ')}
+                        onClick={(e) => {
+                          if (!iv.seniorNA) {
+                            e.preventDefault();
+                            toggleSenior(iv.id);
+                          }
+                        }}
+                      >
+                        <span
+                          className={['cb', iv.seniorQa && !iv.seniorNA ? 'on' : '']
+                            .filter(Boolean)
+                            .join(' ')}
+                          style={iv.seniorNA ? { opacity: 0.4 } : undefined}
+                        >
+                          <svg
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          >
+                            <path d="M3 8l3 3 7-7" />
+                          </svg>
+                        </span>
+                        {iv.seniorNA ? F27M1_SENIOR.naLabel : F27M1_SENIOR.label}
+                      </label>
+                      <button
+                        className="inv-x"
+                        type="button"
+                        aria-label="Remove"
+                        onClick={() => removeInvitee(iv.id)}
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M4 4l8 8M12 4l-8 8" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Personal message collapsible */}
+            <div className={['pmsg', pmsgOpen ? 'open' : ''].filter(Boolean).join(' ')}>
+              <div
+                className="pmsg-head"
+                onClick={() => setPmsgOpen((v) => !v)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setPmsgOpen((v) => !v);
+                  }
+                }}
+              >
+                <span className="chev">
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M6 4l4 4-4 4" />
+                  </svg>
+                </span>
+                <span className="lab">{F27M1_PMSG.label}</span>
+                <span className="r">{F27M1_PMSG.rTag}</span>
+              </div>
+              <div className="pmsg-body">
+                <textarea
+                  placeholder={F27M1_PMSG.placeholder}
+                  maxLength={F27M1_PMSG.charLimit}
+                  value={pmsg}
+                  onChange={(e) => setPmsg(e.target.value.slice(0, F27M1_PMSG.charLimit))}
+                />
+                <span className="ctr">
+                  {pmsg.length} / {F27M1_PMSG.charLimit}
+                </span>
+              </div>
+            </div>
+
+            {/* Resend callout */}
+            <div className="resend">
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M8 1.5l1.9 4 4.4.5-3.3 3 .9 4.3L8 11.1 4.2 13.3l.9-4.3L1.8 6l4.4-.5z" />
+              </svg>
+              <span>
+                {F27M1_RESEND.leadPart} · <b>{F27M1_RESEND.sent}</b> / <b>{F27M1_RESEND.total}</b>{' '}
+                {F27M1_RESEND.emailsUsedThisMonth} · {F27M1_RESEND.budget}
+              </span>
+              <a href="#">{F27M1_RESEND.metricsLink}</a>
+            </div>
+          </div>
+
+          <footer className="m-foot">
+            <div className="sum">
+              <span className="l1">
+                {F27M1_FOOTER.sumL1Prefix} <b>{summary.total}</b> {F27M1_FOOTER.sumL1Invites}
+                {sumL1Parts.length > 0 ? ` · ${sumL1Parts.join(', ')}` : ''}
+              </span>
+              <span className="l2">
+                {F27M1_FOOTER.sumL2Prefix} <b>{F27M1_FOOTER.sumL2Days}</b> {F27M1_FOOTER.sumL2Tail}
+              </span>
+            </div>
+            <div className="acts">
+              <button className="btn-ghost" type="button" onClick={() => onClose?.()}>
+                {F27M1_FOOTER.cancel}
+              </button>
+              <button className="btn-send" type="button" disabled={summary.total === 0}>
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 8l4 4 6-8" />
+                </svg>
+                {F27M1_FOOTER.send} <span className="badge">{summary.total}</span>{' '}
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 3l5 5-5 5" />
+                </svg>
+              </button>
+            </div>
+          </footer>
+        </div>
       </div>
     </div>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Shared input class helper
-// ---------------------------------------------------------------------------
-
-function inputCls(invalid: boolean, extra = ''): string {
-  return [
-    'w-full rounded-md border bg-[var(--canvas)] px-3 py-2 text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-colors focus:outline-none focus:ring-2',
-    invalid
-      ? 'border-[var(--fail)] focus:border-[var(--fail)] focus:ring-[var(--fail)]/30'
-      : 'border-[var(--border-subtle)] focus:border-[var(--primary)] focus:ring-[var(--primary)]/30',
-    extra,
-  ].join(' ');
 }
