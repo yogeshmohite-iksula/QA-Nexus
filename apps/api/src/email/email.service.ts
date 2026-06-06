@@ -1,49 +1,39 @@
-// QA Nexus PM1 — EmailService.
+// QA Nexus PM1 — EmailService (provider-strategy; ADR-025 supersedes ADR-018
+// for the pilot transport).
 //
-// Spec: ADR-018 (Day-16) — migration from nodemailer/Gmail SMTP to
-// Resend HTTPS API. Render Free tier silently blocks outbound SMTP
-// connections (Sept 2025 policy), so the ADR-008 SMTP path stopped
-// delivering email in production. Resend's HTTPS POST to api.resend.com
-// bypasses the block; free tier 3,000 emails/month is sufficient for
-// the 8-user pilot. Public API contract from Day-6 (sendInvitation /
-// sendMagicLink / sendPasswordReset / send / getCapturedEmails /
-// clearCapturedEmails) is preserved verbatim — only the underlying
-// transport changed.
+// Public API (sendInvitation / sendMagicLink / sendPasswordReset / send /
+// getCapturedEmails / clearCapturedEmails / getHealth) is preserved VERBATIM
+// from Day-6 — BetterAuth's magic-link callback + the invitations service are
+// untouched. Only the transport became pluggable.
 //
-// Modes (DEFERRED-pattern, mirrors LLMGateway / R2Service):
-//   - REAL    : RESEND_API_KEY parsed OK + NODE_ENV != test. Calls
-//               resend.emails.send().
-//   - DEFERRED: RESEND_API_KEY missing OR Zod parse failure. Logs body
-//               to stdout + returns { messageId: 'deferred-<uuid>',
-//               stubbed: true }. Visible-warning at boot. Same shape as
-//               ADR-008 to keep operator muscle memory.
-//   - CAPTURE : NODE_ENV=test OR EMAIL_TEST_CAPTURE=true. In-memory
-//               queue, no transport calls. Tests assert via
-//               getCapturedEmails().
+// ADR-025 (Day-3+4 pilot): EMAIL_PROVIDER selects the active provider
+// (default 'apps-script'); the other is a fallback if the primary is
+// unconfigured. apps-script = Google Apps Script Web App (Workspace sender
+// yogesh.mohite@iksula.com, 1500/day, $0, no DNS DKIM/SPF) for the pilot;
+// resend = the ADR-018 path, re-enabled with EMAIL_PROVIDER=resend once
+// mail.qanexus.iksula.com is verified — a pure env swap, no code change.
 //
-// BCC discipline (Day-8 follow-up, retained): every send sets
-// `bcc: RESEND_BCC_EMAIL` (when set) so Yogesh's work email gets a
-// silent pilot-tracking copy. Recipient does NOT see this in headers
-// (BCC is hidden by RFC). Without BCC the audit log is the only
-// ground-truth — adding BCC gives Yogesh a human-readable inbox view
-// without adding any FE work.
+// Modes:
+//   - CAPTURE  : NODE_ENV=test or EMAIL_TEST_CAPTURE=true. In-memory queue.
+//   - REAL     : an active provider isReady(). Delegates to it.
+//   - DEFERRED : no provider ready. Logs the body to stdout, returns a stub.
 //
-// Error policy: Resend SDK failures are LOGGED + RETURNED with
-// { messageId, error }, never thrown. Caller (invitations service)
-// captures the error in its audit row — invite still committed,
-// user can resend. RESEND_API_KEY is redacted from any error message
-// before logging (defence-in-depth, mirrors SMTP_PASSWORD redaction).
+// Error policy unchanged: provider failures are LOGGED + RETURNED with
+// { messageId: 'failed-…', error }, never thrown — the caller (invitations)
+// captures the error in its audit row. Secrets (RESEND_API_KEY / Apps Script
+// shared secret) are redacted inside each provider before the error surfaces.
 
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Resend } from 'resend';
-import { parseResendEnv, type ResendEnv } from '@qa-nexus/shared';
 import {
   renderInvitationSubject,
   renderInvitationHtml,
   renderInvitationText,
   type InvitationTemplateParams,
 } from './templates/invitation';
+import type { EmailProvider } from './providers/email-provider.interface';
+import { AppsScriptEmailProvider } from './providers/apps-script.provider';
+import { ResendEmailProvider } from './providers/resend.provider';
 
 export interface SendEmailParams {
   to: string;
@@ -71,15 +61,20 @@ export interface CapturedEmail extends SendEmailParams {
   bcc?: string;
 }
 
+type Mode = 'real' | 'deferred' | 'capture';
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private resend: Resend | null = null;
-  private resendEnv: ResendEnv | null = null;
-  private mode: 'real' | 'deferred' | 'capture' = 'deferred';
+  private mode: Mode = 'deferred';
+  private active: EmailProvider | null = null;
+  private providerName: string | null = null;
   private captureQueue: CapturedEmail[] = [];
 
-  constructor() {
+  constructor(
+    private readonly appsScript: AppsScriptEmailProvider,
+    private readonly resend: ResendEmailProvider,
+  ) {
     this.initialize();
   }
 
@@ -91,62 +86,58 @@ export class EmailService {
       process.env.EMAIL_TEST_CAPTURE === 'true'
     ) {
       this.mode = 'capture';
-      this.resend = null;
-      this.resendEnv = null;
+      this.active = null;
+      this.providerName = null;
       return;
     }
 
-    try {
-      this.resendEnv = parseResendEnv(process.env);
-      this.mode = 'real';
-      this.resend = new Resend(this.resendEnv.RESEND_API_KEY);
-      // Boot log — NEVER includes the API key.
-      this.logger.log(
-        `EmailService REAL: Resend HTTPS API · ` +
-          `from="${this.resendEnv.RESEND_FROM_NAME}" <${this.resendEnv.RESEND_FROM_EMAIL}>` +
-          (this.resendEnv.RESEND_REPLY_TO
-            ? ` reply-to=${this.resendEnv.RESEND_REPLY_TO}`
-            : '') +
-          (this.resendEnv.RESEND_BCC_EMAIL
-            ? ` bcc=${this.resendEnv.RESEND_BCC_EMAIL}`
-            : ' bcc=(none)'),
-      );
-      // Compatibility hint: SMTP_* env vars from ADR-008 are no longer
-      // consumed. Warn so operators can clean them up (followup (bh)).
-      if (process.env.SMTP_HOST || process.env.SMTP_USER) {
-        this.logger.warn(
-          `SMTP_* env vars detected but unused — ADR-018 superseded ADR-008. ` +
-            `Remove SMTP_HOST/PORT/SECURE/USER/PASSWORD/FROM_NAME/FROM_EMAIL/` +
-            `REPLY_TO/BCC_EMAIL from Render env vars (followup (bh)).`,
-        );
-      }
-    } catch (err) {
-      // Validation failure → deferred mode, NOT a hard crash. The API
-      // still boots; invitations + magic-links log to stdout instead
-      // of sending. /health surfaces deferred state.
-      this.mode = 'deferred';
-      this.resend = null;
-      this.resendEnv = null;
-      const msg = err instanceof Error ? err.message : String(err);
+    const want = (process.env.EMAIL_PROVIDER ?? 'apps-script').toLowerCase();
+    const primary = want === 'resend' ? this.resend : this.appsScript;
+    const fallback = want === 'resend' ? this.appsScript : this.resend;
+
+    if (primary.isReady()) {
+      this.active = primary;
+    } else if (fallback.isReady()) {
+      this.active = fallback;
       this.logger.warn(
-        `EmailService DEFERRED — Resend env invalid: ${msg}. ` +
-          `Magic-links + invites will be logged to stdout. Set RESEND_API_KEY ` +
-          `(plus optional RESEND_FROM_EMAIL/NAME/REPLY_TO/BCC_EMAIL) on Render ` +
-          `to enable real sending. (See ADR-018.)`,
+        `EmailService: requested provider '${want}' not configured — ` +
+          `falling back to '${fallback.name}'.`,
+      );
+    } else {
+      this.active = null;
+    }
+
+    if (this.active) {
+      this.mode = 'real';
+      this.providerName = this.active.name;
+      this.logger.log(
+        `EmailService REAL · provider=${this.active.name} · ${this.active.describe()}`,
+      );
+    } else {
+      this.mode = 'deferred';
+      this.providerName = null;
+      this.logger.warn(
+        `EmailService DEFERRED — no email provider configured ` +
+          `(EMAIL_PROVIDER='${want}'). Magic-links + invites log to stdout. ` +
+          `Set APPS_SCRIPT_EMAIL_URL + APPS_SCRIPT_EMAIL_SECRET (apps-script) or ` +
+          `RESEND_API_KEY (resend) on Render. (See ADR-025.)`,
       );
     }
   }
 
-  /** Snapshot for /health. Boolean-only — no env values leak. */
+  /** Snapshot for /health. Boolean-only — no env values leak. Shape preserved
+   *  from ADR-018 so the /health readout + its tests are untouched. */
   getHealth(): {
-    mode: 'real' | 'deferred' | 'capture';
+    mode: Mode;
     from: string | null;
     bccEnabled: boolean;
   } {
     return {
       mode: this.mode,
-      from: this.resendEnv?.RESEND_FROM_EMAIL ?? null,
-      bccEnabled: !!this.resendEnv?.RESEND_BCC_EMAIL,
+      from: this.active?.fromAddress() ?? null,
+      // BCC is a Resend-only capability; the Apps Script bridge has no BCC field.
+      bccEnabled:
+        this.providerName === 'resend' && !!process.env.RESEND_BCC_EMAIL,
     };
   }
 
@@ -230,10 +221,6 @@ export class EmailService {
   private async sendInternal(params: SendEmailParams): Promise<SendResult> {
     if (this.mode === 'capture') {
       const messageId = `captured-${randomUUID()}`;
-      // Capture the BCC value the real path WOULD have used so tests
-      // can assert wiring without Resend mocking. In capture mode we
-      // read RESEND_BCC_EMAIL directly from env if set; otherwise
-      // undefined (tests that need to assert the field can set the env).
       this.captureQueue.push({
         ...params,
         messageId,
@@ -243,73 +230,28 @@ export class EmailService {
       return { messageId, stubbed: true };
     }
 
-    if (this.mode === 'deferred' || !this.resend || !this.resendEnv) {
+    if (this.mode === 'deferred' || !this.active) {
       this.logger.log(
-        `\n  ==== DEFERRED EMAIL (Resend env invalid) ====` +
+        `\n  ==== DEFERRED EMAIL (no provider configured) ====` +
           `\n    to:      ${params.to}` +
           `\n    subject: ${params.subject}` +
           `\n    text:    ${params.text ?? '(html-only)'}` +
-          `\n  =============================================`,
+          `\n  =================================================`,
       );
       return { messageId: `deferred-${randomUUID()}`, stubbed: true };
     }
 
-    try {
-      // Resend SDK shape: emails.send({ from, to, subject, html, text,
-      // bcc?, reply_to? }) → { data: { id } | null, error: ... | null }.
-      // Note: SDK uses snake_case `reply_to` per Resend HTTP API.
-      const response = await this.resend.emails.send({
-        from: `${this.resendEnv.RESEND_FROM_NAME} <${this.resendEnv.RESEND_FROM_EMAIL}>`,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-        text: params.text,
-        ...(this.resendEnv.RESEND_BCC_EMAIL
-          ? { bcc: this.resendEnv.RESEND_BCC_EMAIL }
-          : {}),
-        ...(this.resendEnv.RESEND_REPLY_TO
-          ? { replyTo: this.resendEnv.RESEND_REPLY_TO }
-          : {}),
-      });
-
-      // Resend returns { data, error } — error is non-null on API
-      // failures (invalid API key, rate limit, malformed payload, etc.).
-      // We translate to our { messageId, error } shape for symmetry
-      // with the nodemailer path callers already handle.
-      if (response.error) {
-        const safeMsg = this.redact(
-          typeof response.error === 'object' && 'message' in response.error
-            ? String(response.error.message)
-            : JSON.stringify(response.error),
-        );
-        this.logger.error(`Resend send failed for to=${params.to}: ${safeMsg}`);
-        return {
-          messageId: `failed-${randomUUID()}`,
-          stubbed: false,
-          error: safeMsg,
-        };
-      }
-
-      const messageId = response.data?.id ?? 'unknown';
-      return { messageId, stubbed: false };
-    } catch (err) {
-      // Network failure / SDK throw / unexpected runtime error.
-      const msg = err instanceof Error ? err.message : String(err);
-      const safeMsg = this.redact(msg);
-      this.logger.error(`Resend send threw for to=${params.to}: ${safeMsg}`);
+    const result = await this.active.send(params);
+    if (result.error) {
+      this.logger.error(
+        `Email send failed via ${this.active.name} for to=${params.to}: ${result.error}`,
+      );
       return {
-        messageId: `failed-${randomUUID()}`,
+        messageId: result.messageId,
         stubbed: false,
-        error: safeMsg,
+        error: result.error,
       };
     }
-  }
-
-  /** Defence-in-depth: NEVER let RESEND_API_KEY leak into a logged
-   *  message. Resend SDK error messages can sometimes echo back the
-   *  bearer token from the failed request — strip it if present. */
-  private redact(msg: string): string {
-    if (!this.resendEnv?.RESEND_API_KEY) return msg;
-    return msg.split(this.resendEnv.RESEND_API_KEY).join('<redacted>');
+    return { messageId: result.messageId, stubbed: false };
   }
 }
