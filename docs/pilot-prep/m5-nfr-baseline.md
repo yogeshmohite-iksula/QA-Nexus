@@ -106,6 +106,36 @@ latency ~1.2 s (scale-to-zero), then warm (~10 ms, see `/health` p50).
 
 ---
 
+## Day-3-4 (Sat 2026-06-06) — Production Measurements (Render-side) — DEFERRED to Day-29
+
+Per the **14th-finding methodology** (binding): latency NFRs with DB round-trips (A1
+Composer, A2 Curator, NFR-002-auth) are only representative when measured **from a host
+co-located with Neon** — the dev-Mac → Neon-Singapore path adds ~91 ms/round-trip (A2
+measured 7.1 s p95 locally = network-bound, not the algorithm). The `/admin/nfr/{a1,a2}`
+probe endpoints (`NfrController`, `NFR_PROBE_ENABLED`-gated, `@Roles(Admin)` session-cookie
+auth — the 24th reality-check) are **deployed + live on Render** (verified Day-3-4: 401
+unauthenticated → route + RolesGuard active).
+
+**Why deferred (not run today):** capturing a cross-origin BetterAuth session cookie for
+the curl was blocked — the FE home renders 100% stub data (no API calls in the Network
+panel to lift a session from), and CORS blocks calling `/admin/nfr/*` from the browser
+console. No piggyback path today. **Resolution already filed** (`feedback_nfr_probe_token_auth.md`):
+add an optional `NFR_PROBE_TOKEN` env + an `X-NFR-Probe-Token` header bypass (no cookie, no
+CORS) in `NfrController` — ~1-line change, clean Day-29 cleanup PR. The probe code itself is
+**ready**; only the auth-capture path is deferred.
+
+| NFR-003 agent            | gate         | projection                                          | status                                              |
+| ------------------------ | ------------ | --------------------------------------------------- | --------------------------------------------------- |
+| A1 Composer `generate()` | p95 < 10 s   | < 10 s under ≥6 s RPM spacing (engineered estimate) | **DEFERRED** — code-ready, awaits `NFR_PROBE_TOKEN` |
+| A2 Curator `check()`     | p95 < 500 ms | ~150 ms (14th-finding methodology)                  | **DEFERRED** — code-ready, awaits `NFR_PROBE_TOKEN` |
+| A4 Sherlock RCA          | p95 < 15 s   | 18.2 s actual (measured Day-2)                      | **RESOLVED** via ADR-024 (pilot p95 < 20 s)         |
+
+_A2's ~150 ms projection (embed ~98 ms + ~4 × ~3 ms co-located RTT + pgvector HNSW) will
+production-vindicate the 14th-finding methodology when measured Day-29 — the local 7.1 s was
+network distance, not a Curator defect._
+
+---
+
 _Started Day-1 2026-06-02 (BE+1); extended Day-1 PM with Yogesh-provided live keys.
 **GREEN:** NFR-002 public · A2 embedding component (98ms). **RED:** NFR-003 A4 p95 18.2s
 (> 15s budget — real finding). **DEFERRED to Wed:** A1 + A2-full (test branch needs a
