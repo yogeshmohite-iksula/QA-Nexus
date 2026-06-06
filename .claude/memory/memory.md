@@ -36,6 +36,9 @@ is private to a specific machine and Claude Code install.
 - @.claude/memory/feedback_ac042_provenance_llm_assist.md — AC042 corpus used Codex-labeled + human-spot-checked ground truth (ADR-022 §5.9 reserve precedent); M6 corpus-governance follow-up (Day-28)
 - @.claude/memory/feedback_eval_gate_smoke_first.md — run a 1-defect smoke before the full binding eval; schema-bridge failures present as a zero-hypothesis degraded state (Day-28)
 - @.claude/memory/feedback_skill_v2.2_first_use.md — frame-port skill v2.2 first-use journal (FE F22 Day-22/23 + BE M5-close footnote Day-28)
+- @.claude/memory/feedback_worktree_locked_merge_pattern.md — merging a PR whose branch is checked out in a sibling worktree: temp-branch + --force-with-lease to the remote ref; union-resolve add/add conflicts (pilot Day-2 AM)
+- @.claude/memory/feedback_multi_worktree_env_discipline.md — BINDING: .env edits MUST target the correct worktree (-backend/-frontend/root); verify with pwd + awk before assuming landed (Day-2 PM, 18th reality-check)
+- @.claude/memory/feedback_chained_base_cascade_resolution.md — BINDING: when squash-merge causes downstream PRs to go DIRTY, use temp-branch + rebase + take-ours for upstream content + force-push (Day-3 AM, 4-PR merge wave)
 
 ## Maintenance
 
