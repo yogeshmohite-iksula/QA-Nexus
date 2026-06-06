@@ -39,6 +39,9 @@ is private to a specific machine and Claude Code install.
 - @.claude/memory/feedback_worktree_locked_merge_pattern.md — merging a PR whose branch is checked out in a sibling worktree: temp-branch + --force-with-lease to the remote ref; union-resolve add/add conflicts (pilot Day-2 AM)
 - @.claude/memory/feedback_multi_worktree_env_discipline.md — BINDING: .env edits MUST target the correct worktree (-backend/-frontend/root); verify with pwd + awk before assuming landed (Day-2 PM, 18th reality-check)
 - @.claude/memory/feedback_chained_base_cascade_resolution.md — BINDING: when squash-merge causes downstream PRs to go DIRTY, use temp-branch + rebase + take-ours for upstream content + force-push (Day-3 AM, 4-PR merge wave)
+- @.claude/memory/feedback_dns_authority_verify_day_1.md — BINDING: Day-1 of any project, verify DNS edit access on the production domain explicitly. Domain ownership ≠ email account ownership ≠ DNS edit access. Drove ADR-025 Apps Script pivot (Sat Day-3+4 AM, Iksula IT blocker discovery)
+- @.claude/memory/feedback_multi_worktree_chat_misroute.md — BINDING: agents MUST verify-before-edit when an incoming brief looks outside their worktree's role (check pwd + file paths + intent). Sat Day-3+4 ~12:15 IST, BE+1 25th reality-check, F26m1 brief misroute caught clean
+- @.claude/memory/feedback_multi_worktree_git_working_tree_drift.md — BINDING: cross-worktree .git sharing causes locked-frame `D` status drift. Mitigation: explicit-path `git add` + `git restore` + branch creation with `origin/main` explicit. Sat Day-3+4 BE+1 26th reality-check + MAIN replay + branch-creation drift
 
 ## Maintenance
 
