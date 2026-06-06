@@ -14,8 +14,6 @@
 // React port imports from. Re-run this script to refresh extracts; do
 // NOT hand-edit the RAW block (it'll be overwritten).
 
- 
-
 export const F26M2_RAW = {
   pageTitle: 'QA Nexus — F26m2 Configure Composer · Model Assignment',
   headings: {
