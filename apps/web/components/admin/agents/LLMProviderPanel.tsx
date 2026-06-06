@@ -1,7 +1,10 @@
 // F26 LLMProviderPanel — markup mirrors canonical .prov-panel.
+// The "Configure" button links to the F26m1 modal route in edit mode for the
+// configured provider; an "Add provider" entry uses the same route unparam'd.
 
 'use client';
 
+import Link from 'next/link';
 import type { F26LLMProviderData } from '@/components/admin/agents/types';
 
 interface Props {
@@ -79,7 +82,7 @@ export function LLMProviderPanel({ data }: Props) {
               </svg>
               Test now
             </button>
-            <button className="btn-primary" type="button">
+            <Link className="btn-primary" href="/admin/agents/provider-setup?mode=edit&id=groq">
               <svg
                 viewBox="0 0 16 16"
                 fill="none"
@@ -92,7 +95,7 @@ export function LLMProviderPanel({ data }: Props) {
                 <path d="M8 1v1.5M8 13.5V15M2.5 4.5l1 1M12.5 10.5l1 1M1 8h1.5M13.5 8H15M2.5 11.5l1-1M12.5 5.5l1-1" />
               </svg>
               Configure
-            </button>
+            </Link>
           </div>
         </div>
         <div className="prov-callout">
