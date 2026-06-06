@@ -13,6 +13,10 @@ updates land here at the end of every working day.
 
 ## [Unreleased]
 
+### Added — Day 3 (Thu, pilot-prep) — admin NFR-003 latency probe endpoints [pilot-prep]
+
+`POST /admin/nfr/{a1,a2}` (NfrModule) — admin-only (`@Roles(Role.Admin)` + RolesGuard) + `NFR_PROBE_ENABLED`-gated (404 when off). Measures Composer (A1) `generate()` + Curator (A2) `check()` latency from a Neon-co-located host (Render), resolving the Day-2 14th reality-check (dev-Mac → Neon Singapore adds ~91ms/round-trip — network-bound, not algorithmic). Each call runs an isolated per-request child Nest context whose PrismaService binds to `TEST_DATABASE_URL` (ep-blue-star) — NEVER pilot (A1 persists test cases + both agents audit-write). `assertTestBranch()` refuses if the TEST host equals the pilot host; A2 fails loudly if the child embedder defers (else it would report an ADR-014 stub). Zod `NfrProbeRequest`/`NfrProbeResponse` added to `packages/shared`. Spec: `docs/runbooks/render-side-nfr-measurement.md` §3 Option C.
+
 ## [M5 CORE] - 2026-05-27
 
 **M5 CORE milestone closed Wed Day-28 2026-05-27.** 4 binding frames + F28 Tier-2 bonus + 3 ADRs ratified (impl LIVE) + AC042 Sherlock RCA corpus eval PASS gate cleared on the 50-defect golden set. F26 + F27 carry to Day-29 as Tier-2 reserve allowance per ADR-022 §5.9.
