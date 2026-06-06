@@ -22,12 +22,24 @@ jest.mock('resend', () => ({
 }));
 
 import { EmailService } from '../email.service';
+import { AppsScriptEmailProvider } from '../providers/apps-script.provider';
+import { ResendEmailProvider } from '../providers/resend.provider';
 import { Resend } from 'resend';
 import {
   renderInvitationSubject,
   renderInvitationHtml,
   renderInvitationText,
 } from '../templates/invitation';
+
+/** ADR-025: EmailService now takes the two provider strategies. Build them
+ *  fresh per construction so each reads the current env (providers read env in
+ *  their constructors). */
+function makeService(): EmailService {
+  return new EmailService(
+    new AppsScriptEmailProvider(),
+    new ResendEmailProvider(),
+  );
+}
 
 const baseInv = {
   to: 'kishor.kadam@iksula.com',
@@ -41,6 +53,7 @@ const baseInv = {
 /** Set the Resend env (1 required + 4 optional). Used by real-mode tests. */
 function setRealEnv(overrides: Partial<Record<string, string>> = {}): void {
   process.env.NODE_ENV = 'production';
+  process.env.EMAIL_PROVIDER = 'resend';
   process.env.RESEND_API_KEY = 're_test_qa_nexus_pm1_local_test_only';
   process.env.RESEND_FROM_EMAIL = 'noreply@qanexus.iksula.com';
   process.env.RESEND_FROM_NAME = 'QA Nexus';
@@ -67,6 +80,9 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     (Resend as unknown as jest.Mock).mockClear();
     clearAllResendEnv();
     delete process.env.EMAIL_TEST_CAPTURE;
+    delete process.env.EMAIL_PROVIDER;
+    delete process.env.APPS_SCRIPT_EMAIL_URL;
+    delete process.env.APPS_SCRIPT_EMAIL_SECRET;
     process.env.NODE_ENV = 'test';
   });
   afterAll(() => {
@@ -75,7 +91,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
 
   describe('mode detection', () => {
     it('NODE_ENV=test → capture mode', () => {
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('capture');
       expect(Resend).not.toHaveBeenCalled();
     });
@@ -83,13 +99,13 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('EMAIL_TEST_CAPTURE=true overrides production-looking env', () => {
       setRealEnv();
       process.env.EMAIL_TEST_CAPTURE = 'true';
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('capture');
     });
 
     it('Resend env complete in production → real mode', () => {
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('real');
       expect(svc.getHealth().from).toBe('noreply@qanexus.iksula.com');
       expect(svc.getHealth().bccEnabled).toBe(true);
@@ -103,21 +119,21 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('RESEND_API_KEY missing in production → deferred mode (no crash)', () => {
       process.env.NODE_ENV = 'production';
       // No RESEND_* env at all
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('deferred');
       expect(Resend).not.toHaveBeenCalled();
     });
 
     it('RESEND_API_KEY without "re_" prefix → deferred mode', () => {
       setRealEnv({ RESEND_API_KEY: 'invalid-format-token-1234567890' });
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('deferred');
     });
 
     it('only RESEND_API_KEY set → real mode with default from/name (no BCC)', () => {
       process.env.NODE_ENV = 'production';
       process.env.RESEND_API_KEY = 're_minimal_set_for_pilot_bootstrap';
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('real');
       expect(svc.getHealth().from).toBe('onboarding@resend.dev');
       expect(svc.getHealth().bccEnabled).toBe(false);
@@ -125,8 +141,29 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
 
     it('invalid RESEND_FROM_EMAIL → deferred', () => {
       setRealEnv({ RESEND_FROM_EMAIL: 'not-an-email' });
-      const svc = new EmailService();
+      const svc = makeService();
       expect(svc.getHealth().mode).toBe('deferred');
+    });
+
+    it('EMAIL_PROVIDER=apps-script + bridge configured → real via apps-script', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.APPS_SCRIPT_EMAIL_URL =
+        'https://script.google.com/macros/s/AKfTest/exec';
+      process.env.APPS_SCRIPT_EMAIL_SECRET = 'x'.repeat(64);
+      const svc = makeService();
+      expect(svc.getHealth().mode).toBe('real');
+      // apps-script fromAddress() is the reply-to (envelope sender fixed by deploy).
+      expect(svc.getHealth().from).toBe('yogesh.mohite@iksula.com');
+      // No Resend client built when apps-script is active + RESEND env absent.
+      expect(Resend).not.toHaveBeenCalled();
+    });
+
+    it('apps-script default but unconfigured + Resend set → falls back to resend', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.RESEND_API_KEY = 're_fallback_pilot_bootstrap_key';
+      const svc = makeService();
+      expect(svc.getHealth().mode).toBe('real');
+      expect(svc.getHealth().from).toBe('onboarding@resend.dev');
     });
   });
 
@@ -162,7 +199,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
 
   describe('capture mode', () => {
     it('sendInvitation captures into queue (no Resend call)', async () => {
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^captured-/);
       expect(result.stubbed).toBe(true);
@@ -175,14 +212,14 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
 
     it('capture records RESEND_BCC_EMAIL when set in env (so wire-tests can assert)', async () => {
       process.env.RESEND_BCC_EMAIL = 'yogesh.mohite@iksula.com';
-      const svc = new EmailService();
+      const svc = makeService();
       await svc.sendInvitation(baseInv);
       const captured = svc.getCapturedEmails();
       expect(captured[0].bcc).toBe('yogesh.mohite@iksula.com');
     });
 
     it('clearCapturedEmails empties the queue', async () => {
-      const svc = new EmailService();
+      const svc = makeService();
       await svc.sendInvitation(baseInv);
       expect(svc.getCapturedEmails()).toHaveLength(1);
       svc.clearCapturedEmails();
@@ -190,7 +227,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     });
 
     it('sendMagicLink + sendPasswordReset capture with right subjects', async () => {
-      const svc = new EmailService();
+      const svc = makeService();
       await svc.sendMagicLink({
         to: 'x@iksula.com',
         magicLinkUrl: 'https://x.example/?t=t',
@@ -211,7 +248,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('sendInvitation returns deferred-prefixed messageId, no Resend call', async () => {
       process.env.NODE_ENV = 'production';
       // No RESEND env → deferred
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^deferred-/);
       expect(result.stubbed).toBe(true);
@@ -226,7 +263,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
         error: null,
       });
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toBe('resend-id-789');
       expect(result.stubbed).toBe(false);
@@ -246,7 +283,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('every public method (invite/magic-link/reset) carries the BCC field', async () => {
       mockSend.mockResolvedValue({ data: { id: 'x' }, error: null });
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       await svc.sendInvitation(baseInv);
       await svc.sendMagicLink({
         to: 'x@iksula.com',
@@ -268,7 +305,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('without RESEND_BCC_EMAIL — bcc field is OMITTED, not undefined', async () => {
       mockSend.mockResolvedValueOnce({ data: { id: 'no-bcc' }, error: null });
       setRealEnv({ RESEND_BCC_EMAIL: undefined });
-      const svc = new EmailService();
+      const svc = makeService();
       await svc.sendInvitation(baseInv);
       const arg = mockSend.mock.calls[0][0];
       expect('bcc' in arg).toBe(false);
@@ -277,7 +314,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('without RESEND_REPLY_TO — replyTo field is OMITTED', async () => {
       mockSend.mockResolvedValueOnce({ data: { id: 'no-rt' }, error: null });
       setRealEnv({ RESEND_REPLY_TO: undefined });
-      const svc = new EmailService();
+      const svc = makeService();
       await svc.sendInvitation(baseInv);
       const arg = mockSend.mock.calls[0][0];
       expect('replyTo' in arg).toBe(false);
@@ -289,7 +326,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
         error: { message: 'rate_limit_exceeded', name: 'RateLimitError' },
       });
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^failed-/);
       expect(result.stubbed).toBe(false);
@@ -299,7 +336,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
     it('Resend SDK throws — caught, logged, returned as failed result', async () => {
       mockSend.mockRejectedValueOnce(new Error('network unreachable'));
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.messageId).toMatch(/^failed-/);
       expect(result.stubbed).toBe(false);
@@ -314,7 +351,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
         ),
       );
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.sendInvitation(baseInv);
       expect(result.error).toBeDefined();
       expect(result.error).not.toContain(
@@ -329,7 +366,7 @@ describe('EmailService (ADR-018 Resend HTTPS API)', () => {
         error: null,
       });
       setRealEnv();
-      const svc = new EmailService();
+      const svc = makeService();
       const result = await svc.send({
         to: 'x@iksula.com',
         subject: 'subj',

@@ -26,6 +26,7 @@ export * from './schemas/auth';
 export * from './schemas/smtp-env';
 export * from './schemas/resend-env';
 export * from './schemas/nfr-probe';
+export * from './schemas/email-bridge';
 // M4 (Day-18 #144) — namespaced to avoid collision with legacy
 // DefectSchema / TestRunSchema / RcaReportSchema / JiraConnection types
 // at the package root. Import as: `import { m4 } from '@qa-nexus/shared'`
