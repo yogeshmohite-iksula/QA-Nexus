@@ -25,6 +25,7 @@ import { TestRunsModule } from './test-runs/test-runs.module';
 import { DefectsModule } from './defects/defects.module';
 import { JiraSyncModule } from './jira-sync/jira-sync.module';
 import { ReportsModule } from './reports/reports.module';
+import { NfrModule } from './nfr/nfr.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ReportsModule } from './reports/reports.module';
     DefectsModule, // M4 Day-19 P0 #2 → Day-20 P1 — POST :id/rca FUNCTIONAL (calls SherlockOrchestratorService); other endpoints stay 501 stubs
     JiraSyncModule, // M4 Day-19 P0 #2 — STUB (501); webhook + sync land Day-19/20
     ReportsModule, // M5 Day-24 P0 — ADR-021 Reports backend (cycle/defect/agent/sprint/coverage)
+    NfrModule, // Day-3 pilot-prep — admin /admin/nfr/{a1,a2} latency probe (test-branch only, NFR_PROBE_ENABLED-gated)
     ObservabilityModule, // /admin/otel/test-trace (Admin-gated)
     HealthModule, // last so it can depend on LLMGateway + R2Service for /health readouts
   ],
