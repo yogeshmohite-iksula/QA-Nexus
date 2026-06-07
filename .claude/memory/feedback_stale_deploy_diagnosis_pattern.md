@@ -55,3 +55,48 @@ Pattern lesson: **stacked PRs need either (a) base re-target before parent merge
 - Hard Rule 13 — visual gate authority; the visual gate is against the deployed bundle, not source code
 
 _Authored Sun Day-5 2026-06-07 ~16:35 IST. 10th safety pattern of the week; running tally: 9 formal + 1 (10th, this file) + 1 dwelling (broad-audit-shallow-coverage)._
+
+---
+
+## AMENDMENT — Sun Day-5 2026-06-07 ~17:45 IST (34th reality-check)
+
+**Pattern still valid for diagnosing STALE deploys, BUT requires a MANDATORY VERIFICATION step. Grep alone is insufficient.**
+
+### What happened
+
+After this pattern file was authored at ~16:35 IST + PRs #247 + #251 merged + Cloudflare auto-redeployed `963fc08`, Yogesh re-tested P0-001 in fresh incognito at ~17:30 IST. **The bug PERSISTED.** Identity still rendered as "Kishor K. QA ENGINEER" for the `yogesh.mohite@iksula.com` session. Network tab showed ZERO `/api/auth/get-session` calls + ZERO cookies on the `qa-nexus-web.pages.dev` domain.
+
+P0-001 was NOT a stale-deploy artifact. It was a real cross-layer bug spanning:
+
+- **Infra layer:** cookie-domain misconfig + CORS `Access-Control-Allow-Credentials` not set → cross-site cookie never reached the browser
+- **Code layer:** Pattern-A persona embed in canned data + session hook not actually called → component defaulted to "Kishor K." persona fallback
+
+FE+1's 32nd reality-check (grep-only) correctly proved zero hardcoded matches but **could not see the infra layer** that was preventing the session hook from ever firing. The 10th pattern's diagnostic step 4 ("grep current main") returned the truth-shaped wrong-answer.
+
+### The amended rule
+
+Grep-only diagnosis can prove "the value isn't hardcoded" but cannot prove "the code path is reachable" or "the runtime fetch is happening." Both are required for a real stale-deploy diagnosis.
+
+**New step 7 (MANDATORY):** after merging suspected fix-PRs + waiting for redeploy + before declaring "stale-deploy resolved":
+
+7. **Yogesh-style verification:** open a fresh incognito window → sign in → re-test the bug. If post-redeploy fresh-session STILL shows the bug → hypothesis is wrong, escalate to cross-layer investigation (infra + code, not just code).
+
+### Cross-layer investigation playbook (when step 7 fails)
+
+When the post-redeploy verification still shows the bug:
+
+1. **Open DevTools Network tab** during sign-in flow. Are the expected API calls firing? (`/auth/sign-in`, `/auth/callback`, `/api/auth/get-session`, etc.)
+2. **Check DevTools Application → Cookies.** Is the session cookie present on EACH expected domain? (FE domain + API domain).
+3. **Check the response `Set-Cookie` headers** on `/auth/sign-in` or `/auth/callback`. Are `SameSite=None`, `Secure`, `Domain=...` set correctly for cross-site?
+4. **Check the request `Origin` + response `Access-Control-Allow-Origin` + `Access-Control-Allow-Credentials`.** All three required for cross-site cookie persistence.
+5. **Check the auth provider/hook source.** Does the component actually CALL the session hook? (e.g., `useSession()`, `useCurrentUser()`). Or does it fall back to a hardcoded persona?
+6. **Read the canned-data file** for the affected surface. Are persona stubs embedded that would override real session data when the hook returns `undefined`?
+
+The 10th pattern + this amendment + the new 13th pattern (cross-team independent diagnosis convergence) together close the diagnosis gap.
+
+### Cross-references (amendment)
+
+- 34th reality-check (Yogesh fresh-incognito re-test, Sun Day-5 ~17:45 IST)
+- `docs/runbooks/magic-link-debug.md` §5 cookie/origin mismatch — this WAS the diagnostic playbook needed
+- `feedback_independent_diagnosis_convergence.md` (sibling 13th pattern — BE+1 35th RC + FE+1 34th RC converged on same root cause Sun ~18:00 IST)
+- Hard Rule 13 — visual gate authority is against the DEPLOYED bundle in a FRESH session, not against source code in dev
