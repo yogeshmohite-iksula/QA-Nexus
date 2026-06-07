@@ -42,6 +42,7 @@ is private to a specific machine and Claude Code install.
 - @.claude/memory/feedback_dns_authority_verify_day_1.md — BINDING: Day-1 of any project, verify DNS edit access on the production domain explicitly. Domain ownership ≠ email account ownership ≠ DNS edit access. Drove ADR-025 Apps Script pivot (Sat Day-3+4 AM, Iksula IT blocker discovery)
 - @.claude/memory/feedback_multi_worktree_chat_misroute.md — BINDING: agents MUST verify-before-edit when an incoming brief looks outside their worktree's role (check pwd + file paths + intent). Sat Day-3+4 ~12:15 IST, BE+1 25th reality-check, F26m1 brief misroute caught clean
 - @.claude/memory/feedback_multi_worktree_git_working_tree_drift.md — BINDING: cross-worktree .git sharing causes locked-frame `D` status drift. Mitigation: explicit-path `git add` + `git restore` + branch creation with `origin/main` explicit. Sat Day-3+4 BE+1 26th reality-check + MAIN replay + branch-creation drift
+- @.claude/memory/feedback_stale_deploy_diagnosis_pattern.md — BINDING: before classifying any UI bug as P0/P1 against a deployed environment, verify which commit/PR the deploy is built from. Cloudflare Pages auto-deploys on `main` only; pending PRs are NOT in the bundle. Grep current main + read source before code surgery. Sun Day-5 ~16:35 IST after FE+1's 32nd reality-check caught P0-001 as stale-deploy, not code bug. Includes stacked-PR cascade caveat (#250 auto-closed on parent merge → #251 re-open)
 
 ## Maintenance
 
