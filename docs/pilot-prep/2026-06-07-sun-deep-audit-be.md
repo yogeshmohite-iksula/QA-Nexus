@@ -166,9 +166,45 @@ data (P1 seed gap, Yogesh ruling).\*\* Catalog delivered for FE+1.
 
 public with their own gates (auth-flow / HMAC signature).
 
-## Bucket 2 — Cross-Site Cookie Persistence — **PENDING (Yogesh browser capture)**
+## Bucket 2 — Cross-Site Cookie Persistence — **PASS** (CORS layer verified live; cookie-attr browser confirm pending FE #258)
 
-## Bucket 4 — Free-Tier Quota Baseline — **PENDING (Yogesh dashboard screenshots)**
+This bucket became the root cause of **P0-001** (magic-link sign-in succeeds but the app
+shows no real identity — the FE renders its hardcoded "Kishor K." fallback because no
+session cookie is stored). Full RCA: `2026-06-07-p0-001-cookie-cors-root-cause-be.md`.
+
+**Root cause — cross-site topology.** FE `qa-nexus-web.pages.dev` + API
+`qa-nexus-api.onrender.com` are **different registrable domains**, but `auth.config.ts`
+targeted a future shared-parent zone (`*.qanexus.iksula.com`). Three bugs: (1) cookie
+`Domain=.qanexus.iksula.com` → browser **rejects** the Set-Cookie (Domain ≠ origin host)
+→ no cookie stored [PRIMARY]; (2) `SameSite=Lax` → not sent on cross-site fetch; (3) **no
+CORS on `/api/*`** (only `/auth/*` had it).
+
+**Fix — PR #256 (deployed `28122ad`).** `resolveCookieConfig` emits a host-only
+`SameSite=None; Secure; Partitioned` cookie for non-shared-parent https hosts; `main.ts`
+adds credentialed CORS for `/api/*` (reusing `isAuthCorsOriginAllowed`). Shared-parent +
+localhost topologies unchanged.
+
+**Evidence:**
+
+| Check                                                                     | Pre-fix (captured)                    | Post-fix (verified)                                            | Verdict     |
+| ------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------- | ----------- |
+| `OPTIONS /api/users` (Origin: pages.dev)                                  | `HTTP 404`, ACAO `null`               | `HTTP 204`, ACAO `https://qa-nexus-web.pages.dev`, ACAC `true` | **PASS** ✅ |
+| `resolveCookieConfig` 3-topology unit test                                | —                                     | 5/5 pass (cross-site → host-only / `None` / Secure)            | **PASS** ✅ |
+| Cookie attrs in browser (`SameSite=None; Secure; Partitioned`; no Domain) | `Lax` + `Domain=.qanexus…` (rejected) | _pending Yogesh DevTools after FE #258 deploy_                 | PENDING     |
+| `GET /auth/session` → `{user:{displayName, role}}` in incognito           | hardcoded fallback                    | _pending Yogesh browser (with FE #258)_                        | PENDING     |
+
+**Verdict: PASS** for the CORS + cookie-config layers (empirically + unit-test verified).
+The final cookie-attribute + `/auth/session` browser confirmation lands via Yogesh's
+incognito DevTools once FE #258 (Pattern-B session wire) deploys — expected PASS.
+
+## Bucket 4 — Free-Tier Quota Baseline — **PARTIAL** (email self-tested PASS; other quotas pending Yogesh dashboards)
+
+- **Apps Script email bridge (ADR-025) — PASS** ✅ (self-tested via GET): `{ok:true,
+service:"qa-nexus-email-bridge", remaining:1499/1500}`. 1 used today (Yogesh's
+  magic-link test); ample headroom for 8-user pilot magic-links + invites.
+- **Pending Yogesh dashboards** (independent of P0-001): Neon CU-hr (**first — was 87/100
+  Wed, CRITICAL**), Groq RPD, R2 storage/ops, GitHub Actions minutes, Render hours.
+  Document baselines for Mon-morning comparison once provided.
 
 ## Reality-checks logged: 2 so far (28th — didn't ring P0 before root-causing the break; 30th — the fix script _respected_ the DB immutability control, surfacing the SOC-2-gold append-only guard)
 
