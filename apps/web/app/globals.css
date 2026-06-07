@@ -75,8 +75,100 @@
   --info-soft: rgba(96, 165, 250, 0.12);
   --info-line: rgba(96, 165, 250, 0.3);
 
+  /* Admin role badge red — _SHELL Developer Handoff.md §2 (Sun 2026-06-07). */
+  --admin-red: #ef4444;
+  --admin-soft: rgba(239, 68, 68, 0.1);
+  --admin-line: rgba(239, 68, 68, 0.32);
+
+  /* Geometry — _SHELL Developer Handoff.md §2. */
+  --rail-w: 240px;
+  --rail-w-collapsed: 64px;
+  --topbar-h: 56px;
+  --tap: 44px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
   /* F25 Prove mode -- the ONLY frame that flips canvas */
   --canvas-prove: #fafaf8; /* ivory; only used inside F25 Executive Dashboard */
+}
+
+/* ============================================================
+   LIGHT THEME — html[data-theme="light"]
+   Source: _SHELL Developer Handoff.md §2 (Sun 2026-06-07 canonical).
+   Tinted slate/indigo surfaces — NOT stark white. Because every
+   surface references CSS variables, toggling html[data-theme="light"]
+   re-themes the entire UI without component-level edits.
+   ============================================================ */
+html[data-theme='light'] {
+  /* Surfaces */
+  --canvas: #e8ecf4;
+  --base: #f3f1fb;
+  --raised: #eaeaf6;
+  --overlay: #dfe0ef;
+
+  /* Borders (slightly darker than dark theme for contrast on light bgs) */
+  --border-subtle: #d2d5e6;
+  --border-strong: #b5bad2;
+
+  /* Text hierarchy — flipped from light-on-dark to dark-on-light */
+  --text-primary: #1b1f3b;
+  --text-secondary: #3c4366;
+  --text-tertiary: #6b7298;
+  --text-disabled: #9ca1c0;
+
+  /* Ink for text-on-solid-primary stays white in light mode */
+  --primary-ink: #ffffff;
+
+  /* Soft/line alpha pairs — darker hue + slightly higher alpha for
+     visibility on light surfaces (per handoff §2). */
+  --primary-soft: rgba(13, 148, 136, 0.12);
+  --primary-line: rgba(13, 148, 136, 0.3);
+  --ai-soft: rgba(124, 58, 237, 0.1);
+  --ai-line: rgba(124, 58, 237, 0.26);
+  --pass-soft: rgba(5, 150, 105, 0.13);
+  --pass-line: rgba(5, 150, 105, 0.3);
+  --warn-soft: rgba(217, 119, 6, 0.13);
+  --warn-line: rgba(217, 119, 6, 0.3);
+  --fail-soft: rgba(220, 38, 38, 0.12);
+  --fail-line: rgba(220, 38, 38, 0.3);
+  --info-soft: rgba(37, 99, 235, 0.12);
+  --info-line: rgba(37, 99, 235, 0.28);
+  --admin-soft: rgba(220, 38, 38, 0.1);
+  --admin-line: rgba(220, 38, 38, 0.3);
+}
+
+/* ============================================================
+   Base typography — _SHELL Developer Handoff.md §1 + §7.
+   - Inter default for body/UI (declared on body below)
+   - DM Sans applies automatically to h1-h6
+   - JetBrains Mono applies to .mono / code / time / .id / .count / .kbd
+   - font-variant-numeric: tabular-nums on mono for column alignment
+   ============================================================ */
+html {
+  font-size: 14px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
+  /* Smooth theme transitions on toggle */
+  transition: background-color 180ms ease;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+.mono,
+code,
+time,
+.id,
+.count,
+.kbd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tailwind 4 @theme -- exposes tokens as Tailwind utilities (bg-canvas, text-primary, etc.).
@@ -237,5 +329,19 @@ body {
   *::-webkit-scrollbar {
     width: 6px;
     height: 6px;
+  }
+}
+
+/* popIn — _SHELL Developer Handoff.md §4 ("popIn 140ms animation"). Used by
+   the .pop dropdown panels in the topbar (project switcher, search, quick
+   create, notifications, user menu). */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

@@ -47,13 +47,11 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
-  Bell,
   Bookmark,
   Bot,
   Calendar,
   CheckSquare,
   ChevronDown,
-  Crosshair,
   Database,
   FileBarChart,
   FileText,
@@ -61,20 +59,25 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Menu,
-  Moon,
   Play,
   Plug,
-  Plus,
-  Search,
   Server,
   Settings,
-  Sun,
   Users,
   X,
   Zap,
 } from 'lucide-react';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
-import { useProjectList } from '@/lib/contexts/ProjectContext';
+import { PopoverManagerProvider } from '@/components/admin/use-popover-manager';
+import {
+  ProjectSwitcher,
+  Search as ShellSearch,
+  QuickCreate,
+  Notifications,
+  ThemeToggle,
+  ModeToggle,
+  UserMenu,
+} from '@/components/admin/shell-topbar-widgets';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -273,7 +276,8 @@ function initialsOf(displayName: string): string {
 
 export function AdminShell({ active, children, projectKeyLower }: AdminShellProps) {
   const me = useCurrentUser();
-  const projects = useProjectList();
+  // useProjectList() no longer consumed at shell level — the ProjectSwitcher
+  // widget reads its own hardcoded canon (per CLAUDE.md Iksula data canon).
   const meName = shortName(me.displayName);
   const meInitials = initialsOf(me.displayName);
   const meRoleLabel = (me.role === 'Admin' ? 'Admin' : me.organizationalLabel) ?? me.role;
@@ -282,8 +286,7 @@ export function AdminShell({ active, children, projectKeyLower }: AdminShellProp
   const [collapsed, setCollapsed] = useState(false);
   // Mobile drawer state.
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Dark/light toggle (Pattern A stub — visual only for now).
-  const [lightMode, setLightMode] = useState(false);
+  // Theme is now owned by ThemeToggle widget — html[data-theme] + localStorage.
 
   // Hydrate collapsed state from localStorage post-mount.
   useEffect(() => {
@@ -341,31 +344,33 @@ export function AdminShell({ active, children, projectKeyLower }: AdminShellProp
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--canvas)] text-[var(--text-primary)]">
-      <TopBar
-        meName={meName}
-        meInitials={meInitials}
-        meRoleLabel={meRoleLabel}
-        projectCount={projects.length}
-        lightMode={lightMode}
-        onToggleLight={() => setLightMode((v) => !v)}
-        onOpenMobileMenu={() => setMobileOpen(true)}
-      />
-      <div className="flex flex-1">
-        <AdminLeftRail
-          active={active}
+    <PopoverManagerProvider>
+      <div className="flex min-h-screen flex-col bg-[var(--canvas)] text-[var(--text-primary)]">
+        <TopBar
           meName={meName}
+          meFullName={me.displayName}
+          meEmail={me.email}
           meInitials={meInitials}
           meRoleLabel={meRoleLabel}
-          projectKeyLower={projectKeyLower}
-          collapsed={collapsed}
-          onToggleCollapsed={toggleCollapsed}
-          mobileOpen={mobileOpen}
-          setMobileOpen={setMobileOpen}
+          isAdmin={me.role === 'Admin'}
+          onOpenMobileMenu={() => setMobileOpen(true)}
         />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex flex-1">
+          <AdminLeftRail
+            active={active}
+            meName={meName}
+            meInitials={meInitials}
+            meRoleLabel={meRoleLabel}
+            projectKeyLower={projectKeyLower}
+            collapsed={collapsed}
+            onToggleCollapsed={toggleCollapsed}
+            mobileOpen={mobileOpen}
+            setMobileOpen={setMobileOpen}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        </div>
       </div>
-    </div>
+    </PopoverManagerProvider>
   );
 }
 
@@ -375,19 +380,19 @@ export function AdminShell({ active, children, projectKeyLower }: AdminShellProp
 
 function TopBar({
   meName,
+  meFullName,
+  meEmail,
   meInitials,
   meRoleLabel,
-  projectCount,
-  lightMode,
-  onToggleLight,
+  isAdmin,
   onOpenMobileMenu,
 }: {
   meName: string;
+  meFullName: string;
+  meEmail: string;
   meInitials: string;
   meRoleLabel: string;
-  projectCount: number;
-  lightMode: boolean;
-  onToggleLight: () => void;
+  isAdmin: boolean;
   onOpenMobileMenu: () => void;
 }) {
   return (
@@ -422,195 +427,36 @@ function TopBar({
         </span>
       </Link>
 
-      {/* Project pill — gradient IR dot + Iksula Returns · main.
-          Canonical F15 v2 L94-100: height 36px / radius 6px / pad 0 10px /
-          gap 8px. Inner dot 18×18 / radius 4px. Pin radius inline. */}
-      <button
-        type="button"
-        aria-label={`Switch project (${projectCount} projects)`}
-        style={{ borderRadius: '6px' }}
-        className="hidden h-9 shrink-0 items-center gap-2 border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 text-[13px] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex"
-      >
-        <span
-          aria-hidden="true"
-          className="font-display inline-flex h-[18px] w-[18px] items-center justify-center text-[9px] font-bold text-[var(--primary-ink)]"
-          style={{
-            borderRadius: '4px',
-            background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)',
-          }}
-        >
-          IR
-        </span>
-        <span className="font-medium">Iksula Returns</span>
-        <span aria-hidden="true" className="font-mono text-[11px] text-[var(--text-tertiary)]">
-          · main
-        </span>
-        <ChevronDown size={12} aria-hidden="true" className="text-[var(--text-tertiary)]" />
-      </button>
+      {/* Canonical topbar widgets — all 7 from _SHELL Developer Handoff.md §4.
+          Each manages its own state via usePopoverManager() for one-at-a-time
+          + outside-click + ESC behavior. */}
+      <ProjectSwitcher />
+      <ShellSearch />
 
-      {/* Global search omnibox — visible at xl (1280+) only. Hidden at
-          768-1279 because header content (brand + projpill + 4 icons +
-          mode toggle + user pill) already exceeds available width when
-          the rail is expanded at lg (1024px). ⌘K shortcut + (+) icon-btn
-          remain accessible at every viewport. */}
-      <div className="hidden flex-1 items-center justify-center xl:flex">
-        {/* Canonical F15 v2 L102-105: .global-search height 36px,
-            padding 0 10px, gap 8px, border-radius 6px (pinned inline).
-            .kbd: padding 1px 5px, border-radius 4px. */}
-        <div
-          style={{ borderRadius: '6px' }}
-          className="flex h-9 w-full max-w-[520px] items-center gap-2 border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 text-[13px] text-[var(--text-tertiary)]"
-        >
-          <Search size={14} aria-hidden="true" />
-          <span className="flex-1 truncate">Search everything…</span>
-          <kbd
-            style={{ borderRadius: '4px' }}
-            className="border border-[var(--border-subtle)] bg-[var(--base)] px-1 py-0 font-mono text-[10.5px] text-[var(--text-tertiary)]"
-          >
-            ⌘K
-          </kbd>
-        </div>
-      </div>
-
-      {/* Spacer pushes icon cluster + user pill to the right when search
-          omnibox is hidden (< xl). At xl+ the search wrapper itself
-          handles flex-grow so spacer becomes flex-none. */}
+      {/* Spacer pushes the right cluster (icons + mode toggle + user pill) to
+          the right edge when search is hidden at <xl. At xl+ the search
+          wrapper itself handles flex-grow so spacer becomes inert. */}
       <div className="flex flex-1 xl:flex-none" />
 
-      {/* Icon buttons cluster — plus / bell (with notification pip) /
-          crosshair (switch project) / dark-light toggle */}
-      <IconButton aria-label="New entity">
-        <Plus size={16} aria-hidden="true" />
-      </IconButton>
-      <IconButton aria-label="Notifications">
-        <span className="relative inline-flex">
-          <Bell size={16} aria-hidden="true" />
-          <span
-            aria-hidden="true"
-            className="absolute -right-0.5 -top-0.5 inline-block h-1.5 w-1.5 rounded-full"
-            style={{ background: 'var(--secondary)' }}
-          />
-        </span>
-      </IconButton>
-      <IconButton aria-label="Switch project">
-        <Crosshair size={16} aria-hidden="true" />
-      </IconButton>
-      <IconButton
-        aria-label={lightMode ? 'Switch to dark mode' : 'Switch to light mode'}
-        onClick={onToggleLight}
-      >
-        {lightMode ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
-      </IconButton>
-
-      {/* Mode toggle: Operate / Review / Prove.
-          Canonical F15 v2 L114: .mode-toggle { height 32px; padding 2px;
-          border-radius 6px } — height pinned via h-8. */}
-      <div
-        role="tablist"
-        aria-label="Mode"
-        style={{ borderRadius: '6px' }}
-        className="hidden h-8 shrink-0 items-center border border-[var(--border-subtle)] bg-[var(--raised)] p-0.5 xl:inline-flex"
-      >
-        <ModeTab active>Operate</ModeTab>
-        <ModeTab>Review</ModeTab>
-        <ModeTab>Prove</ModeTab>
-      </div>
-
-      {/* User pill — canonical F15 v2 L120-125:
-            .user-pill {
-              display: inline-flex; align-items: center; gap: 8px;
-              height: 36px; padding: 3px 10px 3px 3px;
-              border-radius: 999px;
-            }
-            .user-av { width: 28px; height: 28px }
-          Pin border-radius: 999px inline (rounded-full computes to a
-          huge calc(infinity*1px) in Tailwind 4 which differs from the
-          canon 999px probe value). Height pinned via h-9 (36px). */}
-      <button
-        type="button"
-        aria-label={`Signed in as ${meName}, ${meRoleLabel}`}
-        style={{ borderRadius: '999px' }}
-        className="flex h-9 shrink-0 items-center gap-2 border border-[var(--border-subtle)] bg-[var(--raised)] py-0.5 pl-0.5 pr-2.5 transition-colors hover:border-[var(--border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]"
-      >
-        <span
-          aria-hidden="true"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-bold text-[var(--primary-ink)]"
-          style={{ background: 'linear-gradient(135deg, #2DD4BF 0%, #A78BFA 120%)' }}
-        >
-          {meInitials}
-        </span>
-        <span className="hidden text-[12.5px] font-medium text-[var(--text-primary)] md:inline">
-          {meName}
-        </span>
-        <span
-          className="hidden rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em] sm:inline"
-          style={{
-            background: 'rgba(167,139,250,0.15)',
-            borderColor: 'rgba(167,139,250,0.30)',
-            color: 'var(--secondary)',
-          }}
-        >
-          {meRoleLabel}
-        </span>
-      </button>
+      <QuickCreate />
+      <Notifications />
+      <ThemeToggle />
+      <ModeToggle />
+      <UserMenu
+        meName={meName}
+        meFullName={meFullName}
+        meEmail={meEmail}
+        meInitials={meInitials}
+        meRoleLabel={meRoleLabel}
+        isAdmin={isAdmin}
+      />
     </header>
   );
 }
 
-function IconButton({
-  children,
-  onClick,
-  ...rest
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  'aria-label': string;
-}) {
-  // Canonical F15 v2 L108-112:
-  //   .icon-btn { width: var(--tap); height: var(--tap); border-radius: 6px }
-  //   @media (min-width: 1024px) { .icon-btn { width: 36px; height: 36px } }
-  // → 44×44 (--tap, WCAG 2.5.5 tap target) at < 1024px,
-  //   compact 36×36 at desktop.
-  // Border-radius pinned to explicit 6px (rounded-md = 6px today, but
-  // pin defensively in case a future Tailwind theme override shifts
-  // it). Same belt-and-suspenders treatment applied to proj-pill +
-  // global-search + mode-toggle below.
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{ borderRadius: '6px' }}
-      className="hidden h-11 w-11 shrink-0 items-center justify-center text-[var(--text-tertiary)] transition-colors hover:bg-[var(--raised)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)] sm:inline-flex lg:h-9 lg:w-9"
-      {...rest}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ModeTab({ children, active }: { children: React.ReactNode; active?: boolean }) {
-  // Canonical F19 v2 HTML .mode.on (per probe Round 7):
-  //   active bg: var(--overlay) #232C3F (subtle, NOT primary teal)
-  //   active text: var(--text-primary) #F1F5F9 (white)
-  //   border-radius: 4px (NOT rounded-full)
-  //   padding: 0 10px · height: 26px
-  // Inactive state: text-tertiary + hover text-primary, transparent bg.
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active ? 'true' : 'false'}
-      className={[
-        'inline-flex h-[26px] items-center gap-1 rounded-[4px] px-2.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary)]',
-        active
-          ? 'bg-[var(--overlay)] text-[var(--text-primary)]'
-          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]',
-      ].join(' ')}
-    >
-      {children}
-    </button>
-  );
-}
+// IconButton + ModeTab helpers REMOVED — superseded by canonical shell widgets:
+// IconButton lives in shell-topbar-widgets.tsx (exported); ModeTab is replaced
+// by ModeToggle in the same file (Sun 2026-06-07 Phase 2 upgrade).
 
 // ---------------------------------------------------------------------------
 // Left rail — 3-zone layout: rail-toggle (fixed top) + rail-content
