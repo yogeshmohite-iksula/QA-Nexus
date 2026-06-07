@@ -102,8 +102,9 @@ test.describe('MVP Smoke — new-user journey', () => {
       const text = m.text();
       // Ignore environment-dependent network resource-load failures. In dev/CI
       // there is no live API/session, so client calls (BetterAuth session,
-      // /api/* data) fail with `net::ERR_CONNECTION_REFUSED` — the DESIGNED
-      // fallback path, not an app bug. On the deployed pilot the API is up.
+      // /api/* data, e.g. /api/projects via fetchWithFallback) fail with
+      // `net::ERR_CONNECTION_REFUSED` — the DESIGNED canned-data fallback path,
+      // not an app bug. On the deployed pilot the API is up so these never fire.
       if (/Failed to load resource|net::ERR|ERR_CONNECTION/i.test(text)) return;
       errors.push(text);
     });

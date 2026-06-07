@@ -46,6 +46,11 @@ import {
 } from 'lucide-react';
 
 import { usePopoverManager, useClickOutside } from './use-popover-manager';
+import {
+  getSwitcherProjects,
+  PROJECTS_FALLBACK,
+  type SwitcherProject,
+} from '@/lib/api/projects-api';
 
 // =========================================================================
 // SHARED
@@ -88,33 +93,42 @@ function PopoverPanel({
 // 1. PROJECT SWITCHER
 // =========================================================================
 
-/** Iksula project canon. Source: CLAUDE.md "Iksula data canon" + handoff §8. */
-const PROJECTS = [
-  { key: 'RET', name: 'Iksula Returns', branch: 'main' },
-  { key: 'CART', name: 'Iksula Commerce', branch: 'main' },
-  { key: 'PAY', name: 'Iksula Payments', branch: 'main' },
-  { key: 'AUTH', name: 'Iksula Mobile App', branch: 'main' },
-  { key: 'OPS', name: 'Iksula Internal Ops', branch: 'main' },
-] as const;
-type ProjectKey = (typeof PROJECTS)[number]['key'];
+// Project list now comes from getSwitcherProjects() (Option B, F09 wiring):
+// canned PROJECTS_FALLBACK renders instantly, then a /api/projects fetch
+// swaps in real data on success. Pre-seed (empty) / error → fallback stays.
+type ProjectKey = string;
 
 const PROJECT_LS_KEY = 'qa-nexus.project';
 
 export function ProjectSwitcher() {
   const { isOpen, toggle, close } = usePopoverManager();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // Seed with canned fallback so there's never an empty/loading flash.
+  const [projects, setProjects] = useState<SwitcherProject[]>(PROJECTS_FALLBACK);
   const [selected, setSelected] = useState<ProjectKey>('RET');
   const open = isOpen('project-switcher');
 
-  // Hydrate from localStorage once mounted.
+  // F09 wiring: fetch real workspace projects on mount; keep fallback on
+  // empty/error (getSwitcherProjects never throws). Runs once.
+  useEffect(() => {
+    let alive = true;
+    void getSwitcherProjects().then((list) => {
+      if (alive && list.length > 0) setProjects(list);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Hydrate selection from localStorage once mounted.
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(PROJECT_LS_KEY) as ProjectKey | null;
-      if (stored && PROJECTS.some((p) => p.key === stored)) setSelected(stored);
+      const stored = localStorage.getItem(PROJECT_LS_KEY);
+      if (stored && projects.some((p) => p.key === stored)) setSelected(stored);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [projects]);
 
   // Mirror to document for downstream CSS / page hooks.
   useEffect(() => {
@@ -123,7 +137,7 @@ export function ProjectSwitcher() {
 
   useClickOutside(rootRef, close, open);
 
-  const current = PROJECTS.find((p) => p.key === selected) ?? PROJECTS[0];
+  const current = projects.find((p) => p.key === selected) ?? projects[0] ?? PROJECTS_FALLBACK[0];
 
   function pick(key: ProjectKey) {
     setSelected(key);
@@ -139,7 +153,7 @@ export function ProjectSwitcher() {
     <div ref={rootRef} style={{ position: 'relative' }} className="hidden sm:inline-flex">
       <button
         type="button"
-        aria-label={`Switch project (${PROJECTS.length} projects)`}
+        aria-label={`Switch project (${projects.length} projects)`}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => toggle('project-switcher')}
@@ -170,10 +184,10 @@ export function ProjectSwitcher() {
             style={{ borderBottom: '1px solid var(--border-subtle)' }}
           >
             <span>Switch project</span>
-            <span className="font-mono">{PROJECTS.length} projects</span>
+            <span className="font-mono">{projects.length} projects</span>
           </div>
           <ul className="mt-1 flex flex-col gap-0.5">
-            {PROJECTS.map((p) => {
+            {projects.map((p) => {
               const isSel = p.key === selected;
               return (
                 <li key={p.key}>
