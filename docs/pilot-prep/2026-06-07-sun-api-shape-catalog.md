@@ -343,6 +343,48 @@ curl -s https://qa-nexus-api.onrender.com/api/admin/config/llm-providers \
 
 ---
 
+## 5. Session / identity — `GET /auth/session` ⚠️ P0-001
+
+- **Controller:** `apps/api/src/auth/auth.controller.ts:193` (`@Controller('auth')`) →
+  **`/auth/session`** (NOT `/api/auth/get-session`; there is **no `/api` prefix** on the
+  auth surface — BetterAuth + the auth wrapper live at `/auth/*`, the data API at `/api/*`).
+- **Auth:** cookie-based; returns `{ authenticated:false }` when unauthenticated (no 401).
+- **This is the FE identity source** — `user.displayName` + `user.role`. Use it to replace the
+  hardcoded "Kishor K." fallback. `user` = the **app** user (TB-002), NOT BetterAuth's raw
+  `/auth/get-session` (which has only id/email/name/image, no role).
+
+```bash
+curl -s https://qa-nexus-api.onrender.com/auth/session \
+  -H "Cookie: better-auth.session_token=<PASTE>" --include
+```
+
+```json
+{
+  "authenticated": true,
+  "user": {
+    "id": "…",
+    "workspaceId": "26d2…",
+    "email": "yogesh.mohite@iksula.com",
+    "displayName": "Yogesh Mohite",
+    "role": "Admin",
+    "organizationalLabel": "Sr QA",
+    "activatedAt": "…",
+    "lastLoginAt": "…",
+    "createdAt": "…"
+  },
+  "authUserId": "…",
+  "expiresAt": "2026-06-14T…Z"
+}
+```
+
+Anon → `{ "authenticated": false }`.
+
+**⚠️ Currently returns `{authenticated:false}` cross-site** (no cookie reaches the API) until the
+P0-001 cookie/CORS fix lands — see `docs/pilot-prep/2026-06-07-p0-001-cookie-cors-root-cause-be.md`.
+FE must fetch with `credentials: 'include'`.
+
+---
+
 ## Quick reference
 
 | Frame | Method + path                         | Roles       | Response envelope                            |
