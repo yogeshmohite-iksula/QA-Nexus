@@ -43,7 +43,7 @@ export type AuthInstance = ReturnType<typeof buildAuth>;
  *  Domain=.qanexus.iksula.com + SameSite=Lax cookie, which the browser
  *  rejected (Domain ≠ origin host) and would not send cross-site. See
  *  docs/pilot-prep/2026-06-07-p0-001-cookie-cors-root-cause-be.md. */
-function resolveCookieConfig(baseUrl: string): {
+export function resolveCookieConfig(baseUrl: string): {
   crossSubDomain: { enabled: boolean; domain?: string };
   useSecure: boolean;
   sameSite: 'lax' | 'none';
