@@ -197,14 +197,33 @@ localhost topologies unchanged.
 The final cookie-attribute + `/auth/session` browser confirmation lands via Yogesh's
 incognito DevTools once FE #258 (Pattern-B session wire) deploys — expected PASS.
 
-## Bucket 4 — Free-Tier Quota Baseline — **PARTIAL** (email self-tested PASS; other quotas pending Yogesh dashboards)
+## Bucket 4 — Free-Tier Quota Baseline — **PASS** (ALL quotas GREEN — no overage risk during pilot week)
 
 - **Apps Script email bridge (ADR-025) — PASS** ✅ (self-tested via GET): `{ok:true,
 service:"qa-nexus-email-bridge", remaining:1499/1500}`. 1 used today (Yogesh's
   magic-link test); ample headroom for 8-user pilot magic-links + invites.
-- **Pending Yogesh dashboards** (independent of P0-001): Neon CU-hr (**first — was 87/100
-  Wed, CRITICAL**), Groq RPD, R2 storage/ops, GitHub Actions minutes, Render hours.
-  Document baselines for Mon-morning comparison once provided.
+- **Neon Postgres (CRITICAL) — PASS** ✅: CU-hr **40.41 / 100** (was 87/100 Wed — billing
+  window rolled over Jun 1) · storage **0.07 / 0.5 GB** · network **0 / 5 GB** · branches 2/10
+  (prod active + idle `test-nfr-fixtures`). Ample headroom for the pilot week.
+- **Groq — PASS** ✅: RPD today 0 (peak ~80 on Jun 2-3 from the audit, far under limit) · tokens
+  ~45K peak (under 240K/min) · projected $0.02 **NOT BILLED** (free-tier projection only).
+- **Cloudflare R2 (`qa-nexus-backups-pm1`) — PASS** ✅: 107.49 KB · Class-A ops 20 · Class-B 0.
+- **Cloudflare overall — PASS** ✅: total **$0.00** (R2 + Pages + Workers all within free tier).
+- **GitHub Actions — PASS** ✅: **0 / 2000 min** this month. (The "Metered usage $5.20" shown is
+  the GROSS pre-discount calc; **public repo → unlimited Actions free → actual billed $0**.)
+- **Render compute — PASS** ✅: not metered on the Free dashboard (~750 hr/mo implicit free; pilot
+  won't exceed).
+
+**Verdict: PASS — ALL quotas GREEN.** Mon-launch quota posture 🟢; no overage risk during the
+pilot week. Source: Yogesh dashboard capture 2026-06-07.
+
+## Bucket 9 (bonus) — Backup + DR — **PASS** (weekly pg_dump cron verified healthy)
+
+Closed opportunistically from the Bucket 4 R2 inspection. The weekly `pg_dump` cron
+(`.github/workflows/`, MS0-T018 → R2 bucket `qa-nexus-backups-pm1`) is **running healthy**:
+**7 weekly backups visible, May 3 → Jun 7** (one per week, no gaps). The backup pipeline is
+confirmed live + producing artifacts. **Restore drill** (`docs/runbooks/db-restore.md`) remains
+the quarterly-manual follow-up — not a Mon blocker. Evidence: Yogesh R2 dashboard screenshots.
 
 ## Reality-checks logged: 2 so far (28th — didn't ring P0 before root-causing the break; 30th — the fix script _respected_ the DB immutability control, surfacing the SOC-2-gold append-only guard)
 
