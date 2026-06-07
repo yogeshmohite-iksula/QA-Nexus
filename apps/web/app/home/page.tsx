@@ -23,7 +23,6 @@
 
 import type { Metadata } from 'next';
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
-import { SEED_IDS } from '@/lib/demo-seed';
 import { QaEngineerHome } from '@/components/home/qa-engineer-home';
 
 export const metadata: Metadata = {
@@ -33,13 +32,13 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  // Page-level current-user override per `docs/refactor/seed-centralization-migration.md`.
-  // F08a is the QA Engineer view; the global default-active user is Yogesh (Admin),
-  // so this scoped provider switches the active user to Kishor for this route only.
-  // Once T030.5+ session cookies + role-aware routing land, this override gets
-  // replaced by a server-side role check; the component tree stays unchanged.
+  // P0-001 fix (Pattern B, 2026-06-07): identity comes from the BetterAuth
+  // session (see CurrentUserContext). The old `initialUserId=kishor` persona
+  // override is REMOVED — it was a Pattern-A QA-Engineer preview that leaked to
+  // every signed-in user on the deployed pilot. A signed-in user now sees
+  // themselves; dev/CI with no session falls back to Yogesh.
   return (
-    <CurrentUserProvider initialUserId={SEED_IDS.users.kishor}>
+    <CurrentUserProvider>
       <QaEngineerHome />
     </CurrentUserProvider>
   );

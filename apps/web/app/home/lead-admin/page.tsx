@@ -21,7 +21,6 @@
 
 import type { Metadata } from 'next';
 import { CurrentUserProvider } from '@/lib/contexts/CurrentUserContext';
-import { SEED_IDS } from '@/lib/demo-seed';
 import { QaLeadHome } from '@/components/home-lead/qa-lead-home';
 
 export const metadata: Metadata = {
@@ -31,13 +30,13 @@ export const metadata: Metadata = {
 };
 
 export default function HomeLeadAdminPage() {
-  // Page-level current-user override per `docs/refactor/seed-centralization-migration.md`.
-  // F08b is the QA Lead view; the demo seed's canonical Lead is Akshay Panchal
-  // (per CLAUDE.md "Iksula data canon"). The locked HTML used Yogesh M. but
-  // the runbook explicitly aligns identity with the seed roster — so this
-  // page renders as Akshay (organizationalLabel = "QA Lead", initials AP).
+  // P0-001 fix (Pattern B, 2026-06-07): identity comes from the BetterAuth
+  // session (see CurrentUserContext). The old `initialUserId=akshay` persona
+  // override is REMOVED — a signed-in user now sees themselves; dev/CI with no
+  // session falls back to Yogesh. (When the real Lead, Akshay, signs in he sees
+  // his own identity here.)
   return (
-    <CurrentUserProvider initialUserId={SEED_IDS.users.akshay}>
+    <CurrentUserProvider>
       <QaLeadHome />
     </CurrentUserProvider>
   );
