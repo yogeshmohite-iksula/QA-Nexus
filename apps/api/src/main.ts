@@ -133,6 +133,35 @@ async function bootstrap() {
   // See followup (bb) for full RCA + (bc) for FE-side prefix coordination.
   expressApp.all('/auth/*', toNodeHandler(authService.auth));
 
+  // P0-001 fix (2026-06-07): the data API (/api/*) is called CROSS-ORIGIN by the
+  // Cloudflare Pages FE (qa-nexus-web.pages.dev → qa-nexus-api.onrender.com), so
+  // it needs the SAME credentialed CORS treatment as /auth/* above. Without it
+  // the browser blocks every /api fetch (no Access-Control-Allow-Origin) even
+  // with a valid session cookie — so the session never reaches the guards.
+  // Reuses isAuthCorsOriginAllowed so the /api + /auth allowlists stay in sync
+  // (pages.dev + preview hashes + AUTH_TRUSTED_ORIGINS). Must run BEFORE the body
+  // parsers below (preflight OPTIONS handling).
+  // See docs/pilot-prep/2026-06-07-p0-001-cookie-cors-root-cause-be.md.
+  expressApp.use(
+    '/api/*',
+    cors({
+      origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => {
+        // No Origin (same-origin / curl / server-to-server e.g. Jira webhook)
+        // → pass through; the RolesGuard owns trust for those.
+        if (!origin) return callback(null, true);
+        if (isAuthCorsOriginAllowed(origin)) return callback(null, true);
+        return callback(new Error(`CORS: origin not allowed (${origin})`));
+      },
+      credentials: true, // session cookie travels cross-site — required
+      methods: ['GET', 'POST', 'OPTIONS', 'PATCH', 'PUT', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Cookie', 'Authorization'],
+      optionsSuccessStatus: 204,
+    }),
+  );
+
   // Raw-body middleware for Atlassian Jira webhook (Day-19 P2 / followup
   // (bq) / docs/architecture/webhook-raw-body.md). MUST be installed BEFORE
   // the global express.json() — Atlassian computes HMAC-SHA256 over RAW
