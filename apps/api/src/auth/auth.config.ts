@@ -29,36 +29,63 @@ import type { EmailService } from '../email/email.service';
 
 export type AuthInstance = ReturnType<typeof buildAuth>;
 
-/** Cookie-domain config: production zone (`.qanexus.iksula.com`) vs dev
- *  (no Domain attribute, no Secure). Driven by `BETTER_AUTH_URL` —
- *  if it starts with `https://`, treat as prod-style; else dev. */
-function resolveCookieDomain(baseUrl: string): {
+/** Cookie config: three deployment topologies, driven by `BETTER_AUTH_URL`.
+ *  Returns crossSubDomain + the Secure flag + the SameSite policy together,
+ *  because all three move as a unit per topology:
+ *    1. Local dev (http)            → host-only, no Secure, SameSite=Lax.
+ *    2. Shared-parent zone (https,  → wildcard parent cookie, Secure,
+ *       host under .qanexus.iksula.com   SameSite=Lax (requests are same-site).
+ *       or BETTER_AUTH_COOKIE_DOMAIN set)
+ *    3. Cross-site pilot (https,    → HOST-ONLY cookie (no Domain), Secure,
+ *       host NOT under that zone —      SameSite=None, Partitioned (CHIPS).
+ *       e.g. pages.dev FE + onrender.com API)
+ *  P0-001 fix (2026-06-07): topology 3 previously fell through to a
+ *  Domain=.qanexus.iksula.com + SameSite=Lax cookie, which the browser
+ *  rejected (Domain ≠ origin host) and would not send cross-site. See
+ *  docs/pilot-prep/2026-06-07-p0-001-cookie-cors-root-cause-be.md. */
+function resolveCookieConfig(baseUrl: string): {
   crossSubDomain: { enabled: boolean; domain?: string };
   useSecure: boolean;
+  sameSite: 'lax' | 'none';
 } {
   const isHttps = baseUrl.startsWith('https://');
   if (!isHttps) {
-    // Local dev — no wildcard domain, no secure flag.
-    return { crossSubDomain: { enabled: false }, useSecure: false };
+    // (1) Local dev — host-only, no Secure, SameSite=Lax (FE+API both
+    // localhost → same-site, Lax is correct + safest).
+    return {
+      crossSubDomain: { enabled: false },
+      useSecure: false,
+      sameSite: 'lax',
+    };
   }
-  // Prod / staging — wildcard parent + secure cookies.
-  // Derived from BETTER_AUTH_URL host, falling back to the canonical zone.
-  let domain = '.qanexus.iksula.com';
+  let host = '';
   try {
-    const host = new URL(baseUrl).hostname;
-    // If we're on `api.qanexus.iksula.com`, parent is `.qanexus.iksula.com`.
-    // For a future zone swap, env var BETTER_AUTH_COOKIE_DOMAIN can override.
-    if (process.env.BETTER_AUTH_COOKIE_DOMAIN) {
-      domain = process.env.BETTER_AUTH_COOKIE_DOMAIN;
-    } else if (host.endsWith('.qanexus.iksula.com')) {
-      domain = '.qanexus.iksula.com';
-    }
+    host = new URL(baseUrl).hostname;
   } catch {
-    // Malformed URL — fall through to default zone.
+    // Malformed URL — treat as cross-site (safest: host-only + SameSite=None).
+    host = '';
   }
+  const explicitDomain = process.env.BETTER_AUTH_COOKIE_DOMAIN;
+  if (explicitDomain || host.endsWith('.qanexus.iksula.com')) {
+    // (2) Shared-parent zone — FE + API are sibling subdomains of one
+    // registrable domain, so a wildcard parent cookie + SameSite=Lax works.
+    return {
+      crossSubDomain: {
+        enabled: true,
+        domain: explicitDomain || '.qanexus.iksula.com',
+      },
+      useSecure: true,
+      sameSite: 'lax',
+    };
+  }
+  // (3) Cross-site pilot — FE (pages.dev) + API (onrender.com) are DIFFERENT
+  // registrable domains. A Domain attribute would be rejected and SameSite=Lax
+  // would not be sent on cross-site fetch. Host-only cookie (no Domain) +
+  // SameSite=None; Secure; Partitioned (CHIPS). P0-001 fix.
   return {
-    crossSubDomain: { enabled: true, domain },
+    crossSubDomain: { enabled: false },
     useSecure: true,
+    sameSite: 'none',
   };
 }
 
@@ -70,7 +97,7 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
     );
   }
   const baseUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:3001';
-  const { crossSubDomain, useSecure } = resolveCookieDomain(baseUrl);
+  const { crossSubDomain, useSecure, sameSite } = resolveCookieConfig(baseUrl);
 
   // Trusted origins for CORS + CSRF — BetterAuth handles its own preflight
   // checks via this list (we deliberately do NOT call app.enableCors() in
@@ -129,10 +156,13 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
       defaultCookieAttributes: {
         secure: useSecure,
         httpOnly: true,
-        sameSite: 'lax',
-        // CHIPS partitioning — required for wildcard parent-domain cookies
-        // in Chrome 118+. No effect on browsers that don't support it.
-        partitioned: useSecure, // partitioned only meaningful with Secure
+        // P0-001 fix (2026-06-07): SameSite=None for the cross-site pilot
+        // (pages.dev FE ↔ onrender.com API); 'lax' for the shared-parent zone
+        // or localhost. Computed per deployment topology in resolveCookieConfig().
+        sameSite,
+        // CHIPS partitioning — required for cross-site (SameSite=None) cookies
+        // in Chrome 118+; a harmless no-op under SameSite=Lax. Secure only.
+        partitioned: useSecure,
       },
       useSecureCookies: useSecure,
     },
