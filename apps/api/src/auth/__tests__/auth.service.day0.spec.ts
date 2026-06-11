@@ -44,6 +44,7 @@ const seededAdmin = {
   role: 'Admin',
   workspaceId: 'ws-iksula',
   organizationalLabel: 'Sr QA',
+  disabledAt: null as Date | null,
 };
 
 function makePrisma(
@@ -229,6 +230,37 @@ describe('AuthService — Day-0 admin seed (T021, closes followup x)', () => {
       expect(result).toBeNull();
       expect(prisma.user.findUnique).not.toHaveBeenCalled();
       expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('disabled user gate (P2 — Day-32 audit §1.5)', () => {
+    it('returns null when the resolved TB-002 row is disabled (disabledAt set)', async () => {
+      const disabled = {
+        ...seededAdmin,
+        disabledAt: new Date('2026-06-10T00:00:00Z'),
+      };
+      const prisma = makePrisma({ existingUser: disabled });
+      const audit = makeAudit();
+      const svc = newSvc(prisma, audit, adminSession);
+
+      const result = await svc.resolveSession(HEADERS);
+
+      // Disabled → no session, even though BetterAuth + the TB-002 row exist.
+      expect(result).toBeNull();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(audit.write).not.toHaveBeenCalled();
+    });
+
+    it('allows an active user (disabledAt null) — regression guard', async () => {
+      const prisma = makePrisma({
+        existingUser: { ...seededAdmin, disabledAt: null },
+      });
+      const svc = newSvc(prisma, makeAudit(), adminSession);
+
+      const result = await svc.resolveSession(HEADERS);
+
+      expect(result).not.toBeNull();
+      expect(result!.appUser.role).toBe('Admin');
     });
   });
 
