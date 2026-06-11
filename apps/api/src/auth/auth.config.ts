@@ -22,7 +22,7 @@
 
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { magicLink } from 'better-auth/plugins';
+import { customSession, magicLink } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import type { PrismaClient } from '@prisma/client';
 import type { EmailService } from '../email/email.service';
@@ -241,6 +241,40 @@ export function buildAuth(prisma: PrismaClient, email: EmailService) {
             expiresAt: 'in 10 minutes',
           });
         },
+      }),
+      // P0-001 follow-up (2026-06-07): the FE reads BetterAuth's native
+      // /auth/get-session, which returns the `auth_user` row (name/email/image)
+      // — but role/displayName/organizationalLabel live on the SEPARATE TB-002
+      // `users` table (auth_* tables are intentionally distinct — see header).
+      // `additionalFields` can't help (those columns aren't on auth_user); this
+      // customSession `after` hook joins TB-002 by email and merges the app
+      // fields into the get-session response, so the FE renders the real role +
+      // name with NO FE change + NO schema migration. One indexed findUnique
+      // per session read — negligible at pilot scale. customSession runs BEFORE
+      // nextCookies (which must stay last). See
+      // docs/pilot-prep/2026-06-07-p0-001-cookie-cors-root-cause-be.md.
+      customSession(async ({ user, session }) => {
+        const appUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: {
+            id: true,
+            role: true,
+            displayName: true,
+            organizationalLabel: true,
+            workspaceId: true,
+          },
+        });
+        return {
+          session,
+          user: {
+            ...user,
+            role: appUser?.role ?? null,
+            displayName: appUser?.displayName ?? null,
+            organizationalLabel: appUser?.organizationalLabel ?? null,
+            appUserId: appUser?.id ?? null,
+            workspaceId: appUser?.workspaceId ?? null,
+          },
+        };
       }),
       // CRITICAL: nextCookies() must be the LAST plugin per BetterAuth docs
       // — it wraps the response chain to push cookies through Next.js

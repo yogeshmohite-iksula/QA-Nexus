@@ -42,6 +42,14 @@ jest.mock('better-auth/plugins', () => ({
     __pluginType: 'magicLink',
     __opts: opts,
   })),
+  // P0-001 follow-up (#259): auth.config now also pulls customSession from
+  // better-auth/plugins. A jest.mock factory REPLACES the real module, so any
+  // export it omits resolves `undefined` at the import site — keep this list
+  // in sync with auth.config.ts's imports.
+  customSession: jest.fn((fn: unknown) => ({
+    __pluginType: 'customSession',
+    __fn: fn,
+  })),
 }));
 jest.mock('better-auth/next-js', () => ({
   nextCookies: jest.fn(() => ({ __pluginType: 'nextCookies' })),
