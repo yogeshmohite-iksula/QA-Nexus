@@ -117,6 +117,10 @@ psql "$DBURL" -c "SELECT tgname, tgrelid::regclass FROM pg_trigger WHERE tgrelid
 **app-level where-clauses ONLY** (proven for 3/4 entities in Phase B; defects pending W2-R). That's a single-layer
 posture vs ERD §8.1's double-layer — document + decide. 5c **non-empty** ⇒ audit immutability confirmed at DB.
 
+### §5 RESULT — pre-run 2026-06-11 (read-only DB probe; RLS state is merge-independent) → **G5 RESOLVED**
+
+RLS is **enabled on all 20 scoped tables** with **20 `*_workspace_isolation` policies installed** (cmd `ALL`; `projects` qual = `workspace_id = current_setting('app.workspace_id')::uuid`). Audit append-only triggers live (`audit_log_block_update` + `audit_log_block_delete`). **This corrects the Phase-B W2-§F inference** ("`init_rls_hnsw.sql` not in migrations chain → not applied"): the policies **ARE applied** — out-of-band, exactly like the audit triggers. **BUT the policies are INERT for the application connection**, for three independent reasons: (1) the app connects as **`neondb_owner`** which has **`rolbypassrls = true`** → RLS bypassed regardless of policies; (2) tables are **`FORCE ROW LEVEL SECURITY = false`** and the app is the table owner → owner bypasses non-forced RLS; (3) the app **never `SET`s `app.workspace_id`** (GUC is null — W2 agent found no `set_config` in `apps/api/src`). **Net: enforced tenant isolation = app-level `where`-clauses + `assert*Workspace` ONLY** — the Phase-B _outcome_ stands; only its _reason_ changes. **Pilot impact: NONE** (single Iksula workspace → no cross-tenant data to leak). **To activate DB-level RLS for PM2+ multi-tenant:** connect as a non-owner, non-`BYPASSRLS` role + `ALTER TABLE … FORCE ROW LEVEL SECURITY` + `SET LOCAL app.workspace_id` per request/transaction. Documented gap vs ERD §8.1 double-layer; **not a PM1 blocker.**
+
 ## 6. NFR p50/p95 latency (G4 — NFR-002 target p95 < 500ms)
 
 ```bash
