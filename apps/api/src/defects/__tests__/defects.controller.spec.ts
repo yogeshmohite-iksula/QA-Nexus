@@ -21,14 +21,31 @@ jest.mock(
   }),
 );
 
+// AuthService imports better-auth (ESM); mock the module boundary so this spec
+// can provide it as a DI token without jest's CJS transform choking — same
+// reasoning as the sherlock mock above (#259 better-auth/plugins precedent).
+jest.mock('../../auth/auth.service', () => ({
+  AuthService: class FakeAuthService {},
+}));
+
 import { Test } from '@nestjs/testing';
+import { Role } from '@qa-nexus/shared';
 import { DefectsController } from '../defects.controller';
 import { SherlockOrchestratorService } from '../../agents/sherlock-orchestrator/sherlock-orchestrator.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
+import { AuthService } from '../../auth/auth.service';
+import { ROLES_KEY } from '../../auth/rbac/roles.decorator';
 
 const TEST_DEFECT_ID = '11111111-2222-3333-4444-555555555555';
 const TEST_WORKSPACE_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+const TEST_ACTOR_ID = '99999999-8888-7777-6666-555555555555';
+
+/** Minimal Express-like request carrying a session cookie (AuthService is
+ *  mocked, so the header content is irrelevant — only the shape matters). */
+function fakeReq(): { headers: Record<string, string> } {
+  return { headers: { cookie: 'better-auth.session_token=test' } };
+}
 
 function fakeRes() {
   const captured: {
@@ -67,6 +84,7 @@ describe('DefectsController', () => {
   let runRca: jest.Mock;
   let defectFindUnique: jest.Mock;
   let auditWrite: jest.Mock;
+  let resolveSession: jest.Mock;
 
   beforeEach(async () => {
     runAndPersist = jest.fn().mockResolvedValue({
@@ -81,6 +99,22 @@ describe('DefectsController', () => {
       project: { workspaceId: TEST_WORKSPACE_ID },
     });
     auditWrite = jest.fn().mockResolvedValue({ id: 'audit-1', thisHash: 'h' });
+    resolveSession = jest.fn().mockResolvedValue({
+      authUser: {
+        id: 'auth-1',
+        email: 'akshay.panchal@iksula.com',
+        name: 'Akshay',
+      },
+      appUser: {
+        id: TEST_ACTOR_ID,
+        email: 'akshay.panchal@iksula.com',
+        displayName: 'Akshay Panchal',
+        role: 'Lead',
+        workspaceId: TEST_WORKSPACE_ID,
+        organizationalLabel: 'QA Lead',
+      },
+      expiresAt: '2026-07-01T00:00:00.000Z',
+    });
 
     const moduleRef = await Test.createTestingModule({
       controllers: [DefectsController],
@@ -97,6 +131,10 @@ describe('DefectsController', () => {
           provide: AuditService,
           useValue: { write: auditWrite },
         },
+        {
+          provide: AuthService,
+          useValue: { resolveSession },
+        },
       ],
     }).compile();
     ctrl = moduleRef.get(DefectsController);
@@ -111,9 +149,58 @@ describe('DefectsController', () => {
       component: 'apps/api/src/refunds',
     };
 
+    // P1 (Day-32 audit §P1): this endpoint was anonymous — anyone with a defect
+    // UUID could trigger the Sherlock LLM fan-out (Groq quota burn) + write
+    // actorId:null audit rows. This asserts the RBAC decorators are present;
+    // it FAILS before the guard is added (metadata undefined) and PASSES after.
+    it('is RBAC-guarded — @Roles(Admin,Lead,QAEngineer) + RolesGuard', () => {
+      const roles = Reflect.getMetadata(
+        ROLES_KEY,
+        DefectsController.prototype.kickoffRca,
+      );
+      expect(roles).toEqual([Role.Admin, Role.Lead, Role.QAEngineer]);
+      // @UseGuards stores the guard classes under Nest's GUARDS_METADATA key.
+      const guards = Reflect.getMetadata(
+        '__guards__',
+        DefectsController.prototype.kickoffRca,
+      ) as Array<{ name: string }> | undefined;
+      expect(guards?.some((g) => g.name === 'RolesGuard')).toBe(true);
+    });
+
+    it('returns 404 when the actor is in a different workspace (tenant isolation)', async () => {
+      resolveSession.mockResolvedValueOnce({
+        authUser: { id: 'auth-2', email: 'x@other.com', name: 'X' },
+        appUser: {
+          id: 'other-actor',
+          email: 'x@other.com',
+          displayName: 'Other',
+          role: 'Lead',
+          workspaceId: 'ffffffff-0000-0000-0000-000000000000',
+          organizationalLabel: null,
+        },
+        expiresAt: '2026-07-01T00:00:00.000Z',
+      });
+      const { res, captured } = fakeRes();
+      await ctrl.kickoffRca(
+        TEST_DEFECT_ID,
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
+      expect(captured.status).toBe(404);
+      expect((captured.body as { error: string }).error).toBe('DefectNotFound');
+      expect(auditWrite).not.toHaveBeenCalled();
+      expect(runAndPersist).not.toHaveBeenCalled();
+    });
+
     it('returns 202 + { runId, accepted, wsChannel } (happy path)', async () => {
       const { res, captured } = fakeRes();
-      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      await ctrl.kickoffRca(
+        TEST_DEFECT_ID,
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
       expect(captured.status).toBe(202);
       const body = captured.body as {
         defectId: string;
@@ -129,10 +216,16 @@ describe('DefectsController', () => {
 
     it('writes rca_kicked_off audit row SYNCHRONOUSLY before returning 202', async () => {
       const { res, captured } = fakeRes();
-      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      await ctrl.kickoffRca(
+        TEST_DEFECT_ID,
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
       expect(auditWrite).toHaveBeenCalledWith(
         expect.objectContaining({
           workspaceId: TEST_WORKSPACE_ID,
+          actorId: TEST_ACTOR_ID,
           entityType: 'defect',
           entityId: TEST_DEFECT_ID,
           action: 'rca_kicked_off',
@@ -144,7 +237,12 @@ describe('DefectsController', () => {
 
     it('spawns orchestrator.runAndPersist via setImmediate (NOT inline-awaited)', async () => {
       const { res } = fakeRes();
-      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      await ctrl.kickoffRca(
+        TEST_DEFECT_ID,
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
       // Not invoked yet — setImmediate hasn't fired
       expect(runAndPersist).not.toHaveBeenCalled();
       await flushSetImmediate();
@@ -155,7 +253,7 @@ describe('DefectsController', () => {
         }),
         expect.objectContaining({
           workspaceId: TEST_WORKSPACE_ID,
-          actorId: null,
+          actorId: TEST_ACTOR_ID,
         }),
       );
     });
@@ -163,7 +261,12 @@ describe('DefectsController', () => {
     it('returns 404 when defect not found', async () => {
       defectFindUnique.mockResolvedValueOnce(null);
       const { res, captured } = fakeRes();
-      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      await ctrl.kickoffRca(
+        TEST_DEFECT_ID,
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
       expect(captured.status).toBe(404);
       expect((captured.body as { error: string }).error).toBe('DefectNotFound');
       expect(auditWrite).not.toHaveBeenCalled();
@@ -172,7 +275,12 @@ describe('DefectsController', () => {
 
     it('returns 400 when defect ID path param is not a UUID', async () => {
       const { res, captured } = fakeRes();
-      await ctrl.kickoffRca('not-a-uuid', validBody, res as never);
+      await ctrl.kickoffRca(
+        'not-a-uuid',
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
       expect(captured.status).toBe(400);
       expect((captured.body as { error: string }).error).toBe(
         'InvalidDefectId',
@@ -187,6 +295,7 @@ describe('DefectsController', () => {
       await ctrl.kickoffRca(
         TEST_DEFECT_ID,
         { stackTrace: '', failureMessage: 'm', component: 'c' },
+        fakeReq() as never,
         res as never,
       );
       expect(captured.status).toBe(400);
@@ -201,7 +310,12 @@ describe('DefectsController', () => {
     it('logs error but does NOT crash when runAndPersist rejects (response already sent)', async () => {
       runAndPersist.mockRejectedValueOnce(new Error('orchestrator boom'));
       const { res, captured } = fakeRes();
-      await ctrl.kickoffRca(TEST_DEFECT_ID, validBody, res as never);
+      await ctrl.kickoffRca(
+        TEST_DEFECT_ID,
+        validBody,
+        fakeReq() as never,
+        res as never,
+      );
       expect(captured.status).toBe(202);
       // Drain setImmediate; the orchestrator's reject is caught and logged.
       await flushSetImmediate();

@@ -43,13 +43,19 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import { Role } from '@qa-nexus/shared';
 import { z } from 'zod';
 import { SherlockOrchestratorService } from '../agents/sherlock-orchestrator/sherlock-orchestrator.service';
 import { AuditService } from '../audit/audit.service';
+import { AuthService } from '../auth/auth.service';
+import { Roles } from '../auth/rbac/roles.decorator';
+import { RolesGuard } from '../auth/rbac/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Request body for POST /api/defects/:id/rca. Failure context the
@@ -60,6 +66,17 @@ const RcaKickoffBodySchema = z.object({
   component: z.string().min(1).max(120).nullable(),
 });
 
+/** Build a WHATWG Headers from the Express request for AuthService session
+ *  resolution. Mirrors the per-controller helper in auth/audit controllers. */
+function reqHeaders(req: Request): Headers {
+  const h = new Headers();
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (Array.isArray(v)) v.forEach((vv) => h.append(k, vv));
+    else if (typeof v === 'string') h.set(k, v);
+  }
+  return h;
+}
+
 @Controller('api/defects')
 export class DefectsController {
   private readonly logger = new Logger(DefectsController.name);
@@ -68,6 +85,7 @@ export class DefectsController {
     private readonly sherlock: SherlockOrchestratorService,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly authService: AuthService,
   ) {}
 
   @Post()
@@ -96,9 +114,12 @@ export class DefectsController {
    *   firing this request so the completion event isn't missed.
    */
   @Post(':id/rca')
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer)
   async kickoffRca(
     @Param('id') defectId: string,
     @Body() body: unknown,
+    @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
     // Validate path param is a UUID — fail fast on shape errors.
@@ -140,6 +161,21 @@ export class DefectsController {
     }
     const workspaceId = defect.project.workspaceId;
 
+    // The guard guarantees an authenticated Admin/Lead/QA-Engineer session.
+    // Resolve the actor for the audit trail + enforce tenant isolation: a user
+    // may only trigger RCA on a defect in their OWN workspace. Cross-tenant (or
+    // a vanished session) is surfaced as 404 — never reveal another workspace's
+    // defect exists, and never burn LLM quota for it.
+    const actor = await this.authService.resolveSession(reqHeaders(req));
+    if (!actor || actor.appUser.workspaceId !== workspaceId) {
+      res.status(HttpStatus.NOT_FOUND).json({
+        error: 'DefectNotFound',
+        message: `Defect ${defectId} not found.`,
+      });
+      return;
+    }
+    const actorId = actor.appUser.id;
+
     // Pre-allocate runId so audit + orchestrator + WS event share it.
     const runId = randomUUID();
     const orchestratorInput = {
@@ -154,7 +190,7 @@ export class DefectsController {
     // fail the request per .claude/rules/api.md.
     await this.audit.write({
       workspaceId,
-      actorId: null, // TODO(auth-retrofit): wire AuthService once @Roles lands on this endpoint
+      actorId,
       entityType: 'defect',
       entityId: defectId,
       action: 'rca_kicked_off',
@@ -174,7 +210,7 @@ export class DefectsController {
         .runAndPersist(orchestratorInput, {
           runId,
           workspaceId,
-          actorId: null,
+          actorId,
         })
         .catch((err) => {
           this.logger.error(

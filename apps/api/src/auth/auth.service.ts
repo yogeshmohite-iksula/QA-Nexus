@@ -32,6 +32,7 @@ const USER_SELECT = {
   role: true,
   workspaceId: true,
   organizationalLabel: true,
+  disabledAt: true,
 } as const;
 
 type UserSelectShape = {
@@ -41,6 +42,7 @@ type UserSelectShape = {
   role: UserRole;
   workspaceId: string;
   organizationalLabel: string | null;
+  disabledAt: Date | null;
 };
 
 /** Day-0 deployer-admin email (per CLAUDE.md "Iksula data canon").
@@ -126,6 +128,20 @@ export class AuthService implements OnModuleInit {
       }
       appUser = seeded;
     }
+
+    // P2 (Day-32 audit §1.5): block Admin-disabled users. resolveSession is the
+    // single chokepoint behind RolesGuard (all /api/*) + the /auth/session
+    // wrapper, so one gate here revokes a disabled user's access immediately
+    // rather than waiting for their 7-day session to expire. Gate ONLY on
+    // disabledAt — the seeded roster has activatedAt=NULL (magic-link users
+    // never set it), so an activatedAt gate would lock out all 8 pilot users.
+    if (appUser.disabledAt) {
+      this.logger.warn(
+        `Disabled user <${session.user.email}> presented a valid session — access blocked.`,
+      );
+      return null;
+    }
+
     return {
       authUser: {
         id: session.user.id,
