@@ -24,6 +24,7 @@
     "ac042:smoke": "node ../../scripts/ac042-smoke.mjs",
     "nfr:embed": "ts-node --transpile-only -P tsconfig.json test/nfr-embed-latency.ts",
     "seed:nfr": "ts-node --transpile-only -P tsconfig.json test/seed/nfr-fixture.seed.ts",
+    "seed:pilot": "ts-node --transpile-only -P tsconfig.json scripts/seed-iksula-pilot.ts",
     "populate:embeddings": "ts-node --transpile-only -P tsconfig.json scripts/populate-embeddings.ts",
     "nfr:a1": "ts-node --transpile-only -P tsconfig.json test/nfr-a1-latency.ts",
     "nfr:a2": "ts-node --transpile-only -P tsconfig.json test/nfr-a2-latency.ts",
