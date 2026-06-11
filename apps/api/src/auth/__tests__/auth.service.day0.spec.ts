@@ -14,7 +14,19 @@ jest.mock('better-auth', () => ({ betterAuth: jest.fn() }));
 jest.mock('better-auth/adapters/prisma', () => ({
   prismaAdapter: jest.fn(() => ({})),
 }));
-jest.mock('better-auth/plugins', () => ({ magicLink: jest.fn() }));
+jest.mock('better-auth/plugins', () => ({
+  magicLink: jest.fn(),
+  // Closes the last instance of the #259 mock-factory class: auth.config.ts
+  // imports { customSession, magicLink }. day0 bypasses buildAuth (injects
+  // svc.auth directly) so customSession is never *called* today — but a
+  // complete factory prevents a future "customSession is not a function" the
+  // moment a test exercises buildAuth/onModuleInit. Matches the stub style in
+  // send-magic-link.spec.ts + t021-auth.config.spec.ts.
+  customSession: jest.fn((fn: unknown) => ({
+    __pluginType: 'customSession',
+    __fn: fn,
+  })),
+}));
 jest.mock('better-auth/next-js', () => ({ nextCookies: jest.fn() }));
 
 import { AuthService } from '../auth.service';
