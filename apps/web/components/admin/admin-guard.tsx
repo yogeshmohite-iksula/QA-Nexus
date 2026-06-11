@@ -1,39 +1,67 @@
-// AdminGuard — client-side RBAC fence for the M1 admin surface.
+// AdminGuard — client-side RBAC + auth fence for the M1 admin surface.
 //
-// Pattern A: deferred routing only — fires `pattern-a:deferred:rbac-redirect`
-// then `router.replace('/home?error=admin-required')`. The /home page
-// SHOULD show a Sonner toast when `?error=admin-required` is present
-// (TODO when Sonner ships in the FE locked stack — currently not yet
-// installed; the query param is the structural hook).
+// P0-A (2026-06-13): in PRODUCTION an unauthenticated visitor must NOT reach
+// the admin surface via the dev/CI Yogesh-Admin fallback (CurrentUserContext
+// returns the Yogesh seed when there is no session — great for local preview +
+// e2e smoke, but on the deployed app it meant a signed-out visitor passed the
+// `role === 'Admin'` check). So in prod we require a REAL session
+// (`isAuthenticated`) before the role check; no session → redirect to
+// `/sign-in`. In dev/CI (`NODE_ENV !== 'production'`) the fallback persona
+// stands so local preview + the smoke suite render without a live session.
 //
-// Server-side guard lands when MS0-T021 BetterAuth + middleware land.
-// Until then this client-side fence is the cheapest correct guard for
-// the visual gate; defence-in-depth is the BetterAuth middleware blocking
-// the request before it reaches React.
+// Two-layer fence:
+//   1. session: prod + resolved-null-session → /sign-in
+//   2. role:    authenticated non-Admin → /home?error=admin-required (existing)
 //
-// Why client-side now: the route is statically exported (Cloudflare Pages
-// + Next `output: 'export'`) so we can't read the session cookie at the
-// edge. Once BE auth lands and we move to a serverful render path, this
-// guard relocates to a server component. The hook signature stays stable.
+// Server-side guard (true defence-in-depth) still lands with the BetterAuth
+// middleware in M6 (MS0-T021) — this client fence is the cheapest correct guard
+// for a statically-exported app (Cloudflare Pages, `output: 'export'`, no edge
+// session read). The hook signature stays stable.
 
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useCurrentUser, useCurrentUserMeta } from '@/lib/contexts/CurrentUserContext';
 
 interface AdminGuardProps {
   children: React.ReactNode;
 }
 
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+function GuardPlaceholder({ message }: { message: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-screen items-center justify-center bg-[var(--canvas)] px-4 text-center"
+    >
+      <p className="text-[13px] text-[var(--text-tertiary)]">{message}</p>
+    </div>
+  );
+}
+
 export function AdminGuard({ children }: AdminGuardProps) {
   const router = useRouter();
   const me = useCurrentUser();
-  const allowed = me.role === 'Admin';
+  const { isLoading, isAuthenticated } = useCurrentUserMeta();
+
+  // Layer 1 (prod only): no real session → unauthenticated. In dev/CI the
+  // fallback persona is intentional, so this never trips there.
+  const sessionBlocked = IS_PROD && !isLoading && !isAuthenticated;
+  // Layer 2: authenticated (or dev fallback) but not an Admin.
+  const roleBlocked = !sessionBlocked && me.role !== 'Admin';
 
   useEffect(() => {
-    if (!allowed) {
-      // PATTERN-A: redirect non-Admin user deferred until M1 (T030.5) - client fence; server guard lands MS0-T021
+    // Wait for the session to resolve before any redirect (prod only).
+    if (IS_PROD && isLoading) return;
+    if (sessionBlocked) {
+      router.replace('/sign-in');
+      return;
+    }
+    if (me.role !== 'Admin') {
+      // PATTERN-A: non-Admin redirect; server guard lands MS0-T021 (M6).
       console.info('pattern-a:deferred:rbac-redirect', {
         from: '/admin',
         userId: me.id,
@@ -42,22 +70,17 @@ export function AdminGuard({ children }: AdminGuardProps) {
       });
       router.replace('/home?error=admin-required');
     }
-  }, [allowed, me.id, me.role, router]);
+  }, [sessionBlocked, isLoading, me.id, me.role, router]);
 
-  if (!allowed) {
-    // Render a minimal redirect placeholder. Avoids flashing the admin
-    // surface to non-admins while the router replace happens.
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="flex min-h-screen items-center justify-center bg-[var(--canvas)] px-4 text-center"
-      >
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Admin access required. Redirecting to home…
-        </p>
-      </div>
-    );
+  // In prod, don't flash the admin surface while the session is resolving.
+  if (IS_PROD && isLoading) {
+    return <GuardPlaceholder message="Checking access…" />;
+  }
+  if (sessionBlocked) {
+    return <GuardPlaceholder message="Sign in required. Redirecting…" />;
+  }
+  if (roleBlocked) {
+    return <GuardPlaceholder message="Admin access required. Redirecting to home…" />;
   }
 
   return <>{children}</>;

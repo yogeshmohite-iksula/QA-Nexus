@@ -136,4 +136,17 @@ test.describe('MVP Smoke — new-user journey', () => {
     await expect(pill).toBeVisible();
     await expect(pill).not.toContainText(/Kishor/i);
   });
+
+  // 14. P0-A prod auth-gate. In PRODUCTION a signed-out visitor must be bounced
+  // from /admin/* to /sign-in (AdminGuard requires a real session, not the
+  // dev/CI fallback persona). This is intentionally a no-op in dev/CI — the
+  // fallback persona renders admin so tests 6-9 above work — so this test only
+  // runs against a production build/target (PROD_GATE=1 or a *.pages.dev BASE).
+  const PROD_GATE = process.env.PROD_GATE === '1' || /pages\.dev/.test(BASE);
+  test('14. P0-A prod auth-gate — signed-out /admin redirects to /sign-in', async ({ page }) => {
+    test.skip(!PROD_GATE, 'prod-only: dev/CI uses the fallback persona by design');
+    await page.goto(`${BASE}/admin/settings/`);
+    await page.waitForURL(/\/sign-in/, { timeout: 12_000 });
+    expect(page.url()).toMatch(/\/sign-in/);
+  });
 });
