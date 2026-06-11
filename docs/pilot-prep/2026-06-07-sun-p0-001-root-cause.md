@@ -1,5 +1,15 @@
 # P0-001 Identity Bug — Root Cause (Sun 2026-06-07, 34th RC)
 
+> ## 🟢 STATUS: CLOSED — verified live Thu 2026-06-11 4:16 PM IST
+>
+> **Resolution chain (3 layers):** #256 (BE cross-site cookie + `/api` CORS, Sun Jun 7) → #258 (FE Pattern-B session wire + remove "Kishor K." hardcode, Sun Jun 7) → **#259 (BE `customSession` plugin surfacing `role`/`displayName`/`organizationalLabel` from TB-002 `users`, Thu Jun 11)**.
+> **Verification:** Yogesh fresh-incognito Thu Jun 11 4:16 PM IST — cookie attrs ✓, `/auth/get-session` carries `role:"Admin"` + `displayName:"Yogesh Mohite"` + `organizationalLabel:"Sr QA"` ✓, pill renders "Yogesh M. · ADMIN" ✓. Live on `pages.dev` + `onrender.com`.
+> **Full closure narrative:** `docs/eod-reports/2026-06-11-thu-p0-001-closure-eod.md`. **Pattern memory:** `.claude/memory/feedback_p0_001_closure_cascade.md` (incl. BE+1's 36th RC mock-factory catch).
+>
+> _The Sun root-cause analysis below is retained as the historical diagnosis record._
+
+---
+
 **Symptom:** fresh incognito sign-in on `main` HEAD 963fc08 → `/home/` shows
 "Kishor K. · QA ENGINEER" in topbar + rail-foot. Cookies empty on `pages.dev`,
 zero `/api/auth/get-session` calls from `/home/`.

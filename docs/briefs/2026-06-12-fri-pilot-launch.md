@@ -1,21 +1,25 @@
-# Mon Day-6 — Pilot Launch D-Day Checklist
+# Fri Day-launch — Pilot Launch D-Day Checklist
 
-> **Date:** Mon 2026-06-08 · **Mode:** Live pilot — 8 users on production · **Audience:** Yogesh (Admin) + agents on-call.
+> **Date:** Fri 2026-06-12 · **Mode:** Live pilot — 8 users on production · **Audience:** Yogesh (Admin) + agents on-call.
+>
+> _(Originally scheduled Mon Jun 8; slipped to Fri Jun 12 because P0-001 user-identity remained open across Yogesh's Jun 8-10 pause. P0-001 CLOSED + verified live Thu Jun 11 4:16 PM IST — see `docs/eod-reports/2026-06-11-thu-p0-001-closure-eod.md`.)_
 
-## Pre-launch gates (must all be GREEN by Mon 08:00 IST)
+## Pre-launch gates (all GREEN as of Thu Jun 11)
 
-These gates were re-locked Sat 22:00 IST after the 28th reality-check identified PARTIAL audit coverage in Sat PRs #242 + #243. Mon Jun 8 unconditional GREEN launch requires all 4 PASS.
+| Gate | Source                                                             | State                                                          |
+| ---- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| 1    | BE+1 Sun fresh audit (5 buckets — immutability + endpoint catalog) | ✅ PASS (PR #248 merged)                                       |
+| 2    | MAIN Sun PM audit (3 buckets + 4 runbooks + user-testing protocol) | ✅ PASS (PR #249 merged)                                       |
+| 3    | **P0-001 (user identity) — the sole carry-over Mon-blocker**       | ✅ **CLOSED + verified live Thu 4:16 PM IST** (#256+#258+#259) |
+| 4    | Yogesh manual smoke (Sun + Thu re-verify)                          | ✅ 0 open P0                                                   |
 
-| Gate | Source                                                      | Required state                                |
-| ---- | ----------------------------------------------------------- | --------------------------------------------- |
-| 1    | BE+1 Sun AM fresh audit (4 buckets)                         | All 4 PASS in `2026-06-07-sun-am-be-audit.md` |
-| 2    | MAIN Sun PM fresh audit (3 buckets + 4 runbooks)            | All 3 PASS + 4 runbooks landed                |
-| 3    | Yogesh manual smoke testing (Sun 15:00-19:00 IST)           | 0 P0 bugs found (P1 with fix plan acceptable) |
-| 4    | Sun EOD verdict (`docs/pilot/sun-blockers.md` ABSENT/empty) | Mon launch unconditional GREEN                |
-
-If any gate FAILS Sun 19:00 IST → delay pilot 24h to Tue Jun 9.
+All three fix layers (#256 cross-site cookie/CORS · #258 FE Pattern-B session wire · #259 customSession app fields) are LIVE on `qa-nexus-web.pages.dev` + `qa-nexus-api.onrender.com`. Fri Jun 12 = unconditional GREEN GO.
 
 ## Pre-launch (08:00-09:00 IST)
+
+### 08:00 IST — Identity regression re-check (P0-001 guard)
+
+Before any invites: fresh incognito → sign in as `yogesh.mohite@iksula.com` → confirm user pill = **"Yogesh M. · ADMIN"** (not "Kishor K."). This is the 30-second regression guard on the Thu closure. If it shows wrong identity → STOP, do not send invites, escalate.
 
 ### 08:00 IST — Apps Script bridge health check
 
@@ -103,8 +107,8 @@ If a critical bug blocks the team:
 
 ## Quota watchpoints
 
-- **Apps Script bridge:** 7 invites Mon AM = 7/1500 = 0.5% of daily quota. Comfortable headroom.
-- **Neon CU-hr:** 8 users active during 10:00-22:00 window. Monitor Sun close + Mon EOD.
+- **Apps Script bridge:** 7 invites Fri AM = 7/1500 = 0.5% of daily quota. Comfortable headroom.
+- **Neon CU-hr:** 8 users active during 10:00-22:00 window. Carry the Wed-87/100 watch into Fri; monitor at Fri EOD.
 - **Groq RPD:** A1/A4 calls when team triggers Composer/Sherlock features. Spot-check at 17:00 EOD.
 
 ## Stand-down
@@ -113,4 +117,4 @@ Yogesh closes Day-1 at 22:00 IST with the retrospective filed. Tue Day-2 brief l
 
 ---
 
-_Authored Sat Day-3+4 2026-06-06 evening. Mon launch D-day playbook. Stand watch via Yogesh; agents reactive only._
+_Authored Sat Day-3+4 2026-06-06 evening; renamed + updated Thu Jun 11 for the Fri Jun 12 launch after P0-001 closure. Stand watch via Yogesh; agents reactive only. #256+#258+#259 all LIVE; P0-001 verified Thu Jun 11 4:16 PM IST._
