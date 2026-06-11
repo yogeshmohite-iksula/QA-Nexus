@@ -1,19 +1,16 @@
-# Fri Day-launch — Pilot Launch D-Day Checklist
+# Yogesh Deep-Test Cycle — Pre-launch Playbook (no fixed date)
 
-> **Date:** Fri 2026-06-12 · **Mode:** Live pilot — 8 users on production · **Audience:** Yogesh (Admin) + agents on-call.
+> **Mode:** Agent PRD-conformance verification → **Yogesh deep test cycle** → launch decision based on test feedback. **No fixed external commitments / no pre-set launch date.**
+> **Audience:** Yogesh (Admin) + agents on-call.
 >
-> _(Originally scheduled Mon Jun 8; slipped to Fri Jun 12 because P0-001 user-identity remained open across Yogesh's Jun 8-10 pause. P0-001 CLOSED + verified live Thu Jun 11 4:16 PM IST — see `docs/eod-reports/2026-06-11-thu-p0-001-closure-eod.md`.)_
+> _History: originally Mon Jun 8 → slipped (P0-001 across the Jun 8-10 pause) → Fri Jun 12 briefly targeted → **HELD** after FE+1's Thu Jun 11 full audit surfaced 4 P0s + 24/28 routes rendering canned fiction (`../Project10-QA_Nexus-frontend/docs/audits/2026-06-11-thu-fe-full-audit.md`). The launch date is now set by the deep-test-cycle outcome, not the calendar._
 
-## Pre-launch gates (all GREEN as of Thu Jun 11)
+## Where things actually stand (Thu Jun 11)
 
-| Gate | Source                                                             | State                                                          |
-| ---- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| 1    | BE+1 Sun fresh audit (5 buckets — immutability + endpoint catalog) | ✅ PASS (PR #248 merged)                                       |
-| 2    | MAIN Sun PM audit (3 buckets + 4 runbooks + user-testing protocol) | ✅ PASS (PR #249 merged)                                       |
-| 3    | **P0-001 (user identity) — the sole carry-over Mon-blocker**       | ✅ **CLOSED + verified live Thu 4:16 PM IST** (#256+#258+#259) |
-| 4    | Yogesh manual smoke (Sun + Thu re-verify)                          | ✅ 0 open P0                                                   |
-
-All three fix layers (#256 cross-site cookie/CORS · #258 FE Pattern-B session wire · #259 customSession app fields) are LIVE on `qa-nexus-web.pages.dev` + `qa-nexus-api.onrender.com`. Fri Jun 12 = unconditional GREEN GO.
+- ✅ **P0-001 (user identity) CLOSED + verified live** Thu 4:16 PM IST (#256+#258+#259). This was the _original_ sole carry-over blocker.
+- ✅ BE+1 Sun audit (#248) + MAIN Sun PM audit (#249) merged.
+- 🔴 **BUT the Thu/Fri PRD-conformance audit cycle is the binding gate now** — FE+1 = HARD-HOLD (4 P0: signed-out→Admin, invite theater, no role routing, nav-trap); BE+1 = AMBER (1 pre-launch P1, fixed in #262). Master picture: `docs/audits/2026-06-13-sat-main-master-conformance-dashboard.md`.
+- **No "GREEN GO" until the deep-test cycle clears.** The D-day operational steps below are the _playbook to activate once the test cycle passes_ — not a dated commitment.
 
 ## Pre-launch (08:00-09:00 IST)
 
@@ -117,4 +114,4 @@ Yogesh closes Day-1 at 22:00 IST with the retrospective filed. Tue Day-2 brief l
 
 ---
 
-_Authored Sat Day-3+4 2026-06-06 evening; renamed + updated Thu Jun 11 for the Fri Jun 12 launch after P0-001 closure. Stand watch via Yogesh; agents reactive only. #256+#258+#259 all LIVE; P0-001 verified Thu Jun 11 4:16 PM IST._
+_Authored Sat Day-3+4 2026-06-06; renamed → `yogesh-deep-test-cycle.md` Fri Jun 11 night after the PRD-conformance audit cycle HELD the dated launch. The operational steps above are the activate-on-clear playbook. Launch date = set by the deep-test-cycle outcome, not the calendar. P0-001 closed + verified Thu 4:16 PM IST; conformance master dashboard tracks the remaining P0 set._
