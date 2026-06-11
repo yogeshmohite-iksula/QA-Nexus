@@ -7,15 +7,23 @@
 //   so the controller can resolve workspaceId from the defect + write
 //   the `rca_kicked_off` audit row synchronously before returning 202.
 // Day-21+: DefectsService CRUD + GET /rca endpoint promoted from stub.
+// Day-32 (#262): AuthModule import — POST :id/rca is now @UseGuards(RolesGuard)
+//   + @Roles, and the controller injects AuthService to resolve the actor for
+//   the audit row + tenant check. AuthModule exports both AuthService +
+//   RolesGuard; without this import Nest DI fails at boot (caught by the E2E
+//   "API failed to boot" check, NOT by unit tests that useValue-provide them).
+//   Plain import (not forwardRef) — DefectsModule is not part of the
+//   AuthModule ↔ AuditModule cycle.
 
 import { Module } from '@nestjs/common';
 import { SherlockOrchestratorModule } from '../agents/sherlock-orchestrator/sherlock-orchestrator.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuditModule } from '../audit/audit.module';
+import { AuthModule } from '../auth/auth.module';
 import { DefectsController } from './defects.controller';
 
 @Module({
-  imports: [SherlockOrchestratorModule, PrismaModule, AuditModule],
+  imports: [SherlockOrchestratorModule, PrismaModule, AuditModule, AuthModule],
   controllers: [DefectsController],
 })
 export class DefectsModule {}
