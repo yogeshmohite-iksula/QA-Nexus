@@ -15,6 +15,7 @@
 // Local dev defaults to http://localhost:3001; prod is the Render URL set
 // in Cloudflare Pages env vars.
 
+import { getApiBaseURL } from '@/lib/env';
 import {
   type Chunk,
   type ChunkDetail,
@@ -48,9 +49,7 @@ export {
   ChunkDetailResponseSchema,
 };
 
-const API_BASE = (
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001') as string
-).replace(/\/$/, '');
+const API_BASE = getApiBaseURL().replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Fetchers (Pattern B — real BE)

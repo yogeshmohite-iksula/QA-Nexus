@@ -24,15 +24,13 @@
 // Sonner toast + revert UI state (e.g. flip `isGenerating` back to false).
 
 import { ComposerGenerateRequest, ComposerGenerateResponse } from '@qa-nexus/shared';
+import { getApiBaseURL } from '@/lib/env';
 
 // ---------------------------------------------------------------------------
 // Base URL — absolute so calls reach NestJS on a separate origin (port 3001
 // in local dev, Render in production). Same pattern as users-api.ts.
 // ---------------------------------------------------------------------------
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001').replace(
-  /\/$/,
-  '',
-);
+const API_BASE = getApiBaseURL().replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Typed errors — let the caller distinguish retry-after (503) from

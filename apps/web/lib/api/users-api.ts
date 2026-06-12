@@ -19,6 +19,7 @@
 // `apps/web/lib/auth/client.ts`.  Defaults to http://localhost:3001 for
 // local dev; set to the Render URL in Cloudflare Pages env vars.
 
+import { getApiBaseURL } from '@/lib/env';
 import {
   ChangeUserRoleInput,
   ChangeUserRoleResponse,
@@ -56,9 +57,7 @@ export {
 // In local dev NEXT_PUBLIC_API_BASE_URL defaults to http://localhost:3001.
 // In production it is set to the Render URL in Cloudflare Pages env vars.
 // ---------------------------------------------------------------------------
-const API_BASE = (
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001') as string
-).replace(/\/$/, '');
+const API_BASE = getApiBaseURL().replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Fetchers

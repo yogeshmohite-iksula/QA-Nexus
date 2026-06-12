@@ -14,6 +14,7 @@
 // `users-api.ts` and `auth/client.ts`. Defaults to localhost:3001 in
 // dev; set to the Render URL via Cloudflare Pages env vars in prod.
 
+import { getApiBaseURL } from '@/lib/env';
 import {
   KbDocumentListResponse,
   KbDocumentDeleteResponse,
@@ -23,9 +24,7 @@ import {
 export type { KbDocumentListItem };
 export type { KbDocumentListResponse, KbDocumentDeleteResponse } from '@qa-nexus/shared';
 
-const API_BASE = (
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001') as string
-).replace(/\/$/, '');
+const API_BASE = getApiBaseURL().replace(/\/$/, '');
 
 /** GET /api/projects/:projectId/kb/documents — list KB documents for a project.
  *  Cookie session; cross-workspace access yields 401/403. */

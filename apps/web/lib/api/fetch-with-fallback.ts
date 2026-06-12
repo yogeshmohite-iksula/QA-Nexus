@@ -25,6 +25,8 @@
 //       label: 'F09 projects',
 //     });
 
+import { getApiBaseURL } from '@/lib/env';
+
 const DEFAULT_TIMEOUT_MS = 3_000;
 
 /** Minimal structural type for a Zod-like schema (avoids a hard zod import
@@ -49,10 +51,7 @@ export interface FetchWithFallbackOptions<T> {
   baseUrl?: string;
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001').replace(
-  /\/$/,
-  '',
-);
+const API_BASE = getApiBaseURL().replace(/\/$/, '');
 
 /**
  * Fetch `path` and return the parsed body, or `fallback` on any failure.

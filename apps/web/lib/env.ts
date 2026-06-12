@@ -18,6 +18,8 @@
 
 const APP_PROD_URL = 'https://qa-nexus-web.pages.dev';
 const APP_DEV_URL = 'http://localhost:3000';
+const API_PROD_URL = 'https://qa-nexus-api.onrender.com';
+const API_DEV_URL = 'http://localhost:3001';
 
 /**
  * Returns the FE origin (where the React app is served).
@@ -42,4 +44,29 @@ export function getAppBaseURL(): string {
   }
   // Dev fallback — Next.js default port.
   return APP_DEV_URL;
+}
+
+/**
+ * Returns the API origin (NestJS on Render) — the single source of truth for
+ * every `/api/*` + `/auth/*` data fetch.
+ *
+ * 46th RC (2026-06-12 live shake-down): six api files used
+ * `NEXT_PUBLIC_API_BASE_URL ?? localhost:3001` with NO production tier — when
+ * Cloudflare Pages drops the env var (the PR #122 injection quirk), the
+ * PRODUCTION bundle called http://localhost:3001 and the canned fallback
+ * silently masked the broken wire. This helper applies the same 3-tier
+ * resolution as `getAppBaseURL()` / `lib/auth/client.ts`: env var →
+ * hardcoded prod origin → localhost dev. In a production build Next.js
+ * inlines `NODE_ENV`, so the localhost branch is dead-code-eliminated —
+ * a prod bundle can never resolve to localhost.
+ */
+export function getApiBaseURL(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (fromEnv && fromEnv.length > 0) {
+    return fromEnv.replace(/\/$/, '');
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return API_PROD_URL;
+  }
+  return API_DEV_URL;
 }
