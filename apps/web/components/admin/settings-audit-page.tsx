@@ -21,14 +21,17 @@
 // locked-palette `--fail` for ADMIN/ANONYMOUS (red family), distinguished by
 // label text. Same choice the v1 implementation made.
 //
-// Pattern A enforcement (PM1_PRD §F28) — deferred markers, ZERO fetch /
-// useMutation / axios. Real /api/audit-log + /api/settings land MS0-T030.5+
-// post-merge of BE M1 schema.
+// AUDIT TAB IS LIVE (Finding I, 2026-06-12): rows + event count + chain badge
+// come from GET /api/audit + /api/audit/verify-chain (shared schemas, Rule 10)
+// with the canned fixture as the offline/dev fallback per the Option-B
+// convention. Settings/integrations/billing tabs remain Pattern A (deferred
+// markers) until their endpoints land.
 
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { fetchAuditEntries, fetchVerifyChain, auditEntryToRow } from '@/lib/api/audit-api';
 import { AdminShell } from './admin-shell';
 import {
   F28_HEAD,
@@ -193,21 +196,54 @@ export function SettingsAuditPage() {
     console.info('pattern-a:deferred:integration-configure', { name });
   }
 
+  // ── Finding I: live audit data (canned = offline/dev fallback) ──
+  const [liveRows, setLiveRows] = useState<F28AuditRow[] | null>(null);
+  const [liveTotal, setLiveTotal] = useState<number | null>(null);
+  const [liveChainVal, setLiveChainVal] = useState<string | null>(null);
+  const [liveChainPct, setLiveChainPct] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchAuditEntries().then((res) => {
+      if (!alive || !res || res.items.length === 0) return;
+      setLiveRows(res.items.map(auditEntryToRow));
+      // Refined by verify-chain's totalRows when that resolves (Admin only).
+      setLiveTotal((cur) => cur ?? res.items.length);
+    });
+    void fetchVerifyChain().then((res) => {
+      if (!alive || !res) return;
+      setLiveTotal(res.totalRows);
+      setLiveChainPct(res.valid ? '100%' : 'BROKEN');
+      setLiveChainVal(
+        res.valid
+          ? res.truncated
+            ? `${res.verifiedRows.toLocaleString()} of ${res.totalRows.toLocaleString()} verified`
+            : '100% verified'
+          : `broken at ${res.brokenAtId ? res.brokenAtId.slice(0, 8) : 'unknown row'}`,
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const sourceRows = liveRows ?? F28_AUDIT_ROWS;
+
   const filteredAudit = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return F28_AUDIT_ROWS;
-    return F28_AUDIT_ROWS.filter((e) =>
+    if (!q) return sourceRows;
+    return sourceRows.filter((e) =>
       [e.ts, e.actor, e.action, e.target, e.targetSub, e.project, e.details, e.hash]
         .join(' ')
         .toLowerCase()
         .includes(q),
     );
-  }, [searchQuery]);
+  }, [searchQuery, sourceRows]);
 
   return (
     <AdminShell active="settings-audit">
       <main className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
-        <QHead />
+        <QHead total={liveTotal} chainPct={liveChainPct} />
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
           <SettingsTabNav activeTab={activeTab} onChange={handleTabChange} />
           <div
@@ -226,6 +262,8 @@ export function SettingsAuditPage() {
                 rows={filteredAudit}
                 searchQuery={searchQuery}
                 page={page}
+                total={liveTotal ?? TOTAL_EVENTS}
+                chainVal={liveChainVal ?? undefined}
                 onSearchChange={handleSearchChange}
                 onExport={handleExport}
                 onScheduleDigest={handleScheduleDigest}
@@ -247,12 +285,29 @@ export function SettingsAuditPage() {
 // q-head — title + stats strip (5 fragments)
 // ---------------------------------------------------------------------------
 
-function QHead() {
+function QHead({
+  total,
+  chainPct,
+}: {
+  /** Live event count (Finding I) — null renders the canned headline. */
+  total: number | null;
+  /** Live chain integrity ('100%' / 'BROKEN') — null renders canned. */
+  chainPct: string | null;
+}) {
   const toneCls: Record<string, string> = {
     b: 'font-semibold text-[var(--t1)]',
     pass: 'font-bold text-[var(--pass)]',
     gate: 'text-[var(--secondary)]',
   };
+  const stats = F28_HEAD.stats.map((st) => {
+    if (total !== null && st.rest.includes('events logged')) {
+      return { ...st, hl: total.toLocaleString('en-US') };
+    }
+    if (chainPct !== null && st.rest.includes('HMAC-verified')) {
+      return { ...st, hl: chainPct };
+    }
+    return st;
+  });
   return (
     <header className="flex flex-col gap-2.5 border-b border-[var(--border)] pb-3.5">
       <h1 className="font-display text-[22px] font-bold leading-[28px] tracking-[-0.01em] text-[var(--t1)] sm:text-[26px] sm:leading-[34px]">
@@ -260,7 +315,7 @@ function QHead() {
       </h1>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[11.5px] leading-[18px] text-[var(--t3)]">
-          {F28_HEAD.stats.map((s, i) => (
+          {stats.map((s, i) => (
             <span key={s.hl} className="inline-flex items-center gap-2.5">
               {i > 0 && (
                 <span aria-hidden="true" className="text-[var(--t4)]">
@@ -977,6 +1032,10 @@ interface AuditLogPanelProps {
   rows: F28AuditRow[];
   searchQuery: string;
   page: number;
+  /** Real event count from the API (verify-chain totalRows); canned fallback. */
+  total: number;
+  /** Live chain-integrity text from /api/audit/verify-chain; canned fallback. */
+  chainVal?: string;
   onSearchChange: (q: string) => void;
   onExport: (format: 'csv' | 'pdf') => void;
   onScheduleDigest: () => void;
@@ -988,6 +1047,8 @@ function AuditLogPanel({
   rows,
   searchQuery,
   page,
+  total,
+  chainVal,
   onSearchChange,
   onExport,
   onScheduleDigest,
@@ -1062,7 +1123,7 @@ function AuditLogPanel({
                 strokeLinejoin="round"
               />
             </svg>
-            {b.chainVal}
+            {chainVal ?? b.chainVal}
           </span>
         </span>
       </div>
@@ -1160,7 +1221,7 @@ function AuditLogPanel({
           distinct header bg; tbody rows show the --raised box bg. */}
       <div className="flex flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--raised)]">
         <AuditTable rows={rows} onVerifyHash={onVerifyHash} />
-        <AuditFooter page={page} pageSize={25} total={TOTAL_EVENTS} onPaginate={onPaginate} />
+        <AuditFooter page={page} pageSize={25} total={total} onPaginate={onPaginate} />
       </div>
     </section>
   );
@@ -1301,16 +1362,34 @@ function AuditFooter({
   total: number;
   onPaginate: (next: number) => void;
 }) {
-  const lastPage = Math.ceil(total / pageSize);
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  // Live data (Finding I): rebuild the canonical footer string + page list from
+  // the REAL total. When total === the canned 47,234 fixture (offline fallback)
+  // the output is byte-identical to the canonical text.
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const footerText = F28_AUDIT.footer
+    .replace('1–25', `${from.toLocaleString('en-US')}–${to.toLocaleString('en-US')}`)
+    .replace('47,234', total.toLocaleString('en-US'));
+  const pageTokens =
+    total === TOTAL_EVENTS
+      ? F28_AUDIT.pages
+      : lastPage <= 5
+        ? Array.from({ length: lastPage }, (_, i) => String(i + 1))
+        : page <= 3
+          ? ['1', '2', '3', '…', String(lastPage)]
+          : page >= lastPage - 2
+            ? ['1', '…', String(lastPage - 2), String(lastPage - 1), String(lastPage)]
+            : ['1', '…', String(page - 1), String(page), String(page + 1), '…', String(lastPage)];
   // Inside the .audit-table-wrap box — canonical .audit-foot (bg --base, border-top).
   return (
     <footer className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--border)] bg-[var(--base)] px-3.5 py-3 font-mono text-[11px] text-[var(--t3)]">
-      <span>{F28_AUDIT.footer}</span>
+      <span>{footerText}</span>
       <div className="inline-flex gap-1">
         <PgBtn onClick={() => onPaginate(Math.max(1, page - 1))} disabled={page === 1}>
           ‹
         </PgBtn>
-        {F28_AUDIT.pages.map((p, i) => {
+        {pageTokens.map((p, i) => {
           const isCur = p === String(page);
           const isEllipsis = p === '…';
           return (
