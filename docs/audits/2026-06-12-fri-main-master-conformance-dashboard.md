@@ -1,23 +1,37 @@
 # Master PRD Conformance Dashboard — Phase B/C
 
-> **Author:** MAIN · **Status:** 🟡 **WORKING DRAFT (Phase B prep, authored Fri night).** Per-requirement BE/FE verdict cells marked ⏳ are GATED on BE+1 + FE+1 fresh conformance verdicts (Sat 10-11 AM). Decisions A-E, the surfaced conflicts, the wiring inventory, and the F18 build plan are CODE-GROUNDED + final.
-> **Inputs read (Phase B prep):** BE+1 #264 PRD baseline · BE+1 #261 Day-32 audit (AMBER) · BE+1 fixes #262/#263 (open) · FE+1 `fri-fe-prd-baseline.md` + Thu full-audit · my Phase A baseline (`2026-06-12-fri-main-prd-orchestration-baseline.md`).
-> **Contract:** PM1-mandated = MUST WORK. PM2-PM4-deferred = acceptable stub/canned. **Modified by Yogesh Decisions A-E (below) which reclassify several gaps.**
+> **Author:** MAIN · **Status:** 🟡 **LIVE AGGREGATION (compressed timeline — Fri 2026-06-12).** Per-requirement verdict cells ⏳ fill during **Phase C live-verify TODAY** (BE+1 HTTP smoke + FE+1 pages.dev verify, late afternoon), not Sat. Decisions, conflicts, wiring inventory = code-grounded + final. **Final verdict → separate doc `docs/audits/2026-06-12-fri-main-prd-conformance-final.md` (Phase D, evening).**
+> **Inputs:** BE+1 #264 PRD baseline · #261 Day-32 audit (AMBER) · #262 (merged) · FE+1 baseline + Thu full-audit + P0-A #266 (merged) · my Phase A baseline · **Yogesh Fri live shake-down (items H/I/J below).**
+> **Contract:** PM1-mandated = MUST WORK. PM2-PM4-deferred = acceptable stub/canned. Modified by Decisions A-E **+ Fri scope re-decisions (F18 deferred · W2-R stays · Yogesh test = Sun).**
 
 ---
 
 ## §0 — Yogesh's 5 binding decisions (applied throughout)
 
-| #        | Decision                                                                            | Conformance effect                                                           |
-| -------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **A**    | Invite flow = **M1-MANDATED, must work for pilot**                                  | P0-D stays 🔴 must-fix (real Resend/Apps-Script invite + set-password)       |
-| **B(a)** | TipTap doc authoring = **SKIP from pilot**                                          | **GAP-1 reclassifies 🔴→⚫ acceptable-deferral** (removes a ~1-2 week P0)    |
-| **B(b)** | F18 Test Suites = **IN scope, BUILD before Yogesh tests**                           | GAP-2 = 🔴 must-**build** (fresh, ~1 week — see §2 conflict)                 |
-| **C**    | F24 QA-Value dashboard = **DROPPED for pilot**                                      | **GAP-3 reclassifies 🟡→⚫** (F25 already shipped covers exec view)          |
-| **D**    | Jira = **SEED-ONLY for pilot test; outbound sync = M5 hardening**                   | FR-013 Jira connect/sync 501-stubs = acceptable-for-pilot; outbound deferred |
-| **E**    | P0-C fictional names = **canned-data override path** (NO Rule 3 locked-frame edits) | P0-C 🔴 fix via canned-data swap to Iksula canon, not HTML edits             |
+| #        | Decision                                                                                                                                                                              | Conformance effect                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **A**    | Invite flow = **M1-MANDATED, must work for pilot**                                                                                                                                    | P0-D stays 🔴 must-fix (real Resend/Apps-Script invite + set-password)                       |
+| **B(a)** | TipTap doc authoring = **SKIP from pilot**                                                                                                                                            | **GAP-1 reclassifies 🔴→⚫ acceptable-deferral** (removes a ~1-2 week P0)                    |
+| **B(b)** | F18 Test Suites = ~~IN scope, build before test~~ → **🔁 DEFERRED-from-today (Fri re-decision)** — cross-agent dependency too tight for compressed timeline; **Sat-AM-optional / M6** | GAP-2 = ⚫ deferred-not-blocking-today (F18 conflict §2 still valid for whenever it's built) |
+| **C**    | F24 QA-Value dashboard = **DROPPED for pilot**                                                                                                                                        | **GAP-3 reclassifies 🟡→⚫** (F25 already shipped covers exec view)                          |
+| **D**    | Jira = **SEED-ONLY for pilot test; outbound sync = M5 hardening**                                                                                                                     | FR-013 Jira connect/sync 501-stubs = acceptable-for-pilot; outbound deferred                 |
+| **E**    | P0-C fictional names = **canned-data override path** (NO Rule 3 locked-frame edits)                                                                                                   | P0-C 🔴 fix via canned-data swap to Iksula canon, not HTML edits                             |
 
-**Net effect of A-E:** two big items removed from the blocker list (TipTap GAP-1, F24 GAP-3); F18 confirmed as a fresh build; the real-data P0 set sharpens to **P0-A/B/C/D + F18-build**.
+**Net effect of A-E:** two big items removed (TipTap GAP-1, F24 GAP-3); F18 now **deferred-from-today**; real-data P0 set = **P0-A/B/C/D**.
+
+### §0.5 — Fri live shake-down re-decisions + 3 new findings (Yogesh, 2026-06-12)
+
+| Item                                    | Decision / finding                                                | Effect                                                                                     |
+| --------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| F18                                     | **DEFERRED from today** (Sat-optional / M6)                       | removes the ~2-day build from today's critical path                                        |
+| W2-R defects read API                   | **STAYS** (agentic-QA core requires it for F21)                   | BE+1 builds; FE+1 F21 consumes after                                                       |
+| F21 Defects Hub                         | **STAYS** in pilot scope                                          | port already audited; wire to W2-R                                                         |
+| Yogesh test                             | **= Sun**                                                         | launch date still set by test outcome                                                      |
+| **H. Sign-out 405**                     | **P0 security gap** — sign-out returns 405, session may not clear | FE+1 baseURL fix + BE+1 endpoint confirm + joint smoke (cross-domain)                      |
+| **I. F28 audit canned 47k vs real 158** | **P1** — F28 shows fabricated count; real chain = 158 rows        | FE+1 wires F28 → real `GET /api/audit`; **confirm pagination handshake vs BE shape first** |
+| **J. RSC 404s**                         | **P2** — React Server Component 404s on some routes               | FE+1 investigates per-route; not a launch-blocker                                          |
+
+**41st RC (institutional):** **live shake-down > static audits for UX-layer issues** — H/I/J surfaced only by Yogesh clicking through the deployed app, not by the file-level audits (which are strong on structure/wiring but blind to runtime UX like a 405 on sign-out). Candidate memory: `feedback_live_shakedown_beats_static_audit.md` (Phase D).
 
 ---
 
