@@ -1,16 +1,19 @@
-// F21 Defects Hub — Pattern A scaffold (Hard Rule 17 from start).
-// Mounts under AdminShell active="defects-failures" + projectKeyLower="ret".
+// F21 Defects Hub — LIVE list (Finding W2-R, 2026-06-12): rows come from
+// GET /api/defects (#271, offset-paged, shared DefectListItem read-shape)
+// with the canned fixture as the offline/dev fallback per the Option-B
+// convention. Mounts under AdminShell active="defects-failures".
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { fetchDefects, defectToRow } from '@/lib/api/defects-api';
 import { DefHead } from './def-head';
 import { FilterStrip } from './filter-strip';
 import { DefectsToolbar } from './toolbar';
 import { DefectRowItem } from './defect-row';
 import { SdRail } from './sd-rail';
-import { F21_DEFECTS, F21_GROUP_HEADERS, type DefectPriority } from './canned-data';
+import { F21_DEFECTS, F21_GROUP_HEADERS, type DefectPriority, type DefectRow } from './canned-data';
 
 // Day-19 Round-2 visual gate fix — render group-sep banner row per
 // priority cohort when GROUP BY = Priority (canonical L819 / L944 / L1063).
@@ -27,10 +30,29 @@ const GROUP_PILL: Record<DefectPriority, { bg: string; bd: string; fg: string }>
 export function DefectsPage() {
   const [selectedId, setSelectedId] = useState<string>(F21_DEFECTS[0].id);
 
+  // W2-R live wire: real defects when /api/defects responds; canned fallback
+  // on error/offline (fetchDefects never throws). Selection is re-anchored to
+  // the first live row when the current selection isn't in the live set.
+  const [liveRows, setLiveRows] = useState<DefectRow[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchDefects().then((res) => {
+      if (!alive || !res || res.defects.length === 0) return;
+      const rows = res.defects.map(defectToRow);
+      setLiveRows(rows);
+      setSelectedId((cur) => (rows.some((r) => r.id === cur) ? cur : rows[0].id));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const sourceRows = liveRows ?? F21_DEFECTS;
+
   // Group defects by priority for section-header rendering.
   const groupedRows = F21_GROUP_HEADERS.map((header) => ({
     header,
-    rows: F21_DEFECTS.filter((d) => d.priority === header.priority),
+    rows: sourceRows.filter((d) => d.priority === header.priority),
   }));
 
   return (
