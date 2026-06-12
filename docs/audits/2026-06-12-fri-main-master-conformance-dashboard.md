@@ -141,3 +141,57 @@ BE Day-32 = **AMBER (launch-viable, 1 pre-launch P1)**; FE Thu = **HARD-HOLD (4 
 ---
 
 _Phase B working draft authored Fri night 2026-06-11. Verdict cells gated on Sat BE+1/FE+1 inputs. Decisions A-E applied; F18 conflict + wiring inventory code-grounded; every finding cited (Rule 17 spirit). The F18 BE-claims-LIVE vs code-says-NOT-BUILT conflict is surfaced for Yogesh + BE+1 reconciliation, not resolved by MAIN._
+
+---
+
+# 🔴 §9 — Phase C CRITICAL CORRECTION (Fri ~10:30 PM IST — 46th RC)
+
+**Finding (Yogesh, live DevTools Network on `qa-nexus-web.pages.dev`):** the deployed FE bundle calls **`http://localhost:3001/api/projects`** instead of `qa-nexus-api.onrender.com`. Pattern A canned fallback masked the broken wire all week — surface renders fixtures, request fails silently, every test passes.
+
+**Root cause (MAIN grep, evidence-grounded):** `getApiBaseURL()` (shared resolver: `users-api.ts` / `projects-api.ts` / `defects-api.ts` / `audit-api.ts` / `composer-api.ts` / `kb-upload-api.ts`) reads `NEXT_PUBLIC_API_BASE_URL`, which **defaults to `http://localhost:3001`** (documented at `users-api.ts:18-19`; `.env.example:9`). If the var is **not set in the Cloudflare Pages BUILD environment**, Next.js inlines the localhost default into the bundle at build time. **Build-env config gap, not a code bug** — one env var + one rebuild fixes every consumer simultaneously.
+
+**Why 10 auditors missed it:** route mocks intercept pre-URL · CI has no Pages env · curl verified the API not the bundle · Playwright asserts on DOM that canned-fallback renders correctly · source review sees correct code (the inline happens at build). **Only live network-tab inspection on the deployed URL catches this class.** Banked: `feedback_deployed_bundle_baseurl_verification.md` (46th RC) — includes the stricter binding definition of `live-verified`.
+
+## §9.1 — Corrected two-axis table (43rd RC applied rigorously)
+
+| Item                       | Merged     | Live-verified                                                                                           |
+| -------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| P0-001 identity (Thu)      | ✅         | ✅ (fresh-incognito 4:16 PM Thu)                                                                        |
+| #262 RCA guard             | ✅         | ✅ (anon curl + shake-down)                                                                             |
+| #266 P0-A auth gate        | ✅         | ✅ (FE+1 + Yogesh shake-down)                                                                           |
+| #272 H sign-out            | ✅         | ✅ (BE+1 anon + Yogesh visual; BetterAuth client uses correct origin)                                   |
+| #273 invite POST           | ✅         | ✅ (Yogesh got 201)                                                                                     |
+| **#269 F09 switcher wire** | ✅         | **🔴 BROKEN — localhost URL**                                                                           |
+| **#274 F28 audit wire**    | ✅         | **🔴 BROKEN — shows 47k canned (same root cause)**                                                      |
+| **#271/#276 F21 defects**  | ✅         | **🔴 UNTESTED — will fail same way until env fix**                                                      |
+| #418 / J RSC 404s          | hypothesis | **🔴 RSC 404s BACK on /admin/users** (stale-deploy theory insufficient — needs per-route investigation) |
+
+**Note the asymmetry:** the ✅ live-verified rows are auth/session flows (BetterAuth client resolves its own origin correctly) — the 🔴 rows are exactly the `getApiBaseURL()` data-wire consumers. The split confirms the root cause.
+
+## §9.2 — Provisional Phase D verdict (tonight): 🔴 RED for Sun deep test
+
+- **BE: GREEN ✅** (endpoints live, guards verified, seed + chain proven).
+- **FE: BLOCKED** on (1) Cloudflare Pages `NEXT_PUBLIC_API_BASE_URL` build-env fix + rebuild, (2) canned-data sweep completion, (3) RSC 404 per-route diagnosis.
+- Yogesh's 3-step workflow cannot proceed cleanly until fixes ship. **Final Phase D verdict gated on re-run of the joint Phase C after the env fix.**
+
+## §9.3 — Revised timeline
+
+1. FE+1: diagnose + fix Pages build env (~30 min; confirm var → trigger rebuild → verify bundle via network tab)
+2. Yogesh: re-verify F09 + F28 + F21 on live (~30 min, network-tab discipline per 46th RC)
+3. FE+1: canned-data sweep (Home Outcome Board · invite form pre-fill removal · pending-invites table · RSC 404s) — ~2-4 hr, scope per §9.4
+4. Re-run Phase C joint → 5. Phase D verdict. **Spillover → Sat AM; Sun deep test only if GREEN.**
+
+## §9.4 — SCOPE QUESTION FOR YOGESH (Rule 11 — surfaced, not resolved)
+
+Your bar: "remove all the dummy data from each page." Per canned surface, two options: **(i) WIRE** to a real endpoint (where BE exists) or **(ii) real empty state + "Coming soon"** label (where the feature is M6-deferred). Decision needed per surface:
+
+| Surface                           | BE endpoint exists?                             | MAIN's read (you decide)     |
+| --------------------------------- | ----------------------------------------------- | ---------------------------- |
+| Home Outcome Board "Active runs"  | `/api/test-runs` exists                         | wire (i)                     |
+| Home Outcome Board "Release risk" | no aggregate endpoint                           | "Coming soon" (ii) — M6      |
+| Home AI narrative                 | no endpoint                                     | (ii) or hide for pilot       |
+| Home Recent Agent Activity rail   | `agent_run` table exists; no aggregate endpoint | (ii) for pilot, wire M6      |
+| Invite form pre-fill              | n/a                                             | remove pre-fill (sweep item) |
+| Pending invites table             | `/api/invitations` exists                       | wire (i)                     |
+
+_§9 appended Fri ~11 PM IST after the 46th RC catch. Dashboard cells corrected per the stricter live-verified definition; nothing flips ✅ until network-tab-verified on the live URL._
