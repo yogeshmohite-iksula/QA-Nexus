@@ -8,8 +8,8 @@
 //   evidence chips, etc.) — copy-stub data that does NOT represent
 //   identifiable users / projects in the workspace seed.
 // - Pattern A still applies: NO fetch / useMutation / axios anywhere.
-// - Names referenced inside QUEUE_ROWS / EVIDENCE_THREAD (e.g., "Priya S",
-//   "Neha D") are FICTIONAL collaborator placeholders from the locked
+// - Names referenced inside QUEUE_ROWS / EVIDENCE_THREAD (e.g., "Nadim S",
+//   "Sagar D") are FICTIONAL collaborator placeholders from the locked
 //   frame, not pilot-roster users. They stay until the locked source is
 //   re-cut against the canonical roster.
 //
@@ -162,7 +162,7 @@ export const QUEUE_ROWS: QueueRow[] = [
     agentChip: { id: 'A4', conf: 87, tone: 'pass' },
     meta: 'P1 · open · Sprint 42',
     freshness: 'assigned 6h ago',
-    extra: 'Priya S assigned',
+    extra: 'Nadim S assigned',
     primary: { label: 'Review RCA', routeTarget: 'F25-defect-detail-DEF-001' },
     secondary: { label: 'Add comment', routeTarget: 'F25-defect-comment-DEF-001' },
     collaborator: { initials: 'PS', tone: 'amber' },
@@ -196,7 +196,7 @@ export const QUEUE_ROWS: QueueRow[] = [
     lane: 'med',
     tab: 'clarifications',
     glyph: 'amber-diamond',
-    title: 'Neha D requested peer-review on 12 new Cart API cases',
+    title: 'Sagar D requested peer-review on 12 new Cart API cases',
     meta: 'Iksula Returns / Cart API · manual cases',
     freshness: 'submitted 45 min ago',
     extra: 'draft review',
@@ -245,7 +245,7 @@ export const EVIDENCE_THREAD: EvidenceEntry[] = [
     agent: 'A4',
     body: "RCA'd failure cluster → DEF-001",
     conf: { value: 0.87, tone: 'pass' },
-    freshness: '6h ago · assigned to Priya',
+    freshness: '6h ago · assigned to Nadim',
     chips: ['6 runs', '2 stacks', 'RefundCalculator.ts:147'],
   },
   {

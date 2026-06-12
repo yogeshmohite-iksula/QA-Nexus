@@ -50,8 +50,8 @@ export const defect: Defect = {
   age: '04:18:32',
   jiraKey: 'RET-3392',
   jiraSynced: true,
-  assignee: { name: 'Suresh P.', initials: 'SP' },
-  reporter: { name: 'Priya A.', initials: 'PA' },
+  assignee: { name: 'Nitin G.', initials: 'NG' },
+  reporter: { name: 'Nadim S.', initials: 'NS' },
   sourceRun: 'RUN-RET-2026-04-25-002',
   testCase: 'TC-RET-1043',
 };
@@ -189,7 +189,7 @@ export const rcaLayers: RcaLayer[] = [
       commits: [
         {
           hash: '7c2e1f9',
-          author: { name: 'Suresh P.', initials: 'SP' },
+          author: { name: 'Nitin G.', initials: 'NG' },
           date: '2026-04-22',
           message: '"Tighten refund handler timeout to 5s for SLA"',
           prNumber: 'PR #2104',
@@ -341,14 +341,14 @@ export const discussionMeta = {
 export const discussion: DiscussionComment[] = [
   {
     id: 'c1',
-    author: { name: 'Priya A.', initials: 'PA' },
+    author: { name: 'Nadim S.', initials: 'NS' },
     role: 'QA Nexus',
     ts: '· 4h ago · 04:22 UTC',
-    body: 'Caught by nightly. Five refunds stuck in PROCESSING — all > ₹10K, all CITI-IN gateway. Customer money is in flight; treating as P0. Pinging Suresh.',
+    body: 'Caught by nightly. Five refunds stuck in PROCESSING — all > ₹10K, all CITI-IN gateway. Customer money is in flight; treating as P0. Pinging Nitin.',
   },
   {
     id: 'c2',
-    author: { name: 'Suresh P.', initials: 'SP' },
+    author: { name: 'Nitin G.', initials: 'NG' },
     role: 'Jira',
     ts: '· 3h ago · 05:14 UTC',
     body: "Owning. Sherlock's read tracks with what I see in PR #2104 — I tightened the handler timeout to 5s for SLA reasons but didn't anticipate CITI-IN's gateway change. Reverting to 30s with an amount-based ceiling on a branch.",
@@ -359,7 +359,7 @@ export const discussion: DiscussionComment[] = [
     author: { name: 'Yogesh M', initials: 'YM' },
     role: 'QA LEAD',
     ts: '· 1h ago · 07:08 UTC',
-    body: "Tagging this regression against Sprint 14. Block release until Suresh's fix lands and TC-RET-1043 goes green on staging. Composer already drafted a regression case for amount-based timeouts — auto-attached.",
+    body: "Tagging this regression against Sprint 14. Block release until Nitin's fix lands and TC-RET-1043 goes green on staging. Composer already drafted a regression case for amount-based timeouts — auto-attached.",
     tags: [{ label: 'regression', tone: 'fail' }],
   },
 ];
@@ -378,8 +378,8 @@ export const rightRail: RightRailMeta = {
     { k: 'age', v: '04:18:32', tone: 'warn' },
   ],
   people: {
-    assigned: { name: 'Suresh P.', initials: 'SP' },
-    reported: { name: 'Priya A.', initials: 'PA' },
+    assigned: { name: 'Nitin G.', initials: 'NG' },
+    reported: { name: 'Nadim S.', initials: 'NS' },
     watching: 'Yogesh M, Deepak R, +3',
   },
   linkage: [
@@ -400,7 +400,7 @@ export const rightRail: RightRailMeta = {
     { actor: 'Yogesh M', text: 'tagged regression, blocked release', when: '1h ago', tag: 'warn' },
     { actor: 'Composer', text: 'drafted regression test TC-RET-1044', when: '1h ago', tag: 'ai' },
     {
-      actor: 'Suresh P.',
+      actor: 'Nitin G.',
       text: 'opened branch fix/refund-timeout-amount-aware',
       when: '2h ago',
       tag: 'now',
@@ -411,7 +411,7 @@ export const rightRail: RightRailMeta = {
       when: '2h ago',
       tag: 'ai',
     },
-    { actor: 'Priya A.', text: 'assigned to Suresh P.', when: '3h ago' },
+    { actor: 'Nadim S.', text: 'assigned to Nitin G.', when: '3h ago' },
     {
       actor: 'Curator',
       text: 'flagged 3 similar defects (92 / 79 / 71%)',

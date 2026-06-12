@@ -29,9 +29,9 @@ import { PasswordStrengthCard } from '@/components/auth/password-strength-card';
 import { PulseDot } from '@/components/auth/pulse-dot';
 
 // Demo invitee name — in M1 this comes from decoding the invite token via
-// BetterAuth. "Priya" preserved per 1:1 parity with the locked F06b HTML
+// BetterAuth. "Nadim" preserved per 1:1 parity with the locked F06b HTML
 // (note: not in the final 8-user pilot roster; replaced at runtime in M1).
-const DEMO_INVITEE_NAME = 'Priya';
+const DEMO_INVITEE_NAME = 'Nadim';
 
 // Demo pre-fill value — matches the locked F06b design state.
 // In production the input is empty on first paint.

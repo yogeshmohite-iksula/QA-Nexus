@@ -218,7 +218,7 @@ export const f25Demo = {
     },
     {
       label: 'Product owner',
-      name: 'Riya Nair',
+      name: 'Kishor Kadam',
       initials: 'RN',
       role: 'Backend Dev · Payment Squad',
       status: 'pending' as const,
