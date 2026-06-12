@@ -21,6 +21,7 @@
 // the pattern in `users-api.ts`, `kb-imports-api.ts`, `kb-api.ts`,
 // and `auth/client.ts`.
 
+import { getApiBaseURL } from '@/lib/env';
 import {
   CreateKbDocumentRequest,
   CreateKbDocumentResponse,
@@ -46,9 +47,7 @@ export {
   KB_UPLOAD_MAX_BYTES,
 } from '@qa-nexus/shared';
 
-const API_BASE = (
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001') as string
-).replace(/\/$/, '');
+const API_BASE = getApiBaseURL().replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Helpers

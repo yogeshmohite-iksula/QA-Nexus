@@ -103,9 +103,12 @@ test.describe('MVP Smoke — new-user journey', () => {
       // Ignore environment-dependent network resource-load failures. In dev/CI
       // there is no live API/session, so client calls (BetterAuth session,
       // /api/* data, e.g. /api/projects via fetchWithFallback) fail with
-      // `net::ERR_CONNECTION_REFUSED` — the DESIGNED canned-data fallback path,
-      // not an app bug. On the deployed pilot the API is up so these never fire.
-      if (/Failed to load resource|net::ERR|ERR_CONNECTION/i.test(text)) return;
+      // `net::ERR_CONNECTION_REFUSED` — or, when a local API IS running without
+      // CORS for :3000, with a CORS-policy block. Both are the DESIGNED
+      // canned-data fallback path, not app bugs. On the deployed pilot the API
+      // is up + CORS-allowlisted so these never fire.
+      if (/Failed to load resource|net::ERR|ERR_CONNECTION|blocked by CORS policy/i.test(text))
+        return;
       errors.push(text);
     });
     for (const route of ['/home/', '/admin/agents/', '/admin/users/', '/admin/settings/']) {

@@ -23,15 +23,9 @@ import { CreateInvitationInput, ProjectSchema } from '@qa-nexus/shared';
 import type { UserRole } from '@qa-nexus/shared';
 import { z } from 'zod';
 
-const API_PROD_URL = 'https://qa-nexus-api.onrender.com';
-const API_DEV_URL = 'http://localhost:3001';
+import { getApiBaseURL } from '@/lib/env';
 
-function apiBase(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (fromEnv && fromEnv.length > 0) return fromEnv.replace(/\/$/, '');
-  if (process.env.NODE_ENV === 'production') return API_PROD_URL;
-  return API_DEV_URL;
-}
+const apiBase = getApiBaseURL;
 
 /** FE project token → canonical project key. Accepts BOTH the F27M1_PROJECTS
  *  keys ('returns', …, the modal's applyProjects state) and display labels
