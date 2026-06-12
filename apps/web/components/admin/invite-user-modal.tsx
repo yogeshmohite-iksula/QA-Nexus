@@ -36,7 +36,6 @@ import {
   F27M1_FOOTER,
   F27M1_ROLES,
   F27M1_PROJECTS,
-  F27M1_INITIAL_INVITEES,
   type F27M1Invitee,
   type F27M1Role,
 } from '@/components/admin/invite-user-modal.canned-data';
@@ -63,7 +62,11 @@ interface InviteUserModalProps {
 }
 
 export function InviteUserModal({ onClose }: InviteUserModalProps = {}) {
-  const [invitees, setInvitees] = useState<F27M1Invitee[]>(() => [...F27M1_INITIAL_INVITEES]);
+  // Phase-4 sweep B (2026-06-12): start EMPTY. The canonical demo pre-filled
+  // 3 fixture invitees (F27M1_INITIAL_INVITEES) — real Admins start from a
+  // blank form and type addresses. The fixture stays in canned-data as the
+  // Rule-17 extraction record; it is no longer rendered.
+  const [invitees, setInvitees] = useState<F27M1Invitee[]>([]);
   const [draft, setDraft] = useState('');
   const [pmsgOpen, setPmsgOpen] = useState(false);
   const [pmsg, setPmsg] = useState('');
