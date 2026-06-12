@@ -35,7 +35,7 @@ cj "$API/health"        # expect 200; if a /version or build-sha field exists, c
 
 ## 1. RCA guard (#262) — `POST /api/defects/{id}/rca` ✏️ returns **202** (async kickoff), not 200
 
-Pick a real defect id: `cj "$API/api/projects/{PROJECT_ID}/defects"` (post-W2R build) or from the seed.
+Pick a real defect id from the W2-R #271 list: `cj "$API/api/defects"` (flat, workspace-scoped) or from the seed.
 
 ```bash
 DEF="<a-seeded-defect-uuid>"
@@ -78,15 +78,17 @@ PID="<grab a project id from 3a>"
 c -H "Cookie: $COOKIE" "$API/api/projects/$PID/requirements"
 # 3c test-cases (project-scoped) → expect 200 + ~63 for RET
 c -H "Cookie: $COOKIE" "$API/api/projects/$PID/test-cases"
-# 3d defects — ⚠ GATED on W2-R build (GET list + GET detail). Pre-build → 404/501. Post-build → 200 + 25
-c -H "Cookie: $COOKIE" "$API/api/projects/$PID/defects"
-# 3e test-suites — ⚠ GATED on W5 F18 build. Pre-build → 404. Post-build → 200 + 5
-c -H "Cookie: $COOKIE" "$API/api/projects/$PID/test-suites"
+# 3d defects (W2-R #271 — LIVE) — ✏️ FLAT route, NOT project-nested. → expect 200 + 25
+cj -H "Cookie: $COOKIE" "$API/api/defects"   # workspace-scoped list; optional ?projectId=$PID&status=&severity=&component=&q=&page=&pageSize=
+DID="<grab a defect id from the list above>"
+c  -H "Cookie: $COOKIE" "$API/api/defects/$DID"   # detail → 200; absent/cross-tenant → 404; non-UUID → 400
+# 3e test-suites — ⏸ F18 DEFERRED (Decision B → M6). No controller built → no route. SKIP (would 404).
 # 3f anonymous on any of the above → expect 401 (RBAC guard)
 c "$API/api/projects"
+c "$API/api/defects"
 ```
 
-**3d/3e are the build-gated rows** — they PROVE the two Sat/Sun builds the moment they land.
+**3d (defects) is LIVE via #271** — proves the W2-R build the moment the redeploy lands. **3e (test-suites) is DEFERRED** (F18 → M6, Decision B); no route exists yet, so it's a SKIP, not a failure.
 
 ## 4. Audit verify-chain ✏️ real path = `GET /api/audit/verify-chain` (Admin) — NOT `/api/admin/...`
 
@@ -142,7 +144,8 @@ probes need `NFR_PROBE_ENABLED=true` + the Admin cookie (per `feedback_nfr_probe
 | 1a/1b/1c | RCA guard            | 401 / 202+real-actor-audit / 404(spec)  | #262 RCA guard + attribution |
 | 2        | disabled gate        | 401 on reuse                            | #262 disabledAt gate         |
 | 3a-3c    | project/req/TC reads | 200 + seeded counts                     | W2 conformant (3/4)          |
-| 3d/3e    | defect/suite reads   | 200 + 25 / 200 + 5                      | **W2-R + W5 builds landed**  |
+| 3d       | defects read (#271)  | `GET /api/defects` → 200 + 25           | **W2-R build live**          |
+| 3e       | test-suites          | n/a — F18 deferred (no route)           | ⏸ SKIP (M6, Decision B)      |
 | 4        | verify-chain         | valid:true (or documented row-25 drift) | audit integrity              |
 | 5a/5b    | pg_policies          | rows present OR empty(=app-level-only)  | **G5 resolved**              |
 | 5c       | audit triggers       | present                                 | immutability at DB           |
@@ -150,6 +153,8 @@ probes need `NFR_PROBE_ENABLED=true` + the Admin cookie (per `feedback_nfr_probe
 
 ## Gating note
 
-Rows **3d, 3e** are not runnable until the two builds land (W2-R defects read API, W5 F18 controller). All
-other rows run immediately post-redeploy. **Cross-tenant (1c) + disabled-user (2)** are partly spec-verified
-in single-workspace pilot — flagged inline. Phase C results → fold into the Phase D final verdict doc.
+Row **3d (defects)** runs once the #271 redeploy lands — **flat `GET /api/defects`, NOT project-nested**
+(path corrected 2026-06-12; the earlier `/api/projects/:id/defects` sketch was wrong). Row **3e
+(test-suites)** is a SKIP — F18 is deferred to M6 (Decision B), no route exists. All other rows run
+immediately post-redeploy. **Cross-tenant (1c) + disabled-user (2)** are partly spec-verified in the
+single-workspace pilot — flagged inline. Phase C results → fold into the Phase D final verdict doc.
