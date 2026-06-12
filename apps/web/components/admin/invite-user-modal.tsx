@@ -18,6 +18,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import type { UserRole } from '@qa-nexus/shared';
+
+import { sendInvitations } from '@/lib/api/invitations-api';
 
 import './invite-user-modal.css';
 
@@ -167,6 +171,52 @@ export function InviteUserModal({ onClose }: InviteUserModalProps = {}) {
         projectMore: Math.max(0, projectLabels.length - 2) || undefined,
       })),
     );
+  }
+
+  // ── P0-D part 2: real POST /api/invitations (Decision D1, M1-mandated) ──
+  // FE role token → canonical UserRole (shared role.enum casing). 'senior' is
+  // organizationally Senior QA but maps to the QAEngineer RBAC role (the org
+  // label is display-only; CreateInvitationInput has no org-label field).
+  const ROLE_TO_USER_ROLE: Record<F27M1Role, UserRole> = {
+    engineer: 'QAEngineer',
+    senior: 'QAEngineer',
+    lead: 'Lead',
+    stakeholder: 'Stakeholder',
+  };
+  const [sending, setSending] = useState(false);
+
+  async function handleSend() {
+    if (sending || invitees.length === 0) return;
+    setSending(true);
+    try {
+      const result = await sendInvitations(
+        invitees.map((iv) => ({
+          email: iv.email,
+          role: ROLE_TO_USER_ROLE[iv.role],
+          // Apply-to-all selection is the live scope source; per-row
+          // `projects` is its sliced display (first 2 + "+N").
+          projectTokens: applyProjects,
+        })),
+      );
+      if (result.scopeDowngraded) {
+        // Scope resolution failed → BE treats invites as workspace-wide.
+        console.warn('[invite] project scope unresolved — invites sent workspace-wide');
+      }
+      if (result.failed.length === 0) {
+        toast.success(`${result.sent} invite${result.sent === 1 ? '' : 's'} sent`);
+        onClose?.();
+      } else {
+        // Keep failed rows in the modal for retry; drop the ones that sent.
+        if (result.sent > 0) {
+          setInvitees((cur) => cur.filter((iv) => result.failed.some((f) => f.email === iv.email)));
+        }
+        toast.error(
+          `${result.failed.length} of ${result.failed.length + result.sent} invites failed — ${result.failed[0].message}`,
+        );
+      }
+    } finally {
+      setSending(false);
+    }
   }
 
   // Footer summary counts
@@ -651,7 +701,12 @@ export function InviteUserModal({ onClose }: InviteUserModalProps = {}) {
               <button className="btn-ghost" type="button" onClick={() => onClose?.()}>
                 {F27M1_FOOTER.cancel}
               </button>
-              <button className="btn-send" type="button" disabled={summary.total === 0}>
+              <button
+                className="btn-send"
+                type="button"
+                onClick={handleSend}
+                disabled={summary.total === 0 || sending}
+              >
                 <svg
                   viewBox="0 0 16 16"
                   fill="none"
