@@ -51,6 +51,7 @@ import {
   PROJECTS_FALLBACK,
   type SwitcherProject,
 } from '@/lib/api/projects-api';
+import { authClient } from '@/lib/auth/client';
 
 // =========================================================================
 // SHARED
@@ -791,7 +792,12 @@ export function UserMenu({
   async function signOut() {
     close();
     try {
-      await fetch('/api/auth/sign-out', { method: 'POST' });
+      // Finding H: the old `fetch('/api/auth/sign-out')` hit the FE origin
+      // (pages.dev → 405) and never revoked the server session. authClient
+      // targets the API origin (baseURL=onrender, basePath=/auth →
+      // …/auth/sign-out) with credentials, so the session IS revoked + the
+      // cookie cleared server-side.
+      await authClient.signOut();
     } catch {
       /* ignore network failure — still nav to sign-in */
     }
