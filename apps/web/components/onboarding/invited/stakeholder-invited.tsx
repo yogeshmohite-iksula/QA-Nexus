@@ -11,7 +11,7 @@ import { useEffect, useMemo } from 'react';
 import { InvitedShell } from './invited-shell';
 
 const INVITEE = {
-  name: 'Meera R.',
+  name: 'Sagar T.',
   initials: 'MR',
   role: 'stakeholder' as const,
 };

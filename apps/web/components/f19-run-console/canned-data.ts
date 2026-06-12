@@ -199,7 +199,7 @@ export const CURRENT_CASE: CurrentCase = {
   id: 'TC-RET-0247',
   tags: [{ label: 'Returns Core' }, { label: 'P1 · BDD', dim: true }],
   agent: { code: 'Composer', version: 'v2.3' },
-  owner: 'Owner · Priya S.',
+  owner: 'Owner · Nadim S.',
   curatorDedupTargetId: 'TC-RET-0211',
   stepsHeadLabel: 'Steps',
   stepsProgress: '3 of 5 · BDD format',

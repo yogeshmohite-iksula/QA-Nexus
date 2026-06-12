@@ -262,7 +262,7 @@ export const F21_DEFECTS: DefectRow[] = [
     ],
     ref: 'TC-1043',
     impact: null,
-    assignee: { initials: 'SP', name: 'Suresh P.', avatarTone: 'violet' },
+    assignee: { initials: 'NG', name: 'Nitin G.', avatarTone: 'violet' },
     age: '2d ago',
     opened: 'opened 9d',
     staleLabel: null,
@@ -302,7 +302,7 @@ export const F21_DEFECTS: DefectRow[] = [
     ],
     ref: 'JIRA RET-3392',
     impact: ['8', '×2'],
-    assignee: { initials: 'PA', name: 'Priya A.', avatarTone: 'amber' },
+    assignee: { initials: 'NS', name: 'Nadim S.', avatarTone: 'amber' },
     age: '5h ago',
     opened: 'opened 4d',
     staleLabel: null,
@@ -336,7 +336,7 @@ export const F21_DEFECTS: DefectRow[] = [
     metaSegments: [],
     ref: 'TC-1012',
     impact: ['6', '×1'],
-    assignee: { initials: 'RB', name: 'Ritu B.', avatarTone: 'violet' },
+    assignee: { initials: 'GD', name: 'Govind D.', avatarTone: 'violet' },
     age: '3h ago',
     opened: 'opened 1d',
     staleLabel: null,
@@ -353,7 +353,7 @@ export const F21_DEFECTS: DefectRow[] = [
     metaSegments: [],
     ref: 'JIRA RET-3401',
     impact: ['3', '×1'],
-    assignee: { initials: 'AK', name: 'Arjun K.', avatarTone: 'amber' },
+    assignee: { initials: 'MK', name: 'Mohanraj K.', avatarTone: 'amber' },
     age: '1d ago',
     opened: 'opened 2d',
     staleLabel: null,
@@ -387,7 +387,7 @@ export const F21_DEFECTS: DefectRow[] = [
     metaSegments: [],
     ref: null,
     impact: ['5', '×2'],
-    assignee: { initials: 'SP', name: 'Suresh P.', avatarTone: 'violet' },
+    assignee: { initials: 'NG', name: 'Nitin G.', avatarTone: 'violet' },
     age: '8h ago',
     opened: 'opened 5d',
     staleLabel: null,
@@ -404,7 +404,7 @@ export const F21_DEFECTS: DefectRow[] = [
     metaSegments: [],
     ref: null,
     impact: ['2', '×1'],
-    assignee: { initials: 'RB', name: 'Ritu B.', avatarTone: 'violet' },
+    assignee: { initials: 'GD', name: 'Govind D.', avatarTone: 'violet' },
     age: '3d ago',
     opened: 'opened 7d',
     staleLabel: null,
@@ -421,7 +421,7 @@ export const F21_DEFECTS: DefectRow[] = [
     metaSegments: [],
     ref: 'TC-901',
     impact: ['1', '×1'],
-    assignee: { initials: 'AK', name: 'Arjun K.', avatarTone: 'amber' },
+    assignee: { initials: 'MK', name: 'Mohanraj K.', avatarTone: 'amber' },
     age: '5d ago',
     opened: 'opened 9d',
     staleLabel: null,
@@ -529,8 +529,8 @@ export const F21_SD_TABS: SdTab[] = [
 export const F21_PEOPLE = {
   label: 'People',
   rows: [
-    { initials: 'SP', name: 'Suresh P.', role: 'Assignee', avatarTone: 'violet' },
-    { initials: 'PA', name: 'Priya A.', role: 'Reporter', avatarTone: 'amber' },
+    { initials: 'NG', name: 'Nitin G.', role: 'Assignee', avatarTone: 'violet' },
+    { initials: 'NS', name: 'Nadim S.', role: 'Reporter', avatarTone: 'amber' },
   ] as PeopleRow[],
 };
 
@@ -572,7 +572,7 @@ export const F21_ACTIVITY = {
     {
       iconKind: 'comment',
       segments: [
-        { kind: 'bold', value: 'Suresh P.' },
+        { kind: 'bold', value: 'Nitin G.' },
         {
           kind: 'text',
           value: ' commented — "Reproduced on staging-v3 with delay-injection at 35 s."',
@@ -586,7 +586,7 @@ export const F21_ACTIVITY = {
         { kind: 'text', value: 'Status changed ' },
         { kind: 'bold', value: 'Open → In progress' },
         { kind: 'text', value: ' by ' },
-        { kind: 'bold', value: 'Suresh P.' },
+        { kind: 'bold', value: 'Nitin G.' },
       ],
       when: '5h',
     },
@@ -594,7 +594,7 @@ export const F21_ACTIVITY = {
       iconKind: 'assign',
       segments: [
         { kind: 'text', value: 'Assigned to ' },
-        { kind: 'bold', value: 'Suresh P.' },
+        { kind: 'bold', value: 'Nitin G.' },
         { kind: 'text', value: ' by ' },
         { kind: 'bold', value: 'Yogesh M.' },
       ],
@@ -608,14 +608,14 @@ export const F21_COMMENTS = {
   label: 'Comments',
   items: [
     {
-      authorName: 'Suresh P.',
+      authorName: 'Nitin G.',
       authorInitials: 'SP',
       authorAvatarTone: 'violet',
       when: '2h ago',
       text: "Confirmed gateway P95 is 41 s in last week. We should bump the webhook deadline AND add a poller as fallback — Sherlock's plan looks right.",
     },
     {
-      authorName: 'Priya A.',
+      authorName: 'Nadim S.',
       authorInitials: 'PA',
       authorAvatarTone: 'amber',
       when: '1d ago',

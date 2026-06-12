@@ -13,7 +13,7 @@ import { InvitedShell } from './invited-shell';
 // Demo invitee context — would be filled from BetterAuth session + invite
 // row in MS0-T021/T022. Hard-coded for visual gate; matches source HTML.
 const INVITEE = {
-  name: 'Priya S.',
+  name: 'Nadim S.',
   initials: 'PS',
   role: 'qa-engineer' as const,
 };

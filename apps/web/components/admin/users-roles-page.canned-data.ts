@@ -578,8 +578,8 @@ export const F27_TEAM_MEMBERS = [
 export const F27_PENDING_INVITES = [
   {
     initials: 'PT' as const,
-    name: 'Priya Tiwari' as const,
-    email: 'priya.tiwari@iksula.com' as const,
+    name: 'Nadim Siddiqui' as const,
+    email: 'nadim.siddiqui@iksula.com' as const,
     role: 'QA ENGINEER' as const,
     roleKey: 'qa_engineer' as const,
     projects: ['Returns'] as const,
@@ -594,7 +594,7 @@ export const F27_RECENT_ACTIVITY = [
     tone: 'violet' as const,
     actor: 'Yogesh M.' as const,
     action: 'invited' as const,
-    target: 'priya.tiwari@iksula.com' as const,
+    target: 'nadim.siddiqui@iksula.com' as const,
     detail: 'as QA Engineer' as const,
     date: '2026-06-01' as const,
     time: '14:22' as const,
