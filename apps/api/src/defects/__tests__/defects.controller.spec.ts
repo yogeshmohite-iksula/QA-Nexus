@@ -28,6 +28,7 @@ jest.mock('../../auth/auth.service', () => ({
   AuthService: class FakeAuthService {},
 }));
 
+import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Role } from '@qa-nexus/shared';
 import { DefectsController } from '../defects.controller';
@@ -35,6 +36,7 @@ import { SherlockOrchestratorService } from '../../agents/sherlock-orchestrator/
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { AuthService } from '../../auth/auth.service';
+import { DefectsService } from '../defects.service';
 import { ROLES_KEY } from '../../auth/rbac/roles.decorator';
 
 const TEST_DEFECT_ID = '11111111-2222-3333-4444-555555555555';
@@ -85,6 +87,8 @@ describe('DefectsController', () => {
   let defectFindUnique: jest.Mock;
   let auditWrite: jest.Mock;
   let resolveSession: jest.Mock;
+  let defectsList: jest.Mock;
+  let defectsDetail: jest.Mock;
 
   beforeEach(async () => {
     runAndPersist = jest.fn().mockResolvedValue({
@@ -115,6 +119,13 @@ describe('DefectsController', () => {
       },
       expiresAt: '2026-07-01T00:00:00.000Z',
     });
+    // W2-R read API — DefectsService backs list + detail.
+    defectsList = jest
+      .fn()
+      .mockResolvedValue({ defects: [], total: 0, page: 1, pageSize: 20 });
+    defectsDetail = jest
+      .fn()
+      .mockResolvedValue({ id: TEST_DEFECT_ID, key: 'DEF-001' });
 
     const moduleRef = await Test.createTestingModule({
       controllers: [DefectsController],
@@ -134,6 +145,10 @@ describe('DefectsController', () => {
         {
           provide: AuthService,
           useValue: { resolveSession },
+        },
+        {
+          provide: DefectsService,
+          useValue: { list: defectsList, detail: defectsDetail },
         },
       ],
     }).compile();
@@ -325,17 +340,83 @@ describe('DefectsController', () => {
     });
   });
 
+  describe('W2-R read API — GET /api/defects (list) + GET :id (detail)', () => {
+    it('list is RBAC-guarded — @Roles(all 4 roles) + RolesGuard', () => {
+      const roles = Reflect.getMetadata(
+        ROLES_KEY,
+        DefectsController.prototype.list,
+      );
+      expect(roles).toEqual([
+        Role.Admin,
+        Role.Lead,
+        Role.QAEngineer,
+        Role.Stakeholder,
+      ]);
+      const guards = Reflect.getMetadata(
+        '__guards__',
+        DefectsController.prototype.list,
+      ) as Array<{ name: string }> | undefined;
+      expect(guards?.some((g) => g.name === 'RolesGuard')).toBe(true);
+    });
+
+    it('detail is RBAC-guarded — @Roles(all 4 roles) + RolesGuard', () => {
+      const roles = Reflect.getMetadata(
+        ROLES_KEY,
+        DefectsController.prototype.detail,
+      );
+      expect(roles).toEqual([
+        Role.Admin,
+        Role.Lead,
+        Role.QAEngineer,
+        Role.Stakeholder,
+      ]);
+      const guards = Reflect.getMetadata(
+        '__guards__',
+        DefectsController.prototype.detail,
+      ) as Array<{ name: string }> | undefined;
+      expect(guards?.some((g) => g.name === 'RolesGuard')).toBe(true);
+    });
+
+    it('list() parses the query, resolves the actor, returns {ok, defects, pagination}', async () => {
+      const out = await ctrl.list({ status: 'new' }, fakeReq() as never);
+      expect(out).toEqual({
+        ok: true,
+        defects: [],
+        pagination: { total: 0, page: 1, pageSize: 20 },
+      });
+      // service called with parsed query (defaults applied) + the actor ctx
+      expect(defectsList).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'new', page: 1, pageSize: 20 }),
+        expect.objectContaining({ workspaceId: TEST_WORKSPACE_ID }),
+      );
+    });
+
+    it('detail() returns {ok, defect} for a valid UUID', async () => {
+      const out = await ctrl.detail(TEST_DEFECT_ID, fakeReq() as never);
+      expect(out).toEqual({
+        ok: true,
+        defect: { id: TEST_DEFECT_ID, key: 'DEF-001' },
+      });
+      expect(defectsDetail).toHaveBeenCalledWith(
+        TEST_DEFECT_ID,
+        expect.objectContaining({ workspaceId: TEST_WORKSPACE_ID }),
+      );
+    });
+
+    it('detail() throws 400 BadRequest when the id is not a UUID', async () => {
+      await expect(
+        ctrl.detail('not-a-uuid', fakeReq() as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(defectsDetail).not.toHaveBeenCalled();
+    });
+  });
+
   describe('still 501 stubs (other endpoints — Day-21+ landing)', () => {
     it.each([
       [
         'create',
         (c: DefectsController, r: ReturnType<typeof fakeRes>['res']) =>
           c.create({}, r as never),
-      ],
-      [
-        'detail',
-        (c: DefectsController, r: ReturnType<typeof fakeRes>['res']) =>
-          c.detail('id-1', r as never),
       ],
       [
         'rca (GET — fetch, not kickoff)',

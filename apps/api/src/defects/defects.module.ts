@@ -21,9 +21,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { DefectsController } from './defects.controller';
+import { DefectsService } from './defects.service';
 
 @Module({
   imports: [SherlockOrchestratorModule, PrismaModule, AuditModule, AuthModule],
   controllers: [DefectsController],
+  // Day-32 (W2-R): DefectsService backs GET list + GET :id (read API).
+  providers: [DefectsService],
 })
 export class DefectsModule {}
