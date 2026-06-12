@@ -35,6 +35,7 @@
 // from the defect itself (defect → project → workspaceId).
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -43,13 +44,20 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
-import { Role } from '@qa-nexus/shared';
+import {
+  Role,
+  DefectListQuery,
+  type DefectListResponse,
+  type DefectDetailResponse,
+} from '@qa-nexus/shared';
 import { z } from 'zod';
 import { SherlockOrchestratorService } from '../agents/sherlock-orchestrator/sherlock-orchestrator.service';
 import { AuditService } from '../audit/audit.service';
@@ -57,6 +65,11 @@ import { AuthService } from '../auth/auth.service';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
+import { DefectsService, type DefectActorContext } from './defects.service';
+
+/** Canonical UUID v4 path-param matcher (shared by detail + rca). */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Request body for POST /api/defects/:id/rca. Failure context the
  *  orchestrator's 4 agents need to do their analysis. */
@@ -86,16 +99,78 @@ export class DefectsController {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly authService: AuthService,
+    private readonly defects: DefectsService,
   ) {}
+
+  /** Resolve the actor off the BetterAuth session. The RolesGuard already
+   *  proved a valid session exists; this re-resolves it for the workspace
+   *  scope (the guard doesn't attach it to the request). */
+  private async actorOf(req: Request): Promise<DefectActorContext> {
+    const session = await this.authService.resolveSession(reqHeaders(req));
+    if (!session) {
+      throw new UnauthorizedException(
+        'session disappeared between guard and handler',
+      );
+    }
+    return {
+      workspaceId: session.appUser.workspaceId,
+      actorId: session.appUser.id,
+      actorEmail: session.appUser.email,
+      role: session.appUser.role as DefectActorContext['role'],
+    };
+  }
 
   @Post()
   create(@Body() _body: unknown, @Res() res: Response): void {
     this.stub(res, 'create defect');
   }
 
+  /**
+   * GET /api/defects — workspace-scoped list for the F21 Defects Hub.
+   * W2-R (Day-32): the 25 seeded defects are now reachable. Read-only,
+   * all 4 roles (Stakeholder is read-only — parity with test-cases/
+   * requirements list). NOT audited (ERD §8.7). Optional filters:
+   * ?projectId=&status=&severity=&assigneeId=&component=&q=&page=&pageSize=.
+   */
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
+  async list(
+    @Query() query: unknown,
+    @Req() req: Request,
+  ): Promise<DefectListResponse> {
+    const q = DefectListQuery.parse(query ?? {});
+    const ctx = await this.actorOf(req);
+    const result = await this.defects.list(q, ctx);
+    return {
+      ok: true,
+      defects: result.defects,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      },
+    };
+  }
+
+  /**
+   * GET /api/defects/:id — detail (F21 row → F22 header data). W2-R
+   * (Day-32): replaces the 501 stub. Cross-workspace or absent → 404
+   * (no leak). Read-only, all 4 roles. NOT audited.
+   */
   @Get(':id')
-  detail(@Param('id') _id: string, @Res() res: Response): void {
-    this.stub(res, 'get defect detail');
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
+  async detail(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ): Promise<DefectDetailResponse> {
+    if (!UUID_RE.test(id)) {
+      throw new BadRequestException('Defect ID path param must be a UUID.');
+    }
+    const ctx = await this.actorOf(req);
+    const defect = await this.defects.detail(id, ctx);
+    return { ok: true, defect };
   }
 
   /**
