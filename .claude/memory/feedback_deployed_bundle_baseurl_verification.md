@@ -67,3 +67,14 @@ The `live-verified` column needs a stricter definition:
 - The shared `getApiBaseURL()` resolver — fixing once via build-env repairs every consumer.
 
 _Authored Fri night 2026-06-12 immediately after the catch, before the dashboard correction + Phase D verdict reframing, so the rule lands with the case still fresh and the evidence (the grep showing localhost as the documented default) inline. The lesson is binding: a deploy with a cross-origin API is not "live-verified" until a human has watched the Network tab on the live URL._
+
+---
+
+## Precision correction (Fri late — post-#277 reconciliation)
+
+What Yogesh's Network tab caught was a **stale pre-#277 bundle**, not the current deploy. FE+1's live probe of `cb1ed3a` (post-#277) shows `apiHosts: ["qa-nexus-api.onrender.com"]`, `callsLocalhost: false`. The localhost default **was a real code condition** (documented above) and is **now fixed** by #277's prod-tier `getApiBaseURL`. So this case is simultaneously **two lessons, not one:**
+
+1. **The 46th RC stands unchanged** — the Network-tab-on-the-live-URL gate is what surfaced the problem; nothing weaker would have. Keep it binding.
+2. **It is also the 4th instance of `feedback_stale_deploy_diagnosis_pattern.md`** (the 41st RC, now **4-for-4**: #418 · J RSC-404 · D · this). What the gate caught was a stale bundle.
+
+**The two compose into one forward rule:** when the Network tab shows a wrong/old request on a live URL, run the 46th-RC gate **and** immediately ask the 41st-RC question — _"is this the CURRENT bundle, or a stale deploy?"_ (probe the live bundle's committed SHA / re-trigger the build). Don't open a code investigation until that's answered. Had we asked it first here, the "RED" interval would have been an "is-the-deploy-current?" check, not a root-cause grep. _(The grep was still correct + useful — it found the real localhost default that #277 then fixed — but the live-state question should lead.)_

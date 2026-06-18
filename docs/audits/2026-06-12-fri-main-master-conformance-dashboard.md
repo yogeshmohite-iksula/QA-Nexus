@@ -195,3 +195,49 @@ Your bar: "remove all the dummy data from each page." Per canned surface, two op
 | Pending invites table             | `/api/invitations` exists                       | wire (i)                     |
 
 _§9 appended Fri ~11 PM IST after the 46th RC catch. Dashboard cells corrected per the stricter live-verified definition; nothing flips ✅ until network-tab-verified on the live URL._
+
+---
+
+# 🟢 §10 — POST-#277 RECONCILIATION (Fri late — supersedes §9's RED)
+
+**§9's 🔴 RED was based on Yogesh's Phase C observation of a STALE pre-#277 bundle.** FE+1's live deployed-bundle probe of `cb1ed3a` (the current Pages build, post-#277) confirms the URL bug is **already fixed**:
+
+- `apiHosts: ["qa-nexus-api.onrender.com"]` ✅ · `callsLocalhost: false` ✅ · `callsOnrender: true` ✅
+
+The localhost call Yogesh saw was a stale bundle from before #277 landed. **The 46th RC verification method stands (watch the Network tab on the live URL) — and what it caught this time was a stale deploy, not a code regression.** Reconciled via verify-before-assert: both agent claims (BE+1 #284 shipped; FE+1 already-fixed-via-#277) independently confirmed against `origin/main` before this edit. **F21-consume PR number verified = #276** (not #275; #275 was the smoke-set docs correction).
+
+## §10.1 — 41st RC reinforced to **4-for-4** (stale-deploy)
+
+Every FE bug hypothesized as stale-deploy **was** stale-deploy: **#418 · J (RSC 404s) · D · 46th-localhost.** **Binding forward discipline:** lead every FE-bug triage with _"is this in the CURRENT deployed bundle (grep main HEAD + probe the live bundle)?"_ **before** any code dig. This is the `feedback_stale_deploy_diagnosis_pattern.md` rule, now 4× confirmed.
+
+## §10.2 — Corrected two-axis table (43rd RC; F21=#276 verified)
+
+| Item                            | Merged           | Live-verified                                                                                                                                                  |
+| ------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-001 + customSession          | ✅               | ✅                                                                                                                                                             |
+| #262 RCA guard                  | ✅               | ✅                                                                                                                                                             |
+| #266 P0-A signed-out            | ✅               | ✅                                                                                                                                                             |
+| #272 H sign-out                 | ✅               | ✅                                                                                                                                                             |
+| #273 invite POST                | ✅               | ✅ (Yogesh 201)                                                                                                                                                |
+| #277 API baseURL (46th RC)      | ✅               | ✅ (FE+1 live probe, `cb1ed3a`)                                                                                                                                |
+| #269 F09 switcher               | ✅               | 🟡 URL target live (inherited via #277's global `getApiBaseURL`, **not individually probed**); per-endpoint render unverified — DB suspended → canned fallback |
+| #274 F28 audit                  | ✅               | 🟡 URL target live (via #277, not individually probed); DB suspended → 47k canned still shows                                                                  |
+| #276 F21 defects                | ✅               | 🟡 wire merged; URL target live (via #277, not individually probed); DB suspended → blank                                                                      |
+| #284 cron-gate + `/health/lite` | ⏳ pending merge | n/a (post-deploy)                                                                                                                                              |
+| #278 invite pre-fill removal    | ⏳ PR'd          | pending merge + deploy                                                                                                                                         |
+| #283 F27 pending-invites wire   | ⏳ PR'd          | pending merge + deploy                                                                                                                                         |
+
+**The single remaining blocker pattern:** URL ✅ + wires ✅ + endpoints ✅ + **DB 🔴 SUSPENDED** = Pattern A canned fallback displays. The 🟡 rows are _not_ broken wires — they inherit #277's correct origin globally but render canned because the DB is down. **DB unlock = full visible verification** (re-run Phase C with real data flips 🟡→✅).
+
+## §10.3 — Phase D verdict (revised — Sun 🔴→🟡)
+
+| Layer                 | Verdict                                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **BE**                | 🟢 **GREEN** — anon curl battery live; cron-gate + `/health/lite` (BE+1's 47th + 48th RCs, banked in BE+1's memory — _not yet on main_; 48th = verify-before-ship) structurally closed via #284 pending merge |
+| **FE**                | 🟢 **GREEN structural** (#277 URL fix live, wires correct per FE+1 probe) · 🟡 **visible pending DB**                                                                                                         |
+| **DB**                | 🔴 **SUSPENDED** (Neon) — Jul 1 auto-reset **OR** Supabase hot-standby failover Sat (plan: `docs/plans/supabase-hot-standby-setup.md`); manual mid-month resume unlikely on a quota-cap suspend               |
+| **Yogesh-test-ready** | **CONDITIONAL on DB.** One DB unlock → Phase C re-run with real data → full GREEN → Sun deep test viable                                                                                                      |
+
+**Sun deep test: 🔴 RED → 🟡 AMBER.** The single remaining gate is the **DB**, not code. Credit: BE+1's verify-before-ship (48th RC) + FE+1's already-fixed-via-#277 live probe + the 41st RC 4-for-4 stale-deploy discipline all converged to move this from RED to a single-gate AMBER.
+
+_§10 appended Fri late after the post-#277 reconciliation. Supersedes §9. The 🟡 rows flip to ✅ when the DB unlocks and Phase C re-runs against real data — nothing flips on stale-deploy theory (41st RC) or URL-inheritance alone (each endpoint still needs its own live render check)._
