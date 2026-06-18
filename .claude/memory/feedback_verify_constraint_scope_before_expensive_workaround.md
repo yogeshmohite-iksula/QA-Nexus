@@ -33,8 +33,8 @@ The expensive workaround was not wrong — Supabase Free is genuinely a free hot
 - `feedback_verify_api_paths_before_consumer_wiring.md` — sibling discipline of verify-before-prescribe against primary source (controller code → Zod). 49th-RC applies the same discipline to vendor constraints (vendor docs).
 - `docs/plans/supabase-hot-standby-setup.md` (PR #285) — NOT obsolete; reframed as the **same-vendor-fails fallback**. Path C keeps it as a viable plan B.
 
-## Ordinal note (Rule 11 — surface, don't resolve)
+## Ordinal note — Yogesh ruling Thu 2026-06-18 evening
 
-This file is filed as **a 49th RC candidate.** A sibling file `feedback_institutional_memory_survives_in_vcs.md` is **also filed as a 49th RC candidate** (the laptop-transition rule, filed the same day). The two are different lessons (constraint-scope verification vs memory-survives-VCS), both real, both worth banking. **The ordinal collision is a known issue** — the canonical 1-N renumber is deferred to the Phase-D RC-ledger reconciliation (see `feedback_metadata_audit_reveals_artifact_issues.md` "Numbering note"). Both files are content-named so the data survives the reconciliation; the ordinal is not asserted as truth in either file.
+**This is the canonical 49th RC** (Yogesh ruling Thu Jun 18 evening after the two-candidates surfacing). Sibling file `feedback_institutional_memory_survives_in_vcs.md` is the **50th RC** (institutional-memory-survives-in-VCS — same day, different lesson). Both files content-named per the metadata-audit precedent; the ordinal collision is **resolved**, not deferred. Full Phase-D 1-N reconciliation across all 50 still pending (see `feedback_metadata_audit_reveals_artifact_issues.md` "Numbering note").
 
 _Authored Thu 2026-06-18. The constraint Yogesh's question surfaced wasn't a bug — it was a missing question I hadn't asked. Adding the question to the discipline so the next blocker class gets it for free._
