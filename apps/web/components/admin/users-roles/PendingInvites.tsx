@@ -2,10 +2,12 @@
 
 'use client';
 
-import type { F27InvitesData } from '@/components/admin/users-roles/types';
+import type { PendingInviteRow } from '@/lib/api/pending-invites-api';
 
 interface Props {
-  data: F27InvitesData;
+  // Sweep C (2026-06-12): structural row type so live GET /api/invitations rows
+  // AND the canned fixture both satisfy it. (Was the frozen F27InvitesData.)
+  data: readonly PendingInviteRow[];
 }
 
 export function PendingInvites({ data }: Props) {
@@ -16,6 +18,11 @@ export function PendingInvites({ data }: Props) {
           Pending invites <span className="ct">· {data.length} pending</span>
         </h2>
       </div>
+      {data.length === 0 ? (
+        <p className="u-email mono" style={{ padding: '4px 2px', color: 'var(--t3)' }}>
+          No pending invites.
+        </p>
+      ) : null}
       <div className="invite-list">
         {data.map((inv) => (
           <div key={inv.email} className="invite-card">

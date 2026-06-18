@@ -5,7 +5,11 @@
 
 import './users-roles-page.css';
 
+import { useEffect, useState } from 'react';
+
 import { AdminShell } from '@/components/admin/admin-shell';
+import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { fetchPendingInvites, type PendingInviteRow } from '@/lib/api/pending-invites-api';
 import {
   F27_RAW,
   F27_STATS,
@@ -27,6 +31,21 @@ import { RoleMatrix } from '@/components/admin/users-roles/RoleMatrix';
 const H1 = F27_RAW.headings.h1[0];
 
 export function UsersRolesPage() {
+  // Sweep C: live pending invites from GET /api/invitations. null = fetch
+  // failed → keep canned fallback; [] = real empty workspace → "No pending
+  // invites". Yogesh's real invite appears here once the API is reachable.
+  const me = useCurrentUser();
+  const [pending, setPending] = useState<PendingInviteRow[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchPendingInvites({ meId: me.id, meName: me.displayName }).then((rows) => {
+      if (alive && rows) setPending(rows);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [me.id, me.displayName]);
+
   return (
     <AdminShell active="users-roles">
       <main className="center" aria-label="Users & Roles page">
@@ -47,7 +66,7 @@ export function UsersRolesPage() {
 
         <CtaBanner data={F27_CTA_BANNER} />
         <TeamRoster data={F27_TEAM_MEMBERS} />
-        <PendingInvites data={F27_PENDING_INVITES} />
+        <PendingInvites data={pending ?? F27_PENDING_INVITES} />
         <RecentActivity data={F27_RECENT_ACTIVITY} />
         <RoleMatrix data={F27_ROLE_MATRIX} />
       </main>
