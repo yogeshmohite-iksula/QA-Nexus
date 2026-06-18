@@ -241,3 +241,46 @@ Every FE bug hypothesized as stale-deploy **was** stale-deploy: **#418 · J (RSC
 **Sun deep test: 🔴 RED → 🟡 AMBER.** The single remaining gate is the **DB**, not code. Credit: BE+1's verify-before-ship (48th RC) + FE+1's already-fixed-via-#277 live probe + the 41st RC 4-for-4 stale-deploy discipline all converged to move this from RED to a single-gate AMBER.
 
 _§10 appended Fri late after the post-#277 reconciliation. Supersedes §9. The 🟡 rows flip to ✅ when the DB unlocks and Phase C re-runs against real data — nothing flips on stale-deploy theory (41st RC) or URL-inheritance alone (each endpoint still needs its own live render check)._
+
+---
+
+# 🟡 §11 — Thu 2026-06-18 evening reframe (Path C + Path B + Fri pivot)
+
+**Six days after §10 was written, the operational picture moved.** This section reconciles the dashboard to Thu Jun 18 evening reality before the Fri WIRE sweep + Fri PM E2E. Verify-before-assert applies: re-run `gh pr list` + `curl /health/lite` + `gh pr view 285 --json state` before treating any §11 claim as current.
+
+## §11.1 — DB strategy: Path C (qa-nexus-2) — Path B in flight Thu eve
+
+The original `qa-nexus` Neon project hit its **per-project** 100 CU-hr cap (the 49th-RC discovery — full lesson at `.claude/memory/feedback_verify_constraint_scope_before_expensive_workaround.md`). Yogesh approved **Path C: same-vendor failover to a 2nd Neon project `qa-nexus-2`** in the same org/region — $0, ~1 hr, no cross-vendor introduction. **PR #285 (Supabase cross-vendor hot-standby plan) CLOSED** Thu PM per the 49th-RC ruling; reframed as recoverable-from-git-history plan B if Path C ever hits the same-vendor cap.
+
+**Path B = the migration mechanism for Path C.** BE+1 is executing the clean-DB migration interleave fix tonight — same migration chain BE+1 needs for the Jul-1 switchback, so the work is dual-use. Switchback plan: when `qa-nexus` auto-resumes Jul 1, flip Render `DATABASE_URL`+`DIRECT_URL` back to it; `qa-nexus-2` stays warm as the same-vendor hot-standby (keep it pinged so it doesn't 7-day auto-pause).
+
+## §11.2 — RC ledger update since §10
+
+| RC                                             | File                                                              | Catch / lesson                                                                                                                                                                                                                             | Status                                   |
+| ---------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| 49th (canonical, Yogesh ruling Thu PM)         | `feedback_verify_constraint_scope_before_expensive_workaround.md` | Verify constraint EXACT scope (per-project vs per-account) before recommending expensive workaround                                                                                                                                        | ✅ banked (PR #287)                      |
+| 50th (renumbered from 49th candidate)          | `feedback_institutional_memory_survives_in_vcs.md`                | Institutional memory must live in VCS + off-device backup, never in agent process state                                                                                                                                                    | ✅ banked (PR #287)                      |
+| **51st (banked by BE+1 Thu evening, pre-E2E)** | `feedback_env_no_stale_no_duplicates_before_migration.md`         | Audit `.env` for stale references AND duplicate keys before any same-vendor env migration. **Caught**: stale OLD `qa-nexus` `DATABASE_URL` + duplicate `DIRECT_URL` BEFORE `prisma migrate deploy` against qa-nexus-2. Caught-not-shipped. | ✅ banked (PR #287)                      |
+| **52nd (candidate)**                           | `feedback_day_29_clean_db_migration_interleave.md` (TBD)          | Day-29 "clean-DB migration interleave" gap surfaced at qa-nexus-2 switchover (cron + migration ordering discipline)                                                                                                                        | 🟡 will bank when BE+1's Path B PR lands |
+
+**Two paired institutional wins from Thu** — 49th (Yogesh's "why Supabase?" caught a 3-4 hr workaround that wasn't needed) + 51st (BE+1's pre-flight `.env` audit caught either a wrong-DB mutation or a silent migration-tool ↔ runtime divergence). Both "ask the cheap question before the expensive action" — that's the discipline arc this week is building.
+
+## §11.3 — Fri Jun 19 pivot (E2E reframed)
+
+**Original tonight (Thu) plan:** migration fix + 4:30-7:30 PM E2E + EOD. **Reframed Thu eve (Yogesh):** migration fix + design prep + handoff progress; **E2E moves to Fri PM**, after FE+1's WIRE sweep ships Fri AM. Rationale: test against the actual pilot-ready state, not a half-wired state (the 73% canned-routes inventory FE+1 produced is the WIRE sweep's work-list). Sat-Sun buffer preserved for fixes + handoff polish.
+
+## §11.4 — Revised pilot-ready ETA + Phase D verdict (deferred)
+
+**Phase D final verdict file** (`docs/audits/2026-06-19-fri-main-prd-conformance-final.md`) gets written Fri evening with real E2E data — NOT tonight. Tonight's EOD (`docs/eod-reports/2026-06-18-thu-migration-fix-eod.md`) closes out Path B + design prep + handoff progress.
+
+**Revised pilot-ready ETA: Fri ~8 PM IST** (post-E2E + any P0/P1 fixes), gating the Sun deep test sign-off or revised-plan-decision. The dashboard cells stay 🟡 until the WIRE sweep wires complete (URL ✅ + wires ✅ + endpoints ✅ + DB ✅ all confirmed live) — same gate definition as §10.
+
+## §11.5 — Cross-links
+
+- **PR #287** — master laptop-transition handoff (the surviving brain; §1 reflects Thu Jun 18 verified state).
+- **PR #286** — ⟦flagged: brief referenced PR #286 as "canned inventory"; verify-before-assert — confirm with FE+1 whether it exists + what its state is before relying on the cite⟧
+- **PR #285** — CLOSED Thu PM (Supabase plan, recoverable from git history; superseded by Path C).
+- **PR #279** — this dashboard (§9 → §10 → §11 evolution).
+- **`docs/handoff/2026-06-21-laptop-transition-master-handoff.md`** — Sun Jun 21 rotation prep + per-agent first-message templates (§3).
+
+_§11 appended Thu 2026-06-18 evening as the E2E-deferred-to-Fri reframe lands. Supersedes §10's "the DB is the single gate" framing — the DB is **closing** via Path B + Path C; the new single gate is the Fri WIRE sweep. The dashboard becomes a live aggregation again Fri AM as wires complete + Phase D verdict drafts Fri evening._
