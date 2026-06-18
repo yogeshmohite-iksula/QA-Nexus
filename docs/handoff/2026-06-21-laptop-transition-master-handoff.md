@@ -10,8 +10,8 @@
 
 ### Repo / git
 
-- **main HEAD = `04c73ea`** (`fix(cron): gate report-aggregate crons to pilot window + /health/lite (#284)`).
-- **7 PRs OPEN against main** (none merged in the 6-day gap since #284):
+- **main HEAD = `ed18027`** (`docs(eod): post day-32 fri fe shakedown-sweep eod report (#280)`). ⟦Re-verified Thu 2026-06-18 ~3:15 PM IST — main advanced past `04c73ea`/#284 since the first §1 write earlier this turn. Re-fetch before acting; this snapshot drifts hourly during active merge waves.⟧
+- **Open PRs against main** (snapshot Thu 2026-06-18 ~3:15 PM IST — re-run `gh pr list --state open --base main` for current truth):
   | PR | Title | Type | Disposition |
   | --- | --- | --- | --- |
   | #278 | sweep B — invite modal starts empty | FE code | review + merge |
@@ -24,17 +24,17 @@
 
 ### Live deploys (the critical truth — merged ≠ deployed)
 
-- **Render API** (`qa-nexus-api.onrender.com`): `/health` → **200, `version: 0.0.1`**; **`/health/lite` → 404**. ⇒ **#284 is merged to main but NOT deployed.** The running instance predates #284 (stale). **ACTION: trigger a Render redeploy of `04c73ea`** (Render dashboard → Manual Deploy → deploy latest commit; confirm `/health/lite` → 200 after). This is the **41st RC stale-deploy pattern, 5th instance** — always confirm the deployed SHA, never assume merge = live.
+- **Render API** (`qa-nexus-api.onrender.com`): `/health` → 200; **`/health/lite` → 200 (✅ #284 IS deployed)** — re-verified Thu ~3:15 PM IST. The earlier "stale Render" finding in this §1 was true at first probe and resolved between the two probes (Render redeployed automatically once #284 landed). **The 41st-RC stale-deploy pattern still applies on every laptop bring-up** — always confirm the deployed SHA against `gh pr view` for the most recent code PR before believing the running instance is current.
 - **Cloudflare Pages FE** (`qa-nexus-web.pages.dev`): last known good = `cb1ed3a` (#277, the 46th-RC prod-baseURL fix; FE+1 live-probed `apiHosts:[onrender.com]`, `callsLocalhost:false`). ⟦TODO-FRI: re-confirm Pages bundle SHA on the new laptop⟧
-- **Neon Postgres DB: SUSPENDED** (quota-cap autosuspend). Manual mid-month resume unlikely; **Jul 1 auto-reset** OR **Supabase hot-standby failover** (plan: `docs/plans/supabase-hot-standby-setup.md`, PR #285). **This is the single remaining gate on the Yogesh deep test** (dashboard §10.3). While suspended, FE renders Pattern A canned fallback (wires are correct; DB is down).
+- **Neon Postgres DB — Path C ACTIVE (Yogesh-approved Thu 2026-06-18 ~3 PM IST):** the original `qa-nexus` project is suspended on its per-project 100-CU-hr cap. **Tonight onward = `qa-nexus-2`, a 2nd Neon project in the same org** (cheap same-vendor failover — Neon Free allows ~100 projects/org, each with its own 100 CU-hr/mo cap; the cap is per-project, not per-account). **Plan:** create `qa-nexus-2` in AWS Singapore → replay migrations + seed Iksula canon (5/30/63/5/25/~158) → flip Render `DATABASE_URL`+`DIRECT_URL` to the new project's URIs → ~1 hr, $0. **Jul 1 switch-back:** `qa-nexus` auto-resumes Jul 1 → flip Render back → `qa-nexus-2` stays as a warm same-vendor hot-standby (keep it pinged so it doesn't idle-pause). **PR #285 (Supabase hot-standby plan) is NOT obsolete** — it remains as the cross-vendor fallback if Path C ever hits the same-vendor cap; reframed as plan B. **49th-RC lesson** (`feedback_verify_constraint_scope_before_expensive_workaround.md`): I had recommended Supabase 3-4 hr migration; Yogesh's "why Supabase?" prompted re-reading Neon docs → discovered the cap was per-project, not per-account. **Same-vendor multi-project beats cross-vendor migration** when the constraint scope is narrower than assumed.
 
 ### Conformance verdict (dashboard §10.3, as of Fri night)
 
-- **BE 🟢 GREEN** (anon battery live; cron-gate + /health/lite structurally closed via #284). **FE 🟢 structural / 🟡 visible-pending-DB** (#277 URL fix live, wires correct). **DB 🔴 SUSPENDED.** **Sun deep test = 🟡 AMBER — single gate = DB.**
+- **BE 🟢 GREEN** (anon battery live; cron-gate + /health/lite **deployed live** via #284 — Render confirmed `/health/lite` 200 Thu 3:15 PM). **FE 🟢 structural / 🟡 visible-pending-DB** (#277 URL fix live, wires correct). **DB 🟡 PATH C IN-FLIGHT** (qa-nexus-2 tonight; Yogesh E2E 4:30-7:30 PM is the live shake-down). **Sun deep test = 🟡 AMBER → flips to 🟢 GREEN if E2E passes + qa-nexus-2 unblocks real data.**
 
 ### Reality-check ledger
 
-- **~48-49 RCs** accumulated (ordinal reconciliation still PENDING — see §6 known-issues). Source of truth = the `feedback_*.md` files in `.claude/memory/` (**25 files, travels with git**) + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest in flight: 46th (deployed-bundle baseURL), 47th/48th (BE+1's cron-gate + verify-before-ship — banked in BE+1's per-machine memory, **not yet on main**), 49th (this doc's rule).
+- **~48-49 RCs** accumulated (ordinal reconciliation PENDING — see §6 known-issues). Source of truth = the `feedback_*.md` files in `.claude/memory/` (**27 files on this branch, travels with git**) + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked: 46th (deployed-bundle baseURL — #279), 47th/48th (BE+1's cron-gate + verify-before-ship — in BE+1's per-machine memory, **not yet on main**), **two 49th-RC candidates filed Thu Jun 18, ordinal collision intentional**: `feedback_institutional_memory_survives_in_vcs.md` (this doc's rule) AND `feedback_verify_constraint_scope_before_expensive_workaround.md` (Path C lesson). Both content-named; reconciliation Phase D.
 
 ---
 
