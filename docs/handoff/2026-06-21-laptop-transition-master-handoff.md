@@ -14,6 +14,7 @@
 - **Open PRs against main** (snapshot Fri 2026-06-19 ~3:45 PM IST — re-run `gh pr list --state open --base main` for current truth):
   | PR | Title | Type | Status |
   | --- | --- | --- | --- |
+  | #295 | 57th RC — projects live from /api/projects + honest empty states | fix/web | OPEN (CI GREEN, awaiting Yogesh merge — P0-F fix) |
   | #290 | BE handoff doc — architecture/contracts/infra/bootstrap | docs/handoff | OPEN (BE+1 finalizing) |
   | #287 | laptop transition master handoff + Path C | docs/handoff | OPEN (this doc — MAIN's branch) |
   | #286 | FE canned-data inventory (STEP 1) | docs/audit | OPEN (FE+1 inventory, historical) |
@@ -37,7 +38,7 @@
 
 ### Reality-check ledger
 
-- **~55 RCs** accumulated (full 1-N reconciliation deferred Phase D). Source of truth = the `feedback_*.md` files in `.claude/memory/` + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked:
+- **~57 RCs** accumulated (full 1-N reconciliation deferred Phase D). Source of truth = the `feedback_*.md` files in `.claude/memory/` + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked:
   - **46th** — `feedback_deployed_bundle_baseurl_verification.md` (PR #279 — Pages bundle prod-baseURL gate).
   - **47th/48th** — BE+1's cron-gate + verify-before-ship (in BE+1's per-machine memory — backed up in BE handoff PR #290).
   - **49th (canonical, Yogesh ruling Thu Jun 18 PM)** — `feedback_verify_constraint_scope_before_expensive_workaround.md` — verify constraint EXACT scope before recommending an expensive workaround.
@@ -46,6 +47,8 @@
   - **53rd (banked Fri Jun 19)** — `feedback_migrate_status_vs_schema_drift.md` — `prisma migrate status` "up to date" ≠ DB matches `schema.prisma`. Run `prisma migrate diff --exit-code` on fresh DBs. Day-32 qa-nexus-2: chain was 3 tables + 17 cols behind.
   - **54th (banked Fri Jun 19)** — `feedback_hard_rule_11_verify_contract_before_consume.md` (user auto-memory) — before wiring FE consumer to BE endpoint, grep `*.controller.ts` for exact HTTP method + route. FE+1 found NO `@Get()` on test-runs → `<ComingSoon>` stubs. ~~Resolved same day by #292 adding the endpoint.~~ The lesson persists: verify contract before consuming. Lineage: 33rd→44th→54th RC.
   - **55th (banked Fri Jun 19 evening)** — `feedback_agent_lane_discipline_flag_cross_domain.md` (user auto-memory) — when a task hits the wrong agent's lane (FE work routed to BE+1), flag cross-domain hazards (design-token hooks, branch collision, visual gate bypass) rather than silently execute. BE+1 correctly refused ACTIVE_RUNS wire → deferred to Sat AM FE+1 warm-up (~15 min). Lineage: 25th→55th RC.
+  - **56th (banked Fri Jun 19 ~8 PM IST)** — `feedback_audit_chain_break_diagnosis_protocol.md` (user auto-memory) — "broken chain" most often = secret mismatch, NOT chain corruption. Diagnostic: walk chain locally with local secret; if clean → Render BETTERAUTH_SECRET ≠ seed-time value. Fix: rotate Render secret to match. BE+1 refuted 3 wrong hypotheses before identifying root cause; 128/128 rows clean locally. Cross-ref: [[feedback_audit_immutability_and_seed_drift]], [[feedback_pilot_seed_pre_launch_pattern]].
+  - **57th (banked Fri Jun 19 ~8 PM IST)** — `feedback_pattern_a_masks_real_data_empty.md` (user auto-memory) — Pattern A adapters must distinguish API-error (show canned fallback) from API-success-but-empty (show honest empty state). `live ?? canned`, never `live.length > 0 ? live : canned`. Also: Requirements 404 from hardcoded UUID (`0fc84fa9` vs seeded `cb7ee262`); project-scoped endpoints must fetch active projectId at runtime. FE+1 PR #295 fixes both. Cross-ref: 46th RC, 54th RC.
 
 ---
 
@@ -301,11 +304,13 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - **Live-verified = network-tab check** — human watches DevTools Network on the live URL, outgoing host = production API origin + 2xx + real data, not canned fallback. Playwright-pass / page-renders ≠ verified (46th RC).
 - **Constraint scope before expensive workaround** — when a quota/limit blocks you, verify its exact scope (per-project vs per-account vs per-region) from primary vendor docs BEFORE proposing a cross-vendor migration (49th RC).
 - **Audit .env for stale refs AND duplicate keys** before any same-vendor env migration (51st RC). Same-vendor URLs look "right enough" that grep-by-vendor misses stale values.
+- **"Broken chain" = secret mismatch first** — when `verify-chain` reports "broken at {hash}", walk the chain locally with the LOCAL secret. If clean → Render secret ≠ seed-time secret. The fix is a ~5-min secret rotation, not a chain repair. Three wrong hypotheses were refuted before identifying the root cause (56th RC).
 
 **Pattern family 2 — Infrastructure economics:**
 
 - **Serverless DB cron-gate** — any unconditional cron/poll/DB-touching healthcheck on <5-min interval keeps Neon compute awake 24/7 → burns the CU-hr cap (47th RC). Gate crons to the operating window; keep healthchecks memory-only.
 - **Pattern A canned fallback masks broken wires** — FE renders fixtures when API calls fail, so a page that "looks fine" may not be hitting the API at all. Network-tab is the only proof (46th RC).
+- **Pattern A must distinguish error vs empty-success** — `live ?? canned`, never `live.length > 0 ? live : canned`. An API returning `{ data: [], total: 0 }` is a SUCCESS with empty results. Show honest empty state ("No queue items"), not fabricated fixture rows. Project-scoped endpoints must fetch active projectId at runtime — a hardcoded UUID produces 404 → triggers canned fallback, compounding the confusion (57th RC).
 
 **Pattern family 3 — Agent coordination:**
 
@@ -351,6 +356,8 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - **52nd-RC candidate** (Day-29 clean-DB migration interleave) — bank when BE+1's Path B PR lands.
 - **Work-log backfill** (Days 9-31) parked on 6 schema acks; token in/out never captured (hook gap) — don't invent.
 - **WIRE sweep in flight** (FE+1 PR #291) — 4 wires + ComingSoon + HERO de-fiction shipped; FE+1 adding ACTIVE_RUNS wire (test-runs list endpoint now live via #292). RECENT_RUNS deferred to Sat if time.
+- **P0-E — Audit HMAC chain broken (56th RC, Fri Jun 19 ~8 PM IST).** `verify-chain` returned "broken at 9e2993e0" on Yogesh's live test. Root cause: BETTERAUTH_SECRET on Render ≠ seed-time secret (NOT chain corruption — 128/128 rows clean locally). Fix: Yogesh rotates Render secret to match seed-time value (~5 min, no re-seed). Status: fix imminent.
+- **P0-F — Pattern A masks real-data-empty (57th RC, Fri Jun 19 ~8 PM IST).** Adapters conflated empty API success with error → showed canned data on live wires. Also: Requirements 404 from hardcoded project UUID. FE+1 PR #295 fixes both (runtime `/api/projects` fetch + adapter three-state pattern). CI GREEN. Status: awaiting merge.
 
 ---
 
@@ -367,9 +374,9 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 
 **Infrastructure:** 5. **Neon Free per-project 100 CU-hr cap** — the cap is per-project, NOT per-account. A second project in the same org resets the counter to 0. Path C (qa-nexus-2) exploits this. 6. **Neon cron-gate** — any DB-touching cron or healthcheck on <5-min interval keeps Neon compute awake 24/7. Gate crons to pilot operating window (10 AM–10 PM IST, 7 days/week). `/health` must be memory-only. 7. **Render Free 15-min cold start** — first request after 15 min idle takes 30-60s. UptimeRobot 5-min keep-alive prevents this during the pilot window. Outside the window, cold starts are expected. 8. **Render Free blocks outbound SMTP** — since Sept 2025. Use Resend HTTP API (ADR-018), not nodemailer/Gmail SMTP. 9. **Better Stack syslog port** — use port 6514 (TLS), not 514 (plaintext). The token goes in the syslog structured-data, not a header. 10. **Cloudflare Pages auto-deploys on main only** — pending PRs are NOT in the deployed bundle. Stale-deploy triage: always confirm the deployed SHA first (41st RC, 5-for-5).
 
-**Backend / NestJS:** 11. **ts-jest mock factory completeness** — `jest.mock(module, factory)` factory must re-export EVERY symbol the test file imports. Omitted export → `undefined` → "X is not a function" (looks like ESM/CJS interop but isn't). 12. **Nest DI module-import vs unit-mock false-green** — adding a controller dep or `@UseGuards` requires the `.module.ts` to `imports: [ExportingModule]`. Unit tests `useValue`-provide it → false green. Only runtime boot (or bogus-DB E2E) catches the missing import. 13. **Prisma two-URL pattern** — `DATABASE_URL` = pooler `:6543` (runtime queries); `DIRECT_URL` = direct `:5432` (migrations only). Mixing them up = silent connection pool exhaustion or migration timeouts. 14. **HMAC audit_log chain** — all state-changing operations must write to the chained audit table (PM1_ERD §3.13). The chain is immutable; a break in the chain = corrupted data. Seed-time secret drift causes a benign row-25 break (documented exception). 15. **BetterAuth session cookies** — cross-site (different registrable domains) needs `SameSite=None` + `Secure` + `Partitioned` + host-only (no `Domain`). The P0-001 root cause was exactly this. `resolveCookieConfig` topology fix in #256.
+**Backend / NestJS:** 11. **ts-jest mock factory completeness** — `jest.mock(module, factory)` factory must re-export EVERY symbol the test file imports. Omitted export → `undefined` → "X is not a function" (looks like ESM/CJS interop but isn't). 12. **Nest DI module-import vs unit-mock false-green** — adding a controller dep or `@UseGuards` requires the `.module.ts` to `imports: [ExportingModule]`. Unit tests `useValue`-provide it → false green. Only runtime boot (or bogus-DB E2E) catches the missing import. 13. **Prisma two-URL pattern** — `DATABASE_URL` = pooler `:6543` (runtime queries); `DIRECT_URL` = direct `:5432` (migrations only). Mixing them up = silent connection pool exhaustion or migration timeouts. 14. **HMAC audit_log chain** — all state-changing operations must write to the chained audit table (PM1_ERD §3.13). The chain is immutable; a break in the chain = corrupted data. Seed-time secret drift causes a benign row-25 break (documented exception). **56th RC addendum:** when `verify-chain` reports "broken at {hash}", walk chain LOCALLY first with the local secret. If clean → the Render BETTERAUTH_SECRET ≠ seed-time secret. Fix: rotate Render secret to match (~5 min), no re-seed. 15. **BetterAuth session cookies** — cross-site (different registrable domains) needs `SameSite=None` + `Secure` + `Partitioned` + host-only (no `Domain`). The P0-001 root cause was exactly this. `resolveCookieConfig` topology fix in #256.
 
-**Frontend / Next.js:** 16. **Pattern A canned fallback** — FE renders fixtures when API calls fail. A page that "looks fine" may not be hitting the API at all. DevTools Network tab is the only proof of real data. 17. **getApiBaseURL()** — defaults to `localhost:3001` when `NEXT_PUBLIC_API_BASE_URL` is missing from Cloudflare Pages BUILD env. This is the 46th RC root cause. Verify the env var is set in Pages Settings → Environment Variables → Production. 18. **AdminShell canonical reference** — F19's React implementation is canonical for shell internals (Day-17 amendment), NOT the v2 HTML. Lucide-react icons retained over HTML's custom SVGs.
+**Frontend / Next.js:** 16. **Pattern A canned fallback** — FE renders fixtures when API calls fail. A page that "looks fine" may not be hitting the API at all. DevTools Network tab is the only proof of real data. **57th RC addendum:** adapters must have THREE states — loading → success (incl. empty-state affordance "No items") → error (canned fallback). `live ?? canned`, never `live.length > 0 ? live : canned`. An API returning `[]` is a success, not a failure. Project-scoped endpoints must fetch active projectId at runtime — hardcoded UUID → 404 → triggers canned, compounding the confusion. 17. **getApiBaseURL()** — defaults to `localhost:3001` when `NEXT_PUBLIC_API_BASE_URL` is missing from Cloudflare Pages BUILD env. This is the 46th RC root cause. Verify the env var is set in Pages Settings → Environment Variables → Production. 18. **AdminShell canonical reference** — F19's React implementation is canonical for shell internals (Day-17 amendment), NOT the v2 HTML. Lucide-react icons retained over HTML's custom SVGs.
 
 **Backend / API contracts:** 16a. ~~**test-runs controller had no @Get list endpoint**~~ — resolved by #292 (`8785c35`). Pre-#292, `test-runs.controller.ts` only had `@Patch` handlers (`start`, `abort`, `report`). FE+1 correctly stubbed ACTIVE_RUNS/RECENT_RUNS as `<ComingSoon>` per 54th RC. Post-#292, `GET /api/test-runs` exists (workspace-scoped, paginated, filterable by status). If you see `<ComingSoon>` on `/home` runs cards, it means FE+1's wire hasn't landed yet — check #291 merge status, not the BE controller.
 
@@ -395,14 +402,18 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - [x] **6:00** — Handoff v4: §1 snapshot → `8785c35`, §5 template fixed (stale SHA + Supabase), §6 54th RC in Pattern family 3, §7 test-runs gotcha (strike-through), RC ledger → 54
 - [x] **~7:00** — 55th RC banked (`feedback_agent_lane_discipline_flag_cross_domain.md`) — agent-lane discipline. BE+1 correctly refused FE-domain ACTIVE_RUNS wire task.
 - [x] **~7:30** — Handoff v5: RC ledger → 55, §6 Pattern family 3 gains 55th RC, dashboard §12.10, Phase D evening update. ACTIVE_RUNS wire = 15-min Sat AM FE+1 warm-up.
-- [ ] **~8:30** — Fri EOD commit + push
+- [x] **~8:15** — #291 merged → `0b3f6f1`. Dashboard §12.11 (FE WIRE sweep complete). Handoff v6.
+- [x] **~9:00** — 56th + 57th RCs banked from Yogesh 8 PM live test. Dashboard §12.12. Phase D PAUSED. P0-E (audit chain) + P0-F (Pattern A empty). Memory files created + refined.
+- [ ] **~9:30** — Aggregate P0 fixes: Render secret rotation (P0-E) + PR #295 merge (P0-F). Phase D → CONDITIONAL. Dashboard §12.13.
+- [ ] **~10:00** — Fri EOD commit + push. Handoff v7.
 
 **Option C (Yogesh, ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E.
 
 ### Sat Jun 20
 
-- [ ] **9:00** — Verify Pages bundle SHA = `0b3f6f1` (auto-deployed from #291 merge). DevTools Network check on `qa-nexus-web.pages.dev`.
-- [ ] **9:15-1:00** — Yogesh E2E orchestration: 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password). MAIN aggregates real-time.
+- [ ] **9:00** — Pre-flight: (1) confirm Render secret rotated (verify-chain PASS on live), (2) confirm PR #295 merged to main (main HEAD advanced), (3) verify Pages bundle SHA current (DevTools Network on `qa-nexus-web.pages.dev`).
+- [ ] **9:15-9:30** — BE+1 P1 fixes if needed (memberCount, activatedAt). Yogesh smoke test.
+- [ ] **10:00-1:00** — Yogesh E2E orchestration: 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password). MAIN aggregates real-time.
 - [ ] **1:00-2:00** — Yogesh lunch
 - [ ] **2:00-5:00** — Aggregate P0 fixes from morning E2E + Phase D verdict fill with real data + handoff polish (§6-§7 with E2E findings)
 - [ ] **5:00-7:00** — Final close-out: verify all branches pushed, Yogesh signs off Phase D
