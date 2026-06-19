@@ -63,6 +63,12 @@ tail -f /tmp/dev.log
 
 # 3) Verify
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/home/   # → 200
+
+# 4) Playwright (needed for visual gate + diff-probe + handoff scripts)
+pnpm --filter web exec playwright install chromium
+
+# 5) Confirm env var resolved
+node -e "console.log(process.env.NEXT_PUBLIC_API_BASE_URL || '(unset — dev defaults to localhost:3001)')"
 ```
 
 Common boot issues:
@@ -133,10 +139,18 @@ Each tool prints a one-page report. Run them in the FE-worktree directory; they 
 
 ### Next BE asks (for next-cycle WIRE work)
 
-1. **`GET /api/test-runs`** workspace list `{ ok, runs, pagination }`. Unblocks /home ActiveRunsCard, F19 Run Console list, F20 Run Results landing.
+> **Update Fri 17:00 — `/api/test-runs` ask was promoted to Option B tonight.** BE+1 is shipping the list endpoint (~5:45 PM signal). When this doc lands on the new laptop, the wire should already be live and ActiveRunsCard/RecentRunsCard will no longer be `<ComingSoon>`. The other three asks remain open.
+
+1. ~~`GET /api/test-runs` workspace list — **shipped tonight per Option B**~~
 2. **`GET /api/test-runs/:id`** detail in `{ ok, run }` envelope (currently the controller returns un-enveloped `{ id, status, startedAt }` from PATCH handlers only).
 3. **`POST /api/admin/config/llm-providers/:id/test-connection`** — unblocks F26m1 "Test connection" wire (today: Pattern A wizard).
 4. **Sprint metadata on `Project`** — unblocks the /home HERO "Sprint 42 · Day 9 of 14" canonical chip (today: dropped).
+
+### Discipline pattern banked tonight — 54th RC (Hard Rule 11 contract verification)
+
+Before wiring any of the 5 Option C surfaces, I greped each BE controller for its actual `@Get` / `@Post` / `@Patch` decorators (not the file-tree path, not the design doc — the real source). Catch: `test-runs.controller.ts` had **only `@Patch(:id/start|result|abort)`** — no list endpoint, no detail-by-id. That prevented 30+ min of dead-end wiring against a non-existent route. Honest `<ComingSoon>` stub shipped instead.
+
+Yogesh then chose Option B (BE+1 ships the list endpoint tonight) so the catch becomes a scope-add rather than a permanent stub. **The Rule 11 pattern stands either way — verify before wire, every time.**
 
 ---
 
@@ -181,6 +195,31 @@ Default debugging instinct: "is this a stale deploy?" Check before anything else
 ### Verify ticket premises before fixing (48th RC)
 
 - Before writing code from a ticket that says "add X to solve Y" — code-verify Y is actually the cause. The proposed fix may target the wrong root.
+
+### New-laptop bootstrap sanity (~5 min total)
+
+After the dev server boots clean, run this smoke sequence to confirm the new machine is wire-equivalent to the previous one:
+
+```bash
+# 1) FE typecheck (the whole workspace)
+pnpm typecheck         # expect "Done" on apps/web, apps/api, and shared
+
+# 2) Lint guard
+pnpm --filter web exec eslint apps/web/lib apps/web/components 2>&1 | tail -5
+
+# 3) Visual gate dry-run (Playwright must be installed per §3 step 4)
+node -e "import('playwright').then(p => p.chromium.launch().then(b => { console.log('playwright OK'); b.close(); }))"
+
+# 4) Live API reachability (signed-in cookie-bearing curl is overkill here;
+#    a plain GET /health proves DNS + Render is awake)
+curl -s https://qa-nexus-2.onrender.com/health | head -c 200
+
+# 5) Build the production bundle once (catches static-export gotchas the
+#    dev server hides)
+pnpm --filter web build
+```
+
+If `pnpm --filter web build` succeeds, you're done bootstrapping. If it fails on a `next/cache` filesystem error, delete `apps/web/.next` and retry — the cache directory is dev-server scoped and doesn't survive a clone.
 
 ---
 
