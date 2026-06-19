@@ -2,7 +2,7 @@
 
 **Audience:** FE+1 (Yogesh) on the new MacBook.
 **Companion doc:** `2026-06-21-laptop-transition-master-handoff.md` (whole project; this file is the FE-only path).
-**Cut date:** Fri 2026-06-19, 4:00 PM IST. State below is what's on `feat/web-fri-wire-sweep-batch-1` after PR #291 + the Option C bundle commit.
+**Cut date:** Fri 2026-06-19, 5:30 PM IST. State below is what's on `feat/web-fri-wire-sweep-batch-1` after PR #291 (Option C + Option B post-#292 runs wire — 9 surfaces live, no `<ComingSoon>` for any data-backed surface).
 
 ---
 
@@ -115,42 +115,44 @@ Each tool prints a one-page report. Run them in the FE-worktree directory; they 
 
 ## 5. WIRE inventory — what's live, what's next
 
-### Live as of 2026-06-19 23:59 (post-Option C bundle)
+### Live as of 2026-06-19 17:30 IST (post-Option C bundle + Option B runs wire)
 
-| Surface                      | Endpoint                                       | File                                                               |
-| ---------------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
-| /home QUEUE defect-triage    | `GET /api/defects`                             | `apps/web/components/home/queue.tsx`                               |
-| /home EVIDENCE_THREAD        | `GET /api/audit?limit=50`                      | `apps/web/components/home/right-rail.tsx`                          |
-| /home HERO greeting          | `useCurrentUser` + `useActiveProject` contexts | `apps/web/components/home/qa-engineer-home.tsx`                    |
-| F27 team roster              | `useAdminUsersList` hook                       | `apps/web/components/admin/users-roles-page.tsx`                   |
-| F27 Recent activity          | `GET /api/audit?limit=50`                      | same                                                               |
-| F27 Pending invites          | `GET /api/invitations`                         | same                                                               |
-| F14 Requirements list        | `GET /api/projects/:projectId/requirements`    | `apps/web/components/requirements/requirements-list-page.tsx`      |
-| F17 Test Cases count         | `GET /api/projects/:projectId/test-cases`      | `apps/web/components/test-cases/test-case-library-placeholder.tsx` |
-| F26m1/F28m1 LLM config count | `GET /api/admin/config/llm-providers`          | `apps/web/components/admin/llm-provider-config-modal.tsx`          |
+| Surface                      | Endpoint                                            | File                                                               |
+| ---------------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| /home HERO greeting          | `useCurrentUser` + `useActiveProject` contexts      | `apps/web/components/home/qa-engineer-home.tsx`                    |
+| /home QUEUE defect-triage    | `GET /api/defects`                                  | `apps/web/components/home/queue.tsx`                               |
+| /home EVIDENCE_THREAD        | `GET /api/audit?limit=50`                           | `apps/web/components/home/right-rail.tsx`                          |
+| /home Active runs            | `GET /api/test-runs?status=running`                 | `apps/web/components/home/outcome-board.tsx` (ActiveRunsCard)      |
+| /home Recent runs            | `GET /api/test-runs` (default sort=started_at_desc) | `apps/web/components/home/outcome-board.tsx` (RecentRunsSection)   |
+| F27 team roster              | `useAdminUsersList` hook                            | `apps/web/components/admin/users-roles-page.tsx`                   |
+| F27 Recent activity          | `GET /api/audit?limit=50`                           | same                                                               |
+| F27 Pending invites          | `GET /api/invitations`                              | same                                                               |
+| F14 Requirements list        | `GET /api/projects/:projectId/requirements`         | `apps/web/components/requirements/requirements-list-page.tsx`      |
+| F17 Test Cases count         | `GET /api/projects/:projectId/test-cases`           | `apps/web/components/test-cases/test-case-library-placeholder.tsx` |
+| F26m1/F28m1 LLM config count | `GET /api/admin/config/llm-providers`               | `apps/web/components/admin/llm-provider-config-modal.tsx`          |
+
+**Total live wires:** 11 surfaces. **No data-backed surface is `<ComingSoon>`.**
 
 ### `<ComingSoon>` (honest deferred — no BE endpoint exists)
 
-- /home Outcome Board · Release risk + AI narrative + **Active runs** (no `/api/test-runs` list endpoint)
-- /home Right Rail · Suggested next + Pinned references
+- /home Outcome Board · Release risk (no release-tracking endpoint)
+- /home Outcome Board · AI narrative (no agent-narrative endpoint)
+- /home Right Rail · Suggested next + Pinned references (no recommender + no pin endpoint)
 - F25 Executive Dashboard (banner over full page)
 - F23 Reports Studio (banner over full page)
 - F26 Agents · Recent Activity + Recent Decisions sections
 
 ### Next BE asks (for next-cycle WIRE work)
 
-> **Update Fri 17:00 — `/api/test-runs` ask was promoted to Option B tonight.** BE+1 is shipping the list endpoint (~5:45 PM signal). When this doc lands on the new laptop, the wire should already be live and ActiveRunsCard/RecentRunsCard will no longer be `<ComingSoon>`. The other three asks remain open.
-
-1. ~~`GET /api/test-runs` workspace list — **shipped tonight per Option B**~~
-2. **`GET /api/test-runs/:id`** detail in `{ ok, run }` envelope (currently the controller returns un-enveloped `{ id, status, startedAt }` from PATCH handlers only).
-3. **`POST /api/admin/config/llm-providers/:id/test-connection`** — unblocks F26m1 "Test connection" wire (today: Pattern A wizard).
-4. **Sprint metadata on `Project`** — unblocks the /home HERO "Sprint 42 · Day 9 of 14" canonical chip (today: dropped).
+1. **`GET /api/test-runs/:id`** detail in `{ ok, run }` envelope (currently the controller returns un-enveloped `{ id, status, startedAt }` from PATCH handlers only). Would unblock the F19 Run Console drill-in path.
+2. **`POST /api/admin/config/llm-providers/:id/test-connection`** — unblocks F26m1 "Test connection" wire (today: Pattern A wizard).
+3. **Sprint metadata on `Project`** — unblocks the /home HERO "Sprint 42 · Day 9 of 14" canonical chip (today: dropped).
 
 ### Discipline pattern banked tonight — 54th RC (Hard Rule 11 contract verification)
 
-Before wiring any of the 5 Option C surfaces, I greped each BE controller for its actual `@Get` / `@Post` / `@Patch` decorators (not the file-tree path, not the design doc — the real source). Catch: `test-runs.controller.ts` had **only `@Patch(:id/start|result|abort)`** — no list endpoint, no detail-by-id. That prevented 30+ min of dead-end wiring against a non-existent route. Honest `<ComingSoon>` stub shipped instead.
+Before wiring any of the 5 Option C surfaces, I greped each BE controller for its actual `@Get` / `@Post` / `@Patch` decorators (not the file-tree path, not the design doc — the real source). Catch: `test-runs.controller.ts` had **only `@Patch(:id/start|result|abort)`** — no list endpoint, no detail-by-id. That prevented 30+ min of dead-end wiring against a non-existent route. Honest `<ComingSoon>` stubs shipped instead.
 
-Yogesh then chose Option B (BE+1 ships the list endpoint tonight) so the catch becomes a scope-add rather than a permanent stub. **The Rule 11 pattern stands either way — verify before wire, every time.**
+Yogesh ratified the pattern: it caught the gap → Option B was chosen → BE+1 shipped `GET /api/test-runs` in #292 (~5:30 PM) → wires landed the same evening (`/home` Active runs + Recent runs are live as of 17:30 IST). **The Rule 11 pattern stands either way — verify before wire, every time. The scope-add round trip cost ~30 min total; the cost of wiring blind against an imagined endpoint would have been a half-shipped PR with broken paths.**
 
 ---
 
