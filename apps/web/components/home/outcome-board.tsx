@@ -3,7 +3,7 @@
 
 'use client';
 
-import { ACTION_QUEUE, ACTIVE_RUNS } from './data';
+import { ACTION_QUEUE } from './data';
 import { ComingSoon } from '@/components/admin/coming-soon';
 
 interface OutcomeBoardProps {
@@ -73,48 +73,18 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 2 — Active runs
+// Card 2 — Active runs (Fri WIRE Option C: BE has no GET /api/test-runs list
+// endpoint — only @Patch(:id/start|result|abort). Falls back to ComingSoon
+// rather than canned ACTIVE_RUNS. Reinstates as a live card once BE adds
+// GET /api/test-runs (list).)
 // ---------------------------------------------------------------------------
 
-function ActiveRunsCard({ onRoute }: { onRoute: (t: string) => void }) {
-  const r = ACTIVE_RUNS;
+function ActiveRunsCard(_props: { onRoute: (t: string) => void }) {
   return (
-    <BoardCard tone="neutral">
-      <div className="flex items-center justify-between">
-        <CardHead label="Active runs" inline />
-        <span className="bg-[var(--pass)]/15 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold text-[var(--pass)]">
-          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[var(--pass)]" />
-          LIVE
-        </span>
-      </div>
-      <div className="flex flex-col gap-1">
-        <span className="font-mono text-[12px] text-[var(--text-tertiary)]">{r.id}</span>
-        <span className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
-          {r.suite}
-        </span>
-      </div>
-      <div className="flex items-baseline justify-between">
-        <span className="text-[13px] text-[var(--text-secondary)]">
-          {r.passed + r.flaky + r.failed} / {r.total} cases
-        </span>
-        <span className="font-mono text-[12px] font-semibold text-[var(--primary)]">
-          {r.percent}%
-        </span>
-      </div>
-      {/* Segmented progress bar */}
-      <div
-        aria-hidden="true"
-        className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--overlay)]"
-      >
-        <span className="bg-[var(--pass)]" style={{ width: `${(r.passed / r.total) * 100}%` }} />
-        <span className="bg-[var(--warn)]" style={{ width: `${(r.flaky / r.total) * 100}%` }} />
-        <span className="bg-[var(--fail)]" style={{ width: `${(r.failed / r.total) * 100}%` }} />
-      </div>
-      <p className="font-mono text-[11px] text-[var(--text-tertiary)]">
-        {r.passed} pass · {r.flaky} flaky · {r.failed} fail · {r.remaining} left
-      </p>
-      <CardCta onClick={() => onRoute('F19-run-console-' + r.id)}>Open Run Console →</CardCta>
-    </BoardCard>
+    <ComingSoon
+      label="Active runs"
+      hint="Live run progress arrives once the run-list endpoint ships."
+    />
   );
 }
 

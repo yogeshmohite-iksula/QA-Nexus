@@ -4,10 +4,11 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import './llm-provider-config-modal.css';
 
+import { fetchLlmProviders, llmProviderToRow, type LlmProviderRow } from '@/lib/api/llm-config-api';
 import {
   F28M1_HEADER,
   F28M1_CONNECTED,
@@ -45,6 +46,24 @@ export function LlmProviderConfigModal() {
     setActiveKey(key);
     setPane(key === 'groq' ? 'groq' : 'wizard');
   };
+
+  // Fri WIRE Option C: live providers via GET /api/admin/config/llm-providers.
+  // Null = fetch failed / non-Admin → canned fallback. The directory rendering
+  // stays canned (BE schema lacks logoCls/sub/etc); the "Connected · N" group
+  // header is the live signal — Admin sees the real count of configured
+  // providers, no more no less.
+  const [liveProviders, setLiveProviders] = useState<LlmProviderRow[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchLlmProviders().then((res) => {
+      if (!alive || !res) return;
+      setLiveProviders(res.providers.map(llmProviderToRow));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const connectedCount = liveProviders ? liveProviders.length : F28M1_CONNECTED.length;
   return (
     <div className="scrim f28m1-scrim" role="presentation">
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="m28-ttl">
@@ -126,7 +145,7 @@ export function LlmProviderConfigModal() {
               </button>
             </div>
             <div className="dir-list">
-              <div className="dir-group">Connected · {F28M1_CONNECTED.length}</div>
+              <div className="dir-group">Connected · {connectedCount}</div>
               {F28M1_CONNECTED.map((p) => (
                 <button
                   key={p.key}

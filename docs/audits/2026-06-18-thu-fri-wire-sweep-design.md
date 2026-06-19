@@ -7,13 +7,16 @@
 
 ## Hard-Rule-11 contracts (verified against backend, file:line cited)
 
-### 1. `api/test-runs` — `test-runs/test-runs.controller.ts:56`
+### 1. `api/test-runs` — `test-runs/test-runs.controller.ts` ⛔ NO LIST ENDPOINT
 
-- Prefix `@Controller('api/test-runs')`. **List endpoint** at `@Get()` is what /home ACTIVE_RUNS + RECENT_RUNS + F19 + F20 consume.
-- **Response shapes vary by route** (44th-RC discipline: read each):
-  - `GET /:id` (detail) → `{ id, status, startedAt }` — **NOT `{ok}`-envelope on some routes.**
-  - `GET /` (list) — need to read the `@Get()` body. Likely `{ items, ... }` or `{ ok, runs, ... }`; Fri AM: open the file, copy the exact return, build schema locally if no shared list response exists yet.
-- **Shared schema:** `TestRunSchema` at `packages/shared/src/schemas/test-run.ts:5` (item only — no list-response schema; compose locally as we did for audit + pending-invites).
+- **Fri PM Hard-Rule-11 catch (2026-06-19):** the controller has ONLY `@Patch(':id/start')`, `@Patch(':id/result')`, `@Patch(':id/abort')` — **no `@Get()`, no `@Get(':id')`, no `@Post()` list.** /home cannot fetch a runs list against this BE state.
+- **Resolution for tonight's WIRE sweep:**
+  - `/home` ActiveRunsCard → swapped to `<ComingSoon label="Active runs" hint="Live run progress arrives once the run-list endpoint ships." />` (honest "no BE list yet" rather than canned `ACTIVE_RUNS`).
+  - `RECENT_RUNS` canned export was never rendered anywhere → left in place as dead code (no behaviour change).
+- **Reinstate as a live card once BE adds:**
+  - `@Get('') @Roles(...)` workspace-scoped list returning `{ ok, runs, pagination }`, **AND**
+  - `@Get(':id') @Roles(...)` detail returning `{ ok, run }` (currently the controller returns an un-enveloped `{ id, status, startedAt }`-shape from PATCH handlers — not a stable read endpoint).
+- **Shared schema:** `TestRunSchema` at `packages/shared/src/schemas/test-run.ts:5` (item only — no list-response schema; compose locally when BE adds the list).
 
 ### 2. `api/audit` — already wired (`audit-api.ts`)
 

@@ -38,6 +38,8 @@ import {
 } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { AgentName } from '@/components/ui/agent-name';
+import { useActiveProject } from '@/lib/contexts/ProjectContext';
+import { fetchRequirements, requirementToRow } from '@/lib/api/requirements-api';
 import { EditRequirementModal } from './edit-requirement-modal';
 import { LinkTestCaseModal } from './link-test-case-modal';
 import {
@@ -267,7 +269,22 @@ export function RequirementsListPage() {
 }
 
 function RequirementsListContent() {
-  const [rows] = useState<Requirement[]>(STUB_REQUIREMENTS);
+  // Fri WIRE Option C: live requirements via GET /api/projects/:projectId/requirements.
+  // Null = fetch pending / failed → canned fallback. Empty live array → empty
+  // honest state (the page already handles 0-row rendering via filter logic).
+  const project = useActiveProject();
+  const [liveRows, setLiveRows] = useState<Requirement[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchRequirements(project.id).then((res) => {
+      if (!alive || !res) return;
+      setLiveRows(res.requirements.map(requirementToRow));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [project.id]);
+  const rows: Requirement[] = liveRows ?? STUB_REQUIREMENTS;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(PRE_SELECTED);
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<Set<Priority>>(new Set());
