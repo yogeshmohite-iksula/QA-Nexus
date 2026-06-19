@@ -154,6 +154,16 @@ Before wiring any of the 5 Option C surfaces, I greped each BE controller for it
 
 Yogesh ratified the pattern: it caught the gap → Option B was chosen → BE+1 shipped `GET /api/test-runs` in #292 (~5:30 PM) → wires landed the same evening (`/home` Active runs + Recent runs are live as of 17:30 IST). **The Rule 11 pattern stands either way — verify before wire, every time. The scope-add round trip cost ~30 min total; the cost of wiring blind against an imagined endpoint would have been a half-shipped PR with broken paths.**
 
+### Discipline pattern banked tonight — 57th RC (empty-vs-null fallback + dynamic project IDs)
+
+Yogesh's 8 PM live test on pages.dev caught two related FE issues. PR [#295](https://github.com/yogeshmohite-iksula/QA-Nexus/pull/295) fixes both — codifying patterns FE+1 should treat as standard from this point forward:
+
+1. **`live ?? canned`, never `live.length > 0 ? live : canned`.** A successful fetch that returns `[]` is real signal — that's the workspace genuinely being empty, and the UI must show that honestly ("No agent activity yet" / "0 members"). The legacy `length > 0 ? live : canned` pattern that the WIRE batches initially shipped silently masked real empty states with stub data — the exact opposite of why Option-B canned-fallback exists. Three sites were retrofitted: `home/right-rail.tsx` (EVIDENCE_THREAD), `admin/users-roles-page.tsx` (roster + activity).
+
+2. **`demo-seed.ts` UUIDs are FALLBACK only.** `ProjectContext` was reading the entire project list (including IDs) from `lib/demo-seed.ts`. That snapshot's UUIDs drifted out of sync the moment BE re-seeded the pilot DB — `useActiveProject().id` then handed out a UUID that didn't exist in the deployed DB, causing `/api/projects/<stale-id>/requirements` 404s on every project-scoped page. Fix: `lib/api/projects-api.ts` adds `fetchWorkspaceProjects()` (Hard Rule 11 against `projects.controller.ts:86`), and `ProjectContext` hydrates from it on mount; `demo-seed` is now the graceful offline fallback (FE renders synchronously, then the live list swaps in once `/api/projects` resolves). The switcher survives the swap because `setActiveProject(slug)` re-resolves against whatever list is currently effective.
+
+**The rule going forward:** for any FE → BE wire, the response shape is the source of truth and an empty response is a valid render. Static FE-side IDs are an anti-pattern for anything that goes to BE.
+
 ---
 
 ## 6. Known gotchas + workarounds
