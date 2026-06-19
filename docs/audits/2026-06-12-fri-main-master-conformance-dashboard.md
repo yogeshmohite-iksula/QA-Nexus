@@ -284,3 +284,48 @@ The original `qa-nexus` Neon project hit its **per-project** 100 CU-hr cap (the 
 - **`docs/handoff/2026-06-21-laptop-transition-master-handoff.md`** — Sun Jun 21 rotation prep + per-agent first-message templates (§3).
 
 _§11 appended Thu 2026-06-18 evening as the E2E-deferred-to-Fri reframe lands. Supersedes §10's "the DB is the single gate" framing — the DB is **closing** via Path B + Path C; the new single gate is the Fri WIRE sweep. The dashboard becomes a live aggregation again Fri AM as wires complete + Phase D verdict drafts Fri evening._
+
+---
+
+## §12 — Fri Jun 19 state update (~12:30 PM IST)
+
+### §12.1 — Main HEAD advanced
+
+- **main = `9059a39`** (from `ed18027`). 3 stale docs-PRs squash-merged during AM ground-truth check:
+  - #279 (46th RC + dashboard §9/§10/§11) — merged, branch deleted
+  - #281 (BE EOD Day 32) — merged, branch deleted
+  - #282 (MAIN Fri evening EOD) — merged, branch deleted
+- **Open PRs:** 2 remaining — #287 (handoff, active), #286 (FE canned inventory, active)
+- **Path B PR:** NOT on main yet. BE+1 still in flight. No `jira_webhook_events` migration commit visible.
+
+### §12.2 — Option A locked (Fri Jun 19)
+
+Yogesh confirmed **Option A — disciplined PM1 scope**. No new features. Focus: WIRE sweep + E2E + handoff. Work autonomously through 8 PM + Sat-Sun. Laptop returned Sun Jun 22.
+
+### §12.3 — Handoff v2 shipped (PR #287)
+
+Master handoff expanded from v1 skeleton to v2 comprehensive:
+
+- **§4** — verified backup paths + tar archive + dual-medium (USB+iCloud) + restore procedure + verification commands
+- **§6** — 51+ RC lessons distilled into 5 pattern families + $0/month gate operational details + Indian RBI e-Mandate + Cowork hang patterns
+- **§7 (NEW)** — 22 known gotchas as one-liner quick-reference cheat sheet
+- **§8 (was §7)** — work-list updated with Fri AM completions
+- **§1** — snapshot refreshed (main `9059a39`, 2 open PRs)
+
+### §12.4 — Gates remaining for pilot-ready verdict
+
+| Gate                                | Status                                | Blocker?                                     |
+| ----------------------------------- | ------------------------------------- | -------------------------------------------- |
+| DB unlocked (qa-nexus-2 via Path C) | 🟡 Path B PR in flight                | YES — blocks all data-layer verification     |
+| Render redeployed with Path B       | 🟡 Waiting on Path B merge            | YES — current deploy has old DB URLs         |
+| FE WIRE sweep                       | 🟡 FE+1 in flight (73% canned → live) | YES — blocks E2E                             |
+| Pages bundle current                | 🟡 After WIRE sweep merges            | YES — network-tab check needs current bundle |
+| E2E test (3 workflows)              | ⬜ Blocked by above 4                 | Yogesh-driven, Fri PM target                 |
+| Phase D verdict                     | ⬜ Blocked by E2E                     | MAIN writes Fri evening                      |
+| Handoff complete                    | 🟢 v2 shipped, §6-§8 populated        | Sat polish only                              |
+
+### §12.5 — Stale-PR triage outcome
+
+All 3 Jun-12 docs PRs were CLEAN/MERGEABLE — no conflicts, no code content, pure historical record. Merged via `gh pr merge --squash --delete-branch`. Main advanced 3 commits. No cascade risk (docs-only).
+
+_§12 appended Fri 2026-06-19 ~12:30 PM IST. Ground-truth check completed; stale PRs cleared; handoff expanded to v2. The single remaining unknown is Path B timing — when BE+1's migration interleave PR lands, the domino chain unlocks: DB → Render redeploy → E2E → Phase D verdict. All prep work is done; we're waiting on the dependency chain now._
