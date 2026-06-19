@@ -6,8 +6,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QUEUE_ROWS, QUEUE_TABS, type QueueRow, type QueueTab } from './data';
+import { fetchDefects } from '@/lib/api/defects-api';
 
 interface QueueProps {
   onRoute: (target: string, entityId?: string) => void;
@@ -16,6 +17,26 @@ interface QueueProps {
 export function Queue({ onRoute }: QueueProps) {
   const [activeTab, setActiveTab] = useState<QueueTab>('all');
   const visible = activeTab === 'all' ? QUEUE_ROWS : QUEUE_ROWS.filter((r) => r.tab === activeTab);
+
+  // Fri WIRE batch 2: live "Defect triage" tab count via fetchDefects.
+  // null = fetch failed → keep canned count. Filter: status === 'new'
+  // (matches the F21 defects-api convention — `new` = needs triage).
+  // Other tabs (AI-reviews, Clarifications) have no endpoint → stay canned.
+  const [liveTriageCount, setLiveTriageCount] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchDefects(1, 100).then((res) => {
+      if (!alive || !res) return;
+      setLiveTriageCount(res.defects.filter((d) => d.status === 'new').length);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const tabs = QUEUE_TABS.map((t) =>
+    t.id === 'defect-triage' && liveTriageCount !== null ? { ...t, count: liveTriageCount } : t,
+  );
 
   return (
     <section aria-labelledby="queue-head" className="flex w-full flex-col gap-3">
@@ -37,7 +58,7 @@ export function Queue({ onRoute }: QueueProps) {
         aria-label="Queue filters"
         className="flex flex-wrap items-center gap-1 border-b border-[var(--border-subtle)]"
       >
-        {QUEUE_TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             role="tab"

@@ -16,6 +16,7 @@
 
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { ComingSoon } from '@/components/admin/coming-soon';
 import { PageHead } from './PageHead';
 import { RegionConfigure, type ReportKindKey, type CanvasState } from './RegionConfigure';
 import { RegionOutputCanvas } from './RegionOutputCanvas';
@@ -70,6 +71,15 @@ export function F23ReportsStudio({ projectSlug }: Props) {
         className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
         style={{ background: 'var(--canvas)' }}
       >
+        <div className="px-4 pt-3 sm:px-6 sm:pt-4">
+          {/* Fri WIRE batch 5: Reports Studio is M5; preview tiles below are
+           *  illustrative. ComingSoon banner declares the surface deferred. */}
+          <ComingSoon
+            label="Reports Studio"
+            hint="Report generation + scheduling are coming in a future release. The preview below shows the canonical layout."
+            variant="inline"
+          />
+        </div>
         <PageHead projectSlug={projectSlug} />
         <RegionConfigure
           activeKind={activeKind}

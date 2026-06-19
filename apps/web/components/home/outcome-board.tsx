@@ -3,7 +3,8 @@
 
 'use client';
 
-import { ACTION_QUEUE, ACTIVE_RUNS, AI_NARRATIVE, RELEASE_RISK } from './data';
+import { ACTION_QUEUE, ACTIVE_RUNS } from './data';
+import { ComingSoon } from '@/components/admin/coming-soon';
 
 interface OutcomeBoardProps {
   onRoute: (target: string) => void;
@@ -121,72 +122,22 @@ function ActiveRunsCard({ onRoute }: { onRoute: (t: string) => void }) {
 // Card 3 — Release risk
 // ---------------------------------------------------------------------------
 
-function ReleaseRiskCard({ onRoute }: { onRoute: (t: string) => void }) {
-  const r = RELEASE_RISK;
-  return (
-    <BoardCard tone="neutral">
-      <div className="flex items-center justify-between">
-        <CardHead label="Release risk" inline />
-        <span className="bg-[var(--warn)]/15 inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[10px] font-bold text-[var(--warn)]">
-          AMBER
-        </span>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        <span className="font-mono text-[12px] text-[var(--text-primary)]">{r.release}</span>
-        <span className="text-[12px] text-[var(--text-tertiary)]">
-          ships in {r.shipsInDays} days
-        </span>
-      </div>
-      <ul className="flex flex-col gap-1.5">
-        {r.rows.map((row) => (
-          <li key={row.id} className="flex items-start gap-2 text-[12px]">
-            <span
-              aria-hidden="true"
-              className={[
-                'mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full',
-                row.severity === 'failing' ? 'bg-[var(--fail)]' : 'bg-[var(--warn)]',
-              ].join(' ')}
-            />
-            <span className="leading-[18px] text-[var(--text-secondary)]">
-              <span className="font-mono text-[11px] text-[var(--text-primary)]">{row.id}</span>{' '}
-              {row.label}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <CardCta onClick={() => onRoute('F25-release-risk-flaky')}>Review flaky tests →</CardCta>
-    </BoardCard>
-  );
+function ReleaseRiskCard(_props: { onRoute: (t: string) => void }) {
+  // Fri WIRE batch 5: no release-tracking endpoint exists → ComingSoon affordance.
+  return <ComingSoon label="Release risk" hint="Release tracking is coming in a future release." />;
 }
 
 // ---------------------------------------------------------------------------
 // Card 4 — AI narrative (violet)
 // ---------------------------------------------------------------------------
 
-function AiNarrativeCard({ onRoute }: { onRoute: (t: string) => void }) {
+function AiNarrativeCard(_props: { onRoute: (t: string) => void }) {
+  // Fri WIRE batch 5: no agent-narrative endpoint exists → ComingSoon.
   return (
-    <BoardCard tone="ai">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--secondary)]">
-          AI narrative
-        </span>
-        <div className="flex items-center gap-1">
-          {AI_NARRATIVE.agents.map((a) => (
-            <span
-              key={a}
-              className="border-[var(--secondary)]/30 bg-[var(--secondary)]/15 inline-flex h-5 items-center rounded border px-1.5 font-mono text-[10px] font-semibold text-[var(--secondary)]"
-            >
-              {a}
-            </span>
-          ))}
-        </div>
-      </div>
-      <p className="text-[14px] font-medium leading-[20px] text-[var(--text-primary)]">
-        {AI_NARRATIVE.body}
-      </p>
-      <p className="text-[12px] leading-[18px] text-[var(--text-secondary)]">{AI_NARRATIVE.sub}</p>
-      <CardCta onClick={() => onRoute(AI_NARRATIVE.routeTarget)}>Review drafts →</CardCta>
-    </BoardCard>
+    <ComingSoon
+      label="AI narrative"
+      hint="Agent-narrated highlights are coming in a future release."
+    />
   );
 }
 
