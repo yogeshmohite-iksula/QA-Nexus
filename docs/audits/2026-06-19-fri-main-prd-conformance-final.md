@@ -118,6 +118,7 @@ _This section populated during E2E orchestration (5-8 PM IST). Each finding logg
 | ----------------------------------------- | ------ | --------------------------------------------------------- |
 | PR #288 (Path B migration) merged         | ✅     | 2026-06-19 09:39:27 UTC                                   |
 | PR #289 (drift corrective) merged         | ✅     | 2026-06-19 09:39:50 UTC                                   |
+| PR #292 (test-runs list endpoint) merged  | ✅     | 2026-06-19 10:39:25 UTC — unblocks ACTIVE_RUNS wire       |
 | Render redeployed with Path B + drift     | ✅     | 2026-06-19 ~09:42 UTC (auto-deploy, uptime 248s at probe) |
 | FE WIRE sweep merged                      | ⬜     |                                                           |
 | Pages bundle current                      | ⬜     |                                                           |

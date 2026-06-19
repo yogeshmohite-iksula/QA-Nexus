@@ -403,3 +403,19 @@ _§12.7 appended Fri 2026-06-19 ~3:45 PM IST. DB + Render gates CLEARED. Two of 
 **Render + Pages:** Both healthy. Render `/health` 200. Pages serving current Next.js bundle.
 
 _§12.8 appended Fri 2026-06-19 ~5:30 PM IST. 54th RC banked. Awaiting Yogesh merge of #291 to advance FE WIRE gate._
+
+### §12.9 — PR #292 merged + 54th RC context shift (~5:45 PM IST)
+
+**PR #292 MERGED** at `8785c35` (2026-06-19 10:39:25 UTC):
+
+- **Title:** `feat(api): add GET /api/test-runs list endpoint (workspace-scoped, paginated, filterable by status)`
+- **Effect:** Unblocks `/home` ACTIVE_RUNS + RECENT_RUNS surfaces. The BE contract gap that the 54th RC caught is now RESOLVED on the producer side.
+- **Main HEAD** advanced: `d0ba367` → `8785c35`.
+
+**54th RC context shift:** When the 54th RC was banked (~5:30 PM), `test-runs.controller.ts` had NO `@Get()` list endpoint — the RC validated that FE+1 correctly stubbed `<ComingSoon>`. Now #292 has added the endpoint. Per Yogesh's decision tonight: FE+1 wires ACTIVE_RUNS only (skip RECENT_RUNS, defer to Sat if time). The 54th RC lesson remains valid — the pattern is "verify contract before consuming," not "the endpoint will never exist."
+
+**Render auto-deploy:** #292 merged to main triggers Render auto-deploy. New `GET /api/test-runs` endpoint will be live once deploy completes (~2-3 min).
+
+**Open PRs (still 4):** #291 (FE WIRE, OPEN — FE+1 adding ACTIVE_RUNS wire), #290 (BE handoff), #287 (master handoff), #286 (FE inventory).
+
+_§12.9 appended Fri 2026-06-19 ~5:45 PM IST. #292 merged = BE test-runs list endpoint live. FE+1 wiring ACTIVE_RUNS in #291. Awaiting #291 final commits + Yogesh merge._
