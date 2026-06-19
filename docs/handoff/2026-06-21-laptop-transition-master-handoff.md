@@ -1,7 +1,7 @@
 # 🔴 MASTER HANDOFF — Laptop / Account Transition (target Sun 2026-06-21)
 
-> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v4 (Fri 2026-06-19 ~6:00 PM IST — §1 snapshot advanced to `8785c35` after #292 merge; 54th RC banked + synthesized in §6/§7; §8 work-list updated; Option C: E2E→Sat AM).
-> **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork _session_ survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
+> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v5 (Fri 2026-06-19 ~7:30 PM IST — 55th RC banked (agent-lane discipline); RC ledger → 55; dashboard §12.10 appended; Phase D evening update; ACTIVE*RUNS wire = 15-min Sat AM FE+1 warm-up before E2E).
+> **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork \_session* survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
 > **Verify-before-assert:** every state claim below was confirmed against `origin/main` + live curl on Thu 2026-06-18 ~3 PM IST. Re-verify before acting — deploys drift (see §1 stale-Render finding).
 
 ---
@@ -38,7 +38,7 @@
 
 ### Reality-check ledger
 
-- **~54 RCs** accumulated (full 1-N reconciliation deferred Phase D). Source of truth = the `feedback_*.md` files in `.claude/memory/` + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked:
+- **~55 RCs** accumulated (full 1-N reconciliation deferred Phase D). Source of truth = the `feedback_*.md` files in `.claude/memory/` + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked:
   - **46th** — `feedback_deployed_bundle_baseurl_verification.md` (PR #279 — Pages bundle prod-baseURL gate).
   - **47th/48th** — BE+1's cron-gate + verify-before-ship (in BE+1's per-machine memory — backed up in BE handoff PR #290).
   - **49th (canonical, Yogesh ruling Thu Jun 18 PM)** — `feedback_verify_constraint_scope_before_expensive_workaround.md` — verify constraint EXACT scope before recommending an expensive workaround.
@@ -46,6 +46,7 @@
   - **51st (banked by BE+1 Thu Jun 18 evening)** — `feedback_env_no_stale_no_duplicates_before_migration.md` — audit `.env` for stale references AND duplicate keys before same-vendor env migration.
   - **53rd (banked Fri Jun 19)** — `feedback_migrate_status_vs_schema_drift.md` — `prisma migrate status` "up to date" ≠ DB matches `schema.prisma`. Run `prisma migrate diff --exit-code` on fresh DBs. Day-32 qa-nexus-2: chain was 3 tables + 17 cols behind.
   - **54th (banked Fri Jun 19)** — `feedback_hard_rule_11_verify_contract_before_consume.md` (user auto-memory) — before wiring FE consumer to BE endpoint, grep `*.controller.ts` for exact HTTP method + route. FE+1 found NO `@Get()` on test-runs → `<ComingSoon>` stubs. ~~Resolved same day by #292 adding the endpoint.~~ The lesson persists: verify contract before consuming. Lineage: 33rd→44th→54th RC.
+  - **55th (banked Fri Jun 19 evening)** — `feedback_agent_lane_discipline_flag_cross_domain.md` (user auto-memory) — when a task hits the wrong agent's lane (FE work routed to BE+1), flag cross-domain hazards (design-token hooks, branch collision, visual gate bypass) rather than silently execute. BE+1 correctly refused ACTIVE_RUNS wire → deferred to Sat AM FE+1 warm-up (~15 min). Lineage: 25th→55th RC.
 
 ---
 
@@ -314,6 +315,7 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - **Independent diagnosis convergence** = high confidence — when two agents converge on the same root cause via different layers, trust the convergence (35th RC). But still verify the FIX empirically.
 - **Cross-worktree .env discipline** — edits MUST target the correct worktree; verify with `pwd` before assuming landed (18th RC).
 - **Chat misroute** — agents MUST verify-before-edit when an incoming brief looks outside their worktree's role (25th RC).
+- **Agent-lane discipline** — when a task hits the wrong agent's lane (FE work routed to BE+1), flag cross-domain hazards (design-token hooks, branch collision, visual gate bypass) rather than silently execute. Surface to Yogesh + stand down on the cross-lane item, continue in-lane work (55th RC). Lineage: 25th→55th.
 - **Cascade discipline** — when squash-merge flips sibling PRs DIRTY, hold+surface, don't force-merge (40th RC).
 
 **Pattern family 4 — Build / test / deploy:**
@@ -392,16 +394,16 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - [x] **5:30** — 54th RC banked (`feedback_hard_rule_11_verify_contract_before_consume.md`) + dashboard §12.8
 - [x] **5:45** — #292 merged to main (`8785c35` — test-runs list endpoint). Dashboard §12.9. Phase D §9 gate updated.
 - [x] **6:00** — Handoff v4: §1 snapshot → `8785c35`, §5 template fixed (stale SHA + Supabase), §6 54th RC in Pattern family 3, §7 test-runs gotcha (strike-through), RC ledger → 54
-- [ ] **~6:15** — Aggregate FE+1 #291 ACTIVE_RUNS wire when pushed
-- [ ] **7:00-8:00** — Pre-Sat-E2E state aggregation: full merged state, Render+Pages SHAs, all systems green
-- [ ] **8:00-9:30** — Handoff final polish (cross-link #288/#289/#290/#291/#292) + Phase D skeleton Sat-ready
-- [ ] **9:30** — Fri EOD report
+- [x] **~7:00** — 55th RC banked (`feedback_agent_lane_discipline_flag_cross_domain.md`) — agent-lane discipline. BE+1 correctly refused FE-domain ACTIVE_RUNS wire task.
+- [x] **~7:30** — Handoff v5: RC ledger → 55, §6 Pattern family 3 gains 55th RC, dashboard §12.10, Phase D evening update. ACTIVE_RUNS wire = 15-min Sat AM FE+1 warm-up.
+- [ ] **~8:30** — Fri EOD commit + push
 
 **Option C (Yogesh, ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E.
 
 ### Sat Jun 20
 
-- [ ] **9:00-1:00** — Yogesh E2E orchestration: 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password). MAIN aggregates real-time.
+- [ ] **9:00** — FE+1 warm-up: ACTIVE_RUNS wire (~15 min, code ready at `608792d`). Yogesh merges #291 after wire lands.
+- [ ] **9:15-1:00** — Yogesh E2E orchestration: 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password). MAIN aggregates real-time.
 - [ ] **1:00-2:00** — Yogesh lunch
 - [ ] **2:00-5:00** — Aggregate P0 fixes from morning E2E + Phase D verdict fill with real data + handoff polish (§6-§7 with E2E findings)
 - [ ] **5:00-7:00** — Final close-out: verify all branches pushed, Yogesh signs off Phase D
@@ -418,4 +420,4 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - [ ] `docs/eod-reports/2026-06-21-sun-laptop-handoff-sign-off.md` written (final EOD)
 - [ ] Confirm post-transition email + GitHub account continuity (yogeshmohite-iksula survives; yogeshcodeshare is personal + unaffected)
 
-_v4 authored Fri 2026-06-19 ~6:00 PM IST by MAIN. Changes from v3: §1 snapshot → `8785c35` (#292 merged — test-runs list endpoint); RC ledger → 54; §5 template fixed (stale SHA `04c73ea` → `8785c35`, Supabase → Path C qa-nexus-2); §6 Pattern family 3 gains 54th RC; §7 gains gotcha 16a (test-runs ~~no @Get~~ resolved by #292); §8 work-list updated with evening completions; known-issues WIRE item updated. Prior changes preserved. Re-verify all §1 state before acting on it._
+_v5 authored Fri 2026-06-19 ~7:30 PM IST by MAIN. Changes from v4: RC ledger → 55 (55th RC: agent-lane discipline); §6 Pattern family 3 gains 55th RC; §8 work-list updated (7:00 + 7:30 completions, remaining items trimmed). Dashboard §12.10 appended. Phase D evening update (§9 ACTIVE_RUNS note, §11 cross-refs → §12.10, RCs 54→55). Prior changes preserved. Re-verify all §1 state before acting on it._

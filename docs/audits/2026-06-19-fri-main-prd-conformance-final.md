@@ -1,7 +1,7 @@
 # Phase D — PRD Conformance Final Verdict
 
 > **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** PRE-SAT FINAL (BE ✅ DB ✅ baselines filled; #292 test-runs endpoint merged; #291 ACTIVE_RUNS wire committed, awaiting merge; E2E verdict cells fill Sat PM)
-> **Inputs:** Dashboard §0-§12.9 · BE+1 audit (#261, #264) + #288/#289/#292 merged · FE+1 audit + P0-A fix (#266) + WIRE sweep #291 (ACTIVE_RUNS wire at `608792d`) · 54 reality-checks · Yogesh Fri live shake-down (H/I/J) · E2E findings (Sat AM)
+> **Inputs:** Dashboard §0-§12.10 · BE+1 audit (#261, #264) + #288/#289/#292 merged · FE+1 audit + P0-A fix (#266) + WIRE sweep #291 (ACTIVE_RUNS wire at `608792d`) · 55 reality-checks · Yogesh Fri live shake-down (H/I/J) · E2E findings (Sat AM)
 > **Binding spec:** PM1_PRD v8.1 · PM1_ERD v2.1 · Decisions A-E (§0)
 > **Verdict definition:** GREEN = pilot-ready, proceed to Sun deep test. CONDITIONAL = pilot-ready with documented workarounds. RED = launch-blocking issues remain.
 > **Option C (Yogesh, Fri ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E. Verdict fills Sat PM.
@@ -114,16 +114,16 @@ _This section populated during E2E orchestration (5-8 PM IST). Each finding logg
 
 ## §9 — Gate status at verdict time
 
-| Gate                                      | Status | Timestamp                                                   |
-| ----------------------------------------- | ------ | ----------------------------------------------------------- |
-| PR #288 (Path B migration) merged         | ✅     | 2026-06-19 09:39:27 UTC                                     |
-| PR #289 (drift corrective) merged         | ✅     | 2026-06-19 09:39:50 UTC                                     |
-| PR #292 (test-runs list endpoint) merged  | ✅     | 2026-06-19 10:39:25 UTC — unblocks ACTIVE_RUNS wire         |
-| Render redeployed (incl #292 test-runs)   | ✅     | 2026-06-19 ~11:00 UTC (uptime 2549s at probe, stable)       |
-| FE WIRE sweep #291 commits ready          | 🟡     | ACTIVE_RUNS + RECENT_RUNS wired at `608792d`; merge pending |
-| Pages bundle current                      | ⬜     |                                                             |
-| E2E 3-workflow test complete              | ⬜     | Sat AM (Option C)                                           |
-| All P0s resolved or documented-workaround | ⬜     |                                                             |
+| Gate                                      | Status | Timestamp                                                                                                             |
+| ----------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------- |
+| PR #288 (Path B migration) merged         | ✅     | 2026-06-19 09:39:27 UTC                                                                                               |
+| PR #289 (drift corrective) merged         | ✅     | 2026-06-19 09:39:50 UTC                                                                                               |
+| PR #292 (test-runs list endpoint) merged  | ✅     | 2026-06-19 10:39:25 UTC — unblocks ACTIVE_RUNS wire                                                                   |
+| Render redeployed (incl #292 test-runs)   | ✅     | 2026-06-19 ~11:00 UTC (uptime 2549s at probe, stable)                                                                 |
+| FE WIRE sweep #291 commits ready          | 🟡     | ACTIVE_RUNS + RECENT_RUNS wired at `608792d`; merge pending. ACTIVE_RUNS wire = 15-min FE+1 Sat AM warm-up before E2E |
+| Pages bundle current                      | ⬜     |                                                                                                                       |
+| E2E 3-workflow test complete              | ⬜     | Sat AM (Option C)                                                                                                     |
+| All P0s resolved or documented-workaround | ⬜     |                                                                                                                       |
 
 ---
 
@@ -143,12 +143,12 @@ _This section populated during E2E orchestration (5-8 PM IST). Each finding logg
 
 ## §11 — Cross-references
 
-- Dashboard: `docs/audits/2026-06-12-fri-main-master-conformance-dashboard.md` (§0-§12.9)
+- Dashboard: `docs/audits/2026-06-12-fri-main-master-conformance-dashboard.md` (§0-§12.10)
 - Deep test prep: `docs/pilot-prep/2026-06-21-sun-deep-test-prep-checklist.md`
 - Handoff: `docs/handoff/2026-06-21-laptop-transition-master-handoff.md` (v4)
-- 54 reality-checks: `.claude/memory/memory.md` (repo index) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory)
+- 55 reality-checks: `.claude/memory/memory.md` (repo index) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory)
 - Binding spec: `QA Nexus/PM1/PM1_PRD/PM1_PRD.md` v8.1 + `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` v2.1
 
 ---
 
-_Phase D skeleton authored Fri 2026-06-19 ~2:00 PM IST. Pre-Sat baseline updated ~6:30 PM IST: #292 merged (test-runs endpoint), FE+1 ACTIVE_RUNS + RECENT_RUNS wire committed in #291 (`608792d`), FR/P0 pre-E2E classes refreshed. Verdict cells (⬜) fill Sat PM after E2E data. The pre-fill ensures Sat AM E2E starts from a current baseline — no catch-up formatting needed._
+_Phase D skeleton authored Fri 2026-06-19 ~2:00 PM IST. Pre-Sat baseline updated ~6:30 PM IST: #292 merged (test-runs endpoint), FE+1 ACTIVE_RUNS + RECENT_RUNS wire committed in #291 (`608792d`), FR/P0 pre-E2E classes refreshed. Evening update ~7:30 PM IST: 55th RC banked (agent-lane discipline), dashboard §12.10 appended, RC ledger 54→55. ACTIVE_RUNS wire = 15-min FE+1 Sat AM warm-up before E2E. Verdict cells (⬜) fill Sat PM after E2E data._
