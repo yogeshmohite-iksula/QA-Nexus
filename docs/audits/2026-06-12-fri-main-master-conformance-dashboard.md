@@ -448,3 +448,43 @@ _§12.9 appended Fri 2026-06-19 ~5:45 PM IST. #292 merged = BE test-runs list en
 **Open PRs (still 4):** #291 (FE WIRE, OPEN), #290 (BE handoff, OPEN), #287 (master handoff, OPEN), #286 (FE inventory, OPEN). All CI green.
 
 _§12.10 appended Fri 2026-06-19 ~7:30 PM IST. 55th RC banked. Evening ship tally: 6/9 wires + 8 ComingSoon + #292 merged + handoff v4 + Phase D pre-filled. Sat AM: FE+1 ACTIVE_RUNS warm-up → #291 merge → E2E._
+
+### §12.11 — PR #291 merged + FE WIRE sweep complete (~8:15 PM IST)
+
+**PR #291 merged** at `0b3f6f1` (squash-merge by Yogesh, Fri ~5:16 PM IST UTC / ~8:15 PM IST processing):
+
+- **main HEAD** advanced: `8785c35` → `0b3f6f1`
+- **Cloudflare Pages** auto-deploy triggered on main merge. Expect bundle SHA = `0b3f6f1` once deploy completes (~2-3 min).
+
+**8 wired surfaces (final count):**
+
+1. F27 team roster → real `/api/users`
+2. `/home` QUEUE defect-triage tab → real `/api/defects`
+3. `/home` EVIDENCE_THREAD → real `/api/audit`
+4. F27 Recent Activity feed → real `/api/audit`
+5. `/home` HERO de-fiction → live `Welcome back, {firstName}` + active project name
+6. `/home` ACTIVE_RUNS → real `GET /api/test-runs` (#292 endpoint)
+7. `/home` RECENT_RUNS → real `GET /api/test-runs` (#292 endpoint)
+8. F14 reqs / F17 test-cases / F26m1 LLM-config wires (bundled in #291 final commits)
+
+**7 ComingSoon stubs (correct affordance — greyed, tap-inert):**
+
+1. `/home` RELEASE_RISK
+2. `/home` AI_NARRATIVE
+3. `/home` SUGGESTED_NEXT
+4. `/home` PINNED_REFS
+5. F23 Reports (inline top banner)
+6. F25 Executive (inline top banner)
+7. F26 Agents Recent Activity + Recent Decisions sections
+
+**Open PRs (down from 4 → 3):**
+
+| PR   | Title                            | Status                            |
+| ---- | -------------------------------- | --------------------------------- |
+| #290 | BE handoff doc                   | OPEN (BE+1 finalizing)            |
+| #287 | laptop transition master handoff | OPEN (this doc — MAIN's branch)   |
+| #286 | FE canned-data inventory         | OPEN (FE+1 inventory, historical) |
+
+**FE status: 🟢 WIRE SWEEP COMPLETE.** All planned wires shipped. Remaining ComingSoon stubs are correct — no BE endpoint exists for those surfaces.
+
+_§12.11 appended Fri 2026-06-19 ~8:15 PM IST. #291 merged at `0b3f6f1`. FE WIRE sweep complete: 8 wired + 7 ComingSoon. Main HEAD advanced. Pages auto-deploy triggered. 3 PRs remain open (#290 BE handoff, #287 master handoff, #286 FE inventory)._

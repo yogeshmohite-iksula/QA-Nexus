@@ -1,7 +1,7 @@
 # 🔴 MASTER HANDOFF — Laptop / Account Transition (target Sun 2026-06-21)
 
-> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v5 (Fri 2026-06-19 ~7:30 PM IST — 55th RC banked (agent-lane discipline); RC ledger → 55; dashboard §12.10 appended; Phase D evening update; ACTIVE*RUNS wire = 15-min Sat AM FE+1 warm-up before E2E).
-> **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork \_session* survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
+> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v6 (Fri 2026-06-19 ~8:15 PM IST — #291 MERGED at `0b3f6f1`; FE WIRE sweep complete (8 wired + 7 ComingSoon); main HEAD advanced; BE+FE+DB all GREEN; E2E = Sat AM).
+> **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork \_session\* survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
 > **Verify-before-assert:** every state claim below was confirmed against `origin/main` + live curl on Thu 2026-06-18 ~3 PM IST. Re-verify before acting — deploys drift (see §1 stale-Render finding).
 
 ---
@@ -10,15 +10,14 @@
 
 ### Repo / git
 
-- **main HEAD = `8785c35`** (advanced from `d0ba367` after #292 merged Fri ~4:10 PM IST; prior: `9059a39` → `d0ba367` after #288 + #289). Re-fetch before acting; this snapshot drifts hourly during active merge waves.
+- **main HEAD = `0b3f6f1`** (advanced from `8785c35` after #291 merged Fri ~8:15 PM IST; prior: `d0ba367` → `8785c35` after #292). Re-fetch before acting; this snapshot drifts hourly during active merge waves.
 - **Open PRs against main** (snapshot Fri 2026-06-19 ~3:45 PM IST — re-run `gh pr list --state open --base main` for current truth):
   | PR | Title | Type | Status |
   | --- | --- | --- | --- |
-  | #291 | FE WIRE sweep — 4 wires + ComingSoon + HERO de-fiction | feat/web | OPEN (FE+1 — batch 1 of 2; expanding tonight) |
   | #290 | BE handoff doc — architecture/contracts/infra/bootstrap | docs/handoff | OPEN (BE+1 finalizing) |
   | #287 | laptop transition master handoff + Path C | docs/handoff | OPEN (this doc — MAIN's branch) |
   | #286 | FE canned-data inventory (STEP 1) | docs/audit | OPEN (FE+1 inventory, historical) |
-- **Merged Fri PM:** #292 (`8785c35` — `GET /api/test-runs` list endpoint, unblocks ACTIVE_RUNS wire), #288 (`4c1a7aa` — jira_webhook_events migration, Path B), #289 (`d0ba367` — clean-DB schema drift corrective, 3 tables + 17 cols + 6 enum + 21 FK).
+- **Merged Fri PM:** #291 (`0b3f6f1` — FE WIRE sweep: 8 wired surfaces + 7 ComingSoon, ACTIVE_RUNS + RECENT_RUNS included), #292 (`8785c35` — `GET /api/test-runs` list endpoint), #288 (`4c1a7aa` — jira_webhook_events migration, Path B), #289 (`d0ba367` — clean-DB schema drift corrective, 3 tables + 17 cols + 6 enum + 21 FK).
 - **Merged Fri AM (stale-PR triage):** #279 (46th RC docs), #281 (BE EOD Day 32), #282 (MAIN Fri evening EOD) — all squash-merged, branches deleted.
 - **Closed:** #285 (Supabase hot-standby) — closed Thu per 49th-RC ruling; Path C supersedes; recoverable from git history.
 - **Previously merged (Thu+earlier):** #277 (prod-baseURL fix), #278 (sweep B), #280 (FE EOD), #283 (sweep C), #284 (cron-gate fix).
@@ -26,15 +25,15 @@
 ### Live deploys (the critical truth — merged ≠ deployed)
 
 - **Render API** (`qa-nexus-api.onrender.com`): `/health` → 200; `/health/lite` → 200. Latest auto-deploy from #292 merge (~4:10 PM IST) includes `GET /api/test-runs` list endpoint + Path B migration (#288) + full drift corrective (#289). **The 41st-RC stale-deploy pattern still applies on every laptop bring-up** — always confirm the deployed SHA against `gh pr view` for the most recent code PR before believing the running instance is current.
-- **Cloudflare Pages FE** (`qa-nexus-web.pages.dev`): last known good = `cb1ed3a` (#277, the 46th-RC prod-baseURL fix). ⟦Pending: FE+1 WIRE sweep #291 merge → auto-deploy → re-verify Pages bundle SHA⟧
+- **Cloudflare Pages FE** (`qa-nexus-web.pages.dev`): #291 merged at `0b3f6f1` — auto-deploy triggered. Expected bundle SHA = `0b3f6f1` once deploy completes. ⟦Verify: Pages deploy SHA matches `0b3f6f1` before Sat AM E2E⟧
 - **Neon Postgres DB — Path C ACTIVE + VERIFIED:** `qa-nexus-2` is live with full migration chain (#288 + #289 applied), base seed (5/30/63/5/25/~158) + pilot seed complete, RLS + HNSW + audit-trigger verified. Original `qa-nexus` auto-resumes Jul 1 → flip Render back → `qa-nexus-2` stays as warm hot-standby. **53rd-RC lesson** (`feedback_migrate_status_vs_schema_drift.md`): `prisma migrate status` "up to date" does NOT mean DB matches `schema.prisma` — always run `prisma migrate diff --exit-code` on fresh DBs. **49th-RC lesson** (`feedback_verify_constraint_scope_before_expensive_workaround.md`): Neon cap is per-project not per-account; same-vendor multi-project beats cross-vendor migration.
 
-### Conformance verdict (dashboard §12.9, as of Fri ~6:00 PM IST)
+### Conformance verdict (dashboard §12.11, as of Fri ~8:15 PM IST)
 
 - **BE ✅ GREEN** — anon battery live; #288 (Path B) + #289 (drift corrective) + #292 (test-runs list) merged; Render auto-deployed with all three.
 - **DB ✅ GREEN** — qa-nexus-2 fully seeded (5/30/63/5/25/~158), RLS + HNSW + audit-trigger verified, migration chain clean.
-- **FE 🟡 WIRE SWEEP IN-FLIGHT** — PR #291 (4 wires + ComingSoon + HERO de-fiction) open; FE+1 adding ACTIVE_RUNS wire (skip RECENT_RUNS, defer to Sat if time).
-- **E2E reframed Fri PM (Option C):** pushed to Sat AM clean 3-workflow E2E after all wires land. Tonight = ship everything + handoff polish. **Revised pilot-ready ETA: Sat PM after E2E.**
+- **FE ✅ WIRE SWEEP COMPLETE** — #291 MERGED (`0b3f6f1`): 8 wired surfaces + 7 ComingSoon. ACTIVE_RUNS + RECENT_RUNS included. Pages auto-deploy triggered.
+- **E2E reframed Fri PM (Option C):** Sat AM clean 3-workflow E2E. All wires landed. **Revised pilot-ready ETA: Sat PM after E2E.**
 
 ### Reality-check ledger
 
@@ -402,7 +401,7 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 
 ### Sat Jun 20
 
-- [ ] **9:00** — FE+1 warm-up: ACTIVE_RUNS wire (~15 min, code ready at `608792d`). Yogesh merges #291 after wire lands.
+- [ ] **9:00** — Verify Pages bundle SHA = `0b3f6f1` (auto-deployed from #291 merge). DevTools Network check on `qa-nexus-web.pages.dev`.
 - [ ] **9:15-1:00** — Yogesh E2E orchestration: 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password). MAIN aggregates real-time.
 - [ ] **1:00-2:00** — Yogesh lunch
 - [ ] **2:00-5:00** — Aggregate P0 fixes from morning E2E + Phase D verdict fill with real data + handoff polish (§6-§7 with E2E findings)
@@ -420,4 +419,4 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - [ ] `docs/eod-reports/2026-06-21-sun-laptop-handoff-sign-off.md` written (final EOD)
 - [ ] Confirm post-transition email + GitHub account continuity (yogeshmohite-iksula survives; yogeshcodeshare is personal + unaffected)
 
-_v5 authored Fri 2026-06-19 ~7:30 PM IST by MAIN. Changes from v4: RC ledger → 55 (55th RC: agent-lane discipline); §6 Pattern family 3 gains 55th RC; §8 work-list updated (7:00 + 7:30 completions, remaining items trimmed). Dashboard §12.10 appended. Phase D evening update (§9 ACTIVE_RUNS note, §11 cross-refs → §12.10, RCs 54→55). Prior changes preserved. Re-verify all §1 state before acting on it._
+_v6 authored Fri 2026-06-19 ~8:15 PM IST by MAIN. Changes from v5: §1 snapshot → `0b3f6f1` (#291 merged — FE WIRE sweep complete); #291 moved from OPEN to merged-Fri-PM; Pages deploy note updated; conformance → §12.11 + FE ✅ GREEN; Sat AM schedule: Pages verify replaces FE+1 warm-up (ACTIVE_RUNS already shipped). Dashboard §12.11 appended. Phase D final pre-E2E update (FR-003/006/010 → 🟢 merged, P0-B → merged, §9 #291 gate ✅). Prior changes preserved. Re-verify all §1 state before acting on it._
