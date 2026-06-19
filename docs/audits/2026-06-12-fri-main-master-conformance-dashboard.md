@@ -329,3 +329,35 @@ Master handoff expanded from v1 skeleton to v2 comprehensive:
 All 3 Jun-12 docs PRs were CLEAN/MERGEABLE — no conflicts, no code content, pure historical record. Merged via `gh pr merge --squash --delete-branch`. Main advanced 3 commits. No cascade risk (docs-only).
 
 _§12 appended Fri 2026-06-19 ~12:30 PM IST. Ground-truth check completed; stale PRs cleared; handoff expanded to v2. The single remaining unknown is Path B timing — when BE+1's migration interleave PR lands, the domino chain unlocks: DB → Render redeploy → E2E → Phase D verdict. All prep work is done; we're waiting on the dependency chain now._
+
+### §12.6 — BE+1 morning wins + 53rd RC banked (~1:30 PM IST)
+
+**BE+1 shipped:**
+
+- **PR #288** (`fix/be-day29-jira-webhook-events-create-migration`) — Path B clean-DB migration interleave fix. Status: OPEN, awaiting Yogesh merge.
+- **PR #289** (drift corrective migration) — referenced by Yogesh but NOT visible in `gh pr list --state open` as of 1:30 PM. Either merged, combined into #288, or not yet pushed. ⟦Flagged for Yogesh verification — do not assume state.⟧
+- **qa-nexus-2 verification** — BE+1 confirmed the Path C Neon project is active and migration chain runs clean after Path B fix.
+
+**53rd RC banked** (`feedback_migrate_status_vs_schema_drift.md`):
+
+- `prisma migrate status` reports "up to date" even when DB ↔ `schema.prisma` drift exists from `db push` history. Must run `prisma migrate diff --exit-code` on fresh DBs to catch silent gaps (exit 2 = drift).
+- Root cause: Day-32 qa-nexus-2 Path C switchover — chain was 3 tables + 17 columns behind `schema.prisma`. All added via `db push` on old `qa-nexus`, never captured as migrations.
+- Fix: idempotent corrective migration (IF NOT EXISTS everywhere). Cross-ref: 51st RC (env stale/dup audit), audit immutability memory.
+- Indexed in: `.claude/memory/memory.md` (repo) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory).
+
+**Revised gates (supersedes §12.4):**
+
+| Gate                                | Status                                          | Blocker?                                     |
+| ----------------------------------- | ----------------------------------------------- | -------------------------------------------- |
+| DB unlocked (qa-nexus-2 via Path C) | 🟡 PR #288 OPEN, awaiting merge                 | YES — blocks all data-layer verification     |
+| PR #289 drift migration             | ❓ Not visible in open PRs — verify with Yogesh | Depends — may be in #288 or already merged   |
+| Render redeployed with Path B       | 🟡 Waiting on PR #288 merge + manual deploy     | YES — current deploy has old DB URLs         |
+| FE WIRE sweep                       | 🟡 FE+1 in flight (73% canned → live)           | YES — blocks E2E                             |
+| Pages bundle current                | 🟡 After WIRE sweep merges                      | YES — network-tab check needs current bundle |
+| E2E test (3 workflows)              | ⬜ Blocked by above gates                       | Yogesh-driven, 5 PM target                   |
+| Phase D verdict                     | ⬜ Blocked by E2E                               | MAIN writes 8-9 PM                           |
+| Handoff complete                    | 🟢 v2 shipped, §6-§8 populated                  | Sat polish only                              |
+
+**E2E start target: 5 PM IST** — contingent on PR #288 merge + Render redeploy + FE WIRE sweep landing.
+
+_§12.6 appended Fri 2026-06-19 ~1:30 PM IST. 53rd RC closes the prisma-migrate-status-vs-schema-drift class. PR #289 status flagged for Yogesh clarification — the domino chain is PR #288 → merge → Render redeploy → E2E → Phase D._
