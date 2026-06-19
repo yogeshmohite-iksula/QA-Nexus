@@ -181,11 +181,13 @@ DB append-only triggers (UPDATE/DELETE → P0001, **verified live on qa-nexus-2*
 break is **benign seed-time secret drift**, documented-as-exception (memory
 `feedback_audit_immutability_and_seed_drift`). Verify chain via `pnpm --filter @qa-nexus/api verify:audit`.
 
-### 4.4 In-flight PRs (must merge for a complete fresh-DB build)
+### 4.4 Migration PRs (Day-29 db-push-drift closure) — MERGED + production-verified
 
-- **#288** `fix/be-day29-jira-webhook-events-create-migration` — backfills the missing `CREATE TABLE jira_webhook_events`.
-- **#289** `fix/be-day29-align-clean-db-schema-drift` — the §4.2 idempotent corrective migration.
-- Both close the Day-29 ledger item "clean-DB migration interleave / db-push drift". Idempotent → safe on the populated DB.
+- **#288** `fix/be-day29-jira-webhook-events-create-migration` — backfills the missing `CREATE TABLE jira_webhook_events`. **MERGED 2026-06-19.**
+- **#289** `fix/be-day29-align-clean-db-schema-drift` — the §4.2 idempotent corrective migration. **MERGED 2026-06-19.**
+- Both close the Day-29 ledger item "clean-DB migration interleave / db-push drift". Idempotent → safe no-op on the populated DB.
+- **Production-verified end-to-end:** after merge, Render auto-redeployed; the fresh instance booted (`/health/lite` 200, uptime ~66s), which **proves the build's `prisma migrate deploy` succeeded** — a failed migration = failed build = no new instance (old one keeps serving with high uptime). The fix is validated in production, not just on the local sandbox.
+- Companion handoff PRs: **#290** (this doc) · **#287** (MAIN master handoff).
 
 ### 4.5 Hard rules that bite the backend
 
