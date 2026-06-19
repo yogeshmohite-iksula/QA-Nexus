@@ -114,10 +114,15 @@ a ledger saying "LIVE" is not proof (39th RC, memory `feedback_audit_doc_live_cl
 
 ### 3.3 Env vars (names only — **values live in Render env vars + GitHub Secrets, never the repo**, Rule 6)
 
+Actual names per `apps/api/.env.example` (the canonical template — the LLM keys use
+provider-agnostic naming, **not** `GROQ_API_KEY`/`GEMINI_API_KEY`):
 `DATABASE_URL` (pooled, runtime) · `DIRECT_URL` (direct, **migrations only**, no `-pooler`) ·
-`BETTER_AUTH_SECRET` (≥32 chars — also the audit HMAC key) · `GROQ_API_KEY` · `GEMINI_API_KEY` ·
-`RESEND_API_KEY` · `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` · `R2_ACCOUNT_ID` · `R2_BUCKET` ·
-`CLOUDFLARE_API_TOKEN` · `EMBEDDING_MODEL_ID` (hot-swap embedding model). Full list: `apps/api/.env.example` (placeholders only).
+`BETTER_AUTH_SECRET` (≥32 chars — also the audit HMAC key) · `BETTER_AUTH_URL` · `BETTER_AUTH_COOKIE_DOMAIN` ·
+`ADMIN_SEED_EMAIL` · `LLM_PRIMARY_PROVIDER`/`LLM_PRIMARY_MODEL`/`LLM_PRIMARY_API_KEY` (Groq) ·
+`LLM_SECONDARY_PROVIDER`/`LLM_SECONDARY_MODEL`/`LLM_SECONDARY_API_KEY` (Gemini fallback) ·
+`LLM_LONG_CONTEXT_PROVIDER`/`LLM_LONG_CONTEXT_MODEL`/`LLM_LONG_CONTEXT_THRESHOLD_TOKENS` ·
+`RESEND_API_KEY` · `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` · `R2_BUCKET` · `R2_ENDPOINT` ·
+`EMBEDDING_MODEL_ID` (hot-swap embedding model) · `NODE_ENV` · `PORT`. Full list: `apps/api/.env.example` (placeholders only).
 
 Prisma datasource (`schema.prisma`): `url = env("DATABASE_URL")` + `directUrl = env("DIRECT_URL")`.
 ⚠️ Local `.env` may carry duplicate keys — Prisma's loader keeps the **last** occurrence. zsh cannot
