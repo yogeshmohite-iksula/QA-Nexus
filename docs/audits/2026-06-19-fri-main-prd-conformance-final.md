@@ -1,7 +1,7 @@
 # Phase D — PRD Conformance Final Verdict
 
-> **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** PRE-SAT FINAL (BE ✅ DB ✅ baselines filled; #292 test-runs endpoint merged; #291 ACTIVE_RUNS wire committed, awaiting merge; E2E verdict cells fill Sat PM)
-> **Inputs:** Dashboard §0-§12.11 · BE+1 audit (#261, #264) + #288/#289/#291/#292 merged · FE+1 audit + P0-A fix (#266) + WIRE sweep #291 MERGED (`0b3f6f1` — 8 wires + 7 ComingSoon) · 55 reality-checks · Yogesh Fri live shake-down (H/I/J) · E2E findings (Sat AM)
+> **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** 🔴 VERDICT PAUSED — P0 audit-chain break (56th RC) blocks GREEN. E2E blocked until chain repair + verify-chain PASS. Sat AM ETA depends on BE+1 overnight fix.
+> **Inputs:** Dashboard §0-§12.12 · BE+1 audit (#261, #264) + #288/#289/#291/#292 merged · FE+1 audit + P0-A fix (#266) + WIRE sweep #291 MERGED (`0b3f6f1` — 8 wires + 7 ComingSoon) · 57 reality-checks (56th+57th from Yogesh 8 PM live test) · E2E findings (blocked)
 > **Binding spec:** PM1_PRD v8.1 · PM1_ERD v2.1 · Decisions A-E (§0)
 > **Verdict definition:** GREEN = pilot-ready, proceed to Sun deep test. CONDITIONAL = pilot-ready with documented workarounds. RED = launch-blocking issues remain.
 > **Option C (Yogesh, Fri ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E. Verdict fills Sat PM.
@@ -61,12 +61,12 @@
 
 ## §4 — Non-functional requirements verdict
 
-| NFR     | Requirement               | Pre-E2E status               | E2E verdict | Evidence                                                 |
-| ------- | ------------------------- | ---------------------------- | ----------- | -------------------------------------------------------- |
-| NFR-001 | Responsive UI (≥320px)    | Enforced (Rule 12 + hooks)   | ⬜          | Verify: 320px + 1440px screenshots, no horizontal scroll |
-| NFR-002 | RBAC enforcement          | BE PASS, FE client-only      | ⬜          | Verify: role-gated endpoints reject unauthorized         |
-| NFR-003 | Audit trail (HMAC chain)  | PASS proven live (~158 rows) | ⬜          | Verify: F28 shows real audit count, HMAC badge intact    |
-| NFR-004 | Performance (A1 p50 ≤18s) | Unmeasured (P2)              | ⬜          | Measure: Groq response time on A1 generation             |
+| NFR     | Requirement               | Pre-E2E status             | E2E verdict | Evidence                                                                               |
+| ------- | ------------------------- | -------------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| NFR-001 | Responsive UI (≥320px)    | Enforced (Rule 12 + hooks) | ⬜          | Verify: 320px + 1440px screenshots, no horizontal scroll                               |
+| NFR-002 | RBAC enforcement          | BE PASS, FE client-only    | ⬜          | Verify: role-gated endpoints reject unauthorized                                       |
+| NFR-003 | Audit trail (HMAC chain)  | 🔴 BROKEN (56th RC)        | ⬜          | verify-chain broken at 9e2993e0. F28 shows "BROKEN HMAC-verified". BE+1 investigating. |
+| NFR-004 | Performance (A1 p50 ≤18s) | Unmeasured (P2)            | ⬜          | Measure: Groq response time on A1 generation                                           |
 
 ---
 
@@ -79,6 +79,8 @@
 | P0-C  | Fictional names in F14/F21 (Priya/Ravi) | Canned-data swap path (Dec E) | ⬜         | FE+1        | TBD       | ⬜                       |
 | P0-D  | Invite flow not functional              | M1-mandated (Dec A)           | ⬜         | BE+1 + FE+1 | TBD       | ⬜                       |
 | P0-DB | DB unlocked (qa-nexus-2 Path C)         | ✅ #288+#289 MERGED `d0ba367` | ✅ CLEARED | BE+1        | #288+#289 | ✅ Render `/health` 200  |
+| P0-E  | Audit HMAC chain broken (56th RC)       | 🔴 BROKEN at 9e2993e0         | ⬜         | BE+1        | TBD       | ⬜                       |
+| P0-F  | Pattern A masks real-data-empty (57th)  | 🔴 canned shown on live wires | ⬜         | FE+1        | TBD       | ⬜                       |
 
 ---
 
@@ -143,12 +145,12 @@ _This section populated during E2E orchestration (5-8 PM IST). Each finding logg
 
 ## §11 — Cross-references
 
-- Dashboard: `docs/audits/2026-06-12-fri-main-master-conformance-dashboard.md` (§0-§12.11)
+- Dashboard: `docs/audits/2026-06-12-fri-main-master-conformance-dashboard.md` (§0-§12.12)
 - Deep test prep: `docs/pilot-prep/2026-06-21-sun-deep-test-prep-checklist.md`
-- Handoff: `docs/handoff/2026-06-21-laptop-transition-master-handoff.md` (v4)
-- 55 reality-checks: `.claude/memory/memory.md` (repo index) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory)
+- Handoff: `docs/handoff/2026-06-21-laptop-transition-master-handoff.md` (v6)
+- 57 reality-checks: `.claude/memory/memory.md` (repo index) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory)
 - Binding spec: `QA Nexus/PM1/PM1_PRD/PM1_PRD.md` v8.1 + `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` v2.1
 
 ---
 
-_Phase D skeleton authored Fri 2026-06-19 ~2:00 PM IST. Pre-Sat baseline updated ~6:30 PM IST. Evening update ~7:30 PM IST: 55th RC banked. **Final pre-E2E update ~8:15 PM IST:** #291 MERGED at `0b3f6f1` — 8 wired surfaces + 7 ComingSoon. FR-003/006/010 upgraded to 🟢 merged. P0-B wire merged. All §9 gates GREEN except Pages bundle verify + E2E (Sat AM). Dashboard through §12.11. Verdict cells (⬜) fill Sat PM after E2E data._
+_Phase D skeleton authored Fri 2026-06-19 ~2:00 PM IST. Pre-Sat baseline updated ~6:30 PM IST. Evening ~7:30 PM: 55th RC. ~8:15 PM: #291 merged. **~9:00 PM IST: VERDICT PAUSED.** 56th RC (P0 audit-chain break at 9e2993e0) + 57th RC (Pattern A masks real-data-empty) from Yogesh 8 PM live test. P0-E + P0-F added to §5. NFR-003 downgraded to 🔴 BROKEN. E2E blocked until chain repair. Dashboard through §12.12. Sat AM ETA depends on overnight BE+1 fix._
