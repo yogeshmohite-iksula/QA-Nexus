@@ -388,3 +388,18 @@ _§12.6 appended Fri 2026-06-19 ~1:30 PM IST. 53rd RC closes the prisma-migrate-
 **Domino chain tonight:** FE+1 ships expanded #291 → Yogesh reviews/merges → Pages auto-deploys → all systems green for Sat AM E2E.
 
 _§12.7 appended Fri 2026-06-19 ~3:45 PM IST. DB + Render gates CLEARED. Two of seven gates remaining (FE WIRE + Pages deploy). Option C moves E2E to Sat AM — tonight is ship-everything + handoff-polish._
+
+### §12.8 — 54th RC banked + Phase 1 standby (~5:30 PM IST)
+
+**54th RC banked** (`feedback_hard_rule_11_verify_contract_before_consume.md` — user auto-memory):
+
+- FE+1's pre-wire contract grep of `test-runs.controller.ts` found NO `@Get()` list endpoint — only `@Patch()` handlers (`start`, `abort`, `report`). Saved ~30 min dead-end wiring + a fake adapter.
+- ACTIVE_RUNS + RECENT_RUNS cards → `<ComingSoon>` stubs instead. Correct outcome via Hard Rule 11 applied at the FE agent level.
+- Lineage: 33rd RC (verify paths before prescribing) → 44th RC (bank blocked window) → **54th RC (verify contract before consuming)**.
+- Indexed in: `.claude/memory/memory.md` (repo, line 55) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory, line 26).
+
+**PR #291 status:** Still OPEN as of ~5:30 PM IST. Yogesh has not yet merged. 4 open PRs unchanged (#291, #290, #287, #286). Main HEAD remains `d0ba367`.
+
+**Render + Pages:** Both healthy. Render `/health` 200. Pages serving current Next.js bundle.
+
+_§12.8 appended Fri 2026-06-19 ~5:30 PM IST. 54th RC banked. Awaiting Yogesh merge of #291 to advance FE WIRE gate._
