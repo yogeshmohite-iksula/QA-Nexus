@@ -51,23 +51,33 @@ export function UsersRolesPage() {
 
   // Fri WIRE batch 1: live team roster via the existing useAdminUsersList
   // hook (TanStack Query, 30s staleTime). isError / undefined → canned
-  // fallback. Empty API users → empty roster (honest empty state).
+  // fallback. Empty live → honest empty roster (the page-level TeamRoster
+  // component renders an empty state cleanly).
+  //
+  // 57th-RC fix: previously, an empty live roster fell back to canned
+  // F27_TEAM_MEMBERS — masking the real "no users yet" state with stub
+  // data. Now: live result wins as soon as the hook resolves (even if []);
+  // canned only renders while data is undefined (still loading).
   const { data: usersResp } = useAdminUsersList();
   const liveRoster: TeamRosterRow[] | null = usersResp
     ? usersToRoster(usersResp.users, { meId: me.id })
     : null;
-  const roster = liveRoster && liveRoster.length > 0 ? liveRoster : F27_TEAM_MEMBERS;
+  const roster = liveRoster ?? F27_TEAM_MEMBERS;
 
-  // Fri WIRE batch 4: live "Recent activity" feed from /api/audit. null →
-  // canned fallback; empty → also canned (a real M1 workspace has invite +
-  // role-change rows day one, so a true 0-row case is "fetch hasn't completed").
+  // Fri WIRE batch 4: live "Recent activity" feed from /api/audit.
+  //
+  // 57th-RC fix: previously, a fetched-but-empty audit list fell back to
+  // canned F27_RECENT_ACTIVITY. Now: a successful fetch always wins —
+  // even when the workspace genuinely has 0 audit rows — and the
+  // RecentActivity component shows its honest empty state. Canned only
+  // renders if the fetch itself fails (null).
   const [liveActivity, setLiveActivity] = useState<F27ActivityRow[] | null>(null);
   useEffect(() => {
     let alive = true;
     void fetchAuditEntries(50).then((res) => {
       if (!alive || !res) return;
       const rows = res.items.map(auditEntryToActivity);
-      if (rows.length > 0) setLiveActivity(rows.slice(0, 6));
+      setLiveActivity(rows.slice(0, 6));
     });
     return () => {
       alive = false;
