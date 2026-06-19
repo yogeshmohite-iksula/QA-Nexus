@@ -1,6 +1,6 @@
 # 🔴 MASTER HANDOFF — Laptop / Account Transition (target Sun 2026-06-21)
 
-> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v3 (Fri 2026-06-19 ~4:00 PM IST — §1 snapshot advanced to `d0ba367`, §8 work-list updated with Fri PM completions, Option C: E2E→Sat AM).
+> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v4 (Fri 2026-06-19 ~6:00 PM IST — §1 snapshot advanced to `8785c35` after #292 merge; 54th RC banked + synthesized in §6/§7; §8 work-list updated; Option C: E2E→Sat AM).
 > **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork _session_ survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
 > **Verify-before-assert:** every state claim below was confirmed against `origin/main` + live curl on Thu 2026-06-18 ~3 PM IST. Re-verify before acting — deploys drift (see §1 stale-Render finding).
 
@@ -10,7 +10,7 @@
 
 ### Repo / git
 
-- **main HEAD = `d0ba367`** (advanced from `9059a39` after #288 + #289 merged Fri ~3:10 PM IST). Re-fetch before acting; this snapshot drifts hourly during active merge waves.
+- **main HEAD = `8785c35`** (advanced from `d0ba367` after #292 merged Fri ~4:10 PM IST; prior: `9059a39` → `d0ba367` after #288 + #289). Re-fetch before acting; this snapshot drifts hourly during active merge waves.
 - **Open PRs against main** (snapshot Fri 2026-06-19 ~3:45 PM IST — re-run `gh pr list --state open --base main` for current truth):
   | PR | Title | Type | Status |
   | --- | --- | --- | --- |
@@ -18,33 +18,34 @@
   | #290 | BE handoff doc — architecture/contracts/infra/bootstrap | docs/handoff | OPEN (BE+1 finalizing) |
   | #287 | laptop transition master handoff + Path C | docs/handoff | OPEN (this doc — MAIN's branch) |
   | #286 | FE canned-data inventory (STEP 1) | docs/audit | OPEN (FE+1 inventory, historical) |
-- **Merged Fri PM:** #288 (`4c1a7aa` — jira_webhook_events migration, Path B), #289 (`d0ba367` — clean-DB schema drift corrective, 3 tables + 17 cols + 6 enum + 21 FK).
+- **Merged Fri PM:** #292 (`8785c35` — `GET /api/test-runs` list endpoint, unblocks ACTIVE_RUNS wire), #288 (`4c1a7aa` — jira_webhook_events migration, Path B), #289 (`d0ba367` — clean-DB schema drift corrective, 3 tables + 17 cols + 6 enum + 21 FK).
 - **Merged Fri AM (stale-PR triage):** #279 (46th RC docs), #281 (BE EOD Day 32), #282 (MAIN Fri evening EOD) — all squash-merged, branches deleted.
 - **Closed:** #285 (Supabase hot-standby) — closed Thu per 49th-RC ruling; Path C supersedes; recoverable from git history.
 - **Previously merged (Thu+earlier):** #277 (prod-baseURL fix), #278 (sweep B), #280 (FE EOD), #283 (sweep C), #284 (cron-gate fix).
 
 ### Live deploys (the critical truth — merged ≠ deployed)
 
-- **Render API** (`qa-nexus-api.onrender.com`): `/health` → 200; `/health/lite` → 200 (uptime ~248s — **fresh auto-deploy from #288+#289 merge**, verified Fri ~3:45 PM IST). Includes Path B migration (#288) + full drift corrective (#289). **The 41st-RC stale-deploy pattern still applies on every laptop bring-up** — always confirm the deployed SHA against `gh pr view` for the most recent code PR before believing the running instance is current.
+- **Render API** (`qa-nexus-api.onrender.com`): `/health` → 200; `/health/lite` → 200. Latest auto-deploy from #292 merge (~4:10 PM IST) includes `GET /api/test-runs` list endpoint + Path B migration (#288) + full drift corrective (#289). **The 41st-RC stale-deploy pattern still applies on every laptop bring-up** — always confirm the deployed SHA against `gh pr view` for the most recent code PR before believing the running instance is current.
 - **Cloudflare Pages FE** (`qa-nexus-web.pages.dev`): last known good = `cb1ed3a` (#277, the 46th-RC prod-baseURL fix). ⟦Pending: FE+1 WIRE sweep #291 merge → auto-deploy → re-verify Pages bundle SHA⟧
 - **Neon Postgres DB — Path C ACTIVE + VERIFIED:** `qa-nexus-2` is live with full migration chain (#288 + #289 applied), base seed (5/30/63/5/25/~158) + pilot seed complete, RLS + HNSW + audit-trigger verified. Original `qa-nexus` auto-resumes Jul 1 → flip Render back → `qa-nexus-2` stays as warm hot-standby. **53rd-RC lesson** (`feedback_migrate_status_vs_schema_drift.md`): `prisma migrate status` "up to date" does NOT mean DB matches `schema.prisma` — always run `prisma migrate diff --exit-code` on fresh DBs. **49th-RC lesson** (`feedback_verify_constraint_scope_before_expensive_workaround.md`): Neon cap is per-project not per-account; same-vendor multi-project beats cross-vendor migration.
 
-### Conformance verdict (dashboard §12.7, as of Fri ~4:00 PM IST)
+### Conformance verdict (dashboard §12.9, as of Fri ~6:00 PM IST)
 
-- **BE ✅ GREEN** — anon battery live; #288 (Path B) + #289 (drift corrective) merged; Render auto-deployed and verified (`/health` + `/health/lite` both 200).
+- **BE ✅ GREEN** — anon battery live; #288 (Path B) + #289 (drift corrective) + #292 (test-runs list) merged; Render auto-deployed with all three.
 - **DB ✅ GREEN** — qa-nexus-2 fully seeded (5/30/63/5/25/~158), RLS + HNSW + audit-trigger verified, migration chain clean.
-- **FE 🟡 WIRE SWEEP IN-FLIGHT** — PR #291 batch 1 (4 wires + ComingSoon + HERO de-fiction) open; batch 2 (F14, F17, ACTIVE_RUNS, RECENT_RUNS, F26m1) ships tonight/Sat AM.
+- **FE 🟡 WIRE SWEEP IN-FLIGHT** — PR #291 (4 wires + ComingSoon + HERO de-fiction) open; FE+1 adding ACTIVE_RUNS wire (skip RECENT_RUNS, defer to Sat if time).
 - **E2E reframed Fri PM (Option C):** pushed to Sat AM clean 3-workflow E2E after all wires land. Tonight = ship everything + handoff polish. **Revised pilot-ready ETA: Sat PM after E2E.**
 
 ### Reality-check ledger
 
-- **~53 RCs** accumulated (full 1-N reconciliation deferred Phase D). Source of truth = the `feedback_*.md` files in `.claude/memory/` + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked:
+- **~54 RCs** accumulated (full 1-N reconciliation deferred Phase D). Source of truth = the `feedback_*.md` files in `.claude/memory/` + the per-day EOD/triage docs. **Do NOT trust any single ordinal count** until the Phase-D reconciliation runs (count files, rebuild 1-N from source). Latest banked:
   - **46th** — `feedback_deployed_bundle_baseurl_verification.md` (PR #279 — Pages bundle prod-baseURL gate).
   - **47th/48th** — BE+1's cron-gate + verify-before-ship (in BE+1's per-machine memory — backed up in BE handoff PR #290).
   - **49th (canonical, Yogesh ruling Thu Jun 18 PM)** — `feedback_verify_constraint_scope_before_expensive_workaround.md` — verify constraint EXACT scope before recommending an expensive workaround.
   - **50th** — `feedback_institutional_memory_survives_in_vcs.md` — institutional memory survives in VCS + off-device backup.
   - **51st (banked by BE+1 Thu Jun 18 evening)** — `feedback_env_no_stale_no_duplicates_before_migration.md` — audit `.env` for stale references AND duplicate keys before same-vendor env migration.
   - **53rd (banked Fri Jun 19)** — `feedback_migrate_status_vs_schema_drift.md` — `prisma migrate status` "up to date" ≠ DB matches `schema.prisma`. Run `prisma migrate diff --exit-code` on fresh DBs. Day-32 qa-nexus-2: chain was 3 tables + 17 cols behind.
+  - **54th (banked Fri Jun 19)** — `feedback_hard_rule_11_verify_contract_before_consume.md` (user auto-memory) — before wiring FE consumer to BE endpoint, grep `*.controller.ts` for exact HTTP method + route. FE+1 found NO `@Get()` on test-runs → `<ComingSoon>` stubs. ~~Resolved same day by #292 adding the endpoint.~~ The lesson persists: verify contract before consuming. Lineage: 33rd→44th→54th RC.
 
 ---
 
@@ -261,10 +262,10 @@ You are MAIN, the orchestrator for the QA Nexus PM1 build. Context after a lapto
 1. Read CLAUDE.md (auto-loaded) + .claude/memory/MEMORY.md + this handoff:
    docs/handoff/2026-06-21-laptop-transition-master-handoff.md
 2. Verify-before-assert FIRST (do not trust this doc's state blindly — it may be stale):
-   - git fetch && git log origin/main --oneline -1   (expect 04c73ea or later)
+   - git fetch && git log origin/main --oneline -1   (expect 8785c35 or later)
    - gh pr list --state open --base main             (expect the §1 open-PR set, minus any merged since)
    - curl -s https://qa-nexus-api.onrender.com/health and /health/lite  (lite 404 = Render still stale → redeploy)
-   - DB: is Neon resumed or did we fail over to Supabase (PR #285)?
+   - DB: which Neon project is active — qa-nexus-2 (Path C, current) or qa-nexus (resumes Jul 1)?
 3. Restore user auto-memory + Cowork folders from the off-device backup (handoff §4) if not already mounted.
 4. Report the reconciled truth-state, then await my direction. Hard Rule 11: surface conflicts, don't resolve.
 Discipline that defines this project: verify (grep+curl+network-tab) before asserting; merged ≠ live (41st/43rd/46th RC);
@@ -309,6 +310,7 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 **Pattern family 3 — Agent coordination:**
 
 - **Verify API paths from producer source** before prescribing to consumer agents — never assume REST conventions (33rd RC). Source from `*.controller.ts` + shared Zod schemas.
+- **Verify contract before consuming** — the 33rd RC applied at the FE agent level. Before wiring a consumer, grep the producer controller for the exact HTTP method + route. If the endpoint doesn't exist, the correct response is `<ComingSoon>` or a gap flag, NOT an invented adapter (54th RC — saved ~30 min on test-runs). Lineage: 33rd→44th→54th.
 - **Independent diagnosis convergence** = high confidence — when two agents converge on the same root cause via different layers, trust the convergence (35th RC). But still verify the FIX empirically.
 - **Cross-worktree .env discipline** — edits MUST target the correct worktree; verify with `pwd` before assuming landed (18th RC).
 - **Chat misroute** — agents MUST verify-before-edit when an incoming brief looks outside their worktree's role (25th RC).
@@ -347,7 +349,7 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - **BE+1's 47th/48th RC memory files** still in BE+1's per-machine memory, **not on main** — back them up off-device per §4 or they're lost. Sat task: BE+1 PR them into the repo.
 - **52nd-RC candidate** (Day-29 clean-DB migration interleave) — bank when BE+1's Path B PR lands.
 - **Work-log backfill** (Days 9-31) parked on 6 schema acks; token in/out never captured (hook gap) — don't invent.
-- **WIRE sweep ships Fri AM** (FE+1, 6-8 hr) — full FE wire-up of canned-data surfaces before E2E. The 73% canned-route inventory FE+1 produced is the work-list.
+- **WIRE sweep in flight** (FE+1 PR #291) — 4 wires + ComingSoon + HERO de-fiction shipped; FE+1 adding ACTIVE_RUNS wire (test-runs list endpoint now live via #292). RECENT_RUNS deferred to Sat if time.
 
 ---
 
@@ -368,6 +370,8 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 
 **Frontend / Next.js:** 16. **Pattern A canned fallback** — FE renders fixtures when API calls fail. A page that "looks fine" may not be hitting the API at all. DevTools Network tab is the only proof of real data. 17. **getApiBaseURL()** — defaults to `localhost:3001` when `NEXT_PUBLIC_API_BASE_URL` is missing from Cloudflare Pages BUILD env. This is the 46th RC root cause. Verify the env var is set in Pages Settings → Environment Variables → Production. 18. **AdminShell canonical reference** — F19's React implementation is canonical for shell internals (Day-17 amendment), NOT the v2 HTML. Lucide-react icons retained over HTML's custom SVGs.
 
+**Backend / API contracts:** 16a. ~~**test-runs controller had no @Get list endpoint**~~ — resolved by #292 (`8785c35`). Pre-#292, `test-runs.controller.ts` only had `@Patch` handlers (`start`, `abort`, `report`). FE+1 correctly stubbed ACTIVE_RUNS/RECENT_RUNS as `<ComingSoon>` per 54th RC. Post-#292, `GET /api/test-runs` exists (workspace-scoped, paginated, filterable by status). If you see `<ComingSoon>` on `/home` runs cards, it means FE+1's wire hasn't landed yet — check #291 merge status, not the BE controller.
+
 **Data / testing:** 19. **Pilot team names** — always the 8 real Iksula users (Akshay, Yogesh, Kishor, Nitin, Nadim, Govind, Mohanraj, Sagar). Never "Priya Tiwari" or "Ravi Sharma" (fictional). Canned data in React ports must trace back to canonical v2 HTML verbatim. 20. **ID patterns** — Jira `RET-###`, uploaded reqs `REQ-###`, test cases `TC-RET-###`, defects `DEF-###`, imports `#242`. Anything else = invented data violation (Rule 17). 21. **P0-001 identity regression** — fresh incognito sign-in MUST show "Yogesh M. · ADMIN" in the user pill. Wrong identity (e.g., "Kishor K.") = P0 STOP + escalate. Cross-layer root cause: cookie infra + persona embed + customSession app-fields.
 
 **Cost / billing:** 22. **Indian RBI e-Mandate** — auto-billing may fail for Indian cards on recurring > ₹5,000 (RBI two-factor mandate). Manual billing (invoice → one-time payment) is the fallback if PM1 ever moves to paid.
@@ -385,9 +389,12 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - [x] **2:00-3:00** — Phase D verdict skeleton created (`docs/audits/2026-06-19-fri-main-prd-conformance-final.md`)
 - [x] **3:30-4:00** — PRs #288 + #289 merged to main → `d0ba367`. Render auto-deployed, verified. Dashboard §12.7 written. DB + Render gates CLEARED.
 - [x] **4:00** — Handoff §1 snapshot advanced to `d0ba367`; §8 work-list updated; version bumped to v3
-- [ ] **4:00-7:00** — Monitor FE+1 WIRE sweep #291 expansion + BE+1 handoff #290; aggregate
+- [x] **5:30** — 54th RC banked (`feedback_hard_rule_11_verify_contract_before_consume.md`) + dashboard §12.8
+- [x] **5:45** — #292 merged to main (`8785c35` — test-runs list endpoint). Dashboard §12.9. Phase D §9 gate updated.
+- [x] **6:00** — Handoff v4: §1 snapshot → `8785c35`, §5 template fixed (stale SHA + Supabase), §6 54th RC in Pattern family 3, §7 test-runs gotcha (strike-through), RC ledger → 54
+- [ ] **~6:15** — Aggregate FE+1 #291 ACTIVE_RUNS wire when pushed
 - [ ] **7:00-8:00** — Pre-Sat-E2E state aggregation: full merged state, Render+Pages SHAs, all systems green
-- [ ] **8:00-9:30** — Handoff final polish (cross-link #288/#289/#290/#291) + Phase D skeleton Sat-ready
+- [ ] **8:00-9:30** — Handoff final polish (cross-link #288/#289/#290/#291/#292) + Phase D skeleton Sat-ready
 - [ ] **9:30** — Fri EOD report
 
 **Option C (Yogesh, ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E.
@@ -405,10 +412,10 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 
 - [ ] Final `gh pr list --state open --base main` → 0 open PRs that matter, or each named with a disposition
 - [ ] All chat-history files committed (or off-device-backed)
-- [ ] Off-device backup VERIFIED on a second medium (USB + iCloud, not just one)
+- [ ] Off-device backup VERIFIED on a second medium (USB + iCloud, not just one) — run §4 tar procedure, then `shasum -a 256` on original + both copies
 - [ ] All credentials accessible on the new laptop (all on `yogeshmohite-iksula` identity: GitHub, Neon, Render, Cloudflare, Resend, Groq, UptimeRobot, Better Stack, Grafana Cloud)
 - [ ] This handoff doc linked from `CLAUDE.md` (one-line pointer at the top — the new agent reads CLAUDE.md automatically)
 - [ ] `docs/eod-reports/2026-06-21-sun-laptop-handoff-sign-off.md` written (final EOD)
 - [ ] Confirm post-transition email + GitHub account continuity (yogeshmohite-iksula survives; yogeshcodeshare is personal + unaffected)
 
-_v3 authored Fri 2026-06-19 ~4:00 PM IST by MAIN. Changes from v2: §1 snapshot advanced to `d0ba367` (#288+#289 merged, Render verified, DB gate CLEARED); RC ledger updated to 53; conformance verdict updated (BE ✅, DB ✅, FE 🟡 WIRE in-flight); §8 work-list updated with Fri PM completions + Option C reframe (E2E→Sat AM). Prior v2 changes preserved: §4 backup paths, §6 RC distillation, §7 gotchas. Re-verify all §1 state before acting on it._
+_v4 authored Fri 2026-06-19 ~6:00 PM IST by MAIN. Changes from v3: §1 snapshot → `8785c35` (#292 merged — test-runs list endpoint); RC ledger → 54; §5 template fixed (stale SHA `04c73ea` → `8785c35`, Supabase → Path C qa-nexus-2); §6 Pattern family 3 gains 54th RC; §7 gains gotcha 16a (test-runs ~~no @Get~~ resolved by #292); §8 work-list updated with evening completions; known-issues WIRE item updated. Prior changes preserved. Re-verify all §1 state before acting on it._
