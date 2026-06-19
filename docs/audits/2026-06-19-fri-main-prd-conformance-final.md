@@ -1,9 +1,10 @@
 # Phase D — PRD Conformance Final Verdict
 
-> **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** SKELETON (verdict cells empty — fill with E2E data Phase 5, ~8-9 PM IST)
-> **Inputs:** Dashboard §0-§12.6 · BE+1 audit (#261, #264) · FE+1 audit + P0-A fix (#266) · 53 reality-checks · Yogesh Fri live shake-down (H/I/J) · E2E findings (pending)
+> **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** SKELETON + PRE-SAT BASELINE (BE ✅ DB ✅ baselines filled; FE + E2E verdict cells fill Sat PM)
+> **Inputs:** Dashboard §0-§12.7 · BE+1 audit (#261, #264) + #288/#289 merged · FE+1 audit + P0-A fix (#266) + WIRE sweep #291 · 53 reality-checks · Yogesh Fri live shake-down (H/I/J) · E2E findings (Sat AM)
 > **Binding spec:** PM1_PRD v8.1 · PM1_ERD v2.1 · Decisions A-E (§0)
 > **Verdict definition:** GREEN = pilot-ready, proceed to Sun deep test. CONDITIONAL = pilot-ready with documented workarounds. RED = launch-blocking issues remain.
+> **Option C (Yogesh, Fri ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E. Verdict fills Sat PM.
 
 ---
 
@@ -71,13 +72,13 @@
 
 ## §5 — P0 tracker (launch-blockers)
 
-| ID    | Title                                   | Status pre-E2E                | E2E status | Owner       | Fix PR | Verified live? |
-| ----- | --------------------------------------- | ----------------------------- | ---------- | ----------- | ------ | -------------- |
-| P0-A  | Signed-out user reaches Admin surface   | FE+1 #266 merged              | ⬜         | FE+1        | #266   | ⬜             |
-| P0-B  | Project switcher shows canned data      | WIRE sweep in flight          | ⬜         | FE+1        | TBD    | ⬜             |
-| P0-C  | Fictional names in F14/F21 (Priya/Ravi) | Canned-data swap path (Dec E) | ⬜         | FE+1        | TBD    | ⬜             |
-| P0-D  | Invite flow not functional              | M1-mandated (Dec A)           | ⬜         | BE+1 + FE+1 | TBD    | ⬜             |
-| P0-DB | DB unlocked (qa-nexus-2 Path C)         | PR #288 OPEN                  | ⬜         | BE+1        | #288   | ⬜             |
+| ID    | Title                                   | Status pre-E2E                | E2E status | Owner       | Fix PR    | Verified live?          |
+| ----- | --------------------------------------- | ----------------------------- | ---------- | ----------- | --------- | ----------------------- |
+| P0-A  | Signed-out user reaches Admin surface   | FE+1 #266 merged              | ⬜         | FE+1        | #266      | ⬜                      |
+| P0-B  | Project switcher shows canned data      | WIRE sweep in flight          | ⬜         | FE+1        | TBD       | ⬜                      |
+| P0-C  | Fictional names in F14/F21 (Priya/Ravi) | Canned-data swap path (Dec E) | ⬜         | FE+1        | TBD       | ⬜                      |
+| P0-D  | Invite flow not functional              | M1-mandated (Dec A)           | ⬜         | BE+1 + FE+1 | TBD       | ⬜                      |
+| P0-DB | DB unlocked (qa-nexus-2 Path C)         | ✅ #288+#289 MERGED `d0ba367` | ✅ CLEARED | BE+1        | #288+#289 | ✅ Render `/health` 200 |
 
 ---
 
@@ -113,14 +114,15 @@ _This section populated during E2E orchestration (5-8 PM IST). Each finding logg
 
 ## §9 — Gate status at verdict time
 
-| Gate                                      | Status | Timestamp |
-| ----------------------------------------- | ------ | --------- |
-| PR #288 (Path B migration) merged         | ⬜     |           |
-| Render redeployed with Path B             | ⬜     |           |
-| FE WIRE sweep merged                      | ⬜     |           |
-| Pages bundle current                      | ⬜     |           |
-| E2E 3-workflow test complete              | ⬜     |           |
-| All P0s resolved or documented-workaround | ⬜     |           |
+| Gate                                      | Status | Timestamp                                                 |
+| ----------------------------------------- | ------ | --------------------------------------------------------- |
+| PR #288 (Path B migration) merged         | ✅     | 2026-06-19 09:39:27 UTC                                   |
+| PR #289 (drift corrective) merged         | ✅     | 2026-06-19 09:39:50 UTC                                   |
+| Render redeployed with Path B + drift     | ✅     | 2026-06-19 ~09:42 UTC (auto-deploy, uptime 248s at probe) |
+| FE WIRE sweep merged                      | ⬜     |                                                           |
+| Pages bundle current                      | ⬜     |                                                           |
+| E2E 3-workflow test complete              | ⬜     | Sat AM (Option C)                                         |
+| All P0s resolved or documented-workaround | ⬜     |                                                           |
 
 ---
 
