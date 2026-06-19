@@ -40,6 +40,14 @@ interface ProjectContextValue {
    *  gracefully (per Yogesh's spec: "useProject(slug) — returns null if
    *  slug not found, NOT a thrown error"). */
   setActiveProject: (slug: string) => void;
+
+  /** True once `GET /api/projects` has resolved (success OR final failure)
+   *  and `activeProject.id` is no longer the seed-UUID placeholder.
+   *  Project-scoped page fetches (F14 requirements, F17 test cases, etc.)
+   *  MUST gate their first useEffect on this — otherwise the initial render
+   *  fires `/api/projects/<seed-uuid>/...` and 404s before the live list
+   *  swaps in (P0 caught by Yogesh on 2026-06-19 ~22:00 IST, post-#295). */
+  isProjectsLoaded: boolean;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -68,6 +76,10 @@ export function ProjectProvider({ children, initialActiveSlug }: ProjectProvider
   //      null → seed array remains the rendered source (graceful).
 
   const [liveProjects, setLiveProjects] = useState<readonly Project[] | null>(null);
+  // `isProjectsLoaded` flips true on EITHER successful live load OR a hard
+  // fetch failure (Option-B fallback). Consumers gating on this flag will
+  // unblock either way — never stuck waiting on a dead network.
+  const [isProjectsLoaded, setIsProjectsLoaded] = useState(false);
   const effectiveProjects: readonly Project[] = liveProjects ?? seedProjects;
 
   const initialSlug = useMemo<string>(() => {
@@ -79,9 +91,13 @@ export function ProjectProvider({ children, initialActiveSlug }: ProjectProvider
   useEffect(() => {
     let alive = true;
     void fetchWorkspaceProjects().then((res) => {
-      if (alive && res && res.length > 0) {
+      if (!alive) return;
+      if (res && res.length > 0) {
         setLiveProjects(res);
       }
+      // Mark loaded regardless — either the live list is in, or the seed
+      // fallback is the final answer. Consumers can fire their fetches now.
+      setIsProjectsLoaded(true);
     });
     return () => {
       alive = false;
@@ -114,14 +130,27 @@ export function ProjectProvider({ children, initialActiveSlug }: ProjectProvider
       projects: [...effectiveProjects],
       activeProject,
       setActiveProject,
+      isProjectsLoaded,
     };
-  }, [effectiveProjects, activeSlug, setActiveProject]);
+  }, [effectiveProjects, activeSlug, setActiveProject, isProjectsLoaded]);
 
   // Reference SEED_IDS so the import isn't pruned (kept for the seed
   // fallback path's stable test identifiers).
   void SEED_IDS;
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
+}
+
+/** Hook — true once `GET /api/projects` resolved (live load OR final fail).
+ *  Project-scoped page fetchers MUST gate on this before firing their first
+ *  request, otherwise the SSR/static-export render fires with the seed-UUID
+ *  placeholder and 404s before the live list swaps in. */
+export function useIsProjectsLoaded(): boolean {
+  const ctx = useContext(ProjectContext);
+  if (!ctx) {
+    throw new Error('useIsProjectsLoaded must be called within a <ProjectProvider>.');
+  }
+  return ctx.isProjectsLoaded;
 }
 
 /** Hook — returns a single project by lowercased key, or `null` if not found.

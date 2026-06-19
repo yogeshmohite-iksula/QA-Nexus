@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { AgentName } from '@/components/ui/agent-name';
-import { useActiveProject } from '@/lib/contexts/ProjectContext';
+import { useActiveProject, useIsProjectsLoaded } from '@/lib/contexts/ProjectContext';
 import { fetchRequirements, requirementToRow } from '@/lib/api/requirements-api';
 import { EditRequirementModal } from './edit-requirement-modal';
 import { LinkTestCaseModal } from './link-test-case-modal';
@@ -269,21 +269,27 @@ export function RequirementsListPage() {
 }
 
 function RequirementsListContent() {
-  // Fri WIRE Option C: live requirements via GET /api/projects/:projectId/requirements.
-  // Null = fetch pending / failed → canned fallback. Empty live array → empty
-  // honest state (the page already handles 0-row rendering via filter logic).
+  // Zero-canned sweep (2026-06-19 ~22:30 IST): gate the project-scoped
+  // fetch on `isProjectsLoaded`. Without the gate, the initial render
+  // fires `/api/projects/<seed-uuid>/requirements` which 404s against the
+  // pilot BE (FE demo-seed UUIDs ≠ BE seed UUIDs). Now we wait for
+  // ProjectContext to resolve `/api/projects` before firing the first
+  // requirements fetch. Stale STUB_REQUIREMENTS only renders briefly until
+  // live arrives; on success it's the honest empty (or populated) list.
   const project = useActiveProject();
+  const isProjectsLoaded = useIsProjectsLoaded();
   const [liveRows, setLiveRows] = useState<Requirement[] | null>(null);
   useEffect(() => {
+    if (!isProjectsLoaded) return;
     let alive = true;
     void fetchRequirements(project.id).then((res) => {
-      if (!alive || !res) return;
-      setLiveRows(res.requirements.map(requirementToRow));
+      if (!alive) return;
+      setLiveRows(res ? res.requirements.map(requirementToRow) : []);
     });
     return () => {
       alive = false;
     };
-  }, [project.id]);
+  }, [isProjectsLoaded, project.id]);
   const rows: Requirement[] = liveRows ?? STUB_REQUIREMENTS;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(PRE_SELECTED);
   const [search, setSearch] = useState('');

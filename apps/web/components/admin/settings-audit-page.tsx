@@ -136,9 +136,11 @@ export function SettingsAuditPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
-    const matched = F28_TABS.find((t) => t.id === hash);
-    const initial: SettingsTab = matched && matched.available ? matched.id : 'audit-log';
+    // Zero-canned sweep (2026-06-19 ~22:30 IST): only the Audit Log tab is
+    // visible. Even if a stale URL hash points at #general / #branding /
+    // etc., the active tab forces to audit-log so the panel switcher
+    // doesn't render a canned panel that the user can't navigate back to.
+    const initial: SettingsTab = 'audit-log';
     setActiveTab(initial);
     // PATTERN-A: load settings deferred until M1 (T030.5) - real /api/settings GET on mount
     console.info('pattern-a:deferred:settings-load', {
@@ -472,8 +474,15 @@ function SettingsTabNav({
   activeTab: SettingsTab;
   onChange: (next: SettingsTab) => void;
 }) {
-  const functional = F28_TABS.filter((t) => t.available);
-  const preview = F28_TABS.filter((t) => !t.available);
+  // Zero-canned sweep (2026-06-19 ~22:30 IST): until BE ships endpoints for
+  // workspace settings (General / Branding / Data Retention), integrations
+  // (Integrations Health), and billing/SSO/Compliance, the Settings page
+  // shows only the Audit Log tab. Restoring a hidden tab is a one-line
+  // change in `VISIBLE_TAB_IDS` once the corresponding endpoint lands. The
+  // canned panels (GeneralPanel / BrandingPanel / etc.) remain in source
+  // as dead exports until their wire arrives.
+  const VISIBLE_TAB_IDS = new Set<SettingsTab>(['audit-log']);
+  const visible = F28_TABS.filter((t) => VISIBLE_TAB_IDS.has(t.id as SettingsTab));
   return (
     <nav
       role="tablist"
@@ -484,13 +493,7 @@ function SettingsTabNav({
       <span className="mx-1 mb-1 hidden border-b border-[var(--border-subtle)] px-2 pb-2 pt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--t3)] lg:block">
         {F28_TAB_SECTION_LABELS.workspace}
       </span>
-      {functional.map((t) => (
-        <TabButton key={t.id} tab={t} active={t.id === activeTab} onClick={() => onChange(t.id)} />
-      ))}
-      <span className="mx-1 mb-1 mt-3 hidden border-b border-[var(--border-subtle)] px-2 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--t4)] lg:block">
-        {F28_TAB_SECTION_LABELS.preview}
-      </span>
-      {preview.map((t) => (
+      {visible.map((t) => (
         <TabButton key={t.id} tab={t} active={t.id === activeTab} onClick={() => onChange(t.id)} />
       ))}
     </nav>
