@@ -44,7 +44,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { Prisma } from '@prisma/client';
 import type { TestRun, TestRunStatus } from '@prisma/client';
+import type { TestRunListItem, TestRunListQuery } from '@qa-nexus/shared';
 
 /** State-machine table — single source of truth, mirrors ERD §3.10.
  *  Keys = current status. Values = the set of statuses the run may
@@ -67,6 +69,60 @@ const ALLOWED_TRANSITIONS: Readonly<
 export interface TestRunActor {
   appUserId: string;
   workspaceId: string;
+}
+
+/** Single source of truth for the columns + joined refs a list row returns.
+ *  `project.workspaceId` is NOT selected (the where-clause already scopes by
+ *  it); `results.status` drives the case-count tally in the mapper. */
+const TEST_RUN_SELECT = {
+  id: true,
+  projectId: true,
+  name: true,
+  status: true,
+  triggeredBy: true,
+  startedAt: true,
+  completedAt: true,
+  environment: true,
+  project: { select: { id: true, key: true, name: true } },
+  triggeredByUser: { select: { id: true, displayName: true } },
+  results: { select: { status: true } },
+} satisfies Prisma.TestRunSelect;
+
+type TestRunRow = Prisma.TestRunGetPayload<{ select: typeof TEST_RUN_SELECT }>;
+
+/** Map a Prisma row → the shared wire shape. Case counts are tallied from the
+ *  joined `results` rows (the model has no denormalized counts). Date → ISO. */
+function toListItem(row: TestRunRow): TestRunListItem {
+  let passed = 0;
+  let failed = 0;
+  for (const r of row.results) {
+    if (r.status === 'passed') passed++;
+    else if (r.status === 'failed') failed++;
+  }
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    name: row.name,
+    status: row.status,
+    trigger: row.triggeredBy,
+    environment: row.environment,
+    startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+    completedAt: row.completedAt ? row.completedAt.toISOString() : null,
+    totalCases: row.results.length,
+    passedCases: passed,
+    failedCases: failed,
+    triggeredBy: row.triggeredByUser
+      ? {
+          id: row.triggeredByUser.id,
+          displayName: row.triggeredByUser.displayName,
+        }
+      : null,
+    project: {
+      id: row.project.id,
+      key: row.project.key,
+      name: row.project.name,
+    },
+  };
 }
 
 @Injectable()
@@ -103,6 +159,53 @@ export class TestRunsService {
    *  cancel (F19 "Abort run" button). */
   async abort(runId: string, actor: TestRunActor): Promise<TestRun> {
     return this.transition(runId, actor, 'aborted', { stampCompletedAt: true });
+  }
+
+  /**
+   * GET /api/test-runs — workspace-scoped list for F08 /home ACTIVE_RUNS
+   * (filter `status=running`) + RECENT_RUNS (default `started_at_desc`).
+   * Read-only, NOT audited (ERD §8.7). The workspace constraint lives on
+   * the where-clause (via project.workspaceId) and is never client-supplied,
+   * so cross-tenant rows are invisible — no leak, no 403. Mirrors
+   * DefectsService.list (offset pagination, NOT the audit cursor).
+   *
+   * `startedAt` is nullable (queued runs never started), so the desc sort
+   * pushes not-yet-started runs last via `nulls: 'last'`.
+   */
+  async list(
+    query: TestRunListQuery,
+    actor: TestRunActor,
+  ): Promise<{
+    testRuns: TestRunListItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    const where: Prisma.TestRunWhereInput = {
+      project: {
+        workspaceId: actor.workspaceId,
+        ...(query.projectId ? { id: query.projectId } : {}),
+      },
+      ...(query.status ? { status: query.status } : {}),
+    };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.testRun.findMany({
+        where,
+        select: TEST_RUN_SELECT,
+        orderBy: { startedAt: { sort: 'desc', nulls: 'last' } },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      this.prisma.testRun.count({ where }),
+    ]);
+
+    return {
+      testRuns: rows.map(toListItem),
+      total,
+      page: query.page,
+      pageSize: query.pageSize,
+    };
   }
 
   // ────────────────────────────────────────────────────────────────────

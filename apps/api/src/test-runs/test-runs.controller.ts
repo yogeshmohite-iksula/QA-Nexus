@@ -28,17 +28,23 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
+  Query,
   Req,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { z } from 'zod';
-import { Role } from '@qa-nexus/shared';
+import {
+  Role,
+  TestRunListQuery,
+  type TestRunListResponse,
+} from '@qa-nexus/shared';
 import { Roles } from '../auth/rbac/roles.decorator';
 import { RolesGuard } from '../auth/rbac/roles.guard';
 import { AuthService } from '../auth/auth.service';
@@ -60,6 +66,33 @@ export class TestRunsController {
     private readonly testRuns: TestRunsService,
     private readonly auth: AuthService,
   ) {}
+
+  /**
+   * GET /api/test-runs — workspace-scoped list for F08 /home ACTIVE_RUNS
+   * (`?status=running`) + RECENT_RUNS (default `sort=started_at_desc`).
+   * Read-only, all 4 roles (Stakeholder read parity with the defects/
+   * test-cases lists). NOT audited (ERD §8.7). Optional filters:
+   * `?status=&projectId=&sort=&page=&pageSize=`.
+   */
+  @Get()
+  @Roles(Role.Admin, Role.Lead, Role.QAEngineer, Role.Stakeholder)
+  async list(
+    @Query() query: unknown,
+    @Req() req: Request,
+  ): Promise<TestRunListResponse> {
+    const q = TestRunListQuery.parse(query ?? {});
+    const actor = await this.requireActor(req);
+    const result = await this.testRuns.list(q, actor);
+    return {
+      ok: true,
+      testRuns: result.testRuns,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      },
+    };
+  }
 
   /** PATCH /api/test-runs/:id/start — queued → running. */
   @Patch(':id/start')
