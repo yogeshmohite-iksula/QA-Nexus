@@ -52,8 +52,11 @@ export function RightRail({ onRoute }: RightRailProps) {
     void fetchAuditEntries(50).then((res) => {
       if (!alive || !res) return;
       const rows = auditToEvidence(res.items);
-      // Keep canned visible if no agent actions exist yet (pre-pilot DB).
-      if (rows.length > 0) setLiveEvidence(rows.slice(0, 4));
+      // 57th-RC fix: fetch SUCCEEDED → live wins, even when the agent-
+      // filtered list is empty. Canned only renders when the fetch itself
+      // failed (res === null). Empty live state now renders the honest
+      // empty message below instead of masquerading as canned EVIDENCE_THREAD.
+      setLiveEvidence(rows.slice(0, 4));
     });
     return () => {
       alive = false;
@@ -61,6 +64,7 @@ export function RightRail({ onRoute }: RightRailProps) {
   }, []);
 
   const evidence = liveEvidence ?? EVIDENCE_THREAD;
+  const isHonestEmpty = liveEvidence !== null && liveEvidence.length === 0;
   return (
     <aside
       aria-label="Recent agent activity"
@@ -75,11 +79,22 @@ export function RightRail({ onRoute }: RightRailProps) {
         </kbd>
       </header>
 
-      <ol className="flex flex-col">
-        {evidence.map((e, i) => (
-          <EvidenceRow key={`${e.agent}-${i}`} entry={e} isLast={i === evidence.length - 1} />
-        ))}
-      </ol>
+      {isHonestEmpty ? (
+        <div className="bg-[var(--overlay)]/40 flex flex-col gap-1 rounded-md border border-dashed border-[var(--border-subtle)] p-3">
+          <p className="text-[13px] leading-[18px] text-[var(--text-secondary)]">
+            No agent activity yet.
+          </p>
+          <p className="font-mono text-[11px] text-[var(--text-tertiary)]">
+            Composer · Curator · Sherlock actions will surface here once agents start working.
+          </p>
+        </div>
+      ) : (
+        <ol className="flex flex-col">
+          {evidence.map((e, i) => (
+            <EvidenceRow key={`${e.agent}-${i}`} entry={e} isLast={i === evidence.length - 1} />
+          ))}
+        </ol>
+      )}
 
       {/* Fri WIRE batch 5: Suggested next + Pinned references — no recommender
        *  or pin endpoint exists → ComingSoon affordances. */}
