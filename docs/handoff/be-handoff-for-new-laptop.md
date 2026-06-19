@@ -86,6 +86,14 @@ conventions. 5 wrong assumptions were caught this way.
 - Response carries M4 fields `component` / `verifiedAt` / `closedAt` on **`DefectListItem`** (not on base `DefectSchema`, which the FE demo-seed consumer depends on — do not move them).
 - 25 defects seeded → unblocks F21 Defects Hub.
 
+**Test-runs list API (shipped #292, MERGED — same W2-R read pattern):**
+
+- `GET /api/test-runs` — list backing F08 /home ACTIVE_RUNS (`?status=running`) + RECENT_RUNS (default `sort=started_at_desc`, nulls-last). Also `?projectId=&page=&pageSize=` (offset, max 50, NOT the audit cursor). RBAC all 4 roles. **NOT audited** (ERD §8.7).
+- Workspace-scoped via `project.workspaceId`; case counts (`totalCases`/`passedCases?`/`failedCases?`) tallied from `test_run_results` (no denormalized columns).
+- Response `{ ok, testRuns: TestRunListItem[], pagination }` — `TestRunListItem`/`TestRunListQuery`/`TestRunListResponse` in `@qa-nexus/shared`. `projectKey` = `project.key`; `triggeredBy` = nullable human (webhook/cron → null), distinct from the `trigger` enum.
+- `test_runs` is **empty until the runner creates runs** → returns `{testRuns:[], total:0}`. The `@Patch :id/start|result|abort` state-transition routes are the other half (the runner; PM-future).
+- ACTIVE_RUNS FE wire deferred to Sat AM (FE+1 lane); RECENT_RUNS has no UI slot yet (M5 backlog).
+
 **501 stubs (PM2–PM4 deferred — acceptable, per PRD):** `jira-sync.controller.ts` + write-ops on
 `defects.controller.ts` return `NOT_IMPLEMENTED`. Contract = "PM1-mandated MUST work now; PM2-4 = 501 stub."
 Confirm any "is X live?" claim by `grep @Controller` + AppModule import + a live curl (non-501) —
