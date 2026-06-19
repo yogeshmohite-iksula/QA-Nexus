@@ -21,7 +21,7 @@ paths:
 
 ## Vector columns (pgvector)
 
-- All vector columns are **1024-dim** (Qwen3-Embedding-0.6B output). Do not introduce other dimensions without an ADR — mixed dimensions break batch embedding flows.
+- All vector columns are **384-dim** (`BAAI/bge-small-en-v1.5`, the current pilot pin per the ADR-003 amendment + the Day-5 `vector(384)` migration `0002_vector_384_dim.sql`). bge-large-en-v1.5 (1024-dim) + Qwen3-Embedding-0.6B remain future targets (hot-swap via `EMBEDDING_MODEL_ID`). Do not introduce other dimensions without an ADR — mixed dimensions break batch embedding flows.
 - **HNSW indexes are mandatory** on every vector column used for similarity search. Add via raw SQL migration, not via `@@index` in `schema.prisma` (Prisma 5 doesn't natively support HNSW yet):
   ```sql
   CREATE INDEX CONCURRENTLY <table>_<col>_hnsw_idx
