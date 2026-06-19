@@ -1,14 +1,14 @@
 # Yogesh Deep-Test — Prep Checklist (target Sun 2026-06-21)
 
 > **Author:** MAIN · **Date:** Thu 2026-06-18 (prep ahead of Sun) · **Scope:** Yogesh's **solo deep test** (precedes the 7-user team invite in `docs/briefs/yogesh-deep-test-cycle.md`).
-> **Binding gate:** the test cannot run with real data until the **DB is unlocked** (Neon resumed OR Supabase failover per PR #285) **and Render is redeployed** (see §A). Until then every data surface shows Pattern A canned fallback (46th RC).
+> **Binding gate:** the test cannot run with real data until the **DB is unlocked** (Path C = `qa-nexus-2` Neon project, active since Thu Jun 18; original `qa-nexus` auto-resumes Jul 1) **and Render is redeployed** (see §A). Until then every data surface shows Pattern A canned fallback (46th RC). _(PR #285 Supabase plan CLOSED per 49th RC — Path C supersedes.)_
 > **Discipline:** every "✅ works" requires the **network-tab check** (46th RC) — open DevTools → Network on the live `pages.dev`, confirm the request hits `qa-nexus-api.onrender.com` + 2xx + REAL data, not canned fallback. Playwright-pass / page-renders ≠ verified.
 
 ---
 
 ## §A — Pre-flight gates (MUST clear in order before testing)
 
-- [ ] **1. DB unlocked.** Neon resumed (check console) OR Supabase failover executed (`docs/plans/supabase-hot-standby-setup.md`, BE+1). Confirm: `curl -s https://qa-nexus-api.onrender.com/api/projects` returns **5 real Iksula projects**, not empty/canned.
+- [ ] **1. DB unlocked.** Path C active: `qa-nexus-2` Neon project should be live (created Thu Jun 18, BE+1 Path B migration). Confirm: `curl -s https://qa-nexus-api.onrender.com/api/projects` returns **5 real Iksula projects**, not empty/canned. If Path B PR not yet merged, check `gh pr list` for status.
 - [ ] **2. Render redeployed `04c73ea`+.** Currently STALE (v0.0.1, `/health/lite` 404). Render dashboard → Manual Deploy. Confirm: `curl .../health/lite` → **200**.
 - [ ] **3. Pages bundle current.** Confirm FE on `cb1ed3a`+ (the #277 prod-baseURL fix). Network-tab: F09 switcher request → host = `onrender.com`, not `localhost`.
 - [ ] **4. Identity regression guard (P0-001).** Fresh incognito → sign in `yogesh.mohite@iksula.com` → user pill = **"Yogesh M. · ADMIN"** (NOT "Kishor K."). Wrong identity → STOP + escalate.

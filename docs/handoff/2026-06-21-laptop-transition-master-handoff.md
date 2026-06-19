@@ -1,26 +1,24 @@
 # 🔴 MASTER HANDOFF — Laptop / Account Transition (target Sun 2026-06-21)
 
-> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v1 comprehensive (sections marked `⟦TODO-FRI⟧` finish Fri after the deep test + final PR dispositions).
+> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v2 (Fri 2026-06-19 ~12:30 PM IST — §4 backup expanded, §6 RC distillation, §7 gotchas added, §8 work-list updated, §1 snapshot refreshed).
 > **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork _session_ survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
 > **Verify-before-assert:** every state claim below was confirmed against `origin/main` + live curl on Thu 2026-06-18 ~3 PM IST. Re-verify before acting — deploys drift (see §1 stale-Render finding).
 
 ---
 
-## §1 — Project state snapshot (Thu 2026-06-18 ~15:00 IST, verified)
+## §1 — Project state snapshot (Fri 2026-06-19 ~12:15 IST, verified)
 
 ### Repo / git
 
-- **main HEAD = `ed18027`** (`docs(eod): post day-32 fri fe shakedown-sweep eod report (#280)`). ⟦Re-verified Thu 2026-06-18 ~3:15 PM IST — main advanced past `04c73ea`/#284 since the first §1 write earlier this turn. Re-fetch before acting; this snapshot drifts hourly during active merge waves.⟧
-- **Open PRs against main** (snapshot Thu 2026-06-18 ~3:15 PM IST — re-run `gh pr list --state open --base main` for current truth):
-  | PR | Title | Type | Disposition |
+- **main HEAD = `9059a39`** (advanced from `ed18027` after 3 docs-PR merges Fri 12:10 PM). Re-fetch before acting; this snapshot drifts hourly during active merge waves.
+- **Open PRs against main** (snapshot Fri 2026-06-19 ~12:15 IST — re-run `gh pr list --state open --base main` for current truth):
+  | PR | Title | Type | Status |
   | --- | --- | --- | --- |
-  | #278 | sweep B — invite modal starts empty | FE code | review + merge |
-  | #279 | 46th RC — deployed-bundle baseURL + dashboard §9/§10 | docs/memory | merge |
-  | #280 | Day-32 Fri FE shakedown-sweep EOD | FE docs | merge |
-  | #281 | Day-32 Fri BE EOD | BE docs | merge |
-  | #282 | Fri evening EOD (12-PR batch) | docs | merge |
-  | #283 | Sweep C — F27 pending-invites consume | FE code | review + merge |
-  | #285 | Supabase hot-standby setup guide | docs | merge (BE+1 executes) |
+  | #287 | laptop transition master handoff v1 + Path C | docs/handoff | OPEN (this doc — MAIN's branch) |
+  | #286 | FE canned-data inventory (STEP 1) | docs/audit | OPEN (FE+1 inventory) |
+- **Merged Fri AM (stale-PR triage):** #279 (46th RC docs), #281 (BE EOD Day 32), #282 (MAIN Fri evening EOD) — all squash-merged, branches deleted.
+- **Closed:** #285 (Supabase hot-standby) — closed Thu per 49th-RC ruling; Path C supersedes; recoverable from git history.
+- **Previously merged (Thu+earlier):** #277 (prod-baseURL fix), #278 (sweep B), #280 (FE EOD), #283 (sweep C), #284 (cron-gate fix).
 
 ### Live deploys (the critical truth — merged ≠ deployed)
 
@@ -188,17 +186,65 @@ Report the reconciled truth-state, then await Yogesh's direction.
 **Backup procedure (run BEFORE the laptop is wiped):**
 
 ```bash
-# off-device target = an external drive or a private cloud folder you control
+# ═══ STEP 1: Create backup directory ═══
 BK=~/qa-nexus-transition-backup-2026-06-21
 mkdir -p "$BK"
+
+# ═══ STEP 2: Copy local-only stores ═══
+# User auto-memory (26 files — all RC lessons, dev-env notes, pilot-team context)
 cp -R ~/.claude/projects/-Users-yogeshmohite-AI-Tester-Project-Project10-QA-Nexus/memory "$BK/user-auto-memory"
+
+# Cowork workspace (work-log xlsx, chat-history, token tracking)
 cp -R "$HOME/Claude Cowork Workspace " "$BK/cowork-workspace"   # note trailing space in folder name
-cp -R ~/AI_Tester_Project/Project10-QA_Nexus/chat-history "$BK/chat-history" 2>/dev/null || true
-# verify counts match this doc's §1 before trusting the backup
-ls "$BK/user-auto-memory" | wc -l   # expect ~26
+
+# Claude Code session transcripts (large — 100+ MB; optional but valuable for auditing)
+mkdir -p "$BK/session-transcripts"
+cp ~/.claude/projects/-Users-yogeshmohite-AI-Tester-Project-Project10-QA-Nexus/*.jsonl "$BK/session-transcripts/" 2>/dev/null || true
+
+# ═══ STEP 3: Verify counts BEFORE trusting the backup ═══
+echo "=== Verification ==="
+echo "User memory files: $(ls "$BK/user-auto-memory" | wc -l | tr -d ' ')  (expect ~26)"
+echo "Cowork files: $(find "$BK/cowork-workspace" -type f | wc -l | tr -d ' ')"
+echo "Session transcripts: $(ls "$BK/session-transcripts"/*.jsonl 2>/dev/null | wc -l | tr -d ' ')"
+
+# ═══ STEP 4: Create compressed archive for USB + iCloud ═══
+tar -czf ~/qa-nexus-handoff-backup-$(date +%Y%m%d).tar.gz -C ~ qa-nexus-transition-backup-2026-06-21/
+echo "Archive: ~/qa-nexus-handoff-backup-$(date +%Y%m%d).tar.gz"
+echo "Size: $(du -sh ~/qa-nexus-handoff-backup-*.tar.gz | cut -f1)"
 ```
 
-**Do NOT rely on the repo clone for these three — they are local-only by design.** This is the entire reason the 49th RC exists.
+**Dual-medium backup (51st RC discipline — verify before destructive op):**
+
+1. **USB drive:** copy `~/qa-nexus-handoff-backup-*.tar.gz` to USB root. Eject safely.
+2. **iCloud Drive:** copy the same `.tar.gz` to `~/Library/Mobile Documents/com~apple~CloudDocs/QA-Nexus-Backup/`. Confirm upload completes (check iCloud status icon). If no iCloud, use Google Drive via browser upload.
+3. **Verify BOTH copies** before clearing the laptop: `shasum -a 256` on the original, USB copy, and iCloud copy must match.
+
+**New-laptop restore procedure:**
+
+```bash
+# ═══ On the NEW laptop, after cloning the repo ═══
+
+# 1. Extract backup (from USB or iCloud)
+tar -xzf /Volumes/USB/qa-nexus-handoff-backup-*.tar.gz -C ~/
+
+# 2. Restore user auto-memory to the Claude Code project path
+#    IMPORTANT: the dir name encodes the absolute project path on disk.
+#    If the new laptop's project path differs, create the new dir first:
+NEW_PROJ_DIR=$(echo "$HOME/AI_Tester_Project/Project10-QA_Nexus" | sed 's|/|-|g; s|^-||')
+mkdir -p "$HOME/.claude/projects/-$NEW_PROJ_DIR/memory"
+cp -R ~/qa-nexus-transition-backup-2026-06-21/user-auto-memory/* \
+      "$HOME/.claude/projects/-$NEW_PROJ_DIR/memory/"
+
+# 3. Restore Cowork workspace (if continuing Cowork sessions)
+cp -R ~/qa-nexus-transition-backup-2026-06-21/cowork-workspace/* \
+      "$HOME/Claude Cowork Workspace /"   # trailing space
+
+# 4. Verify restoration
+echo "User memory restored: $(ls "$HOME/.claude/projects/-$NEW_PROJ_DIR/memory/" | wc -l | tr -d ' ') files (expect ~26)"
+echo "MEMORY.md lines: $(wc -l < "$HOME/.claude/projects/-$NEW_PROJ_DIR/memory/MEMORY.md")"
+```
+
+**Do NOT rely on the repo clone for the user auto-memory or Cowork stores — they are local-only by design.** This is the entire reason the 50th RC exists. The repo's `.claude/memory/` (committed, 25+ files) survives automatically; the user-session memory (per-machine, 26+ files) does NOT.
 
 ---
 
@@ -231,6 +277,57 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 ### Binding decisions A–F (conformance scope)
 
 - **A** invite flow = M1-mandated (must work). **B(a)** TipTap doc authoring = SKIP. **B(b)** F18 Test Suites = DEFERRED-from-pilot (Sat-optional / M6). **C** F24 QA-Value dashboard = DROPPED. **D** Jira = seed-only for pilot (outbound sync → M5). **E** P0-C fictional names = canned-data override (no Rule-3 frame edits). **F** (Fri shake-down) H sign-out 405 + I F28 audit-count + J RSC-404s. Plus: **W2-R defects API STAYS**, **F21 STAYS**, **Yogesh test = deep-test cycle, launch on test feedback (no fixed date).**
+- **Option A (Fri Jun 19)** — disciplined PM1 scope. No new features. Focus: wire sweep + E2E + handoff. Supersedes any prior scope expansion.
+
+### $0/month cost gate — operational details
+
+- **Rule 1 is absolute.** Even $5/mo upgrades need an ADR + Yogesh sign-off. The 49th RC showed how this discipline works in practice: Supabase Free is genuinely free, but the migration effort (3-4 hr + new vendor in topology) was premature — same-vendor Path C ($0, ~1 hr) existed.
+- **Indian RBI e-Mandate gotcha:** Stripe/Paddle/Lemon Squeezy auto-billing may fail for Indian-issued cards (RBI two-factor mandate on recurring > ₹5,000). If PM1 ever moves to a paid tier, test the payment flow with Yogesh's card specifically. Manual billing (invoice → one-time payment) is the safe fallback.
+- **Free-tier caps to watch:** Neon 100 CU-hr/project/mo + 0.5 GB storage, Render 750 hr/mo + 512 MB RAM + 15-min cold start, Cloudflare Pages 500 builds/mo, Resend 3,000 emails/mo, Groq 1k RPD on gpt-oss-120b, GitHub Actions 2k min/mo.
+- **UptimeRobot 5-min keep-alive** must cover the 7-day 10 AM–10 PM pilot window. The 47th RC showed a `*/15 updateMany` cron keeping Neon compute awake 24/7 → burned the CU-hr cap with zero users.
+
+### 51+ reality-check lessons distilled (binding patterns — see `.claude/memory/feedback_*.md` for full write-ups)
+
+**Pattern family 1 — Verify before assert:**
+
+- **Merged ≠ live.** Always confirm the deployed SHA, not the assumed one (41st RC — 5-for-5 stale-deploy pattern). `gh pr view` → compare SHA to Render/Pages deploy.
+- **Two-axis aggregation:** merged-on-main AND live-verified must be independently confirmed (43rd RC). A code PR squash-merged on main can still be running a stale bundle.
+- **Live-verified = network-tab check** — human watches DevTools Network on the live URL, outgoing host = production API origin + 2xx + real data, not canned fallback. Playwright-pass / page-renders ≠ verified (46th RC).
+- **Constraint scope before expensive workaround** — when a quota/limit blocks you, verify its exact scope (per-project vs per-account vs per-region) from primary vendor docs BEFORE proposing a cross-vendor migration (49th RC).
+- **Audit .env for stale refs AND duplicate keys** before any same-vendor env migration (51st RC). Same-vendor URLs look "right enough" that grep-by-vendor misses stale values.
+
+**Pattern family 2 — Infrastructure economics:**
+
+- **Serverless DB cron-gate** — any unconditional cron/poll/DB-touching healthcheck on <5-min interval keeps Neon compute awake 24/7 → burns the CU-hr cap (47th RC). Gate crons to the operating window; keep healthchecks memory-only.
+- **Pattern A canned fallback masks broken wires** — FE renders fixtures when API calls fail, so a page that "looks fine" may not be hitting the API at all. Network-tab is the only proof (46th RC).
+
+**Pattern family 3 — Agent coordination:**
+
+- **Verify API paths from producer source** before prescribing to consumer agents — never assume REST conventions (33rd RC). Source from `*.controller.ts` + shared Zod schemas.
+- **Independent diagnosis convergence** = high confidence — when two agents converge on the same root cause via different layers, trust the convergence (35th RC). But still verify the FIX empirically.
+- **Cross-worktree .env discipline** — edits MUST target the correct worktree; verify with `pwd` before assuming landed (18th RC).
+- **Chat misroute** — agents MUST verify-before-edit when an incoming brief looks outside their worktree's role (25th RC).
+- **Cascade discipline** — when squash-merge flips sibling PRs DIRTY, hold+surface, don't force-merge (40th RC).
+
+**Pattern family 4 — Build / test / deploy:**
+
+- **ts-jest mock factory completeness** — `jest.mock(module, factory)` factory must export EVERY symbol the unit imports; omitted export = `undefined` → "X is not a function" (36th/P0-001 RC).
+- **Nest DI module-import** — adding a controller dep or `@UseGuards` requires the `.module.ts` to import the exporting module; unit tests useValue-provide → false green; only runtime boot catches it (Day-29 RC).
+- **Prettier pre-push gate** honors `.prettierignore` not `.gitignore` — gitignored spec.json + untracked sessions/\*.md trip it. Fix: `prettier --write` on target paths directly; never `--no-verify` (frame-port RC).
+- **Stale-deploy diagnosis pattern** — before classifying ANY UI bug as P0/P1, confirm which commit the deploy is built from. Cloudflare Pages auto-deploys on `main` only; pending PRs are NOT in the bundle (32nd RC).
+
+**Pattern family 5 — Institutional discipline:**
+
+- **Institutional memory = VCS + off-device backup**, never agent process state (50th RC). "The next session will remember" = lost.
+- **Metadata audit reveals artifact issues** — when the user questions metadata (stale tracking, odd counts), treat it as a trigger for focused artifact audit, not bookkeeping (Day-32 RC).
+- **"LIVE" over-claim** — a ledger claiming "X LIVE/N rows" is NOT proof; verify wired via grep @Controller route + AppModule import + live curl (39th RC).
+- **Bank the blocked window** — when blocked on an external gate, pre-produce the stable ~70% of a downstream deliverable, DRAFT-marked (45th RC).
+
+### Cowork hang patterns + known workarounds
+
+- **VM bundle nuke:** Cowork (Mac desktop app) occasionally hangs on "Connecting…" after sleep/wake. Fix: `rm -rf ~/Library/Application\ Support/Cowork/Bundle/` then relaunch. The bundle re-downloads (~30s).
+- **File-bridge timeout:** Cowork's file-system bridge sometimes stops syncing after 2+ hours of continuous use. Symptoms: tool calls return stale file contents, edits silently fail. Fix: restart the Cowork app (not just the session). Save any in-flight work to clipboard first.
+- **Session token expiry:** Cowork sessions expire after ~4 hours of inactivity. The session appears live but tool calls start failing with auth errors. Fix: start a new session; the old one's context is lost (reinforces 50th RC — don't rely on session state).
 
 ### Yogesh's workflow (how to work with the operator)
 
@@ -249,34 +346,58 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 
 ---
 
-## §7 — ⟦TODO-FRI⟧ (finish before Sun)
+## §7 — Known gotchas + workarounds (one-liner quick-reference)
 
-### Fri Jun 19
+> These are the _actionable warnings_ from 51+ reality-checks. Each is a specific situation → specific fix. The thematic patterns behind them live in §6's RC distillation above. This section is the "when you hit THIS, do THIS" cheat sheet.
 
-- [ ] **AM** — FE+1 ships WIRE sweep (~6-8 hr, ~73% canned-routes → live) → Pages redeploy → 46th-RC network-tab verify per surface
-- [ ] **AM** — BE+1 fills `docs/handoff/be-handoff-for-new-laptop.md` on the existing `docs/be-laptop-transition-handoff` branch + PRs it
-- [ ] **AM** — FE+1 creates `docs/handoff/fe-handoff-for-new-laptop.md` on a new branch + PRs it
-- [ ] **Mid-day** — MAIN aggregates BE+1 + FE+1 progress; updates dashboard §11 as wires complete
-- [ ] **Mid-day** — 52nd RC banked (Day-29 clean-DB migration interleave) once Path B PR lands
-- [ ] **PM (5-7)** — Yogesh E2E + MAIN Phase-2 orchestration aggregation (BE+1 log tail + FE+1 console + P0/P1/P2 log)
-- [ ] **Eve (7-9)** — MAIN writes `docs/audits/2026-06-19-fri-main-prd-conformance-final.md` (Phase D verdict — pilot-ready YES/CONDITIONAL/NO)
-- [ ] **Eve** — MAIN polishes handoff §4-§7
+**Git + CI:**
+
+1. **Chained-base squash cascade** — when you squash-merge a PR and a downstream PR shares its base, the downstream goes DIRTY. Fix: temp-branch + rebase + take-ours for upstream content + force-with-lease push. Never force-merge.
+2. **Prettier pre-push gate scans gitignored files** — the pre-push hook honors `.prettierignore` not `.gitignore`. Gitignored `spec.json` + untracked `sessions/*.md` trip it. Fix: `prettier --write` on the specific paths; do NOT use `--no-verify`.
+3. **git-mv-then-add footgun** — after `git mv`, the renamed file's changes need `git add` on the NEW path, not the old one.
+4. **commitlint type-enum** — only the types in `.commitlintrc.yml` are allowed. `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `style`. No `build`, no `wip`.
+
+**Infrastructure:** 5. **Neon Free per-project 100 CU-hr cap** — the cap is per-project, NOT per-account. A second project in the same org resets the counter to 0. Path C (qa-nexus-2) exploits this. 6. **Neon cron-gate** — any DB-touching cron or healthcheck on <5-min interval keeps Neon compute awake 24/7. Gate crons to pilot operating window (10 AM–10 PM IST, 7 days/week). `/health` must be memory-only. 7. **Render Free 15-min cold start** — first request after 15 min idle takes 30-60s. UptimeRobot 5-min keep-alive prevents this during the pilot window. Outside the window, cold starts are expected. 8. **Render Free blocks outbound SMTP** — since Sept 2025. Use Resend HTTP API (ADR-018), not nodemailer/Gmail SMTP. 9. **Better Stack syslog port** — use port 6514 (TLS), not 514 (plaintext). The token goes in the syslog structured-data, not a header. 10. **Cloudflare Pages auto-deploys on main only** — pending PRs are NOT in the deployed bundle. Stale-deploy triage: always confirm the deployed SHA first (41st RC, 5-for-5).
+
+**Backend / NestJS:** 11. **ts-jest mock factory completeness** — `jest.mock(module, factory)` factory must re-export EVERY symbol the test file imports. Omitted export → `undefined` → "X is not a function" (looks like ESM/CJS interop but isn't). 12. **Nest DI module-import vs unit-mock false-green** — adding a controller dep or `@UseGuards` requires the `.module.ts` to `imports: [ExportingModule]`. Unit tests `useValue`-provide it → false green. Only runtime boot (or bogus-DB E2E) catches the missing import. 13. **Prisma two-URL pattern** — `DATABASE_URL` = pooler `:6543` (runtime queries); `DIRECT_URL` = direct `:5432` (migrations only). Mixing them up = silent connection pool exhaustion or migration timeouts. 14. **HMAC audit_log chain** — all state-changing operations must write to the chained audit table (PM1_ERD §3.13). The chain is immutable; a break in the chain = corrupted data. Seed-time secret drift causes a benign row-25 break (documented exception). 15. **BetterAuth session cookies** — cross-site (different registrable domains) needs `SameSite=None` + `Secure` + `Partitioned` + host-only (no `Domain`). The P0-001 root cause was exactly this. `resolveCookieConfig` topology fix in #256.
+
+**Frontend / Next.js:** 16. **Pattern A canned fallback** — FE renders fixtures when API calls fail. A page that "looks fine" may not be hitting the API at all. DevTools Network tab is the only proof of real data. 17. **getApiBaseURL()** — defaults to `localhost:3001` when `NEXT_PUBLIC_API_BASE_URL` is missing from Cloudflare Pages BUILD env. This is the 46th RC root cause. Verify the env var is set in Pages Settings → Environment Variables → Production. 18. **AdminShell canonical reference** — F19's React implementation is canonical for shell internals (Day-17 amendment), NOT the v2 HTML. Lucide-react icons retained over HTML's custom SVGs.
+
+**Data / testing:** 19. **Pilot team names** — always the 8 real Iksula users (Akshay, Yogesh, Kishor, Nitin, Nadim, Govind, Mohanraj, Sagar). Never "Priya Tiwari" or "Ravi Sharma" (fictional). Canned data in React ports must trace back to canonical v2 HTML verbatim. 20. **ID patterns** — Jira `RET-###`, uploaded reqs `REQ-###`, test cases `TC-RET-###`, defects `DEF-###`, imports `#242`. Anything else = invented data violation (Rule 17). 21. **P0-001 identity regression** — fresh incognito sign-in MUST show "Yogesh M. · ADMIN" in the user pill. Wrong identity (e.g., "Kishor K.") = P0 STOP + escalate. Cross-layer root cause: cookie infra + persona embed + customSession app-fields.
+
+**Cost / billing:** 22. **Indian RBI e-Mandate** — auto-billing may fail for Indian cards on recurring > ₹5,000 (RBI two-factor mandate). Manual billing (invoice → one-time payment) is the fallback if PM1 ever moves to paid.
+
+---
+
+## §8 — Work-list (Fri-Sat-Sun)
+
+### Fri Jun 19 (today)
+
+- [x] **12:00** — Ground-truth check: main HEAD `9059a39` (advanced from `ed18027` after 3 stale-PR merges)
+- [x] **12:00** — Stale PR triage: #279, #281, #282 squash-merged (all docs-only, historical record)
+- [x] **12:00-2:00** — Handoff §4 expanded (exact backup/restore commands with verified paths) + §6 expanded (51+ RC distillation, $0 gate, Indian RBI, Cowork patterns) + §7 added (22 gotchas as one-liner quick-reference)
+- [ ] **2:00-3:00** — Dashboard §11 update with Fri Jun 19 state (Path B status, PR dispositions, Fri reframe)
+- [ ] **3:00-5:00** — Monitor FE+1 WIRE sweep + BE+1 Path B progress; aggregate findings
+- [ ] **5:00-7:00** — Yogesh E2E orchestration (tail BE+1 logs + FE+1 console + track P0/P1/P2)
+- [ ] **7:00-8:00** — Phase D verdict: `docs/audits/2026-06-19-fri-main-prd-conformance-final.md`
+- [ ] **8:00** — Fri EOD report
 
 ### Sat Jun 20
 
 - [ ] Buffer for Fri E2E fix-ups (whatever P0/P1 surfaces)
-- [ ] Master handoff §7 known-gotchas distilled from all 51+ RCs (actionable warnings, not lessons — what each rule prevents)
+- [ ] Handoff §8 known-issues populated with E2E findings
 - [ ] BE+1's 47th/48th RC memory files PR'd into `.claude/memory/` (currently per-machine only)
-- [ ] Off-device backup procedure rehearsed (run §4's backup-procedure block once against actual data → verify counts → keep the backup)
+- [ ] Off-device backup procedure REHEARSED (run §4's backup-procedure block once against actual data → verify counts → keep the backup)
+- [ ] Jul 1 qa-nexus switchback checklist drafted
 
 ### Sun Jun 21 — transition day
 
 - [ ] Final `gh pr list --state open --base main` → 0 open PRs that matter, or each named with a disposition
 - [ ] All chat-history files committed (or off-device-backed)
 - [ ] Off-device backup VERIFIED on a second medium (USB + iCloud, not just one)
-- [ ] All credentials accessible on the new laptop (all on `yogeshmohite-iksula` identity)
+- [ ] All credentials accessible on the new laptop (all on `yogeshmohite-iksula` identity: GitHub, Neon, Render, Cloudflare, Resend, Groq, UptimeRobot, Better Stack, Grafana Cloud)
 - [ ] This handoff doc linked from `CLAUDE.md` (one-line pointer at the top — the new agent reads CLAUDE.md automatically)
 - [ ] `docs/eod-reports/2026-06-21-sun-laptop-handoff-sign-off.md` written (final EOD)
-- [ ] Confirm post-transition email + GitHub account continuity (which account survives the corporate email change)
+- [ ] Confirm post-transition email + GitHub account continuity (yogeshmohite-iksula survives; yogeshcodeshare is personal + unaffected)
 
-_v1 authored Thu 2026-06-18 by MAIN while the context was still in-session — deliberately comprehensive rather than a thin skeleton, because the 49th RC's whole point is that this doc, not any session, is what survives Sun. Re-verify all §1 state before acting on it._
+_v2 authored Fri 2026-06-19 12:30 PM IST by MAIN. §4 expanded with verified backup paths + restore procedure. §6 expanded with 51+ RC pattern distillation + $0 gate + Cowork patterns. §7 added: 22 gotchas as one-liner quick-reference. §8 (was §7) work-list updated with Fri AM completions. Re-verify all §1 state before acting on it._
