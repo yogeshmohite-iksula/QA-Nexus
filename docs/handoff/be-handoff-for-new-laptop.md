@@ -92,7 +92,7 @@ conventions. 5 wrong assumptions were caught this way.
 - Workspace-scoped via `project.workspaceId`; case counts (`totalCases`/`passedCases?`/`failedCases?`) tallied from `test_run_results` (no denormalized columns).
 - Response `{ ok, testRuns: TestRunListItem[], pagination }` — `TestRunListItem`/`TestRunListQuery`/`TestRunListResponse` in `@qa-nexus/shared`. `projectKey` = `project.key`; `triggeredBy` = nullable human (webhook/cron → null), distinct from the `trigger` enum.
 - `test_runs` is **empty until the runner creates runs** → returns `{testRuns:[], total:0}`. The `@Patch :id/start|result|abort` state-transition routes are the other half (the runner; PM-future).
-- ACTIVE_RUNS FE wire deferred to Sat AM (FE+1 lane); RECENT_RUNS has no UI slot yet (M5 backlog).
+- F08 wired both cards (ACTIVE_RUNS + RECENT_RUNS) against this endpoint via FE+1 PR #291 (2026-06-19).
 
 **501 stubs (PM2–PM4 deferred — acceptable, per PRD):** `jira-sync.controller.ts` + write-ops on
 `defects.controller.ts` return `NOT_IMPLEMENTED`. Contract = "PM1-mandated MUST work now; PM2-4 = 501 stub."
