@@ -345,19 +345,46 @@ _§12 appended Fri 2026-06-19 ~12:30 PM IST. Ground-truth check completed; stale
 - Fix: idempotent corrective migration (IF NOT EXISTS everywhere). Cross-ref: 51st RC (env stale/dup audit), audit immutability memory.
 - Indexed in: `.claude/memory/memory.md` (repo) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory).
 
-**Revised gates (supersedes §12.4):**
+_§12.6 appended Fri 2026-06-19 ~1:30 PM IST. 53rd RC closes the prisma-migrate-status-vs-schema-drift class._
 
-| Gate                                | Status                                          | Blocker?                                     |
-| ----------------------------------- | ----------------------------------------------- | -------------------------------------------- |
-| DB unlocked (qa-nexus-2 via Path C) | 🟡 PR #288 OPEN, awaiting merge                 | YES — blocks all data-layer verification     |
-| PR #289 drift migration             | ❓ Not visible in open PRs — verify with Yogesh | Depends — may be in #288 or already merged   |
-| Render redeployed with Path B       | 🟡 Waiting on PR #288 merge + manual deploy     | YES — current deploy has old DB URLs         |
-| FE WIRE sweep                       | 🟡 FE+1 in flight (73% canned → live)           | YES — blocks E2E                             |
-| Pages bundle current                | 🟡 After WIRE sweep merges                      | YES — network-tab check needs current bundle |
-| E2E test (3 workflows)              | ⬜ Blocked by above gates                       | Yogesh-driven, 5 PM target                   |
-| Phase D verdict                     | ⬜ Blocked by E2E                               | MAIN writes 8-9 PM                           |
-| Handoff complete                    | 🟢 v2 shipped, §6-§8 populated                  | Sat polish only                              |
+### §12.7 — Post-merge state update (~3:45 PM IST)
 
-**E2E start target: 5 PM IST** — contingent on PR #288 merge + Render redeploy + FE WIRE sweep landing.
+**PRs #288 + #289 MERGED to main:**
 
-_§12.6 appended Fri 2026-06-19 ~1:30 PM IST. 53rd RC closes the prisma-migrate-status-vs-schema-drift class. PR #289 status flagged for Yogesh clarification — the domino chain is PR #288 → merge → Render redeploy → E2E → Phase D._
+- **#288** merged at `4c1a7aa` (2026-06-19 09:39:27 UTC) — jira_webhook_events CREATE TABLE migration
+- **#289** merged at `d0ba367` (2026-06-19 09:39:50 UTC) — full clean-DB schema drift corrective (3 tables + 17 cols + 6 enum/type + 21 FK)
+- **Main HEAD = `d0ba367`** (advanced from `9059a39`)
+
+**Render auto-deployed and verified:**
+
+- `/health` → 200 `{"status":"ok","version":"0.0.1"}` ✅
+- `/health/lite` → 200, uptime ~248s (fresh restart from auto-deploy) ✅
+- DB connection: implicit in `/health` OK (NestJS boot requires Prisma connect)
+
+**Option C decision (Yogesh, ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E.
+
+**Open PRs (4 remaining):**
+
+| PR   | Title                                         | Status                                                                    |
+| ---- | --------------------------------------------- | ------------------------------------------------------------------------- |
+| #291 | FE WIRE sweep — 4 wires + ComingSoon + HERO   | OPEN (FE+1 expanding tonight: +F14, F17, ACTIVE_RUNS, RECENT_RUNS, F26m1) |
+| #290 | BE handoff doc — architecture/contracts/infra | OPEN (BE+1 finalizing)                                                    |
+| #287 | Master handoff — laptop transition            | OPEN (MAIN — polish tonight, merge Sat)                                   |
+| #286 | FE canned-data inventory                      | OPEN (docs-only, historical)                                              |
+
+**Revised gates (supersedes §12.6 table):**
+
+| Gate                                | Status                                                      | Blocker?                         |
+| ----------------------------------- | ----------------------------------------------------------- | -------------------------------- |
+| DB unlocked (qa-nexus-2 via Path C) | ✅ DONE — #288 + #289 merged, migrations applied            | CLEARED                          |
+| Render redeployed with Path B       | ✅ DONE — auto-deploy verified (`/health` + `/health/lite`) | CLEARED                          |
+| FE WIRE sweep (#291)                | 🟡 FE+1 expanding tonight (4→9 wires + 7 ComingSoon + HERO) | YES — blocks Sat E2E             |
+| Pages bundle current                | 🟡 After #291 merges + auto-deploy                          | YES — network-tab check needs it |
+| E2E test (3 workflows)              | ⬜ Sat AM (Option C)                                        | Yogesh-driven, Sat 9 AM-1 PM     |
+| Phase D verdict                     | ⬜ Sat PM (after E2E data)                                  | MAIN fills Sat afternoon         |
+| Handoff complete (#287)             | 🟢 v2 shipped — tonight polish, Sat merge                   | Polish only                      |
+| BE handoff (#290)                   | 🟡 BE+1 finalizing tonight                                  | Merge before Sun                 |
+
+**Domino chain tonight:** FE+1 ships expanded #291 → Yogesh reviews/merges → Pages auto-deploys → all systems green for Sat AM E2E.
+
+_§12.7 appended Fri 2026-06-19 ~3:45 PM IST. DB + Render gates CLEARED. Two of seven gates remaining (FE WIRE + Pages deploy). Option C moves E2E to Sat AM — tonight is ship-everything + handoff-polish._
