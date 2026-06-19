@@ -13,7 +13,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight, Plus } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
-import { useActiveProject } from '@/lib/contexts/ProjectContext';
+import { useActiveProject, useIsProjectsLoaded } from '@/lib/contexts/ProjectContext';
 import { fetchTestCases } from '@/lib/api/test-cases-api';
 import { TestCaseMethodChooserModal } from './test-case-method-chooser-modal';
 import { BulkImportModal } from './bulk-import-modal';
@@ -34,21 +34,23 @@ function TestCaseLibraryContent() {
   const isChooserOpen = (searchParams?.get('new-test-case') ?? null) === '1';
   const isBulkImportOpen = (searchParams?.get('bulk-import') ?? null) === '1';
 
-  // Fri WIRE Option C: live test-case count via GET /api/projects/:projectId/test-cases.
-  // Null = fetch pending / failed → canned "1,284 cases" copy holds (Option-B
-  // fallback). Pilot DB starts at 0 cases → "0 cases" honest display.
+  // Zero-canned sweep (2026-06-19 ~22:30 IST): gate the project-scoped
+  // fetch on `isProjectsLoaded` (same fix class as F14 requirements). Stale
+  // FE seed UUID would 404 otherwise; we now wait for the real UUIDs.
   const project = useActiveProject();
+  const isProjectsLoaded = useIsProjectsLoaded();
   const [liveTotal, setLiveTotal] = useState<number | null>(null);
   useEffect(() => {
+    if (!isProjectsLoaded) return;
     let alive = true;
     void fetchTestCases(project.id, 1, 1).then((res) => {
-      if (!alive || !res) return;
-      setLiveTotal(res.pagination.total);
+      if (!alive) return;
+      setLiveTotal(res ? res.pagination.total : 0);
     });
     return () => {
       alive = false;
     };
-  }, [project.id]);
+  }, [isProjectsLoaded, project.id]);
 
   const openChooser = useCallback(() => {
     console.info('pattern-a:deferred:test-cases:new-test-case');

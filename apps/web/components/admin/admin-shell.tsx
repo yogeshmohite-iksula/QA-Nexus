@@ -1042,12 +1042,9 @@ function NavLinkRow({
   // is items whose intrinsic tone IS 'disabled' (e.g. Automation Studio
   // v1.5 placeholder) — those render the disabled tone style.
   const chipStyle = toneStyle(item.tone);
-  const countColor =
-    item.tone === 'fail' && item.count
-      ? 'var(--fail)'
-      : active
-        ? 'var(--secondary)'
-        : 'var(--text-tertiary)';
+  // `countColor` was used to tone the per-item count badge (Defects red,
+  // active violet, idle grey). Counts are no longer rendered post zero-
+  // canned sweep — see the comment near item.count in JSX below.
 
   return (
     <Tag
@@ -1093,14 +1090,12 @@ function NavLinkRow({
       {!isCollapsed && (
         <>
           <span className="flex-1 truncate">{item.label}</span>
-          {item.count && (
-            <span
-              className="ml-auto font-mono text-[11px]"
-              style={{ color: countColor, fontVariantNumeric: 'tabular-nums' }}
-            >
-              {item.count}
-            </span>
-          )}
+          {/* Zero-canned sweep (2026-06-19 ~22:30 IST): nav-item counts
+              (Requirements 142, Test Cases 1,284, Audit 47k, etc.) were
+              hardcoded fixtures. Stripped until a per-area counts
+              endpoint ships. Pills still render — those are status
+              indicators, not data. */}
+          {/* item.count rendering intentionally removed — see comment above. */}
           {item.pill && (
             <span
               className="ml-auto rounded-[3px] border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"

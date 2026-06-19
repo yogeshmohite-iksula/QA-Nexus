@@ -4,7 +4,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ACTION_QUEUE, ACTIVE_RUNS, RECENT_RUNS } from './data';
+import { ACTIVE_RUNS, RECENT_RUNS } from './data';
 import { ComingSoon } from '@/components/admin/coming-soon';
 import {
   fetchActiveRuns,
@@ -45,42 +45,24 @@ export function OutcomeBoard({ onRoute }: OutcomeBoardProps) {
 // Card 1 — Action queue
 // ---------------------------------------------------------------------------
 
-function ActionQueueCard({ onRoute }: { onRoute: (t: string) => void }) {
+// Zero-canned sweep (2026-06-19 ~22:30 IST): the canonical "personal action
+// queue" sums (open AI reviews + clarifications + defect-triage assigned to
+// the signed-in user) require a roll-up endpoint we haven't built yet
+// (M2/M3 candidate). Until the endpoint exists, the card must NOT show the
+// canned "6 items / +2 yesterday / sparkline" — that masks reality with
+// invented telemetry. Honest empty state until BE catches up.
+function ActionQueueCard(_props: { onRoute: (t: string) => void }) {
   return (
     <BoardCard tone="neutral">
       <CardHead label="Your action queue" />
-      <div className="flex items-center justify-between">
-        <span className="font-display text-[28px] font-bold leading-none text-[var(--text-primary)]">
-          {ACTION_QUEUE.itemCount}{' '}
-          <span className="text-[14px] font-medium text-[var(--text-tertiary)]">items</span>
-        </span>
-        <span
-          className="bg-[var(--pass)]/15 inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[11px] font-bold text-[var(--pass)]"
-          aria-label={`${ACTION_QUEUE.delta} more than yesterday`}
-        >
-          +{ACTION_QUEUE.delta}
-        </span>
-      </div>
-      <Sparkline values={ACTION_QUEUE.spark} />
-      <p className="text-[12px] leading-[18px] text-[var(--text-tertiary)]">
-        {ACTION_QUEUE.caption}
+      <p className="mt-2 text-[14px] leading-[20px] text-[var(--text-secondary)]">
+        No action items today.
       </p>
-      <CardCta onClick={() => onRoute('F08a-action-queue-open')}>Work through queue →</CardCta>
+      <p className="font-mono text-[11px] text-[var(--text-tertiary)]">
+        Open AI reviews + clarifications + defect-triage assigned to you will surface here as soon
+        as the per-user queue endpoint lands.
+      </p>
     </BoardCard>
-  );
-}
-
-function Sparkline({ values }: { values: number[] }) {
-  return (
-    <div aria-hidden="true" className="flex h-10 items-end gap-1">
-      {values.map((v, i) => (
-        <span
-          key={i}
-          className="bg-[var(--primary)]/40 flex-1 rounded-sm"
-          style={{ height: `${Math.max(8, v)}%` }}
-        />
-      ))}
-    </div>
   );
 }
 
