@@ -18,12 +18,10 @@ import { AdminShell } from '@/components/admin/admin-shell';
 import { OutcomeBoard } from './outcome-board';
 import { Queue } from './queue';
 import { RightRail } from './right-rail';
-import { HERO } from './data';
 
-// View-specific stub: sprint metadata isn't on the Project entity yet
-// (lands when BE adds Sprint in M2+). Inline view constant per ADR-006 /
-// runbook step 4.
-const ACTIVE_SPRINT = { number: 42, day: 9, length: 14 } as const;
+// Fri WIRE batch 5: ACTIVE_SPRINT constant dropped (de-fictioned along with
+// HERO + SprintChip + DateChip). Re-add when BE adds Sprint metadata to the
+// Project entity (M2+).
 
 export function QaEngineerHome() {
   const me = useCurrentUser();
@@ -32,8 +30,6 @@ export function QaEngineerHome() {
   useEffect(() => {
     console.info('pattern-a:deferred:home-qa-engineer-load', {
       project: project.key,
-      sprint: ACTIVE_SPRINT.number,
-      day: ACTIVE_SPRINT.day,
       role: me.role,
     });
   }, [project.key, me.role]);
@@ -66,7 +62,19 @@ export function QaEngineerHome() {
 // Hero / greeting (Region 1)
 // ---------------------------------------------------------------------------
 
+/** Returns just the first name from a display name (e.g. "Yogesh M." → "Yogesh"). */
+function firstNameOf(displayName: string): string {
+  return displayName.trim().split(/\s+/)[0] ?? displayName;
+}
+
 function Hero() {
+  // Fri WIRE batch 5 (2026-06-19): de-fictioned. Was canned `HERO.heading`
+  // ("Sprint 42 · Day 9 of 14, …") + `HERO.subFragments` ("Refund regression
+  // suite is queued / Release R-2026-04-PaymentV2 …"). Now: live greeting
+  // from session + active project. No fake sprint, no fake release.
+  const me = useCurrentUser();
+  const project = useActiveProject();
+  const firstName = firstNameOf(me.displayName);
   return (
     <section
       aria-labelledby="home-hero-head"
@@ -77,29 +85,18 @@ function Hero() {
           id="home-hero-head"
           className="font-display text-[24px] font-semibold leading-tight text-[var(--text-primary)] sm:text-[28px] lg:text-[30px]"
         >
-          {HERO.heading}
+          Welcome back, {firstName}.
         </h1>
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-[20px] text-[var(--text-secondary)] sm:text-[14px]">
-          {HERO.subFragments.map((f, i) => (
-            <span key={i} className="inline-flex items-center gap-2">
-              <span className={f.tone === 'pass' ? 'font-medium text-[var(--pass)]' : ''}>
-                {f.text}
-              </span>
-              {i < HERO.subFragments.length - 1 && (
-                <span aria-hidden="true" className="text-[var(--text-disabled)]">
-                  ·
-                </span>
-              )}
-            </span>
-          ))}
+        <p className="text-[13px] leading-[20px] text-[var(--text-secondary)] sm:text-[14px]">
+          Working on <span className="font-medium text-[var(--text-primary)]">{project.name}</span>.
         </p>
       </div>
 
-      {/* Right-side chip cluster */}
+      {/* Right-side chip cluster — only the AI ambient chip survives the
+       *  de-fiction; canonical sprint + date chips referenced fake data and
+       *  are dropped (no equivalent BE endpoint). */}
       <div className="flex flex-wrap items-center gap-2">
         <AiThinkingChip />
-        <SprintChip />
-        <DateChip />
       </div>
     </section>
   );
@@ -118,22 +115,6 @@ function AiThinkingChip() {
         />
       </span>
       A1 is thinking…
-    </span>
-  );
-}
-
-function SprintChip() {
-  return (
-    <span className="border-[var(--primary)]/30 bg-[var(--primary)]/10 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--primary)]">
-      Sprint {ACTIVE_SPRINT.number} · Day {ACTIVE_SPRINT.day} of {ACTIVE_SPRINT.length}
-    </span>
-  );
-}
-
-function DateChip() {
-  return (
-    <span className="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--raised)] px-2.5 py-1 font-mono text-[11px] text-[var(--text-tertiary)]">
-      {HERO.nowDate}
     </span>
   );
 }

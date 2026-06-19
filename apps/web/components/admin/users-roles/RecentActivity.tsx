@@ -2,10 +2,12 @@
 
 'use client';
 
-import type { F27ActivityData } from '@/components/admin/users-roles/types';
+import type { F27ActivityRow } from '@/lib/api/audit-api';
 
 interface Props {
-  data: F27ActivityData;
+  // Fri WIRE batch 4: structural row type so live audit rows AND canned both
+  // satisfy it. Same Sweep-C / batch-1 pattern.
+  data: readonly F27ActivityRow[];
 }
 
 export function RecentActivity({ data }: Props) {

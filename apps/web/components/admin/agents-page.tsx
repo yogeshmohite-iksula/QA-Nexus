@@ -6,6 +6,7 @@
 import './agents-page.css';
 
 import { AdminShell } from '@/components/admin/admin-shell';
+import { ComingSoon } from '@/components/admin/coming-soon';
 import {
   F26_RAW,
   F26_STATS,
@@ -13,9 +14,6 @@ import {
   F26_LLM_PROVIDER,
   F26_AGENTS,
   F26_PERMISSIONS_MATRIX,
-  F26_RECENT_ACTIVITY,
-  F26_RECENT_DECISIONS,
-  F26_DECISION_SUMMARY,
   F26_EVAL_HARNESS,
   F26_GUARDRAIL_EVENTS,
   F26_AUTONOMY_LADDER,
@@ -25,8 +23,6 @@ import { StatsStrip } from '@/components/admin/agents/StatsStrip';
 import { LLMProviderPanel } from '@/components/admin/agents/LLMProviderPanel';
 import { AgentCardsGrid } from '@/components/admin/agents/AgentCardsGrid';
 import { PermissionsMatrix } from '@/components/admin/agents/PermissionsMatrix';
-import { RecentActivity } from '@/components/admin/agents/RecentActivity';
-import { RecentDecisions } from '@/components/admin/agents/RecentDecisions';
 import { EvalHarness } from '@/components/admin/agents/EvalHarness';
 import { GuardrailEvents } from '@/components/admin/agents/GuardrailEvents';
 
@@ -67,8 +63,18 @@ export function AgentsPage() {
           <LLMProviderPanel data={F26_LLM_PROVIDER} />
           <AgentCardsGrid data={F26_AGENTS} />
           <PermissionsMatrix data={F26_PERMISSIONS_MATRIX} />
-          <RecentActivity data={F26_RECENT_ACTIVITY} />
-          <RecentDecisions data={F26_RECENT_DECISIONS} summary={F26_DECISION_SUMMARY} />
+          {/* Fri WIRE batch 5: F26 agents Recent Activity + Recent Decisions
+           *  have no clean endpoint (per-agent metrics not exposed). Replaced
+           *  with ComingSoon. LLM-config + per-agent cards above stay live for
+           *  Yogesh's Workflow-1 walk-through. */}
+          <ComingSoon
+            label="Recent agent activity"
+            hint="Per-agent activity stream coming in a future release."
+          />
+          <ComingSoon
+            label="Recent agent decisions"
+            hint="Per-agent decision log coming in a future release."
+          />
           <EvalHarness data={F26_EVAL_HARNESS} autonomyLadder={F26_AUTONOMY_LADDER} />
           <GuardrailEvents data={F26_GUARDRAIL_EVENTS} />
         </div>
