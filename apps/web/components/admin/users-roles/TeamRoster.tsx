@@ -8,9 +8,9 @@
 
 'use client';
 
-import type { F27TeamData, F27TeamMember } from '@/components/admin/users-roles/types';
+import type { TeamRosterRow } from '@/lib/api/team-roster-api';
 
-function RoleBadge({ role }: { role: F27TeamMember['role'] }) {
+function RoleBadge({ role }: { role: string }) {
   const tone = role === 'ADMIN' ? 'admin' : role === 'QA LEAD' ? 'lead' : 'eng';
   return <span className={`role-badge ${tone}`}>{role}</span>;
 }
@@ -73,7 +73,9 @@ function MoreIcon() {
 }
 
 interface Props {
-  data: F27TeamData;
+  // Fri WIRE batch 1 (2026-06-19): structural row type so live GET /api/users
+  // rows AND the canned fixture both satisfy it. Same pattern as Sweep C.
+  data: readonly TeamRosterRow[];
 }
 
 export function TeamRoster({ data }: Props) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { AdminShell } from '@/components/admin/admin-shell';
+import { ComingSoon } from '@/components/admin/coming-soon';
 import { ExecutiveHeader } from './ExecutiveHeader';
 import { RoiValueTile } from './RoiValueTile';
 import { QualityPostureGrid } from './QualityPostureGrid';
@@ -37,6 +38,14 @@ export function F25Page({ theme = 'light' }: F25PageProps) {
         data-canonical-section="prove-canvas"
       >
         <div className="mx-auto flex max-w-[1320px] flex-col gap-[18px] px-[14px] pb-[40px] pt-[18px] sm:px-[18px] sm:pb-[48px] sm:pt-[22px] md:gap-[20px] md:px-[24px] md:pb-[56px] md:pt-[26px] lg:px-[32px] lg:pt-[28px]">
+          {/* Fri WIRE batch 5: F25 Executive Dashboard is M5; canned KPIs
+           *  below are illustrative placeholders. ComingSoon banner declares
+           *  the entire surface deferred. */}
+          <ComingSoon
+            label="Executive Dashboard"
+            hint="Live KPIs, trends, and approvals are coming in a future release. Tiles below show the canonical layout with illustrative data."
+            variant="inline"
+          />
           <ExecutiveHeader />
           <RoiValueTile />
           <QualityPostureGrid />

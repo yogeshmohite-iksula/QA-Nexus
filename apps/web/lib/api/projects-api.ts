@@ -11,7 +11,7 @@
 // instruction. Pre-seed the endpoint returns [] → fallback (canned 5) renders.
 
 import { z } from 'zod';
-import { ProjectSchema } from '@qa-nexus/shared';
+import { ProjectSchema, type Project } from '@qa-nexus/shared';
 import { fetchWithFallback } from './fetch-with-fallback';
 
 /** Display shape the ProjectSwitcher renders. */
@@ -75,4 +75,30 @@ export async function getSwitcherProjects(): Promise<SwitcherProject[]> {
     name: p.name,
     branch: BRANCH_BY_KEY[p.key] ?? 'main',
   }));
+}
+
+/**
+ * Raw workspace projects (id, workspaceId, key, name, description, …) used
+ * by ProjectContext. Returns null on fetch failure so the caller can fall
+ * back to demo-seed without rendering an empty switcher.
+ *
+ * 57th-RC fix (2026-06-19 evening): ProjectContext previously read from
+ * `lib/demo-seed.ts`. That snapshot used hardcoded dev-seed UUIDs which
+ * drifted when BE re-seeded the pilot DB (RET went from FE-side
+ * `0fc84fa9…` → BE-side `cb7ee262…`). `useActiveProject().id` then
+ * cascaded into `/api/projects/:projectId/requirements` 404s, etc.
+ * Switching ProjectContext to call this fetcher keeps FE in sync with
+ * whatever the BE actually returns at runtime; demo-seed remains the
+ * graceful offline fallback.
+ */
+export async function fetchWorkspaceProjects(): Promise<readonly Project[] | null> {
+  const res = await fetchWithFallback(
+    '/api/projects',
+    null as null | z.infer<typeof projectsResponseSchema>,
+    {
+      schema: projectsResponseSchema,
+      label: 'workspace projects (ProjectContext)',
+    },
+  );
+  return res ? res.projects : null;
 }

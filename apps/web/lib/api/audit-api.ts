@@ -87,6 +87,76 @@ function summarizePayload(payload: Record<string, unknown>): string {
   return parts.length > 0 ? parts.join(' · ') : '—';
 }
 
+/** Action prefix → agent code (F08a EVIDENCE_THREAD + F27 activity feed).
+ *  Returns null when the action doesn't match an agent. */
+export function agentOfAction(action: string): 'A1' | 'A2' | 'A4' | null {
+  const a = action.toLowerCase();
+  if (a.startsWith('composer.') || a.startsWith('a1.')) return 'A1';
+  if (a.startsWith('curator.') || a.startsWith('a2.')) return 'A2';
+  if (a.startsWith('sherlock.') || a.startsWith('a4.')) return 'A4';
+  return null;
+}
+
+/** Relative freshness for /home EVIDENCE_THREAD / F27 activity: "Xm ago" /
+ *  "Xh ago" / "Xd ago" / "Just now". Audit `ts` is ISO-8601. */
+export function relativeFreshness(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return 'Just now';
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return 'Just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  return `${days}d ago`;
+}
+
+/** F27 "Recent activity" display shape (single-line entries). */
+export interface F27ActivityRow {
+  tone: 'violet' | 'pass' | 'warn' | 'fail' | 'info' | 'plain';
+  actor: string;
+  action: string;
+  target: string;
+  detail: string;
+  date: string;
+  time: string;
+  eventType: string;
+}
+
+const TONE_BY_ACT: Record<string, F27ActivityRow['tone']> = {
+  invite: 'violet',
+  approve: 'pass',
+  create: 'pass',
+  generate: 'violet',
+  dedup: 'violet',
+  config: 'warn',
+  warn: 'warn',
+  archive: 'fail',
+  authfail: 'fail',
+  update: 'info',
+  export: 'plain',
+};
+
+/** Audit row → F27 activity row (broad: every audit event renders). */
+export function auditEntryToActivity(e: AuditLogEntryT): F27ActivityRow {
+  const act = actClassOf(e.action);
+  const d = new Date(e.ts);
+  const iso = Number.isNaN(d.getTime()) ? e.ts : d.toISOString();
+  const payload = e.payload ?? {};
+  const targetRaw = payload['invitedEmail'] ?? payload['target'] ?? payload['email'];
+  return {
+    tone: TONE_BY_ACT[act] ?? 'plain',
+    actor: e.actorEmail ? e.actorEmail.split('@')[0] : 'System',
+    action: (ACT_LABEL[act] ?? 'Update').toLowerCase(),
+    target: typeof targetRaw === 'string' ? targetRaw : e.entity.replace(/_/g, ' '),
+    detail: e.entity ? `entity ${e.entity}` : '',
+    date: iso.slice(0, 10),
+    time: iso.slice(11, 16),
+    eventType: e.action,
+  };
+}
+
 /** API audit row → F28 canonical display row. */
 export function auditEntryToRow(e: AuditLogEntryT): F28AuditRow {
   const act = actClassOf(e.action);

@@ -19,10 +19,11 @@
  */
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Project } from '@qa-nexus/shared';
 import { projects as seedProjects, SEED_IDS } from '../demo-seed';
+import { fetchWorkspaceProjects } from '../api/projects-api';
 
 interface ProjectContextValue {
   /** All projects in the active workspace. Stable order: alphabetical by key
@@ -50,42 +51,75 @@ interface ProjectProviderProps {
 }
 
 export function ProjectProvider({ children, initialActiveSlug }: ProjectProviderProps) {
-  const initialId = useMemo(() => {
-    if (initialActiveSlug) {
-      const match = seedProjects.find(
-        (p) => p.key.toLowerCase() === initialActiveSlug.toLowerCase(),
-      );
-      if (match) return match.id;
-    }
-    return SEED_IDS.projects.ret;
+  // 57th-RC fix (Fri 2026-06-19 ~20:00 IST): the project list now hydrates
+  // from GET /api/projects on mount. seed projects are the offline fallback,
+  // not the source of truth. This eliminates the UUID-drift class of bug
+  // that produced /api/projects/<stale-seed-uuid>/requirements 404s after
+  // BE re-seeded the pilot DB.
+  //
+  // Hydration timing (intentional, see comments in this block):
+  //   1) Initial render uses `seedProjects` so the shell + switcher render
+  //      synchronously — no flash of "Loading projects…"
+  //   2) The useEffect below replaces the project array with the live BE
+  //      response if/when it arrives. setActiveProject(slug) re-uses the
+  //      same active slug against the new id list, so the topbar switcher
+  //      survives the swap without "jumping".
+  //   3) Fetch failure / non-Admin / unauthenticated → live state stays
+  //      null → seed array remains the rendered source (graceful).
+
+  const [liveProjects, setLiveProjects] = useState<readonly Project[] | null>(null);
+  const effectiveProjects: readonly Project[] = liveProjects ?? seedProjects;
+
+  const initialSlug = useMemo<string>(() => {
+    return (initialActiveSlug ?? 'ret').toLowerCase();
   }, [initialActiveSlug]);
 
-  const [activeProjectId, setActiveProjectId] = useState<string>(initialId);
+  const [activeSlug, setActiveSlugRaw] = useState<string>(initialSlug);
 
-  const setActiveProject = useCallback((slug: string) => {
-    const match = seedProjects.find((p) => p.key.toLowerCase() === slug.toLowerCase());
-    if (!match) {
-      console.warn(
-        `ProjectContext.setActiveProject: unknown slug "${slug}". ` +
-          'No-op. Valid keys: ' +
-          seedProjects.map((p) => p.key).join(', '),
-      );
-      return;
-    }
-    setActiveProjectId(match.id);
+  useEffect(() => {
+    let alive = true;
+    void fetchWorkspaceProjects().then((res) => {
+      if (alive && res && res.length > 0) {
+        setLiveProjects(res);
+      }
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
+  const setActiveProject = useCallback(
+    (slug: string) => {
+      const lower = slug.toLowerCase();
+      const match = effectiveProjects.find((p) => p.key.toLowerCase() === lower);
+      if (!match) {
+        console.warn(
+          `ProjectContext.setActiveProject: unknown slug "${slug}". ` +
+            'No-op. Valid keys: ' +
+            effectiveProjects.map((p) => p.key).join(', '),
+        );
+        return;
+      }
+      setActiveSlugRaw(lower);
+    },
+    [effectiveProjects],
+  );
 
   const value = useMemo<ProjectContextValue>(() => {
     const activeProject =
-      seedProjects.find((p) => p.id === activeProjectId) ??
-      seedProjects.find((p) => p.id === SEED_IDS.projects.ret) ??
-      seedProjects[0]; // ultimate fallback: first project
+      effectiveProjects.find((p) => p.key.toLowerCase() === activeSlug) ??
+      effectiveProjects.find((p) => p.key.toLowerCase() === 'ret') ??
+      effectiveProjects[0]!; // safe: seed always has ≥1 project
     return {
-      projects: seedProjects,
+      projects: [...effectiveProjects],
       activeProject,
       setActiveProject,
     };
-  }, [activeProjectId, setActiveProject]);
+  }, [effectiveProjects, activeSlug, setActiveProject]);
+
+  // Reference SEED_IDS so the import isn't pruned (kept for the seed
+  // fallback path's stable test identifiers).
+  void SEED_IDS;
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
 }

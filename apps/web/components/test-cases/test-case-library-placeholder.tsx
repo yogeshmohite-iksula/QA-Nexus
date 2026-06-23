@@ -9,10 +9,12 @@
 
 'use client';
 
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight, Plus } from 'lucide-react';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { useActiveProject } from '@/lib/contexts/ProjectContext';
+import { fetchTestCases } from '@/lib/api/test-cases-api';
 import { TestCaseMethodChooserModal } from './test-case-method-chooser-modal';
 import { BulkImportModal } from './bulk-import-modal';
 
@@ -31,6 +33,22 @@ function TestCaseLibraryContent() {
   const searchParams = useSearchParams();
   const isChooserOpen = (searchParams?.get('new-test-case') ?? null) === '1';
   const isBulkImportOpen = (searchParams?.get('bulk-import') ?? null) === '1';
+
+  // Fri WIRE Option C: live test-case count via GET /api/projects/:projectId/test-cases.
+  // Null = fetch pending / failed → canned "1,284 cases" copy holds (Option-B
+  // fallback). Pilot DB starts at 0 cases → "0 cases" honest display.
+  const project = useActiveProject();
+  const [liveTotal, setLiveTotal] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchTestCases(project.id, 1, 1).then((res) => {
+      if (!alive || !res) return;
+      setLiveTotal(res.pagination.total);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [project.id]);
 
   const openChooser = useCallback(() => {
     console.info('pattern-a:deferred:test-cases:new-test-case');
@@ -77,7 +95,9 @@ function TestCaseLibraryContent() {
           </h1>
           <p className="max-w-[640px] text-[13px] leading-[20px] text-[var(--text-tertiary)] sm:text-[14px]">
             <span className="font-semibold text-[var(--text-secondary)]">
-              1,284 cases · 38 suites · last import 2 hours ago.
+              {liveTotal !== null
+                ? `${liveTotal.toLocaleString('en-US')} ${liveTotal === 1 ? 'case' : 'cases'} in ${project.name}.`
+                : '1,284 cases · 38 suites · last import 2 hours ago.'}
             </span>{' '}
             Authoring methods: AI Generated · Bulk Import · Manual.
           </p>

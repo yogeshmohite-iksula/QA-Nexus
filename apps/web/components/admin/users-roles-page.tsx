@@ -9,7 +9,10 @@ import { useEffect, useState } from 'react';
 
 import { AdminShell } from '@/components/admin/admin-shell';
 import { useCurrentUser } from '@/lib/contexts/CurrentUserContext';
+import { useAdminUsersList } from '@/lib/hooks/use-admin-users';
 import { fetchPendingInvites, type PendingInviteRow } from '@/lib/api/pending-invites-api';
+import { usersToRoster, type TeamRosterRow } from '@/lib/api/team-roster-api';
+import { auditEntryToActivity, fetchAuditEntries, type F27ActivityRow } from '@/lib/api/audit-api';
 import {
   F27_RAW,
   F27_STATS,
@@ -46,6 +49,41 @@ export function UsersRolesPage() {
     };
   }, [me.id, me.displayName]);
 
+  // Fri WIRE batch 1: live team roster via the existing useAdminUsersList
+  // hook (TanStack Query, 30s staleTime). isError / undefined → canned
+  // fallback. Empty live → honest empty roster (the page-level TeamRoster
+  // component renders an empty state cleanly).
+  //
+  // 57th-RC fix: previously, an empty live roster fell back to canned
+  // F27_TEAM_MEMBERS — masking the real "no users yet" state with stub
+  // data. Now: live result wins as soon as the hook resolves (even if []);
+  // canned only renders while data is undefined (still loading).
+  const { data: usersResp } = useAdminUsersList();
+  const liveRoster: TeamRosterRow[] | null = usersResp
+    ? usersToRoster(usersResp.users, { meId: me.id })
+    : null;
+  const roster = liveRoster ?? F27_TEAM_MEMBERS;
+
+  // Fri WIRE batch 4: live "Recent activity" feed from /api/audit.
+  //
+  // 57th-RC fix: previously, a fetched-but-empty audit list fell back to
+  // canned F27_RECENT_ACTIVITY. Now: a successful fetch always wins —
+  // even when the workspace genuinely has 0 audit rows — and the
+  // RecentActivity component shows its honest empty state. Canned only
+  // renders if the fetch itself fails (null).
+  const [liveActivity, setLiveActivity] = useState<F27ActivityRow[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void fetchAuditEntries(50).then((res) => {
+      if (!alive || !res) return;
+      const rows = res.items.map(auditEntryToActivity);
+      setLiveActivity(rows.slice(0, 6));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <AdminShell active="users-roles">
       <main className="center" aria-label="Users & Roles page">
@@ -65,9 +103,9 @@ export function UsersRolesPage() {
         </header>
 
         <CtaBanner data={F27_CTA_BANNER} />
-        <TeamRoster data={F27_TEAM_MEMBERS} />
+        <TeamRoster data={roster} />
         <PendingInvites data={pending ?? F27_PENDING_INVITES} />
-        <RecentActivity data={F27_RECENT_ACTIVITY} />
+        <RecentActivity data={liveActivity ?? F27_RECENT_ACTIVITY} />
         <RoleMatrix data={F27_ROLE_MATRIX} />
       </main>
     </AdminShell>
