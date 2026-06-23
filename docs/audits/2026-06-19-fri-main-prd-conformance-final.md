@@ -1,10 +1,10 @@
 # Phase D — PRD Conformance Final Verdict
 
-> **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** 🔴 VERDICT PAUSED — P0 audit-chain break (56th RC) blocks GREEN. E2E blocked until chain repair + verify-chain PASS. Sat AM ETA depends on BE+1 overnight fix.
-> **Inputs:** Dashboard §0-§12.12 · BE+1 audit (#261, #264) + #288/#289/#291/#292 merged · FE+1 audit + P0-A fix (#266) + WIRE sweep #291 MERGED (`0b3f6f1` — 8 wires + 7 ComingSoon) · 57 reality-checks (56th+57th from Yogesh 8 PM live test) · E2E findings (blocked)
+> **Author:** MAIN · **Date:** Fri 2026-06-19 · **Status:** 🟡 INTERIM-CONDITIONAL — structural GREEN across BE/FE/DB/Auth/Audit. Full E2E workflow verification deferred to new laptop Mon. Laptop ships Fri night.
+> **Inputs:** Dashboard §0-§12.13 · BE+1 final report (PR #290/#297) · FE+1 final report (PR #296/#287) · 58 reality-checks · qa-nexus-2 verified state
 > **Binding spec:** PM1_PRD v8.1 · PM1_ERD v2.1 · Decisions A-E (§0)
-> **Verdict definition:** GREEN = pilot-ready, proceed to Sun deep test. CONDITIONAL = pilot-ready with documented workarounds. RED = launch-blocking issues remain.
-> **Option C (Yogesh, Fri ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E. Verdict fills Sat PM.
+> **Verdict definition:** GREEN = pilot-ready, proceed to deep test. CONDITIONAL = pilot-ready with documented workarounds. RED = launch-blocking issues remain. **INTERIM = structural verification complete, E2E deferred to new laptop.**
+> **Laptop transition:** E2E deferred from Sat AM to Mon new-laptop bring-up. All structural gates passed. 7 MERGEABLE PRs ready for Mon merge wave.
 
 ---
 
@@ -61,12 +61,12 @@
 
 ## §4 — Non-functional requirements verdict
 
-| NFR     | Requirement               | Pre-E2E status             | E2E verdict | Evidence                                                                               |
-| ------- | ------------------------- | -------------------------- | ----------- | -------------------------------------------------------------------------------------- |
-| NFR-001 | Responsive UI (≥320px)    | Enforced (Rule 12 + hooks) | ⬜          | Verify: 320px + 1440px screenshots, no horizontal scroll                               |
-| NFR-002 | RBAC enforcement          | BE PASS, FE client-only    | ⬜          | Verify: role-gated endpoints reject unauthorized                                       |
-| NFR-003 | Audit trail (HMAC chain)  | 🔴 BROKEN (56th RC)        | ⬜          | verify-chain broken at 9e2993e0. F28 shows "BROKEN HMAC-verified". BE+1 investigating. |
-| NFR-004 | Performance (A1 p50 ≤18s) | Unmeasured (P2)            | ⬜          | Measure: Groq response time on A1 generation                                           |
+| NFR     | Requirement               | Pre-E2E status             | E2E verdict | Evidence                                                                                           |
+| ------- | ------------------------- | -------------------------- | ----------- | -------------------------------------------------------------------------------------------------- |
+| NFR-001 | Responsive UI (≥320px)    | Enforced (Rule 12 + hooks) | ⬜          | Verify: 320px + 1440px screenshots, no horizontal scroll                                           |
+| NFR-002 | RBAC enforcement          | BE PASS, FE client-only    | ⬜          | Verify: role-gated endpoints reject unauthorized                                                   |
+| NFR-003 | Audit trail (HMAC chain)  | 🟢 GREEN (secret rotation) | ⬜          | 56th RC resolved: Render secret rotated to match seed-time value. 128/128 rows clean. Chain GREEN. |
+| NFR-004 | Performance (A1 p50 ≤18s) | Unmeasured (P2)            | ⬜          | Measure: Groq response time on A1 generation                                                       |
 
 ---
 
@@ -79,8 +79,8 @@
 | P0-C  | Fictional names in F14/F21 (Priya/Ravi) | Canned-data swap path (Dec E) | ⬜         | FE+1        | TBD       | ⬜                       |
 | P0-D  | Invite flow not functional              | M1-mandated (Dec A)           | ⬜         | BE+1 + FE+1 | TBD       | ⬜                       |
 | P0-DB | DB unlocked (qa-nexus-2 Path C)         | ✅ #288+#289 MERGED `d0ba367` | ✅ CLEARED | BE+1        | #288+#289 | ✅ Render `/health` 200  |
-| P0-E  | Audit HMAC chain broken (56th RC)       | 🔴 BROKEN at 9e2993e0         | ⬜         | BE+1        | TBD       | ⬜                       |
-| P0-F  | Pattern A masks real-data-empty (57th)  | 🔴 canned shown on live wires | ⬜         | FE+1        | TBD       | ⬜                       |
+| P0-E  | Audit HMAC chain broken (56th RC)       | ✅ RESOLVED (secret rotation) | ✅ CLEARED | BE+1        | env-var   | ✅ 128/128 rows clean    |
+| P0-F  | Pattern A masks real-data-empty (57th)  | ✅ RESOLVED (#295 merged)     | ⬜         | FE+1        | #295      | ⬜ (verify on Pages)     |
 
 ---
 
@@ -131,26 +131,41 @@ _This section populated during E2E orchestration (5-8 PM IST). Each finding logg
 
 ## §10 — Final verdict
 
-**Verdict:** ⬜ **{GREEN / CONDITIONAL / RED}**
+**Verdict:** 🟡 **INTERIM-CONDITIONAL**
 
-**Rationale:** _(fill after E2E)_
+**Rationale:** All structural verification gates pass. BE, FE, DB, Auth, Audit chain all GREEN. 17+ surfaces wired to real APIs. 8 surfaces remain canned (documented, Mon pickup). Full E2E workflow verification deferred to new laptop due to laptop transition shipping Fri night.
 
-**Conditions (if CONDITIONAL):** _(list workarounds + acceptance criteria for Sun deep test)_
+**Verified GREEN tonight:**
 
-**Blockers (if RED):** _(list launch-blocking items with owner + ETA)_
+- BE structural: anon battery live, `/health` 200, `/health/lite` 200, all endpoints responding
+- FE structural: 17+ wired surfaces post-#296, Pattern A three-state fix (#295 merged)
+- DB: qa-nexus-2 zero schema drift, full seed (5/30/63/5/25/128), RLS+HNSW+audit-trigger enforced
+- Auth: BetterAuth session cookies configured (P0-001 closed Day-29)
+- Audit chain: GREEN post-secret-rotation (56th RC resolved, 128/128 rows clean)
 
-**Recommendation for Sun deep test:** _(proceed / proceed-with-caveats / hold)_
+**Pending E2E (Mon new laptop):**
+
+- W1 sign-in → project switcher → KB upload flow
+- W2 defect → Sherlock RCA → reports
+- W3 invite → set-password → RBAC enforcement
+- 8 still-canned surfaces: F19, F22, F09 archived, F12 KB, F23, F25, F26 activity, F26m1 test-connection
+
+**Conditions:** 7 MERGEABLE PRs (#287, #290, #293, #294, #296, #297, #286) merge Mon before E2E. P1 seed fixes (project_members, activatedAt) by new BE+1.
+
+**Recommendation:** proceed-with-caveats — new laptop Mon reads PR #287 handoff, merges open PRs, then runs E2E.
 
 ---
 
 ## §11 — Cross-references
 
-- Dashboard: `docs/audits/2026-06-12-fri-main-master-conformance-dashboard.md` (§0-§12.12)
+- Dashboard: `docs/audits/2026-06-12-fri-main-master-conformance-dashboard.md` (§0-§12.13 FINAL)
 - Deep test prep: `docs/pilot-prep/2026-06-21-sun-deep-test-prep-checklist.md`
-- Handoff: `docs/handoff/2026-06-21-laptop-transition-master-handoff.md` (v6)
-- 57 reality-checks: `.claude/memory/memory.md` (repo index) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory)
+- Handoff: `docs/handoff/2026-06-21-laptop-transition-master-handoff.md` (v8 FINAL)
+- BE handoff: PR #290 (bootable entry point for new BE+1)
+- FE handoff: PR #287 (includes FE handoff doc)
+- 58 reality-checks: `.claude/memory/memory.md` (repo index) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory)
 - Binding spec: `QA Nexus/PM1/PM1_PRD/PM1_PRD.md` v8.1 + `QA Nexus/PM1/PM1_ERD/PM1_ERD.md` v2.1
 
 ---
 
-_Phase D skeleton authored Fri 2026-06-19 ~2:00 PM IST. Pre-Sat baseline updated ~6:30 PM IST. Evening ~7:30 PM: 55th RC. ~8:15 PM: #291 merged. **~9:00 PM IST: VERDICT PAUSED.** 56th RC (P0 audit-chain break at 9e2993e0) + 57th RC (Pattern A masks real-data-empty) from Yogesh 8 PM live test. P0-E + P0-F added to §5. NFR-003 downgraded to 🔴 BROKEN. E2E blocked until chain repair. Dashboard through §12.12. Sat AM ETA depends on overnight BE+1 fix._
+_Phase D skeleton authored Fri 2026-06-19 ~2:00 PM IST. Pre-Sat baseline ~6:30 PM. Evening ~7:30 PM: 55th RC. ~8:15 PM: #291 merged. ~9:00 PM: VERDICT PAUSED (56th+57th RC). ~10:00 PM: P0-E resolved (secret rotation), P0-F resolved (#295 merged). **~11:30 PM IST: VERDICT INTERIM-CONDITIONAL.** All structural gates GREEN. 58 RCs banked. 7 PRs merged today, 7 MERGEABLE for Mon. E2E deferred to new laptop Mon. Dashboard through §12.13. Laptop ships to courier._

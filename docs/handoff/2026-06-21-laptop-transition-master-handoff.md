@@ -1,24 +1,27 @@
-# 🔴 MASTER HANDOFF — Laptop / Account Transition (target Sun 2026-06-21)
+# 🟡 MASTER HANDOFF — Laptop / Account Transition (target Sun 2026-06-21)
 
-> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v6 (Fri 2026-06-19 ~8:15 PM IST — #291 MERGED at `0b3f6f1`; FE WIRE sweep complete (8 wired + 7 ComingSoon); main HEAD advanced; BE+FE+DB all GREEN; E2E = Sat AM).
+> **Author:** MAIN · **Started:** Thu 2026-06-18 ~3 PM IST · **Finish by:** Fri 2026-06-20 EOD · **Status:** v8 FINAL (Fri 2026-06-19 ~11:30 PM IST — all 3 agents complete; main HEAD `ef64f1b` (#295 merged); 7 PRs merged today, 7 MERGEABLE for Mon; BE+FE+DB+Auth+Audit all GREEN structurally; E2E deferred to Mon new laptop; 58 RCs banked; laptop ships to courier).
 > **Why this doc exists (49th RC):** when a team member rotates off a laptop/account/email, **institutional memory must live in version control + off-device backup — never only in agent process state.** Nothing in any Claude Code / Cowork \_session\* survives the transition. This doc + the repo + the off-device backups ARE the surviving brain. If you are a fresh Claude on a new laptop reading this: **start here.**
 > **Verify-before-assert:** every state claim below was confirmed against `origin/main` + live curl on Thu 2026-06-18 ~3 PM IST. Re-verify before acting — deploys drift (see §1 stale-Render finding).
 
 ---
 
-## §1 — Project state snapshot (Fri 2026-06-19 ~4:00 PM IST, verified)
+## §1 — Project state snapshot (Fri 2026-06-19 ~11:30 PM IST, FINAL)
 
 ### Repo / git
 
-- **main HEAD = `0b3f6f1`** (advanced from `8785c35` after #291 merged Fri ~8:15 PM IST; prior: `d0ba367` → `8785c35` after #292). Re-fetch before acting; this snapshot drifts hourly during active merge waves.
-- **Open PRs against main** (snapshot Fri 2026-06-19 ~3:45 PM IST — re-run `gh pr list --state open --base main` for current truth):
+- **main HEAD = `ef64f1b`** (#295 merged — 57th RC fix: runtime `/api/projects` fetch + honest empty states). Prior: `0b3f6f1` (#291) → `8785c35` (#292) → `d0ba367` (#289). Re-fetch before acting.
+- **Open PRs against main** (snapshot Fri 2026-06-19 ~11:30 PM IST — all 7 MERGEABLE):
   | PR | Title | Type | Status |
   | --- | --- | --- | --- |
-  | #295 | 57th RC — projects live from /api/projects + honest empty states | fix/web | OPEN (CI GREEN, awaiting Yogesh merge — P0-F fix) |
-  | #290 | BE handoff doc — architecture/contracts/infra/bootstrap | docs/handoff | OPEN (BE+1 finalizing) |
-  | #287 | laptop transition master handoff + Path C | docs/handoff | OPEN (this doc — MAIN's branch) |
-  | #286 | FE canned-data inventory (STEP 1) | docs/audit | OPEN (FE+1 inventory, historical) |
-- **Merged Fri PM:** #291 (`0b3f6f1` — FE WIRE sweep: 8 wired surfaces + 7 ComingSoon, ACTIVE_RUNS + RECENT_RUNS included), #292 (`8785c35` — `GET /api/test-runs` list endpoint), #288 (`4c1a7aa` — jira_webhook_events migration, Path B), #289 (`d0ba367` — clean-DB schema drift corrective, 3 tables + 17 cols + 6 enum + 21 FK).
+  | #297 | BE final handoff EOD — Fri 2026-06-19 (laptop transition) | docs/eod | MERGEABLE |
+  | #296 | zero canned data — root-cause sweep across /home + F27 + F26 | feat/web | MERGEABLE — Mon merge (17+ surfaces wired) |
+  | #294 | Day 32 BE EOD — Fri 2026-06-19 (pre-E2E) | docs/eod | MERGEABLE |
+  | #293 | database.md vector dim 1024→384 (bge-small correction) | docs/rules | MERGEABLE |
+  | #290 | BE handoff — architecture/contracts/infra/bootstrap (bootable) | docs/handoff | MERGEABLE — new BE+1 reads this first |
+  | #287 | master handoff + FE handoff + final EOD (this doc) | docs/handoff | MERGEABLE — new MAIN reads this first |
+  | #286 | FE canned-data inventory (STEP 1, historical) | docs/audit | MERGEABLE |
+- **Merged Fri (7 total):** #295 (`ef64f1b` — 57th RC: runtime /api/projects + empty-state fix), #291 (`0b3f6f1` — FE WIRE sweep: 8 wired + 7 ComingSoon), #292 (`8785c35` — `GET /api/test-runs` list endpoint), #288 (`4c1a7aa` — jira_webhook_events migration, Path B), #289 (`d0ba367` — clean-DB schema drift corrective), #271 (BE auth merge), #284 (cron-gate fix).
 - **Merged Fri AM (stale-PR triage):** #279 (46th RC docs), #281 (BE EOD Day 32), #282 (MAIN Fri evening EOD) — all squash-merged, branches deleted.
 - **Closed:** #285 (Supabase hot-standby) — closed Thu per 49th-RC ruling; Path C supersedes; recoverable from git history.
 - **Previously merged (Thu+earlier):** #277 (prod-baseURL fix), #278 (sweep B), #280 (FE EOD), #283 (sweep C), #284 (cron-gate fix).
@@ -29,12 +32,35 @@
 - **Cloudflare Pages FE** (`qa-nexus-web.pages.dev`): #291 merged at `0b3f6f1` — auto-deploy triggered. Expected bundle SHA = `0b3f6f1` once deploy completes. ⟦Verify: Pages deploy SHA matches `0b3f6f1` before Sat AM E2E⟧
 - **Neon Postgres DB — Path C ACTIVE + VERIFIED:** `qa-nexus-2` is live with full migration chain (#288 + #289 applied), base seed (5/30/63/5/25/~158) + pilot seed complete, RLS + HNSW + audit-trigger verified. Original `qa-nexus` auto-resumes Jul 1 → flip Render back → `qa-nexus-2` stays as warm hot-standby. **53rd-RC lesson** (`feedback_migrate_status_vs_schema_drift.md`): `prisma migrate status` "up to date" does NOT mean DB matches `schema.prisma` — always run `prisma migrate diff --exit-code` on fresh DBs. **49th-RC lesson** (`feedback_verify_constraint_scope_before_expensive_workaround.md`): Neon cap is per-project not per-account; same-vendor multi-project beats cross-vendor migration.
 
-### Conformance verdict (dashboard §12.11, as of Fri ~8:15 PM IST)
+### Conformance verdict (dashboard §12.13 FINAL, as of Fri ~11:30 PM IST)
 
-- **BE ✅ GREEN** — anon battery live; #288 (Path B) + #289 (drift corrective) + #292 (test-runs list) merged; Render auto-deployed with all three.
-- **DB ✅ GREEN** — qa-nexus-2 fully seeded (5/30/63/5/25/~158), RLS + HNSW + audit-trigger verified, migration chain clean.
-- **FE ✅ WIRE SWEEP COMPLETE** — #291 MERGED (`0b3f6f1`): 8 wired surfaces + 7 ComingSoon. ACTIVE_RUNS + RECENT_RUNS included. Pages auto-deploy triggered.
-- **E2E reframed Fri PM (Option C):** Sat AM clean 3-workflow E2E. All wires landed. **Revised pilot-ready ETA: Sat PM after E2E.**
+- **BE ✅ GREEN** — anon battery live; #271, #284, #288, #289, #292 merged + deployed; `/health` 200, `/health/lite` 200, anon 401×4.
+- **DB ✅ GREEN** — qa-nexus-2 zero schema drift, full seed (5/30/63/5/25/128 audit), RLS 20 + HNSW 2 + audit-trigger enforced.
+- **FE ✅ GREEN (structural)** — #291 + #295 merged. 17+ wired surfaces post-#296 (Mon merge). 8 surfaces still canned (documented).
+- **Auth ✅ GREEN** — BetterAuth cross-site cookies configured (P0-001 closed Day-29, #256).
+- **Audit chain ✅ GREEN** — secret rotation resolved 56th RC; 128/128 rows clean.
+- **Phase D: 🟡 INTERIM-CONDITIONAL** — structural GREEN, full E2E deferred to Mon new laptop.
+
+### STILL CANNED on Mon handoff (8 surfaces — FE+1 report)
+
+1. F19 Run Console
+2. F22 Defect Detail
+3. F09 archived project count
+4. F12 Knowledge Base
+5. F23 Reports Studio
+6. F25 Executive Dashboard
+7. F26 Agents recent activity
+8. F26m1 Test-connection button
+
+**Mon FE+1 first task: continue canned-data sweep on these 8 surfaces.**
+
+### BE deferred items (all in PR #290 — new BE+1 reads this)
+
+1. P1 `project_members` seed (memberCount shows 0)
+2. P1 `activatedAt` seed (user profiles incomplete)
+3. Day-29 ledger items (non-blocking)
+4. Jul-1 qa-nexus switchback procedure
+5. `writeAuditRow` monotonic sequence improvement
 
 ### Reality-check ledger
 
@@ -404,30 +430,26 @@ $0 cost gate (Rule 1); no secrets in repo (Rule 6); surface-don't-resolve (Rule 
 - [x] **~7:30** — Handoff v5: RC ledger → 55, §6 Pattern family 3 gains 55th RC, dashboard §12.10, Phase D evening update. ACTIVE_RUNS wire = 15-min Sat AM FE+1 warm-up.
 - [x] **~8:15** — #291 merged → `0b3f6f1`. Dashboard §12.11 (FE WIRE sweep complete). Handoff v6.
 - [x] **~9:00** — 56th + 57th RCs banked from Yogesh 8 PM live test. Dashboard §12.12. Phase D PAUSED. P0-E (audit chain) + P0-F (Pattern A empty). Memory files created + refined.
-- [ ] **~9:30** — Aggregate P0 fixes: Render secret rotation (P0-E) + PR #295 merge (P0-F). Phase D → CONDITIONAL. Dashboard §12.13.
-- [ ] **~10:00** — Fri EOD commit + push. Handoff v7.
+- [x] **~10:00** — P0-E resolved (Render secret rotation, 128/128 rows clean). P0-F resolved (#295 merged at `ef64f1b`).
+- [x] **~11:00** — BE+1 final report received. FE+1 final report received (#296 + 58th RC). All agents complete.
+- [x] **~11:30** — Dashboard §12.13 FINAL. Phase D → INTERIM-CONDITIONAL. Handoff v8 FINAL. EOD written. Push + signal.
 
-**Option C (Yogesh, ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E.
+### Mon — New laptop Day 1
 
-### Sat Jun 20
+**Pre-flight (new MAIN):**
 
-- [ ] **9:00** — Pre-flight: (1) confirm Render secret rotated (verify-chain PASS on live), (2) confirm PR #295 merged to main (main HEAD advanced), (3) verify Pages bundle SHA current (DevTools Network on `qa-nexus-web.pages.dev`).
-- [ ] **9:15-9:30** — BE+1 P1 fixes if needed (memberCount, activatedAt). Yogesh smoke test.
-- [ ] **10:00-1:00** — Yogesh E2E orchestration: 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password). MAIN aggregates real-time.
-- [ ] **1:00-2:00** — Yogesh lunch
-- [ ] **2:00-5:00** — Aggregate P0 fixes from morning E2E + Phase D verdict fill with real data + handoff polish (§6-§7 with E2E findings)
-- [ ] **5:00-7:00** — Final close-out: verify all branches pushed, Yogesh signs off Phase D
-- [ ] Off-device backup procedure REHEARSED
-- [ ] Jul 1 qa-nexus switchback checklist drafted
+1. Clone repo, install deps, restore env files + user auto-memory (§2 + §4)
+2. `git fetch && git log origin/main --oneline -5` — expect `ef64f1b` or later
+3. Read this handoff in full, then `docs/eod-reports/2026-06-19-fri-final-handoff-eod.md`
+4. Merge 7 open PRs: #296 first (FE code), then #290/#293/#294/#297 (docs), then #287/#286 (handoff/inventory)
+5. Verify Pages bundle current: DevTools Network on `qa-nexus-web.pages.dev` → outgoing host = `qa-nexus-api.onrender.com` + 2xx
 
-### Sun Jun 21 — transition day
+**New BE+1 first task:** Read PR #290 (BE handoff). Then P1 seed fixes: `project_members` seed (memberCount) + `activatedAt` seed.
 
-- [ ] Final `gh pr list --state open --base main` → 0 open PRs that matter, or each named with a disposition
-- [ ] All chat-history files committed (or off-device-backed)
-- [ ] Off-device backup VERIFIED on a second medium (USB + iCloud, not just one) — run §4 tar procedure, then `shasum -a 256` on original + both copies
-- [ ] All credentials accessible on the new laptop (all on `yogeshmohite-iksula` identity: GitHub, Neon, Render, Cloudflare, Resend, Groq, UptimeRobot, Better Stack, Grafana Cloud)
-- [ ] This handoff doc linked from `CLAUDE.md` (one-line pointer at the top — the new agent reads CLAUDE.md automatically)
-- [ ] `docs/eod-reports/2026-06-21-sun-laptop-handoff-sign-off.md` written (final EOD)
-- [ ] Confirm post-transition email + GitHub account continuity (yogeshmohite-iksula survives; yogeshcodeshare is personal + unaffected)
+**New FE+1 first task:** Read FE handoff doc in `docs/handoff/`. Continue canned-data sweep on 8 surfaces above.
 
-_v6 authored Fri 2026-06-19 ~8:15 PM IST by MAIN. Changes from v5: §1 snapshot → `0b3f6f1` (#291 merged — FE WIRE sweep complete); #291 moved from OPEN to merged-Fri-PM; Pages deploy note updated; conformance → §12.11 + FE ✅ GREEN; Sat AM schedule: Pages verify replaces FE+1 warm-up (ACTIVE_RUNS already shipped). Dashboard §12.11 appended. Phase D final pre-E2E update (FR-003/006/010 → 🟢 merged, P0-B → merged, §9 #291 gate ✅). Prior changes preserved. Re-verify all §1 state before acting on it._
+**New MAIN first task:** Read PR #287. Coordinate Mon agent work. Update dashboard.
+
+**E2E (Yogesh-driven):** 3 full workflows (W1 sign-in→project; W2 defect→Sherlock; W3 invite→set-password) after BE+1 P1 fixes + FE+1 #296 merge verified on Pages. Phase D INTERIM → GREEN or CONDITIONAL with real E2E data.
+
+_v8 FINAL authored Fri 2026-06-19 ~11:30 PM IST by MAIN. All 3 agents complete. 7 PRs merged today (#271, #284, #288, #289, #291, #292, #295). 7 open MERGEABLE for Mon (#287, #290, #293, #294, #296, #297, #286). main HEAD `ef64f1b`. BE+FE+DB+Auth+Audit all GREEN structurally. Phase D INTERIM-CONDITIONAL. 58 RCs banked. E2E deferred to Mon new laptop. Laptop ships to courier._

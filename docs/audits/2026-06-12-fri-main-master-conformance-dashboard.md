@@ -517,3 +517,39 @@ _§12.11 appended Fri 2026-06-19 ~8:15 PM IST. #291 merged at `0b3f6f1`. FE WIRE
 **RC ledger:** 55 → 57. Indexed in: `.claude/memory/memory.md` (repo) + user auto-memory MEMORY.md.
 
 _§12.12 appended Fri 2026-06-19 ~9:00 PM IST. 56th + 57th RCs from Yogesh live test. P0 audit-chain break = launch-blocker. Phase D verdict paused. Sat AM E2E blocked until chain repair. Yogesh working tonight._
+
+### §12.13 — FINAL Fri aggregation: all agents complete, laptop shipping (~11:30 PM IST)
+
+**Main HEAD = `ef64f1b`** (#295 merged — 57th RC fix: runtime `/api/projects` fetch + honest empty states).
+
+**PRs merged Fri (7 total):** #271, #284, #288, #289, #291, #292, #295.
+
+**PRs open + MERGEABLE for Mon merge (7):**
+
+| PR   | Title                                          | Type         | Status                      |
+| ---- | ---------------------------------------------- | ------------ | --------------------------- |
+| #297 | BE final handoff EOD                           | docs/eod     | MERGEABLE                   |
+| #296 | zero canned data root-cause sweep              | feat/web     | MERGEABLE — needs Mon merge |
+| #294 | Day 32 BE EOD (pre-E2E)                        | docs/eod     | MERGEABLE                   |
+| #293 | database.md vector dim 1024→384 fix            | docs/rules   | MERGEABLE                   |
+| #290 | BE handoff (bootable entry point for new BE+1) | docs/handoff | MERGEABLE                   |
+| #287 | master handoff + FE handoff + final EOD        | docs/handoff | MERGEABLE                   |
+| #286 | FE canned-data inventory (historical)          | docs/audit   | MERGEABLE                   |
+
+**qa-nexus-2 verified state (BE+1 report):**
+
+- Schema = `schema.prisma` (zero drift, `prisma migrate diff --exit-code` = 0)
+- 1 workspace / 8 users / 5 projects · 30 requirements · 63 test cases · 5 test suites · 25 defects / 128 audit rows
+- RLS 20 policies + HNSW 2 indexes + audit trigger enforced
+- Audit chain GREEN (secret rotation worked — 56th RC resolved; BE+1 refuted 3 hypotheses with proof)
+- Render API live: anon 401×4, `/health` 200, `/health/lite` 200
+
+**Wired surfaces (~17, FE+1 report post-#296):** HERO, F27 roster + pending invites + recent activity, /home evidence thread, F14 requirements, F17 test-cases count, F26m1 agent detail, Active Runs, Recent Runs, Action Queue empty, Queue empty, nav badges stripped, Settings tabs hidden, /requirements 404 gated.
+
+**Still canned on Mon pickup (8 surfaces, documented in FE handoff §5):** F19 Run Console, F22 Defect Detail, F09 archived count, F12 KB, F23 Reports Studio, F25 Exec Dashboard, F26 Agents activity, F26m1 Test-connection button.
+
+**RC ledger: 58 cumulative.** 58th RC = FE+1 NEW tonight: async ID drift via `isProjectsLoaded` gate (prevents stale canned render while project context loads async).
+
+**Phase D verdict: INTERIM-CONDITIONAL.** BE structural GREEN. FE structural GREEN. DB GREEN. Auth GREEN. Audit chain GREEN. Full E2E workflow verification deferred to new laptop Mon. See `docs/audits/2026-06-19-fri-main-prd-conformance-final.md`.
+
+_§12.13 appended Fri 2026-06-19 ~11:30 PM IST. FINAL Fri aggregation. All 3 agents complete. 7 PRs merged today, 7 open MERGEABLE for Mon. 58 RCs banked. Laptop ships to courier. New laptop bootstraps Mon from PR #287._
