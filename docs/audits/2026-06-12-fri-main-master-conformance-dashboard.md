@@ -284,3 +284,272 @@ The original `qa-nexus` Neon project hit its **per-project** 100 CU-hr cap (the 
 - **`docs/handoff/2026-06-21-laptop-transition-master-handoff.md`** — Sun Jun 21 rotation prep + per-agent first-message templates (§3).
 
 _§11 appended Thu 2026-06-18 evening as the E2E-deferred-to-Fri reframe lands. Supersedes §10's "the DB is the single gate" framing — the DB is **closing** via Path B + Path C; the new single gate is the Fri WIRE sweep. The dashboard becomes a live aggregation again Fri AM as wires complete + Phase D verdict drafts Fri evening._
+
+---
+
+## §12 — Fri Jun 19 state update (~12:30 PM IST)
+
+### §12.1 — Main HEAD advanced
+
+- **main = `9059a39`** (from `ed18027`). 3 stale docs-PRs squash-merged during AM ground-truth check:
+  - #279 (46th RC + dashboard §9/§10/§11) — merged, branch deleted
+  - #281 (BE EOD Day 32) — merged, branch deleted
+  - #282 (MAIN Fri evening EOD) — merged, branch deleted
+- **Open PRs:** 2 remaining — #287 (handoff, active), #286 (FE canned inventory, active)
+- **Path B PR:** NOT on main yet. BE+1 still in flight. No `jira_webhook_events` migration commit visible.
+
+### §12.2 — Option A locked (Fri Jun 19)
+
+Yogesh confirmed **Option A — disciplined PM1 scope**. No new features. Focus: WIRE sweep + E2E + handoff. Work autonomously through 8 PM + Sat-Sun. Laptop returned Sun Jun 22.
+
+### §12.3 — Handoff v2 shipped (PR #287)
+
+Master handoff expanded from v1 skeleton to v2 comprehensive:
+
+- **§4** — verified backup paths + tar archive + dual-medium (USB+iCloud) + restore procedure + verification commands
+- **§6** — 51+ RC lessons distilled into 5 pattern families + $0/month gate operational details + Indian RBI e-Mandate + Cowork hang patterns
+- **§7 (NEW)** — 22 known gotchas as one-liner quick-reference cheat sheet
+- **§8 (was §7)** — work-list updated with Fri AM completions
+- **§1** — snapshot refreshed (main `9059a39`, 2 open PRs)
+
+### §12.4 — Gates remaining for pilot-ready verdict
+
+| Gate                                | Status                                | Blocker?                                     |
+| ----------------------------------- | ------------------------------------- | -------------------------------------------- |
+| DB unlocked (qa-nexus-2 via Path C) | 🟡 Path B PR in flight                | YES — blocks all data-layer verification     |
+| Render redeployed with Path B       | 🟡 Waiting on Path B merge            | YES — current deploy has old DB URLs         |
+| FE WIRE sweep                       | 🟡 FE+1 in flight (73% canned → live) | YES — blocks E2E                             |
+| Pages bundle current                | 🟡 After WIRE sweep merges            | YES — network-tab check needs current bundle |
+| E2E test (3 workflows)              | ⬜ Blocked by above 4                 | Yogesh-driven, Fri PM target                 |
+| Phase D verdict                     | ⬜ Blocked by E2E                     | MAIN writes Fri evening                      |
+| Handoff complete                    | 🟢 v2 shipped, §6-§8 populated        | Sat polish only                              |
+
+### §12.5 — Stale-PR triage outcome
+
+All 3 Jun-12 docs PRs were CLEAN/MERGEABLE — no conflicts, no code content, pure historical record. Merged via `gh pr merge --squash --delete-branch`. Main advanced 3 commits. No cascade risk (docs-only).
+
+_§12 appended Fri 2026-06-19 ~12:30 PM IST. Ground-truth check completed; stale PRs cleared; handoff expanded to v2. The single remaining unknown is Path B timing — when BE+1's migration interleave PR lands, the domino chain unlocks: DB → Render redeploy → E2E → Phase D verdict. All prep work is done; we're waiting on the dependency chain now._
+
+### §12.6 — BE+1 morning wins + 53rd RC banked (~1:30 PM IST)
+
+**BE+1 shipped:**
+
+- **PR #288** (`fix/be-day29-jira-webhook-events-create-migration`) — Path B clean-DB migration interleave fix. Status: OPEN, awaiting Yogesh merge.
+- **PR #289** (drift corrective migration) — referenced by Yogesh but NOT visible in `gh pr list --state open` as of 1:30 PM. Either merged, combined into #288, or not yet pushed. ⟦Flagged for Yogesh verification — do not assume state.⟧
+- **qa-nexus-2 verification** — BE+1 confirmed the Path C Neon project is active and migration chain runs clean after Path B fix.
+
+**53rd RC banked** (`feedback_migrate_status_vs_schema_drift.md`):
+
+- `prisma migrate status` reports "up to date" even when DB ↔ `schema.prisma` drift exists from `db push` history. Must run `prisma migrate diff --exit-code` on fresh DBs to catch silent gaps (exit 2 = drift).
+- Root cause: Day-32 qa-nexus-2 Path C switchover — chain was 3 tables + 17 columns behind `schema.prisma`. All added via `db push` on old `qa-nexus`, never captured as migrations.
+- Fix: idempotent corrective migration (IF NOT EXISTS everywhere). Cross-ref: 51st RC (env stale/dup audit), audit immutability memory.
+- Indexed in: `.claude/memory/memory.md` (repo) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory).
+
+_§12.6 appended Fri 2026-06-19 ~1:30 PM IST. 53rd RC closes the prisma-migrate-status-vs-schema-drift class._
+
+### §12.7 — Post-merge state update (~3:45 PM IST)
+
+**PRs #288 + #289 MERGED to main:**
+
+- **#288** merged at `4c1a7aa` (2026-06-19 09:39:27 UTC) — jira_webhook_events CREATE TABLE migration
+- **#289** merged at `d0ba367` (2026-06-19 09:39:50 UTC) — full clean-DB schema drift corrective (3 tables + 17 cols + 6 enum/type + 21 FK)
+- **Main HEAD = `d0ba367`** (advanced from `9059a39`)
+
+**Render auto-deployed and verified:**
+
+- `/health` → 200 `{"status":"ok","version":"0.0.1"}` ✅
+- `/health/lite` → 200, uptime ~248s (fresh restart from auto-deploy) ✅
+- DB connection: implicit in `/health` OK (NestJS boot requires Prisma connect)
+
+**Option C decision (Yogesh, ~3:30 PM IST):** E2E pushed to Sat AM. Tonight = ship everything + handoff polish. Sat AM = clean full 3-workflow E2E.
+
+**Open PRs (4 remaining):**
+
+| PR   | Title                                         | Status                                                                    |
+| ---- | --------------------------------------------- | ------------------------------------------------------------------------- |
+| #291 | FE WIRE sweep — 4 wires + ComingSoon + HERO   | OPEN (FE+1 expanding tonight: +F14, F17, ACTIVE_RUNS, RECENT_RUNS, F26m1) |
+| #290 | BE handoff doc — architecture/contracts/infra | OPEN (BE+1 finalizing)                                                    |
+| #287 | Master handoff — laptop transition            | OPEN (MAIN — polish tonight, merge Sat)                                   |
+| #286 | FE canned-data inventory                      | OPEN (docs-only, historical)                                              |
+
+**Revised gates (supersedes §12.6 table):**
+
+| Gate                                | Status                                                      | Blocker?                         |
+| ----------------------------------- | ----------------------------------------------------------- | -------------------------------- |
+| DB unlocked (qa-nexus-2 via Path C) | ✅ DONE — #288 + #289 merged, migrations applied            | CLEARED                          |
+| Render redeployed with Path B       | ✅ DONE — auto-deploy verified (`/health` + `/health/lite`) | CLEARED                          |
+| FE WIRE sweep (#291)                | 🟡 FE+1 expanding tonight (4→9 wires + 7 ComingSoon + HERO) | YES — blocks Sat E2E             |
+| Pages bundle current                | 🟡 After #291 merges + auto-deploy                          | YES — network-tab check needs it |
+| E2E test (3 workflows)              | ⬜ Sat AM (Option C)                                        | Yogesh-driven, Sat 9 AM-1 PM     |
+| Phase D verdict                     | ⬜ Sat PM (after E2E data)                                  | MAIN fills Sat afternoon         |
+| Handoff complete (#287)             | 🟢 v2 shipped — tonight polish, Sat merge                   | Polish only                      |
+| BE handoff (#290)                   | 🟡 BE+1 finalizing tonight                                  | Merge before Sun                 |
+
+**Domino chain tonight:** FE+1 ships expanded #291 → Yogesh reviews/merges → Pages auto-deploys → all systems green for Sat AM E2E.
+
+_§12.7 appended Fri 2026-06-19 ~3:45 PM IST. DB + Render gates CLEARED. Two of seven gates remaining (FE WIRE + Pages deploy). Option C moves E2E to Sat AM — tonight is ship-everything + handoff-polish._
+
+### §12.8 — 54th RC banked + Phase 1 standby (~5:30 PM IST)
+
+**54th RC banked** (`feedback_hard_rule_11_verify_contract_before_consume.md` — user auto-memory):
+
+- FE+1's pre-wire contract grep of `test-runs.controller.ts` found NO `@Get()` list endpoint — only `@Patch()` handlers (`start`, `abort`, `report`). Saved ~30 min dead-end wiring + a fake adapter.
+- ACTIVE_RUNS + RECENT_RUNS cards → `<ComingSoon>` stubs instead. Correct outcome via Hard Rule 11 applied at the FE agent level.
+- Lineage: 33rd RC (verify paths before prescribing) → 44th RC (bank blocked window) → **54th RC (verify contract before consuming)**.
+- Indexed in: `.claude/memory/memory.md` (repo, line 55) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory, line 26).
+
+**PR #291 status:** Still OPEN as of ~5:30 PM IST. Yogesh has not yet merged. 4 open PRs unchanged (#291, #290, #287, #286). Main HEAD remains `d0ba367`.
+
+**Render + Pages:** Both healthy. Render `/health` 200. Pages serving current Next.js bundle.
+
+_§12.8 appended Fri 2026-06-19 ~5:30 PM IST. 54th RC banked. Awaiting Yogesh merge of #291 to advance FE WIRE gate._
+
+### §12.9 — PR #292 merged + 54th RC context shift (~5:45 PM IST)
+
+**PR #292 MERGED** at `8785c35` (2026-06-19 10:39:25 UTC):
+
+- **Title:** `feat(api): add GET /api/test-runs list endpoint (workspace-scoped, paginated, filterable by status)`
+- **Effect:** Unblocks `/home` ACTIVE_RUNS + RECENT_RUNS surfaces. The BE contract gap that the 54th RC caught is now RESOLVED on the producer side.
+- **Main HEAD** advanced: `d0ba367` → `8785c35`.
+
+**54th RC context shift:** When the 54th RC was banked (~5:30 PM), `test-runs.controller.ts` had NO `@Get()` list endpoint — the RC validated that FE+1 correctly stubbed `<ComingSoon>`. Now #292 has added the endpoint. Per Yogesh's decision tonight: FE+1 wires ACTIVE_RUNS only (skip RECENT_RUNS, defer to Sat if time). The 54th RC lesson remains valid — the pattern is "verify contract before consuming," not "the endpoint will never exist."
+
+**Render auto-deploy:** #292 merged to main triggers Render auto-deploy. New `GET /api/test-runs` endpoint will be live once deploy completes (~2-3 min).
+
+**Open PRs (still 4):** #291 (FE WIRE, OPEN — FE+1 adding ACTIVE_RUNS wire), #290 (BE handoff), #287 (master handoff), #286 (FE inventory).
+
+_§12.9 appended Fri 2026-06-19 ~5:45 PM IST. #292 merged = BE test-runs list endpoint live. FE+1 wiring ACTIVE_RUNS in #291. Awaiting #291 final commits + Yogesh merge._
+
+### §12.10 — 55th RC banked + evening closeout (~7:30 PM IST)
+
+**55th RC banked** (`feedback_agent_lane_discipline_flag_cross_domain.md` — user auto-memory):
+
+- BE+1 received ACTIVE_RUNS wire task (FE-domain). Correctly refused — flagged cross-domain hazards (design-token hooks, branch collision, visual gate bypass) + stood down.
+- ACTIVE_RUNS wire deferred to Sat AM (~15 min FE+1 warm-up at 9 AM). No actual scope loss.
+- Lineage: 25th RC (chat misroute verify-before-edit) → **55th RC (flag hazard, don't silently execute)**.
+- Indexed in: `.claude/memory/memory.md` (repo) + `~/.claude/projects/.../memory/MEMORY.md` (user auto-memory).
+
+**Tonight's ship tally:**
+
+- **6 of 9** planned WIRE surfaces shipped in #291 (F27 team, /home QUEUE defects, F14 reqs, F17 TCs, F26m1 LLM config, /home HERO de-fiction)
+- **8 ComingSoon** stubs (incl. ACTIVE_RUNS overnight — wire ready in #291 branch at `608792d`, merge + 15-min FE+1 warm-up Sat AM)
+- **#292** merged (BE test-runs list endpoint — unblocks ACTIVE_RUNS wire)
+- **54th + 55th RCs** banked (verify-before-consume + agent-lane discipline)
+- **Handoff v4** shipped (§1/§5/§6/§7/§8 all current)
+- **Phase D** pre-Sat final (FR/P0 baselines refreshed)
+
+**Sat AM pre-E2E sequence (updated):**
+
+1. FE+1 warm-up: ACTIVE_RUNS wire (~15 min) — code ready at `608792d`, just needs FE+1 to commit from its lane
+2. Yogesh merges #291 (with ACTIVE_RUNS wire)
+3. Pages auto-deploys → verify bundle SHA
+4. E2E 3-workflow test (9 AM-1 PM)
+
+**Open PRs (still 4):** #291 (FE WIRE, OPEN), #290 (BE handoff, OPEN), #287 (master handoff, OPEN), #286 (FE inventory, OPEN). All CI green.
+
+_§12.10 appended Fri 2026-06-19 ~7:30 PM IST. 55th RC banked. Evening ship tally: 6/9 wires + 8 ComingSoon + #292 merged + handoff v4 + Phase D pre-filled. Sat AM: FE+1 ACTIVE_RUNS warm-up → #291 merge → E2E._
+
+### §12.11 — PR #291 merged + FE WIRE sweep complete (~8:15 PM IST)
+
+**PR #291 merged** at `0b3f6f1` (squash-merge by Yogesh, Fri ~5:16 PM IST UTC / ~8:15 PM IST processing):
+
+- **main HEAD** advanced: `8785c35` → `0b3f6f1`
+- **Cloudflare Pages** auto-deploy triggered on main merge. Expect bundle SHA = `0b3f6f1` once deploy completes (~2-3 min).
+
+**8 wired surfaces (final count):**
+
+1. F27 team roster → real `/api/users`
+2. `/home` QUEUE defect-triage tab → real `/api/defects`
+3. `/home` EVIDENCE_THREAD → real `/api/audit`
+4. F27 Recent Activity feed → real `/api/audit`
+5. `/home` HERO de-fiction → live `Welcome back, {firstName}` + active project name
+6. `/home` ACTIVE_RUNS → real `GET /api/test-runs` (#292 endpoint)
+7. `/home` RECENT_RUNS → real `GET /api/test-runs` (#292 endpoint)
+8. F14 reqs / F17 test-cases / F26m1 LLM-config wires (bundled in #291 final commits)
+
+**7 ComingSoon stubs (correct affordance — greyed, tap-inert):**
+
+1. `/home` RELEASE_RISK
+2. `/home` AI_NARRATIVE
+3. `/home` SUGGESTED_NEXT
+4. `/home` PINNED_REFS
+5. F23 Reports (inline top banner)
+6. F25 Executive (inline top banner)
+7. F26 Agents Recent Activity + Recent Decisions sections
+
+**Open PRs (down from 4 → 3):**
+
+| PR   | Title                            | Status                            |
+| ---- | -------------------------------- | --------------------------------- |
+| #290 | BE handoff doc                   | OPEN (BE+1 finalizing)            |
+| #287 | laptop transition master handoff | OPEN (this doc — MAIN's branch)   |
+| #286 | FE canned-data inventory         | OPEN (FE+1 inventory, historical) |
+
+**FE status: 🟢 WIRE SWEEP COMPLETE.** All planned wires shipped. Remaining ComingSoon stubs are correct — no BE endpoint exists for those surfaces.
+
+_§12.11 appended Fri 2026-06-19 ~8:15 PM IST. #291 merged at `0b3f6f1`. FE WIRE sweep complete: 8 wired + 7 ComingSoon. Main HEAD advanced. Pages auto-deploy triggered. 3 PRs remain open (#290 BE handoff, #287 master handoff, #286 FE inventory)._
+
+### §12.12 — 56th + 57th RCs: Yogesh live test P0s (~9:00 PM IST)
+
+**Phase D verdict PAUSED.** Cannot be GREEN tonight — P0 audit-chain break discovered during Yogesh's 8 PM IST live test.
+
+**56th RC banked** (`feedback_audit_chain_break_diagnosis_protocol.md` — user auto-memory):
+
+- `verify-chain` returns "broken at 9e2993e0". F28 UI shows "BROKEN HMAC-verified".
+- **Severity: P0 launch-blocker** (PM1_ERD §3.13 — unbroken HMAC chain mandatory).
+- Root cause hypothesis: seed-2-step + align-drift migration (#289) interaction. BE+1 investigating.
+- Prior art: row-25 break was benign seed-time secret drift ([[feedback_audit_immutability_and_seed_drift]]). This is a DIFFERENT break at a real entry.
+- **Binding lesson:** never ship Phase D GREEN without `verify-chain` PASS on LIVE DB.
+
+**57th RC banked** (`feedback_pattern_a_masks_real_data_empty.md` — user auto-memory):
+
+- Pattern A adapters fall back to canned when APIs return real-but-empty data. User perceives canned as "dummy data still showing" even though wires work.
+- Adapters must have THREE states: loading → success (incl. empty-state affordance) → error (canned fallback).
+- Also: Requirements page 404 from wrong project UUID (`0fc84fa9` vs seeded `cb7ee262`) — project-context wiring issue compounds with Pattern A masking.
+- FE+1 investigating both.
+
+**Impact on Sat AM plan:**
+
+- E2E 3-workflow test BLOCKED until P0 audit-chain is repaired + verify-chain PASS.
+- Pattern A empty-state fix is P1 (cosmetic but confusing) — can proceed alongside E2E if chain is fixed.
+- **Realistic new ETA:** depends on BE+1's chain repair complexity. Yogesh prepared for extended night session.
+
+**RC ledger:** 55 → 57. Indexed in: `.claude/memory/memory.md` (repo) + user auto-memory MEMORY.md.
+
+_§12.12 appended Fri 2026-06-19 ~9:00 PM IST. 56th + 57th RCs from Yogesh live test. P0 audit-chain break = launch-blocker. Phase D verdict paused. Sat AM E2E blocked until chain repair. Yogesh working tonight._
+
+### §12.13 — FINAL Fri aggregation: all agents complete, laptop shipping (~11:30 PM IST)
+
+**Main HEAD = `ef64f1b`** (#295 merged — 57th RC fix: runtime `/api/projects` fetch + honest empty states).
+
+**PRs merged Fri (7 total):** #271, #284, #288, #289, #291, #292, #295.
+
+**PRs open + MERGEABLE for Mon merge (7):**
+
+| PR   | Title                                          | Type         | Status                      |
+| ---- | ---------------------------------------------- | ------------ | --------------------------- |
+| #297 | BE final handoff EOD                           | docs/eod     | MERGEABLE                   |
+| #296 | zero canned data root-cause sweep              | feat/web     | MERGEABLE — needs Mon merge |
+| #294 | Day 32 BE EOD (pre-E2E)                        | docs/eod     | MERGEABLE                   |
+| #293 | database.md vector dim 1024→384 fix            | docs/rules   | MERGEABLE                   |
+| #290 | BE handoff (bootable entry point for new BE+1) | docs/handoff | MERGEABLE                   |
+| #287 | master handoff + FE handoff + final EOD        | docs/handoff | MERGEABLE                   |
+| #286 | FE canned-data inventory (historical)          | docs/audit   | MERGEABLE                   |
+
+**qa-nexus-2 verified state (BE+1 report):**
+
+- Schema = `schema.prisma` (zero drift, `prisma migrate diff --exit-code` = 0)
+- 1 workspace / 8 users / 5 projects · 30 requirements · 63 test cases · 5 test suites · 25 defects / 128 audit rows
+- RLS 20 policies + HNSW 2 indexes + audit trigger enforced
+- Audit chain GREEN (secret rotation worked — 56th RC resolved; BE+1 refuted 3 hypotheses with proof)
+- Render API live: anon 401×4, `/health` 200, `/health/lite` 200
+
+**Wired surfaces (~17, FE+1 report post-#296):** HERO, F27 roster + pending invites + recent activity, /home evidence thread, F14 requirements, F17 test-cases count, F26m1 agent detail, Active Runs, Recent Runs, Action Queue empty, Queue empty, nav badges stripped, Settings tabs hidden, /requirements 404 gated.
+
+**Still canned on Mon pickup (8 surfaces, documented in FE handoff §5):** F19 Run Console, F22 Defect Detail, F09 archived count, F12 KB, F23 Reports Studio, F25 Exec Dashboard, F26 Agents activity, F26m1 Test-connection button.
+
+**RC ledger: 58 cumulative.** 58th RC = FE+1 NEW tonight: async ID drift via `isProjectsLoaded` gate (prevents stale canned render while project context loads async).
+
+**Phase D verdict: INTERIM-CONDITIONAL.** BE structural GREEN. FE structural GREEN. DB GREEN. Auth GREEN. Audit chain GREEN. Full E2E workflow verification deferred to new laptop Mon. See `docs/audits/2026-06-19-fri-main-prd-conformance-final.md`.
+
+_§12.13 appended Fri 2026-06-19 ~11:30 PM IST. FINAL Fri aggregation. All 3 agents complete. 7 PRs merged today, 7 open MERGEABLE for Mon. 58 RCs banked. Laptop ships to courier. New laptop bootstraps Mon from PR #287._
