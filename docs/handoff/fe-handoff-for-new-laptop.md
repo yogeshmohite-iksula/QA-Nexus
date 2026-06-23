@@ -115,6 +115,8 @@ Each tool prints a one-page report. Run them in the FE-worktree directory; they 
 
 ## 5. WIRE inventory — what's live, what's next
 
+> **FINAL CLOSE-OUT — 2026-06-19 22:30 IST.** PR #296 (zero-canned data sweep) is open, MERGEABLE, awaiting Yogesh merge before the laptop ships. After #296 lands, the on-prod state is documented in `### STILL CANNED on handoff date` below — that's the list FE+1 picks up Mon. The "Live as of 17:30" table below predates #296.
+
 ### Live as of 2026-06-19 17:30 IST (post-Option C bundle + Option B runs wire)
 
 | Surface                      | Endpoint                                            | File                                                               |
@@ -132,6 +134,31 @@ Each tool prints a one-page report. Run them in the FE-worktree directory; they 
 | F26m1/F28m1 LLM config count | `GET /api/admin/config/llm-providers`               | `apps/web/components/admin/llm-provider-config-modal.tsx`          |
 
 **Total live wires:** 11 surfaces. **No data-backed surface is `<ComingSoon>`.**
+
+### STILL CANNED on handoff date (Mon pickup list for new FE+1)
+
+After PR #296 merges, the following surfaces still render canned fixtures
+in production. These are the next-cycle FE+1 targets:
+
+| #   | Surface                                                       | Why still canned                           | Fix path                                                                  |
+| --- | ------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| 1   | F19 Run Console (full-frame)                                  | M3 deferred — large port + no live run yet | Wait for runner to create runs, then full-frame port via frame-port skill |
+| 2   | F22 Defect Detail                                             | M3 deferred — full-frame port              | Same as F19 — frame-port skill, BE detail endpoint already exists         |
+| 3   | F09 Projects list — archived count badge                      | No archived-project endpoint               | One-liner once `GET /api/projects?archived=true` ships                    |
+| 4   | F12 Knowledge Base list/search                                | No KB list endpoint live yet               | Wire `GET /api/kb-chunks` once it returns non-stub                        |
+| 5   | F23 Reports Studio (banner ComingSoon)                        | M5 — no reports endpoint                   | Defer to M5                                                               |
+| 6   | F25 Executive Dashboard (banner ComingSoon)                   | M5 — no exec metrics endpoint              | Defer to M5                                                               |
+| 7   | F26 Agents page — Recent Activity + Recent Decisions sections | No agent telemetry endpoint                | Wire when agent-actions endpoint ships                                    |
+| 8   | F26m1 LLM Provider "Test connection" button                   | No POST /test-connection endpoint          | BE ask #3 in §5 Next BE asks                                              |
+
+PR #296 already resolved (so they are NOT on the Mon list):
+
+- **/home Action Queue card** — empty state shipped
+- **/home YOUR QUEUE list** — empty state shipped
+- **/requirements 404 on stale UUID** — `isProjectsLoaded` flag gates fetch
+- **F17 Test Cases count** — same gate
+- **Left nav badges** — count rendering stripped across the rail
+- **F28 Settings tabs** — only Audit Log tab renders; other 7 hidden
 
 ### `<ComingSoon>` (honest deferred — no BE endpoint exists)
 
